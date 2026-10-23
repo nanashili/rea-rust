@@ -1,22 +1,90 @@
-# Native runtime development
+# REA (Rust)
 
-`native/` holds REA's Rust workspace (one lockfile, one toolchain pin) and two
-independently built components beside it:
+A Rust rebuild of [REA](https://github.com/morluto/rea), the local-only
+reverse-engineering tool with shared CLI and MCP workflows.
 
-- `ghidra-rust-worker/` is the Ghidra provider's worker process. It is a separate
-  Cargo workspace with its own lockfile and toolchain, and its sources are pinned
-  by the Prism integration manifests in `docs/agents/`, so workspace commands
-  never build or format it.
-- `windows/` is the existing Node-API addon (C++), built by
-  `scripts/build-windows-native.mjs`.
+## Why Rust
 
-Neither is replaced by the workspace. [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
-is the working contract for porting tool families.
+The original REA runs on Node.js and TypeScript. On real investigations it was
+heavy on RAM and system resources: every process paid a Node runtime and module
+graph before doing any analysis, and large outputs were built and held as
+JavaScript objects. On a developer machine running an agent, a decompiler and
+REA side by side, that cost was a recurring problem.
+
+This port keeps REA's tool contracts, Evidence model and session semantics, and
+replaces the runtime with a single native binary. It does not start Node and has
+no TypeScript fallback.
+
+### Measured results
+
+Same machine (macOS arm64), same inputs, alternating fresh processes, three runs
+each. Both runtimes returned structurally identical Evidence. Original: Node
+24.18.0. Rust: 1.93.1 release build.
+
+| Workload | Runtime | Elapsed | CPU | Peak RSS |
+| --- | --- | ---: | ---: | ---: |
+| `--version` / `--help` | Original | 0.64 s | 0.93 s | ~315 MiB |
+| Small ELF inspection | Original | 0.55 s | 0.78 s | 346 MiB |
+| Small ELF inspection | Rust | < 0.01 s | < 0.01 s | 2.9 MiB |
+| ELF with 50,000 packages (5.6 MB JSON out) | Original | 1.01 s | 1.57 s | 500 MiB |
+| ELF with 50,000 packages (5.6 MB JSON out) | Rust | 0.17 s | 0.16 s | 59 MiB |
+
+On the 50,000-package workload the Rust binary is about 5.9x faster in wall
+time, uses 9.8x less CPU and 8.5x less memory. On small inputs, startup drops
+from over half a second and ~350 MiB to effectively instant and under 3 MiB.
+
+Scope of these numbers: medians from macOS `time`; RSS is for the sole REA
+process (no engine was launched); OS caches were not flushed; inputs are
+synthetic. They measure static CLI operations, not MCP session overhead, agent
+token cost or full provider investigations.
+
+### Native Ghidra worker
+
+Ghidra analysis runs in `ghidra-rust-worker/`, a Rust worker that replaces the
+Java Ghidra bridge entirely, so no JVM is required. Observed on
+`UnityPlayer.dylib` (124 MB, 178,573 functions): open in 7.5 s, full procedure
+inventory (698 pages) in 32.8 s, sampled peak process-family RSS 459 MiB.
+Whole-app decompilation of Unity.app (193,191 functions, 4 threads) completes
+in about 25 minutes with 193,183 functions decompiled. There is no Java
+baseline for these runs in this repository, so they are reported as absolute
+numbers rather than a comparison.
+
+## Status
+
+- 195 of 209 frozen MCP tools have native handlers (`rea mcp doctor` reports
+  the inventory). The rest stay advertised and return typed
+  capability-unavailable results.
+- Ported: Rust Ghidra provider, managed static analysis, artifact, Android,
+  capture, ledger, binary and enhanced workflows, offline web capture/fuse/script
+  tools, JavaScript graph comparison and process-capture comparison.
+- Open: live browser/CDP scenarios, PTY process capture, Frida, GDB/Rizin
+  sessions and JavaScript application reconstruction.
+- Not yet shipped as a release artifact. Packaging and verification on
+  Windows/Linux are outstanding; only macOS arm64 has been exercised.
+
+[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) is the working contract for porting the
+remaining tool families.
+
+## Build
+
+```sh
+cargo build --release -p rea
+./target/release/rea --help
+```
+
+The toolchain is pinned in `rust-toolchain.toml`.
 
 ## Layout
 
+The repository is one Cargo workspace (one lockfile, one toolchain pin) plus
+two independently built components:
+
+- `ghidra-rust-worker/` is the Ghidra provider's worker process, a separate
+  Cargo workspace with its own lockfile and toolchain. Workspace commands never
+  build or format it.
+- `windows/` is the Node-API addon (C++) used by the original runtime.
+
 ```text
-native/
 ├── Cargo.toml        members, shared package metadata, dependency pins and lints
 ├── Cargo.lock
 ├── rust-toolchain.toml
@@ -67,8 +135,8 @@ Each crate depends only on crates in earlier groups of the list above:
 ## Manifests
 
 - Members inherit `version`, `edition`, `rust-version`, `license` and `publish`
-  from `[workspace.package]`. `rea` keeps its own version, which tracks the npm
-  package.
+  from `[workspace.package]`. `rea` keeps its own version, which tracks the
+  original npm package.
 - Every dependency, including workspace crates, is pinned once in
   `[workspace.dependencies]`. Members write `name.workspace = true` and add only
   the features they use.
@@ -76,10 +144,9 @@ Each crate depends only on crates in earlier groups of the list above:
   documentation (`rea-core`, `rea-ffi`, `rea-host`, `rea-tools-android`) keep an
   explicit `[lints]` table.
 
-## Commands
+## Development commands
 
 ```sh
-cd native
 cargo test --workspace --locked --offline
 cargo test --workspace --release --locked --offline
 cargo clippy --workspace --all-targets --locked --offline -- -D warnings
@@ -88,58 +155,9 @@ sh crates/platform/rea-ffi/verify-c.sh
 ```
 
 Offline commands require the pinned toolchain and locked dependencies already
-available. The C verifier requires an installed compiler and currently runs on
-macOS/Linux; only macOS arm64 has been exercised for the C shared library.
+available. The C verifier needs an installed compiler and runs on macOS/Linux.
 
-## Status
+## License
 
-The native `rea` binary is now the production composition for its migrated
-MCP/CLI families and is built from `native/crates/apps/rea`. It does not start
-Node or fall back to the TypeScript runtime. `rea mcp doctor` is the parity
-inventory: currently 195 of 209 frozen tools have native handlers; the
-remaining tools stay advertised but return typed capability-unavailable
-results until their owning family is ported.
-
-The native runtime already includes the Rust Ghidra provider, managed static
-analysis, artifact/android/capture/ledger/binary/enhanced workflows, offline
-web capture/fuse/script tools, JavaScript graph comparison workflows, and
-process-capture comparison. Live browser/CDP scenarios, PTY process capture,
-Frida, GDB/Rizin sessions, and JavaScript application reconstruction remain
-open. See `docs/rust-runtime-migration.md` for the migration gates and
-`experiments/analysis-efficiency/rust-runtime-baseline.md` for measured scope.
-
-The native binary is not yet the published release artifact; standalone
-GitHub-release packaging and supported Windows/macOS/Linux verification are
-still required. The existing `rea-runtime` binary remains a legacy reference
-and is not part of the production composition.
-
-<!-- legacy status retained below for historical details -->
-
-## Historical prototype status
-
-These libraries are not wired into the production CLI/MCP runtime. The
-experimental `rea-runtime` binary provides `rea-native inspect-rust-binary PATH
---format json`, `rea-native inspect-go-binary PATH --json` (also accepts
-`--format json`), `rea-native evidence-import PATH --format json`, `rea-native
-evidence-export SOURCE OUTPUT --format json [--overwrite]`, `rea-native compare
-LEFT RIGHT --format json` (alias `compare-bundles`), and stdio MCP inspection,
-record discovery, bundle export/import, and residual-unknown lifecycle operations.
-
-The standalone command has matched complete original CLI Evidence for one compiled
-Mach-O fixture; this does not establish all-format, MCP, provider, persistence or
-packaging parity. SIGINT/SIGTERM request cleanup and preserve the first signal's
-130/143 exit status. The experimental rea-native mcp command exposes the same
-artifact operation over stdio. Real SDK-client checks matched complete Evidence,
-including lone UTF-16 metadata. Retained bundle export matches original canonical
-bytes, including recovery of transport-oversized observations after their inputs
-are removed. Bundle import authenticates and atomically retains complete
-residual-unknown histories, and export preserves those revisions. Residual-unknown
-listing, resolution verification, creation and update are implemented and tested
-through the native MCP session. Remaining operations and full lifecycle/platform
-parity are still open. The standalone bundle comparison command matched the
-original CLI's complete JSON for identical and one-sided membership comparisons of
-a 5.65 MB bundle containing 50,000 packages. Schema-specific validation wording
-still differs on malformed input. There is no Node fallback.
-See `docs/rust-runtime-migration.md` for the migration gates and
-`experiments/analysis-efficiency/rust-runtime-baseline.md` for measured baseline
-scope and limitations.
+MIT. See [LICENSE](LICENSE). Based on [REA](https://github.com/morluto/rea) by
+morluto.
