@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_electron_fuses",
+  "title": "Inspect Electron fuse evidence from a supplied capture.",
+  "description": "Inspect Electron fuse evidence from a supplied capture. This contract accepts only an explicit retained value and never contacts or launches a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "capture"
+    ],
+    "properties": {
+      "capture": {
+        "type": "object",
+        "description": "retained Electron fuse capture"
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "result"
+    ],
+    "properties": {
+      "result": {
+        "type": "object"
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_signature",
+  "title": "Inspect Supplied Signature Capture",
+  "description": "Parse caller-supplied bounded codesign display output or project retained signature Evidence without invoking codesign, reading a path, or making a trust decision.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["output"],
+        "additionalProperties": false,
+        "properties": {
+          "output": { "type": "string", "maxLength": 8388608 },
+          "unsigned": { "type": "boolean" },
+          "executable_paths": {
+            "type": "array",
+            "maxItems": 4096,
+            "items": { "type": "string" }
+          },
+          "entitlements": {},
+          "designated_requirement": { "type": ["string", "null"] },
+          "provenance": { "type": "array" }
+        }
+      },
+      {
+        "type": "object",
+        "required": ["evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "type": "object",
+            "required": ["operation", "evidence_id", "normalized_result"],
+            "properties": {
+              "operation": { "const": "inspect_signature" },
+              "evidence_id": { "type": "string", "minLength": 1 },
+              "normalized_result": { "type": "object" },
+              "result": { "type": "object" }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "signed",
+      "identifier",
+      "team_identifier",
+      "format",
+      "cdhashes",
+      "hash_algorithms",
+      "authorities",
+      "designated_requirement",
+      "entitlements",
+      "timestamp",
+      "hardened_runtime",
+      "provenance",
+      "limitations"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "signed": { "type": "boolean" },
+      "identifier": { "type": ["string", "null"] },
+      "team_identifier": { "type": ["string", "null"] },
+      "format": { "type": ["string", "null"] },
+      "cdhashes": { "type": "array", "items": { "type": "string" } },
+      "hash_algorithms": { "type": "array", "items": { "type": "string" } },
+      "authorities": { "type": "array", "items": { "type": "string" } },
+      "designated_requirement": { "type": ["string", "null"] },
+      "entitlements": {},
+      "timestamp": { "type": ["string", "null"] },
+      "hardened_runtime": { "type": ["boolean", "null"] },
+      "provenance": { "type": "array" },
+      "limitations": { "type": "array", "items": { "type": "string" } }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

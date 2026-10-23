@@ -1,0 +1,25 @@
+{
+  "name": "inspect_pe_target",
+  "title": "Inspect PE Target",
+  "description": "Inspect a selected local PE target identity and metadata without executing the image.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": { "path": { "type": "string", "minLength": 1 } },
+    "required": ["path"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

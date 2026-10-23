@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_native_ui_action",
+  "title": "Trace Native UI Action",
+  "description": "Traverse caller-supplied, already captured UI and native dispatch Evidence. This operation never observes or acts on a live native UI, provider, process, or filesystem.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["action", "graph"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A unique compiled UI action selector, interface object ID, native symbol, or exact function address."
+      },
+      "graph": {
+        "description": "Retained captured graph Evidence; live UI or provider access is not performed.",
+        "$ref": "#/$defs/evidence"
+      },
+      "max_depth": { "type": "integer", "minimum": 0, "maximum": 32, "default": 8 },
+      "max_nodes": { "type": "integer", "minimum": 1, "maximum": 2000, "default": 250 },
+      "max_edges": { "type": "integer", "minimum": 1, "maximum": 5000, "default": 500 }
+    },
+    "$defs": {
+      "evidence": {
+        "type": "object",
+        "required": ["operation", "evidence_id"],
+        "anyOf": [
+          { "required": ["normalized_result"] },
+          { "required": ["result"] }
+        ],
+        "properties": {
+          "operation": { "type": "string", "minLength": 1 },
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "normalized_result": { "$ref": "#/$defs/graph" },
+          "result": { "$ref": "#/$defs/graph" }
+        }
+      },
+      "graph": {
+        "type": "object",
+        "required": ["target_sha256", "provider", "nodes", "edges", "coverage", "truncated"],
+        "properties": {
+          "target_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "provider": {
+            "type": "object",
+            "required": ["id", "version", "tool_version"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "version": { "type": ["string", "null"] },
+              "tool_version": { "type": "string", "minLength": 1 }
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "maxItems": 2000,
+            "items": {
+              "type": "object",
+              "required": ["id", "kind", "name", "location", "attributes", "evidence"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "kind": { "type": "string", "minLength": 1 },
+                "name": { "type": "string", "minLength": 1 },
+                "location": { "type": ["object", "null"] },
+                "attributes": { "type": "object" },
+                "evidence": { "type": "array" }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "maxItems": 5000,
+            "items": {
+              "type": "object",
+              "required": ["id", "from", "to", "relation", "resolution", "evidence", "limitations"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "from": { "type": "string", "minLength": 1 },
+                "to": { "type": ["string", "null"] },
+                "relation": { "type": "string", "minLength": 1 },
+                "resolution": { "type": "string", "enum": ["observed", "inferred", "resolved", "ambiguous", "unresolved"] },
+                "reason": { "type": "string", "minLength": 1 },
+                "evidence": { "type": "array" },
+                "limitations": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["facet", "status", "reason", "examined", "omitted"],
+              "properties": {
+                "facet": { "type": "string", "minLength": 1 },
+                "status": { "type": "string", "enum": ["complete", "partial", "unsupported", "not_requested"] },
+                "reason": { "type": ["string", "null"] },
+                "examined": { "type": "integer", "minimum": 0 },
+                "omitted": { "type": "integer", "minimum": 0 }
+              }
+            }
+          },
+          "truncated": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "required": ["target_sha256", "provider", "start", "direction", "nodes", "edges", "unresolved", "reached_depth", "truncated", "reason", "coverage", "limitations"],
+        "properties": {
+          "target_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "provider": { "type": "object" },
+          "start": { "type": "string", "minLength": 1 },
+          "direction": { "const": "forward" },
+          "nodes": { "type": "array" },
+          "edges": { "type": "array" },
+          "unresolved": { "type": "array" },
+          "reached_depth": { "type": "integer", "minimum": 0 },
+          "truncated": { "type": "boolean" },
+          "reason": { "type": ["string", "null"] },
+          "coverage": { "type": "array" },
+          "limitations": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

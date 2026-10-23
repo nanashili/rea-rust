@@ -1,0 +1,8 @@
+{
+  "name": "inspect_native_load_image",
+  "title": "Inspect Native Load Image",
+  "description": "Validate caller-supplied loaded-image observations and preserve relocation, mapping, entry, provenance, and unknown facts without loading or executing an image.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": true },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "enum": ["unsupported", "verified", "mismatch"] }, "observations": { "type": "object" }, "limitations": { "type": "array" } }, "additionalProperties": true },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

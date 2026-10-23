@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "xrefs",
+  "title": "List native cross references",
+  "description": "Return analyzed references to an optional code or data address through a provider-backed analysis session.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "document": {"type": ["string", "null"]},
+      "address": {"type": ["string", "null"]}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "array",
+    "items": {"type": "string"}
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": true, "readOnlyHint": true}
+}

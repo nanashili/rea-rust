@@ -1,0 +1,8 @@
+{
+  "name":"inspect_dart_aot",
+  "title":"Project Captured Dart AOT Facts",
+  "description":"Return a caller-supplied Dart AOT inspection result. APK acquisition and snapshot parsing remain outside this offline adapter.",
+  "inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["result"],"properties":{"result":{"type":"object"},"normalized_result":{"type":"object"}}},
+  "outputSchema":{"type":"object","required":["target","abi","libapp","string_pool","coverage"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

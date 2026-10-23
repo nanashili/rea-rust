@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_generic_constraints",
+  "title": "Project IL2CPP Generic Constraints",
+  "description": "Attach caller-supplied IL2CPP generic-parameter constraint rows to their exact parameter rows. The projection is bounded, read-only, and static/captured only: source rows and unresolved or ambiguous type references remain explicit and are never guessed.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "optionalIndex": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "parameterRow": {
+      "$ref": "#/$defs/row"
+    },
+    "constraintRow": {
+      "$ref": "#/$defs/row"
+    },
+    "containerRow": {
+      "$ref": "#/$defs/row"
+    },
+    "parameterRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {
+        "$ref": "#/$defs/parameterRow"
+      }
+    },
+    "constraintRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {
+        "$ref": "#/$defs/constraintRow"
+      }
+    },
+    "containerRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {
+        "$ref": "#/$defs/containerRow"
+      }
+    },
+    "metadataFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generic_parameters": {
+          "$ref": "#/$defs/parameterRows"
+        },
+        "genericParameters": {
+          "$ref": "#/$defs/parameterRows"
+        },
+        "generic_parameter_constraints": {
+          "$ref": "#/$defs/constraintRows"
+        },
+        "genericParameterConstraints": {
+          "$ref": "#/$defs/constraintRows"
+        },
+        "constraints": {
+          "$ref": "#/$defs/constraintRows"
+        },
+        "generic_containers": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "genericContainers": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "type_specs": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "typeSpecifications": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "typeSpecs": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "typespecs": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "type_specifications": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "type_definitions": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "typeDefinitions": {
+          "$ref": "#/$defs/containerRows"
+        },
+        "types": {
+          "$ref": "#/$defs/containerRows"
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            { "required": ["generic_parameters"] },
+            { "required": ["genericParameters"] }
+          ]
+        },
+        {
+          "anyOf": [
+            { "required": ["generic_parameter_constraints"] },
+            { "required": ["genericParameterConstraints"] },
+            { "required": ["constraints"] }
+          ]
+        }
+      ]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "$ref": "#/$defs/metadataFields"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metadata"],
+          "properties": {
+            "metadata": {
+              "$ref": "#/$defs/metadataFields"
+            }
+          }
+        }
+      ]
+    },
+    "projectedConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_index", "source", "type_reference", "type_descriptor"],
+      "properties": {
+        "source_index": {
+          "$ref": "#/$defs/index"
+        },
+        "source": {
+          "$ref": "#/$defs/constraintRow"
+        },
+        "type_reference": {},
+        "type_descriptor": {}
+      }
+    },
+    "parameterItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_index",
+        "parameter_index",
+        "parameter_index_source",
+        "owner",
+        "container",
+        "source",
+        "flags",
+        "position",
+        "resolution",
+        "constraints"
+      ],
+      "properties": {
+        "source_index": {
+          "$ref": "#/$defs/index"
+        },
+        "parameter_index": {
+          "$ref": "#/$defs/optionalIndex"
+        },
+        "parameter_index_source": {},
+        "owner": {},
+        "container": {},
+        "source": {
+          "$ref": "#/$defs/parameterRow"
+        },
+        "flags": {},
+        "position": {},
+        "resolution": {
+          "enum": ["resolved", "unresolved", "ambiguous"]
+        },
+        "constraints": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "$ref": "#/$defs/projectedConstraint"
+          }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parameters",
+        "constraints",
+        "attached",
+        "orphan_constraints",
+        "orphan_constraint_rows",
+        "missing_parameter_references"
+      ],
+      "properties": {
+        "parameters": { "$ref": "#/$defs/index" },
+        "constraints": { "$ref": "#/$defs/index" },
+        "attached": { "$ref": "#/$defs/index" },
+        "orphan_constraints": { "$ref": "#/$defs/index" },
+        "orphan_constraint_rows": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/index" }
+        },
+        "missing_parameter_references": { "$ref": "#/$defs/index" }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "parameters",
+        "constraints",
+        "diagnostics",
+        "coverage"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["complete", "partial"]
+        },
+        "parameters": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/parameterItem" }
+        },
+        "constraints": {
+          "$ref": "#/$defs/constraintRows"
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/diagnostic" }
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

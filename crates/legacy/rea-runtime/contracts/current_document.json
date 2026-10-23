@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "current_document",
+  "title": "Read current native document",
+  "description": "Return the exact retained provider document identity.",
+  "inputSchema": {"type": "object", "properties": {"result": {"type": "string"}, "normalized_result": {"type": "string"}, "value": {"type": "string"}, "evidence": {"type": "object"}}, "additionalProperties": true},
+  "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "string"}}, "additionalProperties": false},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

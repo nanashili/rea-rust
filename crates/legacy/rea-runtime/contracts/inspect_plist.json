@@ -1,0 +1,49 @@
+{
+  "name": "inspect_plist",
+  "title": "Inspect Property List",
+  "description": "Parse caller-supplied Apple property-list bytes or project authenticated inspect_plist Evidence without launching target code or opening a path.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "oneOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "bytes_base64": { "type": "string", "minLength": 1 }
+        },
+        "required": ["path", "bytes_base64"]
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "evidence": { "type": "object", "minProperties": 1 }
+        },
+        "required": ["evidence"]
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": {
+      "evidence_id": { "type": "string" },
+      "subject": { "type": "object" },
+      "result": {
+        "type": "object",
+        "required": ["format", "value", "bundle", "source_path", "provenance", "limitations"]
+      },
+      "provenance": { "type": "object" }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

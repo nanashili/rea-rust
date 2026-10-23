@@ -1,0 +1,27 @@
+{
+  "name": "compare_managed_members",
+  "title": "Compare Managed Members",
+  "description": "Compare two caller-supplied inspect_managed_members Evidence records without reopening either artifact or remapping build-local tokens.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "left": { "$ref": "#/$defs/evidence" },
+      "right": { "$ref": "#/$defs/evidence" }
+    },
+    "required": ["left", "right"],
+    "$defs": {
+      "evidence": {
+        "type": "object",
+        "required": ["evidence_id", "operation"],
+        "properties": {
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "operation": { "const": "inspect_managed_members" }
+        }
+      }
+    }
+  },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

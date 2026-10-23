@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "discover_webmcp_tools",
+  "title": "Discover WebMCP tools",
+  "description": "Passively inventory page-declared WebMCP tools for one caller-selected loopback CDP page without registering or invoking them.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["cdp_endpoint", "target_id"],
+    "properties": {
+      "cdp_endpoint": {"type": "string", "minLength": 1, "description": "Explicit-port loopback HTTP endpoint or browser-level ws://127.0.0.1:PORT/devtools/browser/ID endpoint."},
+      "allowed_origins": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+      "target_id": {"type": "string", "minLength": 1},
+      "observation_ms": {"type": "integer", "minimum": 0, "maximum": 2147483647, "default": 100}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

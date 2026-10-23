@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "get_objc_classes",
+  "title": "Project Captured Objective-C Classes",
+  "description": "Classify Objective-C class names from retained Evidence or a caller-supplied static symbol capture.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["names"],
+        "additionalProperties": false,
+        "properties": {
+          "names": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": {
+              "type": "object",
+              "required": ["address", "name"],
+              "additionalProperties": false,
+              "properties": {
+                "address": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "pattern": {"type": "string"}
+        }
+      },
+      {
+        "type": "object",
+        "required": ["evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {"type": "object"},
+          "pattern": {"type": "string"}
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["count", "classes"],
+    "additionalProperties": false,
+    "properties": {
+      "count": {"type": "integer", "minimum": 0},
+      "classes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["address", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "address": {"type": "string"},
+            "name": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

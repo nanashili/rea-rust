@@ -1,0 +1,29 @@
+[package]
+name = "rea-tools-process"
+description = "Bounded process scenario capture and comparison."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+rea-tools-binary.workspace = true
+regex.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+rustix = { workspace = true, features = ["fs", "process"] }
+
+[lints]
+workspace = true

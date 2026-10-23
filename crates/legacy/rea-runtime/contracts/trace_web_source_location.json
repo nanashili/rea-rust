@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_web_source_location",
+  "title": "Trace web source location",
+  "description": "Trace one generated JavaScript position through an explicitly paired local source map while preserving duplicate mappings, embedded content, and unresolved locations.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["manifest_path", "script_index", "source_map", "source_map_text", "generated_position"],
+    "properties": {
+      "manifest_path": {"type": "string", "minLength": 1},
+      "script_index": {"type": "integer", "minimum": 0},
+      "source_map": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "url"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "minLength": 1}
+        }
+      },
+      "source_map_text": {
+        "type": "string",
+        "maxLength": 4194304
+      },
+      "artifacts": {
+        "type": "object",
+        "description": "Caller-retained manifest, selected script and optional source-map artifact facts used to verify identity."
+      },
+      "generated_position": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["line", "column"],
+        "properties": {
+          "line": {"type": "integer", "minimum": 1},
+          "column": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_rgctx_map",
+  "title": "Inspect IL2CPP RGCTX Map",
+  "description": "Project caller-supplied or retained IL2CPP RGCTX ranges and values. This read-only captured/static operation preserves source fields, unresolved values, coverage, and truncation; it never opens an artifact, executes a target, or infers generic behavior.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/evidenceInput" }
+    ],
+    "$defs": {
+      "sourceRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true
+      },
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "range": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["start", "count"],
+        "properties": {
+          "start": { "$ref": "#/$defs/index" },
+          "count": { "$ref": "#/$defs/index" },
+          "rgctx_start": { "$ref": "#/$defs/index" },
+          "rgctx_count": { "$ref": "#/$defs/index" },
+          "first": { "$ref": "#/$defs/index" },
+          "length": { "$ref": "#/$defs/index" }
+        }
+      },
+      "value": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["index"],
+        "properties": {
+          "index": { "$ref": "#/$defs/index" },
+          "rgctx_index": { "$ref": "#/$defs/index" },
+          "kind": { "type": ["string", "null"] },
+          "data_kind": { "type": ["string", "null"] },
+          "reference": {},
+          "resolved": {}
+        }
+      },
+      "module": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "module": { "type": ["string", "null"], "maxLength": 4096 },
+          "module_name": { "type": ["string", "null"], "maxLength": 4096 },
+          "name": { "type": ["string", "null"], "maxLength": 4096 },
+          "rgctx_ranges": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/range" } },
+          "rgctxRanges": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/range" } },
+          "ranges": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/range" } },
+          "rgctx_values": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/value" } },
+          "rgctxValues": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/value" } },
+          "data": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/value" } },
+          "values": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/value" } }
+        }
+      },
+      "modules": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/module" }
+      },
+      "directInput": {
+        "anyOf": [
+          { "$ref": "#/$defs/module" },
+          { "$ref": "#/$defs/modules" },
+          { "type": "object", "required": ["modules"], "properties": { "modules": { "$ref": "#/$defs/modules" } }, "additionalProperties": true }
+        ]
+      },
+      "evidenceInput": {
+        "type": "object",
+        "required": ["evidence"],
+        "properties": {
+          "evidence": { "type": "object", "required": ["normalized_result"], "additionalProperties": true }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["modules", "coverage", "limitations"],
+    "properties": {
+      "modules": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/module" } },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "ranges_examined", "values_examined", "unresolved_values", "reason"],
+        "properties": {
+          "status": { "enum": ["complete", "partial"] },
+          "ranges_examined": { "type": "integer", "minimum": 0 },
+          "values_examined": { "type": "integer", "minimum": 0 },
+          "unresolved_values": { "type": "integer", "minimum": 0 },
+          "reason": { "type": "string" }
+        }
+      },
+      "limitations": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 4096 } }
+    },
+    "$defs": {
+      "module": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false
+}

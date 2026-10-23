@@ -1,0 +1,8 @@
+{
+  "name": "inspect_native_data_type",
+  "title": "Inspect Native Data Type",
+  "description": "Select and validate one caller-supplied native type Evidence record by type identity or address, preserving provider provenance and unresolved layout facts.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["evidence"], "properties": { "evidence": { "type": "object" }, "type": { "type": "string", "minLength": 1 }, "address": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["status"], "properties": { "status": { "type": "string" }, "id": { "type": ["string", "null"] }, "name": { "type": ["string", "null"] }, "address": { "type": ["string", "null"] } }, "additionalProperties": true },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "binary_overview",
+  "title": "Inspect Native Binary Overview",
+  "description": "Project caller-supplied native binary inventory facts into a bounded overview without opening a database or executing the artifact.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["document", "procedure_count", "string_count"], "properties": { "document": { "type": "string", "minLength": 1 }, "procedure_count": { "type": "integer", "minimum": 0 }, "string_count": { "type": "integer", "minimum": 0 }, "segments": { "type": "array" } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["document", "procedure_count", "string_count"], "properties": { "document": { "type": "string" }, "procedure_count": { "type": "integer" }, "string_count": { "type": "integer" }, "segment_count": { "type": "integer" }, "image_base": { "type": "string" }, "segments": { "type": "array" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

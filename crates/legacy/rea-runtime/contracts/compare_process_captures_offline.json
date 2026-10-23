@@ -1,0 +1,8 @@
+{
+  "name": "compare_process_captures_offline",
+  "title": "Compare supplied process captures",
+  "description": "Compare two caller-supplied process captures while preserving partial and generation-scoped evidence.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "left": { "type": "object" }, "right": { "type": "object" }, "max_capture_age_ms": { "type": "integer", "minimum": 0 }, "now_ms": { "type": "integer" }, "trace_spec": { "type": "object" } }, "required": ["left", "right"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

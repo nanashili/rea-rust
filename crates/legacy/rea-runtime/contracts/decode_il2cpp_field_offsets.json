@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "decode_il2cpp_field_offsets",
+  "title": "Decode IL2CPP Field Offsets",
+  "description": "Decode caller-supplied captured IL2CPP field-offset table bytes using an explicit bounded layout. This static/captured-only operation never reads an artifact, attaches to a process, executes Unity or IL2CPP, or mutates a target. Raw values, source addresses, sentinel observations, unknown resolutions, and the declared endianness are preserved.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "u64": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615
+    },
+    "i64NonNegative": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "metadataVersion": {
+      "type": "integer",
+      "enum": [29, 31, 39]
+    },
+    "endianness": {
+      "enum": ["little", "big"]
+    },
+    "offsetEncoding": {
+      "enum": ["signed", "unsigned"]
+    },
+    "base64Bytes": {
+      "type": "string",
+      "maxLength": 357913944,
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pointer_width",
+        "endianness",
+        "offset_encoding",
+        "table_offset",
+        "table_count"
+      ],
+      "properties": {
+        "pointer_width": { "enum": [4, 8] },
+        "endianness": { "$ref": "#/$defs/endianness" },
+        "offset_encoding": { "$ref": "#/$defs/offsetEncoding" },
+        "table_offset": { "$ref": "#/$defs/u64" },
+        "table_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000000
+        },
+        "address_base": { "$ref": "#/$defs/u64" },
+        "sentinels": {
+          "type": "array",
+          "maxItems": 2000000,
+          "items": { "$ref": "#/$defs/u64" }
+        }
+      }
+    },
+    "typeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type_index", "field_start", "field_count"],
+      "properties": {
+        "type_index": { "$ref": "#/$defs/u64" },
+        "field_start": { "$ref": "#/$defs/u64" },
+        "field_count": { "$ref": "#/$defs/u64" }
+      }
+    },
+    "typeRecords": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/typeRecord" }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metadata_version",
+        "layout",
+        "type_records",
+        "bytes_base64"
+      ],
+      "properties": {
+        "metadata_version": { "$ref": "#/$defs/metadataVersion" },
+        "layout": { "$ref": "#/$defs/layout" },
+        "type_records": { "$ref": "#/$defs/typeRecords" },
+        "bytes_base64": { "$ref": "#/$defs/base64Bytes" }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "raw",
+        "offset",
+        "source_address",
+        "resolution",
+        "sentinel"
+      ],
+      "properties": {
+        "slot": { "$ref": "#/$defs/u64" },
+        "raw": { "$ref": "#/$defs/u64" },
+        "offset": {
+          "anyOf": [
+            { "$ref": "#/$defs/i64NonNegative" },
+            { "type": "null" }
+          ]
+        },
+        "source_address": {
+          "anyOf": [
+            { "$ref": "#/$defs/u64" },
+            { "type": "null" }
+          ]
+        },
+        "resolution": { "enum": ["mapped", "unknown"] },
+        "sentinel": { "type": "boolean" }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type_index",
+        "record_index",
+        "source",
+        "field_start",
+        "field_count",
+        "resolution",
+        "fields"
+      ],
+      "properties": {
+        "type_index": { "$ref": "#/$defs/u64" },
+        "record_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 199999
+        },
+        "source": { "$ref": "#/$defs/typeRecord" },
+        "field_start": { "$ref": "#/$defs/u64" },
+        "field_count": { "$ref": "#/$defs/u64" },
+        "resolution": { "enum": ["mapped", "partial", "invalid"] },
+        "fields": {
+          "type": "array",
+          "maxItems": 2000000,
+          "items": { "$ref": "#/$defs/field" }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "types",
+        "table_slots",
+        "mapped",
+        "unknown",
+        "invalid",
+        "status"
+      ],
+      "properties": {
+        "types": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "table_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000000
+        },
+        "mapped": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000000
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000000
+        },
+        "invalid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "status": { "enum": ["complete", "partial"] }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metadata_version",
+        "layout",
+        "source",
+        "items",
+        "coverage"
+      ],
+      "properties": {
+        "metadata_version": { "$ref": "#/$defs/metadataVersion" },
+        "layout": { "$ref": "#/$defs/layout" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bytes_base64", "byte_count"],
+          "properties": {
+            "bytes_base64": { "$ref": "#/$defs/base64Bytes" },
+            "byte_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 268435456
+            }
+          }
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "coverage": { "$ref": "#/$defs/coverage" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

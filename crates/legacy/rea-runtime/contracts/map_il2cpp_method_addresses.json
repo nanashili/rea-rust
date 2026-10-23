@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_method_addresses",
+  "title": "Map IL2CPP Method Addresses",
+  "description": "Correlate MethodDef tokens with caller-supplied CodeGenModule method-pointer slots. Matching requires exact image/module identity and preserves unmapped, unknown, null, short, and ambiguous outcomes. This operation is bounded, read-only, and captured-only.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false,
+  "$defs": {
+    "index": {"type": "integer", "minimum": 0},
+    "optionalIndex": {"type": ["integer", "null"], "minimum": 0},
+    "token": {
+      "oneOf": [
+        {"type": "integer", "minimum": 0, "maximum": 4294967295},
+        {"type": "string", "minLength": 1, "maxLength": 32}
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "image_index": {"$ref": "#/$defs/optionalIndex"},
+        "image_id": {"$ref": "#/$defs/optionalIndex"},
+        "image_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "assembly_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "image": {"type": "string", "minLength": 1, "maxLength": 512},
+        "module_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "module": {"type": "string", "minLength": 1, "maxLength": 512}
+      },
+      "additionalProperties": true
+    },
+    "method": {
+      "allOf": [
+        {"$ref": "#/$defs/identity"},
+        {
+          "type": "object",
+          "required": ["token"],
+          "properties": {
+            "token": {"$ref": "#/$defs/token"},
+            "declaring_type": {"type": "integer", "minimum": 0},
+            "name": {"type": "string", "maxLength": 512}
+          }
+        }
+      ]
+    },
+    "pointer": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 0},
+        {"type": "object", "properties": {"address": {"type": ["integer", "string", "null"]}}, "additionalProperties": true}
+      ]
+    },
+    "module": {
+      "allOf": [
+        {"$ref": "#/$defs/identity"},
+        {
+          "type": "object",
+          "required": ["method_pointers"],
+          "properties": {
+            "method_pointers": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/pointer"}},
+            "method_pointer_count": {"type": "integer", "minimum": 0, "maximum": 200000}
+          }
+        }
+      ]
+    },
+    "methodRows": {"type": "array", "minItems": 1, "maxItems": 200000, "items": {"$ref": "#/$defs/method"}},
+    "moduleRows": {"type": "array", "minItems": 1, "maxItems": 200000, "items": {"$ref": "#/$defs/module"}},
+    "metadata": {
+      "type": "object",
+      "required": ["methods"],
+      "properties": {
+        "methods": {"$ref": "#/$defs/methodRows"},
+        "method_definitions": {"$ref": "#/$defs/methodRows"},
+        "metadata_methods": {"$ref": "#/$defs/methodRows"},
+        "types": {"type": "array", "maxItems": 200000, "items": {"type": "object"}},
+        "images": {"type": "array", "maxItems": 200000, "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "binary": {
+      "type": "object",
+      "required": ["codegen_modules"],
+      "properties": {
+        "codegen_modules": {"$ref": "#/$defs/moduleRows"},
+        "modules": {"$ref": "#/$defs/moduleRows"},
+        "method_pointer_modules": {"$ref": "#/$defs/moduleRows"}
+      },
+      "additionalProperties": true
+    },
+    "input": {
+      "oneOf": [
+        {"type": "object", "required": ["metadata", "binary"], "properties": {"metadata": {"$ref": "#/$defs/metadata"}, "binary": {"$ref": "#/$defs/binary"}}, "additionalProperties": false},
+        {"type": "object", "required": ["methods", "codegen_modules"], "properties": {"methods": {"$ref": "#/$defs/methodRows"}, "codegen_modules": {"$ref": "#/$defs/moduleRows"}}, "additionalProperties": true}
+      ]
+    },
+    "outputItem": {
+      "type": "object",
+      "required": ["method", "method_token", "method_token_rid", "method_pointer", "method_pointer_source", "codegen_module", "resolution"],
+      "properties": {
+        "method": {"type": "object"},
+        "method_token": {"$ref": "#/$defs/token"},
+        "method_token_rid": {"type": "integer", "minimum": 1},
+        "method_pointer": {"$ref": "#/$defs/pointer"},
+        "method_pointer_source": {},
+        "codegen_module": {"anyOf": [{"type": "object"}, {"type": "null"}]},
+        "resolution": {"enum": ["mapped", "unknown", "unmapped", "ambiguous"]}
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "required": ["status", "items", "coverage"],
+      "properties": {
+        "status": {"enum": ["complete", "partial"]},
+        "items": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/outputItem"}},
+        "coverage": {
+          "type": "object",
+          "required": ["methods", "mapped", "unknown", "ambiguous", "unmapped", "unmapped_method_tokens", "codegen_modules"],
+          "properties": {
+            "methods": {"$ref": "#/$defs/index"}, "mapped": {"$ref": "#/$defs/index"}, "unknown": {"$ref": "#/$defs/index"}, "ambiguous": {"$ref": "#/$defs/index"}, "unmapped": {"$ref": "#/$defs/index"}, "unmapped_method_tokens": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/token"}}, "codegen_modules": {"$ref": "#/$defs/index"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

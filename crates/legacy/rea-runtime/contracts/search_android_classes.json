@@ -1,0 +1,28 @@
+{
+  "name": "search_android_classes",
+  "title": "Search Android Classes",
+  "description": "Search top-level Android DEX class names by case-sensitive substring without executing the APK.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "query": { "type": "string" }
+    },
+    "required": ["path", "query"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

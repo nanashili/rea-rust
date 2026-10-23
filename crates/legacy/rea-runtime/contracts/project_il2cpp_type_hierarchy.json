@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_type_hierarchy",
+  "title": "Project IL2CPP Type Hierarchy",
+  "description": "Project caller-captured IL2CPP type-definition rows into a relationship graph. This read-only, captured-only operation never opens an artifact, attaches to a process, invokes Unity or IL2CPP, executes target code, or mutates a target. Unknown row fields are retained in each projected source row; unresolved, duplicate, cyclic, and incomplete relationships remain explicit.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/metadataInput" }
+    ],
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "signedIndex": { "type": "integer", "minimum": -1, "maximum": 9007199254740991 },
+      "typeRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "properties": {
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "type_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "declaring_type": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "declaringType": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "parent_type": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "parent": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "base_type": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "parent_index": { "anyOf": [{ "$ref": "#/$defs/signedIndex" }, { "type": "null" }] },
+          "nested_types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "nested_type_indices": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "nestedTypeIndices": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "interfaces": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "interface_indices": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "interface_types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "vtable_start": { "$ref": "#/$defs/index" },
+          "vtableStart": { "$ref": "#/$defs/index" },
+          "vtable_count": { "$ref": "#/$defs/index" },
+          "vtableCount": { "$ref": "#/$defs/index" },
+          "methods_start": { "$ref": "#/$defs/signedIndex" },
+          "methodsStart": { "$ref": "#/$defs/signedIndex" },
+          "methods_count": { "$ref": "#/$defs/index" },
+          "methodsCount": { "$ref": "#/$defs/index" },
+          "fields_start": { "$ref": "#/$defs/signedIndex" },
+          "fieldsStart": { "$ref": "#/$defs/signedIndex" },
+          "fields_count": { "$ref": "#/$defs/index" },
+          "fieldsCount": { "$ref": "#/$defs/index" },
+          "interfaces_start": { "$ref": "#/$defs/signedIndex" },
+          "interfacesStart": { "$ref": "#/$defs/signedIndex" },
+          "interfaces_count": { "$ref": "#/$defs/index" },
+          "interfacesCount": { "$ref": "#/$defs/index" },
+          "nested_types_start": { "$ref": "#/$defs/signedIndex" },
+          "nested_typesStart": { "$ref": "#/$defs/signedIndex" },
+          "nested_types_count": { "$ref": "#/$defs/index" },
+          "nested_typesCount": { "$ref": "#/$defs/index" }
+        },
+        "additionalProperties": true
+      },
+      "table": { "type": "array", "maxItems": 200000, "items": {} },
+      "directInput": {
+        "type": "object",
+        "required": ["types"],
+        "properties": {
+          "types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/typeRow" } },
+          "nested_types": { "$ref": "#/$defs/table" },
+          "methods": { "$ref": "#/$defs/table" },
+          "fields": { "$ref": "#/$defs/table" },
+          "interfaces": { "$ref": "#/$defs/table" }
+        },
+        "additionalProperties": false
+      },
+      "metadataInput": {
+        "type": "object",
+        "required": ["metadata"],
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "required": ["types"],
+            "properties": {
+              "types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/typeRow" } },
+              "nested_types": { "$ref": "#/$defs/table" },
+              "methods": { "$ref": "#/$defs/table" },
+              "fields": { "$ref": "#/$defs/table" },
+              "interfaces": { "$ref": "#/$defs/table" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "types", "coverage", "diagnostics"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "types": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "row", "source", "relationships", "ranges", "vtable"],
+          "properties": {
+            "index": { "$ref": "#/$defs/index" },
+            "row": { "$ref": "#/$defs/index" },
+            "source": { "type": "object", "maxProperties": 128, "additionalProperties": true },
+            "relationships": {
+              "type": "array",
+              "maxItems": 200000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "target", "status"],
+                "properties": {
+                  "kind": { "enum": ["declaring_type", "parent_type", "nested_type", "interface"] },
+                  "target": { "$ref": "#/$defs/index" },
+                  "status": { "enum": ["resolved", "unresolved"] }
+                }
+              }
+            },
+            "ranges": {
+              "type": "object",
+              "maxProperties": 4,
+              "properties": { "methods": { "$ref": "#/$defs/rangeOrNull" }, "fields": { "$ref": "#/$defs/rangeOrNull" }, "interfaces": { "$ref": "#/$defs/rangeOrNull" }, "nested_types": { "$ref": "#/$defs/rangeOrNull" } },
+              "additionalProperties": false
+            },
+            "vtable": { "$ref": "#/$defs/rangeOrNull" }
+          }
+        }
+      },
+      "coverage": { "$ref": "#/$defs/coverage" },
+      "diagnostics": { "$ref": "#/$defs/diagnostics" }
+    },
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "rangeOrNull": { "anyOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["start", "count", "end"], "properties": { "start": { "$ref": "#/$defs/index" }, "count": { "$ref": "#/$defs/index" }, "end": { "$ref": "#/$defs/index" } } }] },
+      "coverage": { "type": "object", "additionalProperties": false, "required": ["type_rows", "unique_type_indices", "relationship_edges", "unresolved_relationships", "duplicate_type_indices", "cycles", "range_diagnostics", "orphan_nested_rows"], "properties": { "type_rows": { "$ref": "#/$defs/index" }, "unique_type_indices": { "$ref": "#/$defs/index" }, "relationship_edges": { "$ref": "#/$defs/index" }, "unresolved_relationships": { "$ref": "#/$defs/index" }, "duplicate_type_indices": { "$ref": "#/$defs/index" }, "cycles": { "$ref": "#/$defs/index" }, "range_diagnostics": { "$ref": "#/$defs/index" }, "orphan_nested_rows": { "$ref": "#/$defs/index" } } },
+      "diagnostics": { "type": "object", "additionalProperties": false, "required": ["duplicate_type_indices", "cycles", "range_diagnostics", "orphan_nested_rows", "orphan_rows"], "properties": { "duplicate_type_indices": { "type": "array", "items": { "$ref": "#/$defs/index" } }, "cycles": { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/index" } } }, "range_diagnostics": { "type": "array", "items": { "type": "object", "additionalProperties": true } }, "orphan_nested_rows": { "type": "array", "items": { "$ref": "#/$defs/index" } }, "orphan_rows": { "type": "object", "additionalProperties": false, "properties": { "methods": { "type": "array", "items": { "$ref": "#/$defs/index" } }, "fields": { "type": "array", "items": { "$ref": "#/$defs/index" } }, "interfaces": { "type": "array", "items": { "$ref": "#/$defs/index" } }, "nested_types": { "type": "array", "items": { "$ref": "#/$defs/index" } } }, "required": ["methods", "fields", "interfaces", "nested_types"] } } }
+    }
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

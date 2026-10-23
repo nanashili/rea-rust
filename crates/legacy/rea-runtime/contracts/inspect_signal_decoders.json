@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_signal_decoders",
+  "title": "Inspect signal decoders",
+  "description": "Discover installed sigrok protocol decoders or inspect one decoder's channel and option help on Linux. Omit decoder to list ID/name pairs; supply its exact ID for literal help lines with source line numbers. query is a case-insensitive literal substring. Page matches with offset/limit (default 50; null returns all remaining). Reports tool identity, version, diagnostics and examined/matching coverage. Uses configured REA_SIGROK_COMMAND and prlimit; no recording, binary target, hardware scan or acquisition. Each call probes again; decoder modules are trusted, not fully fingerprinted. Use returned IDs/options with decode_signal_recording.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "decoder": {
+        "type": ["string", "null"],
+        "pattern": "^[a-zA-Z0-9_+\\-]+$",
+        "maxLength": 256,
+        "default": null
+      },
+      "query": {"type": "string", "maxLength": 8192, "default": ""},
+      "offset": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "default": 0
+      },
+      "limit": {
+        "type": ["integer", "null"],
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "default": 50
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["selection", "decoders", "help_lines", "output_window", "diagnostics", "tool", "resource_limiter", "limits", "hardware_acquisition"],
+        "properties": {
+          "selection": {"$ref": "#/$defs/selection"},
+          "decoders": {"type": "array", "items": {"$ref": "#/$defs/decoder"}},
+          "help_lines": {"type": "array", "items": {"$ref": "#/$defs/help_line"}},
+          "output_window": {"$ref": "#/$defs/output_window"},
+          "diagnostics": {"type": "string"},
+          "tool": {"$ref": "#/$defs/tool"},
+          "resource_limiter": {"$ref": "#/$defs/resource_limiter"},
+          "limits": {"$ref": "#/$defs/limits"},
+          "hardware_acquisition": {"const": "not-performed"}
+        }
+      }
+    },
+    "$defs": {
+      "selection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decoder", "query", "offset", "limit"],
+        "properties": {
+          "decoder": {"type": ["string", "null"]},
+          "query": {"type": "string"},
+          "offset": {"type": "integer", "minimum": 0},
+          "limit": {"type": ["integer", "null"], "exclusiveMinimum": 0}
+        }
+      },
+      "decoder": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {"id": {"type": "string"}, "name": {"type": "string"}}
+      },
+      "help_line": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["line_number", "text"],
+        "properties": {"line_number": {"type": "integer", "minimum": 1}, "text": {"type": "string"}}
+      },
+      "output_window": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["unit", "examined", "matching", "returned", "has_more"],
+        "properties": {
+          "unit": {"enum": ["decoders", "help-lines"]},
+          "examined": {"type": "integer", "minimum": 0},
+          "matching": {"type": "integer", "minimum": 0},
+          "returned": {"type": "integer", "minimum": 0},
+          "has_more": {"type": "boolean"}
+        }
+      },
+      "tool": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["configured_path", "path", "sha256", "version_banner", "version_diagnostics", "arguments"],
+        "properties": {
+          "configured_path": {"type": "string"}, "path": {"type": "string"}, "sha256": {"type": "string"},
+          "version_banner": {"type": "string"}, "version_diagnostics": {"type": "string"},
+          "arguments": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "resource_limiter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["configured_path", "path", "sha256", "arguments"],
+        "properties": {
+          "configured_path": {"type": "string"}, "path": {"type": "string"}, "sha256": {"type": "string"},
+          "arguments": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "limits": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input_bytes", "output_bytes", "command_timeout_ms", "address_space_bytes", "file_bytes", "cpu_seconds"],
+        "properties": {
+          "input_bytes": {"type": "integer", "minimum": 0}, "output_bytes": {"type": "integer", "minimum": 0},
+          "command_timeout_ms": {"type": "integer", "minimum": 0}, "address_space_bytes": {"type": "integer", "minimum": 0},
+          "file_bytes": {"type": "integer", "minimum": 0}, "cpu_seconds": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

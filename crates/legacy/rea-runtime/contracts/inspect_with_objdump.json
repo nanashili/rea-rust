@@ -1,0 +1,8 @@
+{
+  "name": "inspect_with_objdump",
+  "title": "Inspect Captured Objdump Output",
+  "description": "Validate caller-supplied objdump request metadata and captured output without invoking objdump, reading the target, or interpreting raw text as a stable format.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["request", "capture"], "properties": { "request": { "type": "object" }, "capture": { "type": "object" } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["request", "result", "limitations"], "properties": { "request": { "type": "object" }, "result": { "type": "object" }, "limitations": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

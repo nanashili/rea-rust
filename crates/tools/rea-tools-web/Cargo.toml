@@ -1,0 +1,42 @@
+[package]
+name = "rea-tools-web"
+description = "Browser, Electron and JavaScript runtime observation tools over CDP."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+[features]
+# Every family group is bound by default once verified against the TS oracle.
+    default = ["network-capture", "web-scripts", "comparisons", "javascript-recovery", "electron-fuses", "browser", "javascript-runtime", "electron", "browser-scenario"]
+network-capture = []
+web-scripts = []
+web-modules = ["cdp"]
+comparisons = []
+javascript-recovery = []
+electron-fuses = []
+cdp = []
+browser = ["cdp", "comparisons"]
+electron = ["cdp", "browser"]
+# Native CDP scenario runners; bound by default only once verified against the TS oracle.
+browser-scenario = ["cdp", "browser", "comparisons"]
+javascript-runtime = ["cdp"]
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+base64.workspace = true
+flate2 = { workspace = true, features = ["runtime_detection"] }
+regex.workspace = true
+libc.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+url = "=2.5.8"
+
+tungstenite.workspace = true
+[lints]
+workspace = true

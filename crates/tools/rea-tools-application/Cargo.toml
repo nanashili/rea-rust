@@ -1,0 +1,23 @@
+[package]
+name = "rea-tools-application"
+description = "JavaScript application analysis and application workflows."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+unicode-normalization.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+# WHATWG URL parsing for runtime URL mappings (same pin as rea-tools-web).
+url = "=2.5.8"
+
+[lints]
+workspace = true

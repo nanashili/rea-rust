@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_generic_context",
+  "title": "Project IL2CPP Generic Context",
+  "description": "Project caller-supplied normalized IL2CPP generic-container, parameter, and constraint rows into explicit container ownership and parameter attachments. The operation is captured/static only: it does not read artifacts, execute code, or infer missing ownership.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "signedIndex": {
+      "type": "integer",
+      "minimum": -1
+    },
+    "containerRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "anyOf": [
+        { "required": ["generic_container_index"] },
+        { "required": ["container_index"] },
+        { "required": ["source_index"] },
+        { "required": ["index"] }
+      ],
+      "properties": {
+        "generic_container_index": { "$ref": "#/$defs/index" },
+        "container_index": { "$ref": "#/$defs/index" },
+        "source_index": { "$ref": "#/$defs/index" },
+        "index": { "$ref": "#/$defs/index" },
+        "owner_kind": { "type": "string", "minLength": 1 },
+        "ownerKind": { "type": "string", "minLength": 1 },
+        "owner_index": { "$ref": "#/$defs/signedIndex" },
+        "type_index": { "$ref": "#/$defs/index" },
+        "method_index": { "$ref": "#/$defs/index" },
+        "generic_parameter_start": { "$ref": "#/$defs/index" },
+        "parameter_start": { "$ref": "#/$defs/index" },
+        "genericParameterStart": { "$ref": "#/$defs/index" },
+        "type_argc": { "$ref": "#/$defs/index" },
+        "parameter_count": { "$ref": "#/$defs/index" },
+        "generic_parameter_count": { "$ref": "#/$defs/index" },
+        "typeArgc": { "$ref": "#/$defs/index" }
+      }
+    },
+    "parameterRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "generic_parameter_index": { "$ref": "#/$defs/index" },
+        "parameter_index": { "$ref": "#/$defs/index" },
+        "index": { "$ref": "#/$defs/index" },
+        "constraints_start": { "$ref": "#/$defs/index" },
+        "constraint_start": { "$ref": "#/$defs/index" },
+        "constraints_count": { "$ref": "#/$defs/index" },
+        "constraint_count": { "$ref": "#/$defs/index" }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/containerRow" }
+    },
+    "parameterRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/parameterRow" }
+    },
+    "constraintRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {}
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "anyOf": [
+            { "required": ["generic_containers"] },
+            { "required": ["genericContainers"] }
+          ]
+        },
+        {
+          "anyOf": [
+            { "required": ["generic_parameters"] },
+            { "required": ["genericParameters"] }
+          ]
+        }
+      ],
+      "properties": {
+        "generic_containers": { "$ref": "#/$defs/rows" },
+        "genericContainers": { "$ref": "#/$defs/rows" },
+        "generic_parameters": { "$ref": "#/$defs/parameterRows" },
+        "genericParameters": { "$ref": "#/$defs/parameterRows" },
+        "generic_parameter_constraints": { "$ref": "#/$defs/constraintRows" },
+        "genericParameterConstraints": { "$ref": "#/$defs/constraintRows" },
+        "constraints": { "$ref": "#/$defs/constraintRows" }
+      }
+    },
+    "directInput": {
+      "$ref": "#/$defs/metadata"
+    },
+    "wrappedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata"],
+      "properties": {
+        "metadata": { "$ref": "#/$defs/metadata" },
+        "binary": { "type": "object" }
+      }
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/directInput" },
+        { "$ref": "#/$defs/wrappedInput" }
+      ]
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "index"],
+      "properties": {
+        "kind": { "type": "string" },
+        "index": {
+          "anyOf": [
+            { "$ref": "#/$defs/signedIndex" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string" },
+        "row": { "$ref": "#/$defs/index" },
+        "message": { "type": "string" },
+        "container_index": { "$ref": "#/$defs/index" },
+        "parameter_index": { "$ref": "#/$defs/index" },
+        "indices": { "type": "array", "items": { "$ref": "#/$defs/index" } },
+        "count": { "$ref": "#/$defs/index" },
+        "meaning": { "type": "string" }
+      }
+    },
+    "containerResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_index", "container_index", "source", "owner", "parameter_start", "parameter_count", "parameters"],
+      "properties": {
+        "source_index": { "$ref": "#/$defs/index" },
+        "container_index": { "$ref": "#/$defs/index" },
+        "source": { "$ref": "#/$defs/containerRow" },
+        "owner": { "$ref": "#/$defs/owner" },
+        "parameter_start": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] },
+        "parameter_count": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] },
+        "parameters": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/parameterRow" } }
+      }
+    },
+    "parameterResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_index", "parameter_index", "source", "constraints"],
+      "properties": {
+        "source_index": { "$ref": "#/$defs/index" },
+        "parameter_index": { "$ref": "#/$defs/index" },
+        "source": { "$ref": "#/$defs/parameterRow" },
+        "constraints": { "type": "array", "maxItems": 200000, "items": {} }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "containers", "parameters", "constraints", "diagnostics", "coverage"],
+      "properties": {
+        "status": { "enum": ["complete", "partial"] },
+        "containers": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/containerResult" } },
+        "parameters": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/parameterResult" } },
+        "constraints": { "$ref": "#/$defs/constraintRows" },
+        "diagnostics": { "type": "array", "maxItems": 400000, "items": { "$ref": "#/$defs/diagnostic" } },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["generic_containers", "generic_parameters", "constraints", "attached_parameter_rows", "unresolved_parameter_references", "duplicate_owner_count"],
+          "properties": {
+            "generic_containers": { "$ref": "#/$defs/index" },
+            "generic_parameters": { "$ref": "#/$defs/index" },
+            "constraints": { "$ref": "#/$defs/index" },
+            "attached_parameter_rows": { "$ref": "#/$defs/index" },
+            "unresolved_parameter_references": { "$ref": "#/$defs/index" },
+            "duplicate_owner_count": { "$ref": "#/$defs/index" }
+          }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "resolve_adb_packages",
+  "title": "Resolve ADB Packages",
+  "description": "Resolve a query against caller-supplied package Evidence.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Captured adapter input or retained Evidence. This contract grants no ADB or filesystem authority."
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "result"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "Application projection derived only from caller-supplied captured facts."
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "inspect_android_class",
+  "title": "Inspect Android Class",
+  "description": "Inspect one exact Android DEX class and its declared members without executing the APK.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "path": { "type": "string", "minLength": 1 }, "class_name": { "type": "string", "minLength": 1 } }, "required": ["path", "class_name"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object", "required": ["path", "sha256", "projection"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "projection": { "type": "object" } }, "additionalProperties": false } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

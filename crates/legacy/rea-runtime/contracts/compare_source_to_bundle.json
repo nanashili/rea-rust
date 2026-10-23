@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "compare_source_to_bundle",
+  "title": "Compare source to bundle",
+  "description": "Compare a historical source inventory with authenticated JavaScript application graph Evidence while preserving ambiguous and unknown mappings.",
+  "inputSchema": {"type": "object", "additionalProperties": false, "required": ["reference", "application"], "properties": {"reference": {"type": "object"}, "application": {"type": "object"}}},
+  "outputSchema": {"type": "object", "additionalProperties": false, "required": ["result"], "properties": {"result": {"type": "object"}}},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

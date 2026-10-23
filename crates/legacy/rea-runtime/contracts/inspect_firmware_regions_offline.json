@@ -1,0 +1,19 @@
+{
+  "name": "inspect_firmware_regions",
+  "title": "Inspect Supplied Firmware Region Report",
+  "description": "Validate a bounded caller-supplied firmware signature report without invoking Binwalk, reading the firmware, or treating signatures as decoded content.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "input_size", "report", "engine"],
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "input_size": { "type": "integer", "minimum": 1, "maximum": 134217728 },
+      "report": { "type": "array" },
+      "engine": { "type": "object" }
+    }
+  },
+  "outputSchema": { "type": "object", "required": ["engine", "input_size", "regions", "coverage"] },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

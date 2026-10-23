@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_pcap_capture",
+  "title": "Inspect packet capture",
+  "description": "Inspect one caller-selected PCAP or PCAPNG capture through the native offline PCAP producer. The adapter preserves the selected source path, decoded capture facts, explicit complete or partial coverage, and Evidence provenance. It never opens a path, invokes Wireshark, captures traffic, or substitutes the field-oriented inspect_packet_capture operation.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["request", "capture"],
+        "properties": {
+          "request": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1, "description": "Absolute local capture path" }
+            }
+          },
+          "capture": {
+            "type": "object",
+            "additionalProperties": false,
+            "oneOf": [
+              { "required": ["bytes_base64"], "properties": { "bytes_base64": { "type": "string", "minLength": 1 }, "metadata": { "type": "object" } } },
+              { "required": ["records"], "properties": { "records": { "type": "array" }, "metadata": { "type": "object" } } }
+            ]
+          }
+        }
+      },
+      {
+        "required": ["evidence"],
+        "properties": { "evidence": { "type": "object", "description": "Authenticated retained inspect_pcap_capture Evidence" } }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result", "provenance"],
+    "properties": {
+      "evidence_id": { "type": "string" },
+      "result": { "type": "object" },
+      "provenance": { "type": "object" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

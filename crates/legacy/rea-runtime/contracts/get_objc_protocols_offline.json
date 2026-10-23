@@ -1,0 +1,8 @@
+{
+  "name":"get_objc_protocols",
+  "title":"Project Captured Objective-C Protocols",
+  "description":"Classify Objective-C and Swift protocol names from caller-supplied authenticated symbol observations.",
+  "inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"names":{"type":"array","maxItems":200000,"items":{"type":"object","required":["address","name"]}},"evidence":{"type":"object"}}},
+  "outputSchema":{"type":"object","required":["count","protocols"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

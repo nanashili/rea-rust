@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_javascript_runtime_targets",
+  "title": "List JavaScript runtime targets",
+  "description": "List Node and Electron V8 Inspector targets from an explicit loopback endpoint without attaching.",
+  "inputSchema": {"type": "object", "additionalProperties": false, "required": ["inspector_endpoint"], "properties": {"inspector_endpoint": {"type": "string", "minLength": 1}}},
+  "outputSchema": {"type": "object", "additionalProperties": false, "required": ["result"], "properties": {"result": {"type": "object"}}},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

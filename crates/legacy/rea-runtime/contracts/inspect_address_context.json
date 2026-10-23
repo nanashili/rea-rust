@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_address_context",
+  "title": "Inspect native address context",
+  "description": "Project retained provider facets at an exact address while preserving unavailable facets.",
+  "inputSchema": {"type": "object", "required": ["address"], "properties": {"address": {"type": "string", "minLength": 1}, "document": {"type": "string", "minLength": 1}, "observations": {"type": "object"}, "results": {"type": "object"}, "facets": {"type": "object"}}, "additionalProperties": false},
+  "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "object"}}, "additionalProperties": false},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

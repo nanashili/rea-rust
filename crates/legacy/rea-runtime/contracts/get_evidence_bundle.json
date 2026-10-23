@@ -1,0 +1,1579 @@
+{
+  "name": "get_evidence_bundle",
+  "title": "Get Evidence Bundle",
+  "description": "Return every retained Evidence record and residual unknown as a complete canonical bundle by default. detail=summary discovers retained records without copying or transferring their payloads; optionally filter by exact Evidence ID, operation, target SHA-256, analysis-profile digest or canonical native procedure address. Metadata distinguishes complete record retention from native value-flow truncation or unavailable/unknown coverage. Use a discovered evidence_id with inspect_analysis_view without restarting a provider. Filters apply only to summary delivery.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "detail": {
+        "default": "complete",
+        "type": "string",
+        "enum": [
+          "complete",
+          "summary"
+        ]
+      },
+      "filters": {
+        "type": "object",
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^ev_[a-f0-9]{64}$",
+            "description": "Stable identifier of the recorded Evidence observation."
+          },
+          "operation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Exact SHA-256 digest of target."
+          },
+          "analysis_profile_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "procedure_address": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "examples": [
+      {
+        "detail": "summary",
+        "filters": {
+          "operation": "analyze_function",
+          "procedure_address": "0x1000"
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "result": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "$defs": {
+      "__schema0": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "digest": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "format": {
+                          "$ref": "#/$defs/__schema3"
+                        },
+                        "architecture": {
+                          "$ref": "#/$defs/__schema4"
+                        }
+                      },
+                      "required": [
+                        "digest",
+                        "format",
+                        "architecture"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "digest": {
+                          "$ref": "#/$defs/__schema1"
+                        },
+                        "format": {
+                          "$ref": "#/$defs/__schema5"
+                        },
+                        "architecture": {
+                          "$ref": "#/$defs/__schema6"
+                        }
+                      },
+                      "required": [
+                        "digest",
+                        "format",
+                        "architecture"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "providers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema7"
+                }
+              },
+              "environments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema8"
+                }
+              },
+              "scenarios": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "$ref": "#/$defs/__schema9"
+                    },
+                    "operation": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "authority": {
+                      "type": "string",
+                      "const": "controlled-replay"
+                    }
+                  },
+                  "required": [
+                    "evidence_id",
+                    "operation",
+                    "authority"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "captures": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "$ref": "#/$defs/__schema9"
+                    },
+                    "predicate_type": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "evidence_id",
+                    "predicate_type"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "unknowns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "unknown_id": {
+                      "$ref": "#/$defs/__schema10"
+                    },
+                    "revision": {
+                      "$ref": "#/$defs/__schema11"
+                    },
+                    "previous_revision_digest": {
+                      "$ref": "#/$defs/__schema12"
+                    },
+                    "revision_digest": {
+                      "$ref": "#/$defs/__schema13"
+                    },
+                    "scope_digest": {
+                      "$ref": "#/$defs/__schema14"
+                    },
+                    "question": {
+                      "$ref": "#/$defs/__schema15"
+                    },
+                    "status": {
+                      "$ref": "#/$defs/__schema16"
+                    },
+                    "severity": {
+                      "$ref": "#/$defs/__schema17"
+                    },
+                    "domain": {
+                      "$ref": "#/$defs/__schema15"
+                    },
+                    "comparison_conclusion_scope": {
+                      "$ref": "#/$defs/__schema18"
+                    },
+                    "supporting_evidence_ids": {
+                      "$ref": "#/$defs/__schema22"
+                    },
+                    "contradicting_evidence_ids": {
+                      "$ref": "#/$defs/__schema23"
+                    },
+                    "required_authority": {
+                      "$ref": "#/$defs/__schema24"
+                    },
+                    "required_confidence": {
+                      "$ref": "#/$defs/__schema25"
+                    },
+                    "required_environment": {
+                      "$ref": "#/$defs/__schema26"
+                    },
+                    "recommended_probes": {
+                      "$ref": "#/$defs/__schema27"
+                    },
+                    "relationships": {
+                      "$ref": "#/$defs/__schema28"
+                    },
+                    "resolution": {
+                      "$ref": "#/$defs/__schema29"
+                    },
+                    "mutation_evidence_ids": {
+                      "$ref": "#/$defs/__schema30"
+                    }
+                  },
+                  "required": [
+                    "unknown_id",
+                    "revision",
+                    "previous_revision_digest",
+                    "revision_digest",
+                    "scope_digest",
+                    "question",
+                    "status",
+                    "severity",
+                    "domain",
+                    "supporting_evidence_ids",
+                    "contradicting_evidence_ids",
+                    "required_authority",
+                    "required_confidence",
+                    "required_environment",
+                    "recommended_probes",
+                    "relationships",
+                    "resolution",
+                    "mutation_evidence_ids"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "$ref": "#/$defs/__schema9"
+                    },
+                    "subject": {
+                      "$ref": "#/$defs/__schema31"
+                    },
+                    "provider": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "analysis_profile": {
+                      "$ref": "#/$defs/__schema34"
+                    },
+                    "predicate_type": {
+                      "$ref": "#/$defs/__schema37"
+                    },
+                    "operation": {
+                      "$ref": "#/$defs/__schema38"
+                    },
+                    "parameters": {
+                      "$ref": "#/$defs/__schema36"
+                    },
+                    "raw_result": {
+                      "$ref": "#/$defs/__schema39"
+                    },
+                    "normalized_result": {
+                      "$ref": "#/$defs/__schema40"
+                    },
+                    "confidence": {
+                      "$ref": "#/$defs/__schema41"
+                    },
+                    "authority": {
+                      "$ref": "#/$defs/__schema42"
+                    },
+                    "environment": {
+                      "$ref": "#/$defs/__schema43"
+                    },
+                    "limitations": {
+                      "$ref": "#/$defs/__schema44"
+                    },
+                    "relationship_coverage": {
+                      "$ref": "#/$defs/__schema45"
+                    },
+                    "locations": {
+                      "$ref": "#/$defs/__schema57"
+                    },
+                    "evidence_links": {
+                      "$ref": "#/$defs/__schema58"
+                    }
+                  },
+                  "required": [
+                    "evidence_id",
+                    "subject",
+                    "provider",
+                    "analysis_profile",
+                    "predicate_type",
+                    "operation",
+                    "parameters",
+                    "raw_result",
+                    "normalized_result",
+                    "confidence",
+                    "authority",
+                    "environment",
+                    "limitations",
+                    "relationship_coverage",
+                    "locations",
+                    "evidence_links"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "artifacts",
+              "providers",
+              "environments",
+              "scenarios",
+              "captures",
+              "unknowns",
+              "records"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "evidence-bundle-summary"
+              },
+              "filters": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "total_retained_records": {
+                "$ref": "#/$defs/__schema59"
+              },
+              "matching_records": {
+                "$ref": "#/$defs/__schema59"
+              },
+              "unknown_revisions": {
+                "$ref": "#/$defs/__schema59"
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "$ref": "#/$defs/__schema9"
+                    },
+                    "subject": {
+                      "$ref": "#/$defs/__schema31"
+                    },
+                    "provider": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "operation": {
+                      "$ref": "#/$defs/__schema38"
+                    },
+                    "confidence": {
+                      "$ref": "#/$defs/__schema41"
+                    },
+                    "authority": {
+                      "$ref": "#/$defs/__schema42"
+                    },
+                    "analysis_profile_digest": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/__schema2"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "retention": {
+                      "type": "string",
+                      "const": "complete-record"
+                    },
+                    "limitation_count": {
+                      "$ref": "#/$defs/__schema59"
+                    },
+                    "native_dossier": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "available": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "procedure_address": {
+                              "type": "string"
+                            },
+                            "procedure_name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "value_flow": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "observed"
+                                    },
+                                    "truncated": {
+                                      "type": "boolean"
+                                    },
+                                    "omitted_operations_lower_bound": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/$defs/__schema59"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "known_omitted_inputs": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/$defs/__schema59"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "known_omitted_edges": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/$defs/__schema59"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "truncated",
+                                    "omitted_operations_lower_bound",
+                                    "known_omitted_inputs",
+                                    "known_omitted_edges"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "unavailable"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "not-recorded"
+                                    }
+                                  },
+                                  "required": [
+                                    "status"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "available",
+                            "procedure_address",
+                            "procedure_name",
+                            "value_flow"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "available": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "reason": {
+                              "type": "string",
+                              "enum": [
+                                "different-operation",
+                                "not-recorded-or-incompatible"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "available",
+                            "reason"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "evidence_id",
+                    "subject",
+                    "provider",
+                    "operation",
+                    "confidence",
+                    "authority",
+                    "analysis_profile_digest",
+                    "retention",
+                    "limitation_count",
+                    "native_dossier"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "kind",
+              "filters",
+              "total_retained_records",
+              "matching_records",
+              "unknown_revisions",
+              "records"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "__schema1": {
+        "type": "object",
+        "properties": {
+          "sha256": {
+            "$ref": "#/$defs/__schema2"
+          }
+        },
+        "required": [
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "__schema2": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "__schema3": {
+        "type": "string",
+        "enum": [
+          "hopper",
+          "analysis-database",
+          "mach-o",
+          "elf",
+          "pe",
+          "dos-mz",
+          "dos-com",
+          "zip",
+          "ipa",
+          "apk",
+          "msix",
+          "appx",
+          "hap",
+          "hsp",
+          "app-pack",
+          "asar",
+          "dmg",
+          "pkg",
+          "plist",
+          "nib",
+          "javascript",
+          "source-map",
+          "directory",
+          "file",
+          "unknown",
+          "mach-o-universal",
+          "javascript-bundle",
+          "entitlements"
+        ]
+      },
+      "__schema4": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "x86",
+              "x86_64",
+              "arm",
+              "arm64",
+              "mips",
+              "riscv",
+              "powerpc",
+              "hexagon"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema5": {
+        "type": "string",
+        "const": "raw-binary"
+      },
+      "__schema6": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "6502",
+              "x86",
+              "x86_64",
+              "arm",
+              "arm64",
+              "mips",
+              "riscv",
+              "powerpc",
+              "m68k",
+              "hexagon"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema7": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "__schema8": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1
+          },
+          "architecture": {
+            "type": "string",
+            "minLength": 1
+          },
+          "isolation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "process",
+              "container",
+              "virtual-machine"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "architecture",
+          "isolation"
+        ],
+        "additionalProperties": false
+      },
+      "__schema9": {
+        "type": "string",
+        "pattern": "^ev_[a-f0-9]{64}$"
+      },
+      "__schema10": {
+        "type": "string",
+        "pattern": "^unk_[a-f0-9]{64}$"
+      },
+      "__schema11": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      },
+      "__schema12": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema13": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "__schema14": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema15": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema16": {
+        "type": "string",
+        "enum": [
+          "open",
+          "investigating",
+          "blocked",
+          "contradicted",
+          "resolved"
+        ]
+      },
+      "__schema17": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      },
+      "__schema18": {
+        "type": "object",
+        "properties": {
+          "comparison_evidence_id": {
+            "$ref": "#/$defs/__schema19"
+          },
+          "dimensions": {
+            "$ref": "#/$defs/__schema20"
+          }
+        },
+        "required": [
+          "comparison_evidence_id",
+          "dimensions"
+        ],
+        "additionalProperties": false
+      },
+      "__schema19": {
+        "type": "string",
+        "pattern": "^ev_[a-f0-9]{64}$"
+      },
+      "__schema20": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/__schema21"
+        }
+      },
+      "__schema21": {
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "overall"
+          },
+          {
+            "type": "string",
+            "enum": [
+              "identity",
+              "pseudocode",
+              "assembly",
+              "comments",
+              "calls",
+              "references",
+              "strings_names",
+              "cfg"
+            ]
+          }
+        ]
+      },
+      "__schema22": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/__schema19"
+        }
+      },
+      "__schema23": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/__schema19"
+        }
+      },
+      "__schema24": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "shipped-artifact",
+              "controlled-replay",
+              "historical-reference",
+              "external-service",
+              "analyst-inference"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema25": {
+        "type": "string",
+        "enum": [
+          "observed",
+          "derived",
+          "inferred"
+        ]
+      },
+      "__schema26": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "platform": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "architecture": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "isolation": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "process",
+                      "container",
+                      "virtual-machine"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "platform",
+              "architecture",
+              "isolation"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema27": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rationale": {
+              "$ref": "#/$defs/__schema15"
+            }
+          },
+          "required": [
+            "operation",
+            "rationale"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "__schema28": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "depends-on",
+                "related-to",
+                "contradicts"
+              ]
+            },
+            "unknown_id": {
+              "$ref": "#/$defs/__schema10"
+            }
+          },
+          "required": [
+            "type",
+            "unknown_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "__schema29": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "disposition": {
+                    "type": "string",
+                    "const": "verified"
+                  },
+                  "rationale": {
+                    "$ref": "#/$defs/__schema15"
+                  },
+                  "evidence_ids": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema19"
+                    }
+                  }
+                },
+                "required": [
+                  "disposition",
+                  "rationale",
+                  "evidence_ids"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "disposition": {
+                    "type": "string",
+                    "enum": [
+                      "withdrawn",
+                      "out-of-scope"
+                    ]
+                  },
+                  "rationale": {
+                    "$ref": "#/$defs/__schema15"
+                  },
+                  "evidence_ids": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema19"
+                    }
+                  }
+                },
+                "required": [
+                  "disposition",
+                  "rationale",
+                  "evidence_ids"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema30": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/__schema19"
+        }
+      },
+      "__schema31": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "$ref": "#/$defs/__schema32"
+                  },
+                  "digest": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "local_path": {
+                    "$ref": "#/$defs/__schema33"
+                  },
+                  "format": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "architecture": {
+                    "$ref": "#/$defs/__schema4"
+                  }
+                },
+                "required": [
+                  "name",
+                  "digest",
+                  "local_path",
+                  "format",
+                  "architecture"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "$ref": "#/$defs/__schema32"
+                  },
+                  "digest": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "local_path": {
+                    "$ref": "#/$defs/__schema33"
+                  },
+                  "format": {
+                    "$ref": "#/$defs/__schema5"
+                  },
+                  "architecture": {
+                    "$ref": "#/$defs/__schema6"
+                  }
+                },
+                "required": [
+                  "name",
+                  "digest",
+                  "local_path",
+                  "format",
+                  "architecture"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema32": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema33": {
+        "type": "string",
+        "pattern": "^[^\\x00]*$"
+      },
+      "__schema34": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "$ref": "#/$defs/__schema35"
+              },
+              "parameters": {
+                "$ref": "#/$defs/__schema36"
+              },
+              "digest": {
+                "$ref": "#/$defs/__schema2"
+              }
+            },
+            "required": [
+              "provider",
+              "parameters",
+              "digest"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema35": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "__schema36": {
+        "type": "object",
+        "additionalProperties": {}
+      },
+      "__schema37": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema38": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema39": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema40"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema40": {},
+      "__schema41": {
+        "type": "string",
+        "enum": [
+          "observed",
+          "derived",
+          "inferred"
+        ]
+      },
+      "__schema42": {
+        "type": "string",
+        "enum": [
+          "shipped-artifact",
+          "controlled-replay",
+          "historical-reference",
+          "external-service",
+          "analyst-inference"
+        ]
+      },
+      "__schema43": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema8"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema44": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "__schema45": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "complete"
+                  },
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema46"
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "partial"
+                  },
+                  "limitations": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema48"
+                    }
+                  },
+                  "limited_directions": {
+                    "$ref": "#/$defs/__schema49"
+                  },
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema46"
+                  }
+                },
+                "required": [
+                  "status",
+                  "limitations"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "unknown"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "limited_directions": {
+                    "$ref": "#/$defs/__schema49"
+                  },
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema46"
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema46": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/__schema47"
+        }
+      },
+      "__schema47": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema48": {
+        "type": "string",
+        "minLength": 1
+      },
+      "__schema49": {
+        "anyOf": [
+          {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema50"
+              }
+            ],
+            "items": {
+              "$ref": "#/$defs/__schema51"
+            },
+            "minItems": 1,
+            "maxItems": 1
+          },
+          {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema52"
+              }
+            ],
+            "items": {
+              "$ref": "#/$defs/__schema53"
+            },
+            "minItems": 1,
+            "maxItems": 1
+          },
+          {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema54"
+              },
+              {
+                "$ref": "#/$defs/__schema55"
+              }
+            ],
+            "items": {
+              "$ref": "#/$defs/__schema56"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        ]
+      },
+      "__schema50": {
+        "type": "string",
+        "const": "callers"
+      },
+      "__schema51": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema50"
+          }
+        ]
+      },
+      "__schema52": {
+        "type": "string",
+        "const": "callees"
+      },
+      "__schema53": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema52"
+          }
+        ]
+      },
+      "__schema54": {
+        "type": "string",
+        "const": "callers"
+      },
+      "__schema55": {
+        "type": "string",
+        "const": "callees"
+      },
+      "__schema56": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema54"
+          },
+          {
+            "$ref": "#/$defs/__schema55"
+          }
+        ]
+      },
+      "__schema57": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "address"
+                },
+                "address": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "address"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "address-range"
+                },
+                "start": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "end": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "artifact-path"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "path"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "file-offset"
+                },
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "kind",
+                "offset"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "file-offset-range"
+                },
+                "start": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "kind",
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "__schema58": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^ev_[a-f0-9]{64}$"
+        }
+      },
+      "__schema59": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "$id": "urn:rea:tool-output:sha256:51659f5404d91c4a069e1fac11b01cc2ed7bbeffee35091cf2c6dd527ac08af5"
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_invokers",
+  "title": "Map IL2CPP Invokers",
+  "description": "Correlate caller-supplied IL2CPP invoker-index rows with invoker pointers and optional managed method, type, and generic-invoker facts. This bounded operation is read-only and captured/static-only; it does not open artifacts, invoke providers, execute target code, or mutate a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/wrappedInput" }
+    ],
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "fact": { "type": "object", "additionalProperties": true },
+      "indexRow": {
+        "type": "object", "additionalProperties": true,
+        "anyOf": [
+          { "required": ["invoker_index"] },
+          { "required": ["index"] },
+          { "required": ["slot"] }
+        ],
+        "properties": {
+          "invoker_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "slot": { "$ref": "#/$defs/index" }
+        }
+      },
+      "pointerRow": {
+        "type": "object", "additionalProperties": true,
+        "properties": {
+          "invoker_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "slot": { "$ref": "#/$defs/index" },
+          "address": { "type": ["string", "integer", "null"] }
+        },
+        "minProperties": 0
+      },
+      "methodRow": { "$ref": "#/$defs/fact" },
+      "genericRow": {
+        "type": "object", "additionalProperties": true,
+        "anyOf": [
+          { "required": ["invoker_index"] },
+          { "required": ["invokerIndex"] },
+          { "required": ["generic_invoker_index"] }
+        ],
+        "properties": {
+          "invoker_index": { "$ref": "#/$defs/index" },
+          "invokerIndex": { "$ref": "#/$defs/index" },
+          "generic_invoker_index": { "$ref": "#/$defs/index" }
+        }
+      },
+      "rows": {
+        "type": "array", "minItems": 0, "maxItems": 200000,
+        "items": { "$ref": "#/$defs/fact" }
+      },
+      "indexRows": {
+        "type": "array", "minItems": 0, "maxItems": 200000,
+        "items": { "$ref": "#/$defs/indexRow" }
+      },
+      "pointerRows": {
+        "type": "array", "minItems": 0, "maxItems": 200000,
+        "items": { "$ref": "#/$defs/pointerRow" }
+      },
+      "methodRows": {
+        "type": "array", "minItems": 0, "maxItems": 200000,
+        "items": { "$ref": "#/$defs/methodRow" }
+      },
+      "genericRows": {
+        "type": "array", "minItems": 0, "maxItems": 200000,
+        "items": { "$ref": "#/$defs/genericRow" }
+      },
+      "directInput": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "invoker_indices": { "$ref": "#/$defs/indexRows" },
+          "invoker_index_table": { "$ref": "#/$defs/indexRows" },
+          "invoker_index_rows": { "$ref": "#/$defs/indexRows" },
+          "invoker_pointers": { "$ref": "#/$defs/pointerRows" },
+          "invokers": { "$ref": "#/$defs/pointerRows" },
+          "invoker_pointer_rows": { "$ref": "#/$defs/pointerRows" },
+          "methods": { "$ref": "#/$defs/methodRows" },
+          "method_definitions": { "$ref": "#/$defs/methodRows" },
+          "types": { "$ref": "#/$defs/rows" },
+          "type_definitions": { "$ref": "#/$defs/rows" },
+          "generic_invokers": { "$ref": "#/$defs/genericRows" },
+          "generic_invoker_facts": { "$ref": "#/$defs/genericRows" }
+        },
+        "allOf": [
+          { "anyOf": [{ "required": ["invoker_indices"] }, { "required": ["invoker_index_table"] }, { "required": ["invoker_index_rows"] }] },
+          { "anyOf": [{ "required": ["invoker_pointers"] }, { "required": ["invokers"] }, { "required": ["invoker_pointer_rows"] }] }
+        ]
+      },
+      "metadataInput": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "methods": { "$ref": "#/$defs/methodRows" },
+          "method_definitions": { "$ref": "#/$defs/methodRows" },
+          "types": { "$ref": "#/$defs/rows" },
+          "type_definitions": { "$ref": "#/$defs/rows" }
+        }
+      },
+      "binaryInput": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "invoker_indices": { "$ref": "#/$defs/indexRows" },
+          "invoker_index_table": { "$ref": "#/$defs/indexRows" },
+          "invoker_index_rows": { "$ref": "#/$defs/indexRows" },
+          "invoker_pointers": { "$ref": "#/$defs/pointerRows" },
+          "invokers": { "$ref": "#/$defs/pointerRows" },
+          "invoker_pointer_rows": { "$ref": "#/$defs/pointerRows" },
+          "generic_invokers": { "$ref": "#/$defs/genericRows" },
+          "generic_invoker_facts": { "$ref": "#/$defs/genericRows" }
+        },
+        "allOf": [
+          { "anyOf": [{ "required": ["invoker_indices"] }, { "required": ["invoker_index_table"] }, { "required": ["invoker_index_rows"] }] },
+          { "anyOf": [{ "required": ["invoker_pointers"] }, { "required": ["invokers"] }, { "required": ["invoker_pointer_rows"] }] }
+        ]
+      },
+      "wrappedInput": {
+        "type": "object", "additionalProperties": false,
+        "required": ["metadata", "binary"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/metadataInput" },
+          "binary": { "$ref": "#/$defs/binaryInput" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object", "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array", "maxItems": 200000,
+        "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["invoker_index", "source", "invoker_pointers", "methods", "types", "generic_invokers", "resolution"],
+          "properties": {
+            "invoker_index": { "$ref": "#/$defs/index" },
+            "source": { "$ref": "#/$defs/fact" },
+            "invoker_pointers": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/fact" } },
+            "methods": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/fact" } },
+            "types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/fact" } },
+            "generic_invokers": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/fact" } },
+            "resolution": { "enum": ["resolved", "unknown", "unresolved", "ambiguous"] }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object", "additionalProperties": false,
+        "required": ["invoker_indices", "invoker_pointers", "methods", "types", "generic_invokers", "ambiguous", "unresolved"],
+        "properties": {
+          "invoker_indices": { "$ref": "#/$defs/index" },
+          "invoker_pointers": { "$ref": "#/$defs/index" },
+          "methods": { "$ref": "#/$defs/index" },
+          "types": { "$ref": "#/$defs/index" },
+          "generic_invokers": { "$ref": "#/$defs/index" },
+          "ambiguous": { "$ref": "#/$defs/index" },
+          "unresolved": { "$ref": "#/$defs/index" }
+        }
+      }
+    },
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "fact": { "type": "object", "additionalProperties": true }
+    }
+  },
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false
+}

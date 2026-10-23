@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_native_annotation",
+  "title": "Inspect native annotation",
+  "description": "Validate and return retained address, comment, or inline-comment Evidence while preserving null and identity fields.",
+  "inputSchema": {"type": "object", "required": ["evidence"], "properties": {"operation": {"type": "string", "enum": ["address_name", "comment", "inline_comment"]}, "address": {"type": ["string", "null"]}, "document": {"type": ["string", "null"]}, "evidence": {"type": "object"}, "native_observation": {"type": "object"}, "annotation": {"type": "object"}}, "additionalProperties": false},
+  "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": ["string", "null"]}}, "additionalProperties": false},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

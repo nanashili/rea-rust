@@ -1,0 +1,8 @@
+{
+  "name": "inspect_native_instruction",
+  "title": "Inspect Native Instruction",
+  "description": "Select and validate one caller-supplied decoded instruction Evidence record without decoding bytes or opening a provider database.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["evidence"], "properties": { "evidence": { "type": "object" }, "address": { "type": "string", "minLength": 1 }, "document": { "type": ["string", "null"] } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["address", "status"], "properties": { "address": { "type": "string" }, "status": { "type": "string" }, "bytes": { "type": ["string", "null"] }, "mnemonic": { "type": ["string", "null"] } }, "additionalProperties": true },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

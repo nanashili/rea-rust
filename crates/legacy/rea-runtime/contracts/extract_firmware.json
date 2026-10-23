@@ -1,0 +1,195 @@
+{
+  "name": "extract_firmware",
+  "title": "Extract Firmware From a Supplied Report",
+  "description": "Bind a caller-selected immutable firmware source to a bounded extractor report and return verified file identities, provenance, and recovery evidence. This native adapter does not invoke an extractor, create an output directory, publish files, or execute extracted content.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "request",
+      "report"
+    ],
+    "properties": {
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "output_directory"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output_directory": {
+            "type": "string",
+            "minLength": 1
+          },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "offset",
+              "length"
+            ],
+            "properties": {
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "max_depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 3
+          },
+          "max_output_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 536870912,
+            "default": 268435456
+          },
+          "max_output_files": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 10000
+          }
+        }
+      },
+      "report": {
+        "type": "object",
+        "required": [
+          "engine",
+          "entries"
+        ],
+        "properties": {
+          "engine": {
+            "type": "object"
+          },
+          "entries": {
+            "type": "array"
+          },
+          "coverage": {
+            "enum": [
+              "complete",
+              "partial"
+            ]
+          },
+          "unpublished_entries": {
+            "type": "array"
+          },
+          "chunks": {
+            "type": "array"
+          },
+          "derivations": {
+            "type": "array"
+          },
+          "depth_limited_paths": {
+            "type": "array"
+          },
+          "diagnostics": {
+            "type": "array"
+          },
+          "extraction_gaps": {
+            "type": "array"
+          },
+          "extraction_continuations": {
+            "type": "array"
+          },
+          "failed_extraction_stages": {
+            "type": "array",
+            "description": "Normalized producer facts used to retain named extraction gaps."
+          },
+          "missing_dependencies": {
+            "type": "array",
+            "description": "Normalized producer facts used to retain named extraction gaps."
+          },
+          "chunk_missing_dependencies": {
+            "type": "array",
+            "description": "Normalized producer facts used to retain named extraction gaps."
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "engine",
+      "selection",
+      "output_directory",
+      "coverage",
+      "files",
+      "unpublished_entries",
+      "chunks",
+      "derivations",
+      "depth_limited_paths",
+      "diagnostics",
+      "extraction_gaps",
+      "extraction_continuations",
+      "published_bytes"
+    ],
+    "properties": {
+      "engine": {
+        "type": "object"
+      },
+      "selection": {
+        "type": "object"
+      },
+      "output_directory": {
+        "type": "string"
+      },
+      "coverage": {
+        "enum": [
+          "complete",
+          "partial"
+        ]
+      },
+      "files": {
+        "type": "array"
+      },
+      "unpublished_entries": {
+        "type": "array"
+      },
+      "chunks": {
+        "type": "array"
+      },
+      "derivations": {
+        "type": "array"
+      },
+      "depth_limited_paths": {
+        "type": "array"
+      },
+      "diagnostics": {
+        "type": "array"
+      },
+      "extraction_gaps": {
+        "type": "array"
+      },
+      "extraction_continuations": {
+        "type": "array"
+      },
+      "published_bytes": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

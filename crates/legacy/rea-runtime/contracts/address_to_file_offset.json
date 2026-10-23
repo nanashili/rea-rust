@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "address_to_file_offset",
+  "title": "Map native address to file offset",
+  "description": "Resolve an exact address against retained file-backed mappings.",
+  "inputSchema": {"type": "object", "required": ["address", "mappings"], "properties": {"address": {"type": "string", "minLength": 1}, "address_space": {"type": "string"}, "mappings": {"type": "array"}, "provider_file_offset": {}, "provider_source_path": {}, "provider_image_header_hex": {}}, "additionalProperties": false},
+  "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "object"}}, "additionalProperties": false},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

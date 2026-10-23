@@ -1,0 +1,8 @@
+{
+  "name": "compare_process_captures",
+  "title": "Compare supplied process captures",
+  "description": "Compare authenticated caller-supplied process capture Evidence while preserving partial and generation-scoped facts.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "left": { "type": "object" }, "right": { "type": "object" }, "max_capture_age_ms": { "type": "integer", "minimum": 0 }, "trace_spec": { "type": "object" } }, "required": ["left", "right"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

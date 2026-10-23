@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "find_xrefs_to_name",
+  "title": "Find native xrefs to name",
+  "description": "Resolve an exact name using retained provider name inventory and xref observations. A missing name is unresolved; this workflow never opens a provider to look it up.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["name"],
+    "properties": {
+      "name": {"type": "string"},
+      "names": {"type": "array", "items": {"type": "object"}},
+      "name_evidence": {"type": "object"},
+      "name_observation": {"type": "object"},
+      "xrefs": {"type": "array", "items": {"type": "string"}},
+      "xref_evidence": {"type": "object"},
+      "xref_observation": {"type": "object"},
+      "evidence": {"type": "object"}
+    }
+  },
+  "outputSchema": {"type": "object"},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

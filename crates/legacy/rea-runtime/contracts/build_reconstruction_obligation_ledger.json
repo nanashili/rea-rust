@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "build_reconstruction_obligation_ledger",
+  "title": "Build reconstruction obligation ledger",
+  "description": "Build a deterministic reconstruction ledger from an authenticated Evidence bundle, reviewed obligations, and an explicit manifest while preserving typed diagnostics and closure state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence_bundle", "reviewed_obligations", "manifest"],
+    "properties": {
+      "evidence_bundle": {"type": "object"},
+      "reviewed_obligations": {"type": "array"},
+      "manifest": {"type": "object"}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "search_procedures",
+  "title": "Search Captured Procedures",
+  "description": "Apply the bounded literal or supported regex predicate to retained procedure observations.",
+  "inputSchema": { "type": "object", "additionalProperties": false, "required": ["pattern"], "properties": { "pattern": { "type": "string", "minLength": 1, "maxLength": 16384 }, "mode": { "enum": ["literal", "regex"], "default": "literal" }, "case_sensitive": { "type": "boolean", "default": false }, "procedures": { "type": "array", "maxItems": 200000 }, "evidence": { "type": "object" }, "observations": { "type": "array", "maxItems": 200000 } } },
+  "outputSchema": { "type": "array", "items": { "type": "object", "required": ["address", "value"], "additionalProperties": false, "properties": { "address": { "type": "string" }, "value": { "type": "string" } } } },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

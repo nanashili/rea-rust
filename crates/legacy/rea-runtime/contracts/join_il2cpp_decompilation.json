@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "join_il2cpp_decompilation",
+  "title": "Join captured IL2CPP method mappings with native decompilation Evidence",
+  "description": "Correlates caller-supplied IL2CPP method-address rows with authenticated retained native Evidence. Matching requires the exact lowercase binary SHA-256, address space, and start address. Missing, identity-mismatched, ambiguous, and incomplete observations remain explicit. The operation never opens artifacts, invokes a provider, executes a target, or mutates state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["mappings", "evidence"],
+    "properties": {
+      "mappings": { "$ref": "#/$defs/mappingRows" },
+      "method_addresses": { "$ref": "#/$defs/mappingRows" },
+      "method_address_mappings": { "$ref": "#/$defs/mappingRows" },
+      "evidence": { "$ref": "#/$defs/evidenceRows" },
+      "native_evidence": { "$ref": "#/$defs/evidenceRows" },
+      "decompilation_evidence": { "$ref": "#/$defs/evidenceRows" }
+    },
+    "allOf": [
+      { "oneOf": [{ "required": ["mappings"] }, { "required": ["method_addresses"] }, { "required": ["method_address_mappings"] }] },
+      { "oneOf": [{ "required": ["evidence"] }, { "required": ["native_evidence"] }, { "required": ["decompilation_evidence"] }] }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array", "maxItems": 200000,
+        "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mapping", "status", "matches"],
+          "properties": {
+            "mapping": { "type": "object" },
+            "status": { "enum": ["mapped", "ambiguous", "unknown", "unmapped"] },
+            "matches": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/match" } },
+            "unknowns": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object", "additionalProperties": false,
+        "required": ["mapping_rows", "authenticated_evidence_rows", "mapped", "ambiguous", "unknown", "unmapped"],
+        "properties": {
+          "mapping_rows": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "authenticated_evidence_rows": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "mapped": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "ambiguous": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "unknown": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "unmapped": { "type": "integer", "minimum": 0, "maximum": 200000 }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "mapping": {
+      "type": "object", "additionalProperties": true,
+      "required": ["binary_sha256", "address_space"],
+      "properties": {
+        "binary_sha256": { "$ref": "#/$defs/sha256" },
+        "address_space": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "start_address": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "anyOf": [{ "required": ["start_address"] }, { "required": ["address"] }]
+    },
+    "mappingRows": { "type": "array", "minItems": 1, "maxItems": 200000, "items": { "$ref": "#/$defs/mapping" } },
+    "evidence": {
+      "type": "object", "additionalProperties": true,
+      "required": ["evidence_id", "operation", "normalized_result"],
+      "properties": {
+        "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+        "operation": { "enum": ["analyze_function", "procedure_info", "procedure_pseudo_code", "batch_decompile"] },
+        "subject_sha256": { "$ref": "#/$defs/sha256" },
+        "normalized_result": { "type": "object" }
+      }
+    },
+    "evidenceRows": { "type": "array", "minItems": 1, "maxItems": 200000, "items": { "$ref": "#/$defs/evidence" } },
+    "match": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_evidence_id", "operation", "binary_sha256", "address_space", "start_address", "result"],
+      "properties": {
+        "source_evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+        "operation": { "enum": ["analyze_function", "procedure_info", "procedure_pseudo_code", "batch_decompile"] },
+        "binary_sha256": { "$ref": "#/$defs/sha256" },
+        "address_space": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "start_address": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "result": { "type": "object" }
+      }
+    }
+  }
+}

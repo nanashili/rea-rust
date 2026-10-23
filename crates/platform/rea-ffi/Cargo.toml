@@ -1,0 +1,22 @@
+[package]
+name = "rea-ffi"
+description = "Versioned C embedding adapters for REA's process-stat and process-status parsers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+rea-core.workspace = true
+
+# The C ABI requires `unsafe`; every block is documented.
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"

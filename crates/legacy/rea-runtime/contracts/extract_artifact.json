@@ -1,0 +1,47 @@
+{
+  "name": "extract_artifact",
+  "title": "Extract Artifact",
+  "description": "Extract all regular files from the active archive or application package into a fresh temporary directory chosen by REA. The result includes its location. Rejects traversal and symlink escapes, never overwrites, and verifies cleanup. Integrity mismatches fail by default; record-and-continue extracts the observed bytes and returns each mismatch as an explicitly untrusted integrity contradiction.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["integrity_policy"],
+    "properties": {
+      "integrity_policy": {
+        "enum": ["fail", "record-and-continue"]
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": [
+      "manifest",
+      "extraction_manifest",
+      "output_root",
+      "artifacts",
+      "containment_verified",
+      "cleanup",
+      "provenance",
+      "integrity_contradictions",
+      "limitations"
+    ],
+    "properties": {
+      "manifest": { "type": "object" },
+      "extraction_manifest": { "type": "object" },
+      "output_root": { "type": "string", "minLength": 1 },
+      "artifacts": { "type": "array" },
+      "containment_verified": { "type": "boolean" },
+      "cleanup": { "type": "object" },
+      "provenance": { "type": "array" },
+      "integrity_contradictions": { "type": "array" },
+      "limitations": { "type": "array" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

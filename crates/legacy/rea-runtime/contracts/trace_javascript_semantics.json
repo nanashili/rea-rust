@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_javascript_semantics",
+  "title": "Trace JavaScript semantics",
+  "description": "Trace static JavaScript data-flow, calls, and closure relations from authenticated application Evidence without claiming runtime execution.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["application", "query"],
+    "properties": {
+      "application": {"type": "object"},
+      "query": {"type": "object"}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["query_id", "source_graph_id", "seed", "direction", "status", "seed_node_ids", "evidence_contexts", "nodes", "relations", "unknowns", "expected_match_node_ids", "summary", "coverage", "limitations", "source_evidence_id", "evidence_links"],
+    "properties": {
+      "query_id": {"type": "string", "pattern": "^jsrq_[a-f0-9]{64}$"},
+      "source_graph_id": {"type": "string", "pattern": "^jsrg_[a-f0-9]{64}$"},
+      "seed": {"type": "object"},
+      "direction": {"enum": ["backward-provenance", "forward-influence", "callers", "ownership"]},
+      "status": {"enum": ["found", "no-match", "ambiguous", "partial", "unsupported"]},
+      "seed_node_ids": {"type": "array", "items": {"type": "string"}},
+      "evidence_contexts": {"type": "array"},
+      "nodes": {"type": "array"},
+      "relations": {"type": "array"},
+      "unknowns": {"type": "array"},
+      "expected_match_node_ids": {"type": "array", "items": {"type": "string"}},
+      "summary": {"type": "object", "additionalProperties": false, "required": ["total_seed_matches", "traversed_nodes", "traversed_relations", "traversed_functions", "traversed_modules", "relevant_unknowns"], "properties": {"total_seed_matches": {"type": "integer", "minimum": 0}, "traversed_nodes": {"type": "integer", "minimum": 0}, "traversed_relations": {"type": "integer", "minimum": 0}, "traversed_functions": {"type": "integer", "minimum": 0}, "traversed_modules": {"type": "integer", "minimum": 0}, "relevant_unknowns": {"type": "integer", "minimum": 0}}},
+      "coverage": {"type": "object", "additionalProperties": false, "required": ["status"], "properties": {"status": {"enum": ["complete", "partial", "unavailable"]}}},
+      "limitations": {"type": "array", "items": {"type": "string"}},
+      "source_evidence_id": {"type": "string", "minLength": 1},
+      "evidence_links": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

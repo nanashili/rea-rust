@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "resolve_native_call_targets",
+  "title": "Resolve native call targets",
+  "description": "Project static call references from one retained inspect_native_instruction observation. Ambiguous, unresolved, and computed calls remain distinct and do not establish runtime execution.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "anyOf": [{"required": ["evidence"]}, {"required": ["instruction"]}, {"required": ["native_observation"]}],
+    "properties": {
+      "address": {"type": "string"},
+      "evidence": {"type": "object"},
+      "instruction": {"type": "object"},
+      "native_observation": {"type": "object"}
+    }
+  },
+  "outputSchema": {"type": "object"},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

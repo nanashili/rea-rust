@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_adb_package",
+  "title": "Inspect ADB Package",
+  "description": "Project caller-captured package inspection facts and Evidence.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Captured adapter input or retained Evidence. This contract grants no ADB or filesystem authority."
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "result",
+      "evidence",
+      "provenance"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "Application projection derived only from caller-supplied captured facts."
+      },
+      "evidence": {
+        "type": "array",
+        "minItems": 1,
+        "description": "Authenticated package Evidence records used by the projection.",
+        "items": {
+          "type": "object"
+        }
+      },
+      "provenance": {
+        "type": "object",
+        "required": [
+          "operation",
+          "source",
+          "execution"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "const": "inspect_adb_package"
+          },
+          "source": {
+            "const": "caller-supplied-adb-package-facts"
+          },
+          "execution": {
+            "const": "none"
+          }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

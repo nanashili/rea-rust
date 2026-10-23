@@ -1,0 +1,69 @@
+{
+  "name": "inspect_process_memory",
+  "title": "Inspect Captured Process Memory",
+  "description": "Project caller-supplied process-memory ranges or retain matching Evidence without reading live memory or controlling a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["observations"],
+        "properties": {
+          "source": { "type": "string" },
+          "observations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["pid", "generation", "state"],
+              "properties": {
+                "pid": { "type": "integer", "minimum": 1 },
+                "generation": {},
+                "state": { "enum": ["readable", "absent", "unavailable"] },
+                "ranges": { "type": "array" },
+                "virtual_pages": { "type": "integer", "minimum": 0 },
+                "resident_pages": { "type": "integer", "minimum": 0 },
+                "page_size_bytes": { "type": "integer", "minimum": 0 },
+                "virtual_bytes": { "type": "integer", "minimum": 0 },
+                "resident_bytes": { "type": "integer", "minimum": 0 },
+                "page_size_source": { "type": "string" }
+              }
+            }
+          },
+          "provider": {},
+          "parameters": { "type": "object" },
+          "limitations": { "type": "array", "items": { "type": "string" } },
+          "provenance": { "type": "array" },
+          "evidence_links": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      { "required": ["evidence"], "properties": { "evidence": { "type": "object" } } }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["subject", "provider", "analysis_profile", "predicate_type", "operation", "parameters", "raw_result", "normalized_result", "confidence", "authority", "environment", "limitations", "relationship_coverage", "locations", "evidence_links", "provenance"],
+    "properties": {
+      "subject": { "type": ["object", "null"] },
+      "provider": {},
+      "analysis_profile": { "type": ["object", "null"] },
+      "predicate_type": { "const": "rea.process-memory" },
+      "operation": { "const": "inspect_process_memory" },
+      "parameters": { "type": "object" },
+      "raw_result": {},
+      "normalized_result": { "type": "object" },
+      "confidence": { "const": "observed" },
+      "authority": { "enum": ["shipped-artifact", "historical-reference"] },
+      "environment": { "type": ["object", "null"] },
+      "limitations": { "type": "array", "items": { "type": "string" } },
+      "relationship_coverage": { "type": ["object", "null"] },
+      "locations": { "type": "array" },
+      "evidence_links": { "type": "array", "items": { "type": "string" } },
+      "provenance": { "type": "array" }
+    }
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

@@ -1,0 +1,8 @@
+{
+  "name":"list_architectures",
+  "title":"Project Captured Architecture Inventory",
+  "description":"Validate and project a caller-supplied architecture inventory captured from a native provider.",
+  "inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"result":{"type":"object"},"normalized_result":{"type":"object"},"architectures":{"type":"object"},"provenance":{"type":"array"},"limitations":{"type":"array"}}},
+  "outputSchema":{"type":"object","required":["architectures","provenance","limitations"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

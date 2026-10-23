@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_custom_attributes",
+  "title": "Project IL2CPP Custom Attributes",
+  "description": "Project caller-supplied IL2CPP custom-attribute ranges and opaque payload facts. Optional matching metadata rows allow owner identities to be resolved without guessing. This bounded, read-only operation is static/captured only: it never opens an artifact, executes constructors, or deserializes arbitrary blobs.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "oneOf": [
+      {
+        "$ref": "#/$defs/directFields"
+      },
+      {
+        "$ref": "#/$defs/metadataInput"
+      }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "signedIndex": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "attributeRange": {
+        "type": "object",
+        "maxProperties": 128,
+        "properties": {
+          "owner_kind": { "type": "string" },
+          "owner_index": { "$ref": "#/$defs/signedIndex" },
+          "type_index": { "$ref": "#/$defs/signedIndex" },
+          "typeIndex": { "$ref": "#/$defs/signedIndex" },
+          "method_index": { "$ref": "#/$defs/signedIndex" },
+          "methodIndex": { "$ref": "#/$defs/signedIndex" },
+          "field_index": { "$ref": "#/$defs/signedIndex" },
+          "fieldIndex": { "$ref": "#/$defs/signedIndex" },
+          "event_index": { "$ref": "#/$defs/signedIndex" },
+          "eventIndex": { "$ref": "#/$defs/signedIndex" },
+          "property_index": { "$ref": "#/$defs/signedIndex" },
+          "propertyIndex": { "$ref": "#/$defs/signedIndex" },
+          "parameter_index": { "$ref": "#/$defs/signedIndex" },
+          "parameterIndex": { "$ref": "#/$defs/signedIndex" },
+          "data_start": { "$ref": "#/$defs/index" },
+          "attribute_data_start": { "$ref": "#/$defs/index" },
+          "start": { "$ref": "#/$defs/index" },
+          "data_size": { "$ref": "#/$defs/index" },
+          "attribute_data_size": { "$ref": "#/$defs/index" },
+          "size": { "$ref": "#/$defs/index" },
+          "count": { "$ref": "#/$defs/index" },
+          "data_index": { "$ref": "#/$defs/index" },
+          "attribute_data_index": { "$ref": "#/$defs/index" },
+          "attribute_type_index": {},
+          "constructor_type_index": {},
+          "attributeTypeIndex": {},
+          "constructor_method_index": {},
+          "constructorMethodIndex": {},
+          "payload": {},
+          "blob": {}
+        },
+        "additionalProperties": true
+      },
+      "attributeRanges": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/attributeRange" }
+      },
+      "dataRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {}
+      },
+      "metadataRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "base64Data": {
+        "type": "string",
+        "maxLength": 89478488,
+        "contentEncoding": "base64"
+      },
+      "metadataFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attribute_data_ranges": { "$ref": "#/$defs/attributeRanges" },
+          "attributeDataRanges": { "$ref": "#/$defs/attributeRanges" },
+          "ranges": { "$ref": "#/$defs/attributeRanges" },
+          "attribute_data": { "$ref": "#/$defs/dataRows" },
+          "attributeData": { "$ref": "#/$defs/dataRows" },
+          "data": { "$ref": "#/$defs/dataRows" },
+          "attribute_data_base64": { "$ref": "#/$defs/base64Data" },
+          "data_base64": { "$ref": "#/$defs/base64Data" },
+          "types": { "$ref": "#/$defs/metadataRows" },
+          "type_definitions": { "$ref": "#/$defs/metadataRows" },
+          "typeDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "methods": { "$ref": "#/$defs/metadataRows" },
+          "method_definitions": { "$ref": "#/$defs/metadataRows" },
+          "methodDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "fields": { "$ref": "#/$defs/metadataRows" },
+          "field_definitions": { "$ref": "#/$defs/metadataRows" },
+          "fieldDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "events": { "$ref": "#/$defs/metadataRows" },
+          "event_definitions": { "$ref": "#/$defs/metadataRows" },
+          "eventDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "properties": { "$ref": "#/$defs/metadataRows" },
+          "property_definitions": { "$ref": "#/$defs/metadataRows" },
+          "propertyDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "parameters": { "$ref": "#/$defs/metadataRows" },
+          "parameter_definitions": { "$ref": "#/$defs/metadataRows" },
+          "parameterDefinitions": { "$ref": "#/$defs/metadataRows" }
+        },
+        "anyOf": [
+          { "required": ["attribute_data_ranges"] },
+          { "required": ["attributeDataRanges"] },
+          { "required": ["ranges"] }
+        ]
+      },
+      "directFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attribute_data_ranges": { "$ref": "#/$defs/attributeRanges" },
+          "attributeDataRanges": { "$ref": "#/$defs/attributeRanges" },
+          "ranges": { "$ref": "#/$defs/attributeRanges" },
+          "attribute_data": { "$ref": "#/$defs/dataRows" },
+          "attributeData": { "$ref": "#/$defs/dataRows" },
+          "data": { "$ref": "#/$defs/dataRows" },
+          "attribute_data_base64": { "$ref": "#/$defs/base64Data" },
+          "data_base64": { "$ref": "#/$defs/base64Data" },
+          "types": { "$ref": "#/$defs/metadataRows" },
+          "type_definitions": { "$ref": "#/$defs/metadataRows" },
+          "typeDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "methods": { "$ref": "#/$defs/metadataRows" },
+          "method_definitions": { "$ref": "#/$defs/metadataRows" },
+          "methodDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "fields": { "$ref": "#/$defs/metadataRows" },
+          "field_definitions": { "$ref": "#/$defs/metadataRows" },
+          "fieldDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "events": { "$ref": "#/$defs/metadataRows" },
+          "event_definitions": { "$ref": "#/$defs/metadataRows" },
+          "eventDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "properties": { "$ref": "#/$defs/metadataRows" },
+          "property_definitions": { "$ref": "#/$defs/metadataRows" },
+          "propertyDefinitions": { "$ref": "#/$defs/metadataRows" },
+          "parameters": { "$ref": "#/$defs/metadataRows" },
+          "parameter_definitions": { "$ref": "#/$defs/metadataRows" },
+          "parameterDefinitions": { "$ref": "#/$defs/metadataRows" }
+        },
+        "anyOf": [
+          { "required": ["attribute_data_ranges"] },
+          { "required": ["attributeDataRanges"] },
+          { "required": ["ranges"] }
+        ]
+      },
+      "metadataInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/metadataFields" },
+          "attribute_data_base64": { "$ref": "#/$defs/base64Data" },
+          "data_base64": { "$ref": "#/$defs/base64Data" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "status", "items", "coverage", "diagnostics", "limitations"],
+    "properties": {
+      "operation": { "const": "project_il2cpp_custom_attributes" },
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/item" }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ranges", "unresolved", "unsupported_payloads", "overlapping_ranges", "unused_data_rows"],
+        "properties": {
+          "ranges": { "$ref": "#/$defs/index" },
+          "unresolved": { "$ref": "#/$defs/index" },
+          "unsupported_payloads": { "$ref": "#/$defs/index" },
+          "overlapping_ranges": { "$ref": "#/$defs/index" },
+          "unused_data_rows": { "$ref": "#/$defs/index" }
+        }
+      },
+      "diagnostics": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["overlapping_range_rows", "unused_data_rows"],
+        "properties": {
+          "overlapping_range_rows": { "$ref": "#/$defs/indexList" },
+          "unused_data_rows": { "$ref": "#/$defs/indexList" }
+        }
+      },
+      "limitations": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "indexList": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/index" }
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row", "source", "owner", "owner_status", "constructor", "span", "payload"],
+        "properties": {
+          "row": { "$ref": "#/$defs/index" },
+          "source": { "type": "object", "maxProperties": 128, "additionalProperties": true },
+          "owner": {
+            "anyOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "index"],
+                "properties": {
+                  "kind": { "type": "string" },
+                  "index": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+                }
+              }
+            ]
+          },
+          "owner_status": { "enum": ["resolved", "unknown", "invalid"] },
+          "constructor": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type_index", "method_index"],
+            "properties": { "type_index": {}, "method_index": {} }
+          },
+          "span": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "size", "end", "status"],
+            "properties": {
+              "start": { "$ref": "#/$defs/index" },
+              "size": { "$ref": "#/$defs/index" },
+              "end": { "$ref": "#/$defs/index" },
+              "status": { "enum": ["mapped", "out_of_bounds", "unresolved"] }
+            }
+          },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,531 @@
+{
+ "prompts": [
+  {
+   "name": "investigate_feature",
+   "title": "Investigate a feature",
+   "description": "Trace a feature through relevant artifact, symbol, and function evidence while distinguishing observations, inferences, and residual unknowns.",
+   "arguments": [
+    {
+     "name": "feature",
+     "description": "Feature, behavior, string, or symbol to investigate",
+     "required": true
+    },
+    {
+     "name": "target_path",
+     "description": "Absolute target path; omit when the intended target is already open",
+     "required": false
+    },
+    {
+     "name": "document",
+     "description": "Active target's provider document name",
+     "required": false
+    },
+    {
+     "name": "procedure",
+     "description": "Known procedure name or address to prioritize",
+     "required": false
+    },
+    {
+     "name": "provider_id",
+     "description": "Configured provider identity to prefer when its capability is available",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "compare_application_versions",
+   "title": "Compare application versions",
+   "description": "Compare two shipped application artifacts through complete inventory and optional static or runtime evidence without equating missing data with unchanged behavior.",
+   "arguments": [
+    {
+     "name": "left_target_path",
+     "description": "Absolute path to the earlier or baseline target",
+     "required": true
+    },
+    {
+     "name": "right_target_path",
+     "description": "Absolute path to the later or candidate target",
+     "required": true
+    },
+    {
+     "name": "left_manifest_id",
+     "description": "Retained baseline artifact graph manifest to reuse or validate",
+     "required": false
+    },
+    {
+     "name": "right_manifest_id",
+     "description": "Retained candidate artifact graph manifest to reuse or validate",
+     "required": false
+    },
+    {
+     "name": "focus_occurrence_id",
+     "description": "Retained artifact occurrence to prioritize without authorizing extraction",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "verify_reconstruction",
+   "title": "Verify a reconstruction",
+   "description": "Evaluate a finite reconstruction specification against retained Evidence comparisons without broadening pass results into global equivalence claims.",
+   "arguments": [
+    {
+     "name": "reconstruction_goal",
+     "description": "Finite behavior or structure the reconstruction is expected to satisfy",
+     "required": true
+    },
+    {
+     "name": "comparison_evidence_id",
+     "description": "Retained comparison Evidence to use in a declared claim",
+     "required": false
+    },
+    {
+     "name": "provider_id",
+     "description": "Provider identity whose Evidence is relevant to the reconstruction",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "trace_crash",
+   "title": "Trace a crash",
+   "description": "Correlate a crash symptom with static call and reference evidence plus optional process capture observations.",
+   "arguments": [
+    {
+     "name": "crash_signal",
+     "description": "Crash message, exception, signal, address, or reproducible symptom",
+     "required": true
+    },
+    {
+     "name": "target_path",
+     "description": "Absolute target path; omit when the intended target is already open",
+     "required": false
+    },
+    {
+     "name": "document",
+     "description": "Open Hopper document to inspect",
+     "required": false
+    },
+    {
+     "name": "procedure",
+     "description": "Known crash-adjacent procedure name or address",
+     "required": false
+    },
+    {
+     "name": "capture_evidence_id",
+     "description": "Retained process capture Evidence for the crash",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "audit_residual_unknowns",
+   "title": "Audit residual unknowns",
+   "description": "Review current residual-unknown heads against retained evidence, revision integrity, and declared authority without silently closing unanswered questions.",
+   "arguments": [
+    {
+     "name": "audit_scope",
+     "description": "Decision, risk, or investigation scope the unknown audit must support",
+     "required": true
+    },
+    {
+     "name": "unknown_id",
+     "description": "Active residual unknown to audit; omit to review every active head",
+     "required": false
+    },
+    {
+     "name": "evidence_id",
+     "description": "Retained Evidence record relevant to the audit",
+     "required": false
+    }
+   ]
+  },
+  {
+   "name": "prepare_bounded_process_capture",
+   "title": "Prepare a bounded process capture",
+   "description": "Choose a command, inputs, observations, and stopping conditions for a process capture that answers the behavioral question.",
+   "arguments": [
+    {
+     "name": "behavior_question",
+     "description": "Behavioral question the capture must answer and stopping condition",
+     "required": true
+    },
+    {
+     "name": "executable",
+     "description": "Command name or executable path requested for the scenario",
+     "required": true
+    },
+    {
+     "name": "working_directory",
+     "description": "Working directory requested for the scenario",
+     "required": true
+    },
+    {
+     "name": "prior_capture_evidence_id",
+     "description": "Retained process capture Evidence to compare or refine",
+     "required": false
+    }
+   ]
+  }
+ ],
+ "contracts": [
+  {
+   "name": "investigate_feature",
+   "title": "Investigate a feature",
+   "description": "Trace a feature through relevant artifact, symbol, and function evidence while distinguishing observations, inferences, and residual unknowns.",
+   "objective": "Explain how the requested feature is represented and connected without claiming recovery of original source or behavior not supported by complete evidence.",
+   "arguments": {
+    "feature": {
+     "description": "Feature, behavior, string, or symbol to investigate",
+     "required": true
+    },
+    "target_path": {
+     "description": "Absolute target path; omit when the intended target is already open",
+     "required": false
+    },
+    "document": {
+     "description": "Active target's provider document name",
+     "required": false,
+     "completion": "document"
+    },
+    "procedure": {
+     "description": "Known procedure name or address to prioritize",
+     "required": false,
+     "completion": "procedure"
+    },
+    "provider_id": {
+     "description": "Configured provider identity to prefer when its capability is available",
+     "required": false,
+     "completion": "provider"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "open_binary",
+      "analyze_javascript_application"
+     ],
+     "instruction": "For a JavaScript/Electron application directory, call analyze_javascript_application with input_path=target_path directly; no open_binary call is needed. For a file or macOS app bundle, open target_path only when the required target is not active."
+    },
+    {
+     "tools": [
+      "current_document"
+     ],
+     "instruction": "Analysis stays bound to the active target's provider document. Use open_binary to switch targets; document names never select another artifact."
+    },
+    {
+     "tools": [
+      "search_strings",
+      "search_procedures",
+      "procedure_address"
+     ],
+     "instruction": "Search relevant strings or procedures and analyze the matching procedures; pass names or addresses directly when already known."
+    },
+    {
+     "tools": [
+      "inspect_analysis_view",
+      "trace_application_feature"
+     ],
+     "instruction": "When inspect_binary_layout or analyze_javascript_application Evidence is already retained, call inspect_analysis_view with that evidence_id for a summary, one section/symbol/module, or a stable page. Do not re-run the producer. Use trace_application_feature once a route, API, channel, module, string, or native export seed is known."
+    },
+    {
+     "tools": [
+      "analyze_function",
+      "xrefs",
+      "procedure_callers",
+      "procedure_callees",
+      "trace_feature"
+     ],
+     "instruction": "Build function dossiers and corroborate references and call relationships. Keep indirect or truncated paths unknown."
+    },
+    {
+     "tools": [
+      "record_unknown"
+     ],
+     "instruction": "Use Evidence returned inline. Record a residual unknown when an unanswered material question needs to be tracked."
+    }
+   ]
+  },
+  {
+   "name": "compare_application_versions",
+   "title": "Compare application versions",
+   "description": "Compare two shipped application artifacts through complete inventory and optional static or runtime evidence without equating missing data with unchanged behavior.",
+   "objective": "Identify evidence-backed artifact, function, and observed runtime differences between two versions and preserve every unresolved comparison frontier.",
+   "arguments": {
+    "left_target_path": {
+     "description": "Absolute path to the earlier or baseline target",
+     "required": true
+    },
+    "right_target_path": {
+     "description": "Absolute path to the later or candidate target",
+     "required": true
+    },
+    "left_manifest_id": {
+     "description": "Retained baseline artifact graph manifest to reuse or validate",
+     "required": false,
+     "completion": "manifest"
+    },
+    "right_manifest_id": {
+     "description": "Retained candidate artifact graph manifest to reuse or validate",
+     "required": false,
+     "completion": "manifest"
+    },
+    "focus_occurrence_id": {
+     "description": "Retained artifact occurrence to prioritize without authorizing extraction",
+     "required": false,
+     "completion": "occurrence"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "open_binary",
+      "inspect_artifact"
+     ],
+     "instruction": "For each supplied target path, open that target before inspection because inspect_artifact uses the active target and accepts no path. Retain the returned graph, substep Evidence, integrity findings, and next probes for each manifest."
+    },
+    {
+     "tools": [
+      "analyze_javascript_application",
+      "reconcile_javascript_runtime",
+      "compare_application_versions"
+     ],
+     "instruction": "For JavaScript/Electron versions, reconstruct each artifact and compare the resulting graphs; reconcile passive runtime Evidence when it helps answer the question. Keep ambiguous and incomplete matches unknown."
+    },
+    {
+     "tools": [
+      "compare_artifacts"
+     ],
+     "instruction": "Compare the inventory Evidence returned by each inspection."
+    },
+    {
+     "tools": [
+      "open_binary",
+      "analyze_function",
+      "compare_functions"
+     ],
+     "instruction": "When code-level localization is needed, analyze corresponding functions on both targets and compare their Evidence."
+    },
+    {
+     "tools": [
+      "compare_process_captures",
+      "find_changed_behavior"
+     ],
+     "instruction": "Use controlled runtime comparisons when runtime behavior is relevant, and keep those observations distinct from static candidates."
+    },
+    {
+     "tools": [
+      "record_unknown"
+     ],
+     "instruction": "Preserve unmatched paths, incomplete pages, provider differences, and causal uncertainty; record material residual unknowns when useful."
+    }
+   ]
+  },
+  {
+   "name": "verify_reconstruction",
+   "title": "Verify a reconstruction",
+   "description": "Evaluate a finite reconstruction specification against retained Evidence comparisons without broadening pass results into global equivalence claims.",
+   "objective": "Produce per-claim pass, fail, or unknown results backed by compatible comparison Evidence and exact authority requirements.",
+   "arguments": {
+    "reconstruction_goal": {
+     "description": "Finite behavior or structure the reconstruction is expected to satisfy",
+     "required": true
+    },
+    "comparison_evidence_id": {
+     "description": "Retained comparison Evidence to use in a declared claim",
+     "required": false,
+     "completion": "evidence"
+    },
+    "provider_id": {
+     "description": "Provider identity whose Evidence is relevant to the reconstruction",
+     "required": false,
+     "completion": "provider"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "compare_artifacts",
+      "compare_functions",
+      "compare_process_captures"
+     ],
+     "instruction": "Produce missing comparison Evidence when needed; incomplete comparison dimensions remain unknown."
+    },
+    {
+     "tools": [
+      "verify_reconstruction"
+     ],
+     "instruction": "Construct a finite typed specification using the comparison Evidence already returned in this session. Interpret pass only for the declared claim and dimension."
+    },
+    {
+     "tools": [
+      "list_unknowns"
+     ],
+     "instruction": "Report verification unknowns and the authority needed to resolve them. Record new unknowns when they need to be tracked."
+    }
+   ]
+  },
+  {
+   "name": "trace_crash",
+   "title": "Trace a crash",
+   "description": "Correlate a crash symptom with static call and reference evidence plus optional process capture observations.",
+   "objective": "Localize plausible crash paths while separating observed runtime failure, static reachability, inferred causality, and unobserved paths.",
+   "arguments": {
+    "crash_signal": {
+     "description": "Crash message, exception, signal, address, or reproducible symptom",
+     "required": true
+    },
+    "target_path": {
+     "description": "Absolute target path; omit when the intended target is already open",
+     "required": false
+    },
+    "document": {
+     "description": "Open Hopper document to inspect",
+     "required": false,
+     "completion": "document"
+    },
+    "procedure": {
+     "description": "Known crash-adjacent procedure name or address",
+     "required": false,
+     "completion": "procedure"
+    },
+    "capture_evidence_id": {
+     "description": "Retained process capture Evidence for the crash",
+     "required": false,
+     "completion": "capture"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "open_binary"
+     ],
+     "instruction": "Confirm the target only when needed; open or analyze it if it is not already active and the request requires it."
+    },
+    {
+     "tools": [
+      "search_strings",
+      "search_procedures",
+      "resolve_containing_procedure",
+      "analyze_function"
+     ],
+     "instruction": "Resolve crash text or addresses to function dossiers; do not infer a source location from symbol similarity alone."
+    },
+    {
+     "tools": [
+      "xrefs",
+      "procedure_callers",
+      "build_call_path"
+     ],
+     "instruction": "Trace corroborated references and caller paths; unresolved indirect calls remain unknown."
+    },
+    {
+     "tools": [
+      "capture_process_scenario",
+      "correlate_static_and_runtime"
+     ],
+     "instruction": "Reuse a supplied capture when relevant; otherwise capture a bounded runtime reproduction when it can distinguish competing explanations. Correlate through explicit hypotheses rather than timing or name coincidence."
+    },
+    {
+     "tools": [
+      "record_unknown"
+     ],
+     "instruction": "Separate the observed crash from inferred cause and record missing reproduction or authority as residual unknowns."
+    }
+   ]
+  },
+  {
+   "name": "audit_residual_unknowns",
+   "title": "Audit residual unknowns",
+   "description": "Review current residual-unknown heads against retained evidence, revision integrity, and declared authority without silently closing unanswered questions.",
+   "objective": "Determine which unknowns remain open, contradicted, blocked, or truthfully resolved and identify evidence-producing next probes.",
+   "arguments": {
+    "audit_scope": {
+     "description": "Decision, risk, or investigation scope the unknown audit must support",
+     "required": true
+    },
+    "unknown_id": {
+     "description": "Active residual unknown to audit; omit to review every active head",
+     "required": false,
+     "completion": "unknown"
+    },
+    "evidence_id": {
+     "description": "Retained Evidence record relevant to the audit",
+     "required": false,
+     "completion": "evidence"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "list_unknowns"
+     ],
+     "instruction": "List current heads and select the unknowns relevant to the audit. Preserve their exact revisions and requirements."
+    },
+    {
+     "tools": [
+      "verify_unknown_resolution"
+     ],
+     "instruction": "Validate any resolved head against its cited Evidence and authority requirements."
+    },
+    {
+     "tools": [
+      "update_unknown"
+     ],
+     "instruction": "Update an unknown when evidence supports it, using its current expected_revision to guard against concurrent changes."
+    },
+    {
+     "tools": [
+      "record_unknown"
+     ],
+     "instruction": "Record a distinct unanswered question when it should be tracked."
+    }
+   ]
+  },
+  {
+   "name": "prepare_bounded_process_capture",
+   "title": "Prepare a bounded process capture",
+   "description": "Choose a command, inputs, observations, and stopping conditions for a process capture that answers the behavioral question.",
+   "objective": "Run a caller-selected process experiment that can answer the stated behavioral question.",
+   "arguments": {
+    "behavior_question": {
+     "description": "Behavioral question the capture must answer and stopping condition",
+     "required": true
+    },
+    "executable": {
+     "description": "Command name or executable path requested for the scenario",
+     "required": true
+    },
+    "working_directory": {
+     "description": "Working directory requested for the scenario",
+     "required": true
+    },
+    "prior_capture_evidence_id": {
+     "description": "Retained process capture Evidence to compare or refine",
+     "required": false,
+     "completion": "capture"
+    }
+   },
+   "steps": [
+    {
+     "tools": [
+      "capture_process_scenario"
+     ],
+     "instruction": "Run the caller-provided scenario. Explain command lookup, effective working directory, inherited environment, optional filesystem observations, and that the target runs with the current user's permissions."
+    },
+    {
+     "tools": [
+      "compare_process_captures"
+     ],
+     "instruction": "When a prior compatible capture exists, compare complete process capture observations under recorded normalization and freshness requirements."
+    },
+    {
+     "tools": [
+      "record_unknown"
+     ],
+     "instruction": "Treat sampling gaps, genuinely truncated output, external behavior, and cleanup uncertainty as residual unknowns; cite relevant Evidence and suggest focused probes."
+    }
+   ]
+  }
+ ]
+}

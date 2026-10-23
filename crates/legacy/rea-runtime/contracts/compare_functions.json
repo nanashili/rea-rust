@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "compare_functions",
+  "title": "Compare Functions",
+  "description": "Compare two explicit analyze_function Evidence records across identity, exact provider text, calls, references, strings, and address-normalized CFG topology without reopening a provider or executing a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["left", "right"],
+    "properties": {
+      "left": { "$ref": "#/$defs/functionEvidence" },
+      "right": { "$ref": "#/$defs/functionEvidence" }
+    },
+    "$defs": {
+      "functionEvidence": {
+        "type": "object",
+        "required": ["evidence_id", "operation", "predicate_type"],
+        "properties": {
+          "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+          "operation": { "const": "analyze_function" },
+          "predicate_type": { "const": "rea.analysis" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

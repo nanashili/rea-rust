@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "join_il2cpp_assemblies",
+  "title": "Join IL2CPP Assemblies",
+  "description": "Correlate caller-supplied IL2CPP metadata images and assemblies with CodeGenModule identity facts. Matching is exact and identity-based; ambiguity, missing identities, and optional case-folded candidates remain explicit. The operation is bounded, read-only, and closed-world.",
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false,
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["metadata", "binary"],
+    "properties": {
+      "metadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["images", "assemblies"],
+        "properties": {
+          "images": {"$ref": "#/$defs/identityRows"},
+          "metadata_images": {"$ref": "#/$defs/identityRows"},
+          "assemblies": {"$ref": "#/$defs/identityRows"},
+          "metadata_assemblies": {"$ref": "#/$defs/identityRows"}
+        }
+      },
+      "binary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codegen_modules"],
+        "properties": {
+          "codegen_modules": {"$ref": "#/$defs/identityRows"},
+          "modules": {"$ref": "#/$defs/identityRows"}
+        }
+      },
+      "normalization": {
+        "type": ["object", "null"],
+        "additionalProperties": false,
+        "properties": {
+          "case_fold": {"type": "boolean"},
+          "case_insensitive": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "images", "coverage"],
+    "properties": {
+      "status": {"enum": ["complete", "partial"]},
+      "images": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["image", "identity", "status", "exact_matches", "normalized_candidates"],
+          "properties": {
+            "image": {"$ref": "#/$defs/identity"},
+            "identity": {"$ref": "#/$defs/identityValue"},
+            "status": {"enum": ["matched", "ambiguous", "unmatched"]},
+            "exact_matches": {"$ref": "#/$defs/identityRows"},
+            "normalized_candidates": {"$ref": "#/$defs/identityRows"}
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["images", "assemblies", "codegen_modules", "exact_matched", "ambiguous", "unmatched", "normalized_only", "normalization_requested"],
+        "properties": {
+          "images": {"$ref": "#/$defs/count"},
+          "assemblies": {"$ref": "#/$defs/count"},
+          "codegen_modules": {"$ref": "#/$defs/count"},
+          "exact_matched": {"$ref": "#/$defs/count"},
+          "ambiguous": {"$ref": "#/$defs/count"},
+          "unmatched": {"$ref": "#/$defs/count"},
+          "normalized_only": {"$ref": "#/$defs/count"},
+          "normalization_requested": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image_index": {"type": ["integer", "null"], "minimum": 0},
+        "image_id": {"type": ["integer", "null"], "minimum": 0},
+        "index": {"type": ["integer", "null"], "minimum": 0},
+        "image_name": {"type": ["string", "null"], "minLength": 1},
+        "name": {"type": ["string", "null"], "minLength": 1},
+        "image": {"type": ["string", "null"], "minLength": 1},
+        "assembly_name": {"type": ["string", "null"], "minLength": 1},
+        "assembly": {"type": ["string", "null"], "minLength": 1},
+        "assembly_index": {"type": ["integer", "null"], "minimum": 0},
+        "binary_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "binary_digest": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "architecture": {"type": ["string", "null"], "minLength": 1},
+        "arch": {"type": ["string", "null"], "minLength": 1},
+        "address_space": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "identityRows": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/identity"}},
+    "identityValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image_index", "image_name", "assembly_name", "binary_sha256", "architecture", "address_space"],
+      "properties": {
+        "image_index": {"type": ["integer", "null"], "minimum": 0},
+        "image_name": {"type": ["string", "null"], "minLength": 1},
+        "assembly_name": {"type": ["string", "null"], "minLength": 1},
+        "binary_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "architecture": {"type": ["string", "null"], "minLength": 1},
+        "address_space": {"type": ["string", "null"], "minLength": 1}
+      }
+    }
+  }
+}

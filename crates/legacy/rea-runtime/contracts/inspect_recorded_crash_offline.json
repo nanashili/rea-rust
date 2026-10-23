@@ -1,0 +1,8 @@
+{
+  "name": "inspect_recorded_crash_offline",
+  "title": "Inspect supplied recorded crash",
+  "description": "Project a caller-supplied recorded crash observation without opening or acquiring a target.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "observation": { "type": "object" }, "provenance": { "type": "array" }, "evidence_links": { "type": "array", "items": { "type": "string" } } }, "required": ["observation"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "observe_javascript_runtime",
+  "title": "Observe JavaScript runtime",
+  "description": "Passively observe one Node or Electron V8 Inspector target without evaluating, pausing, resuming, or instrumenting it.",
+  "inputSchema": {"type": "object", "additionalProperties": false, "required": ["inspector_endpoint", "target_id"], "properties": {"inspector_endpoint": {"type": "string", "minLength": 1}, "target_id": {"type": "string", "minLength": 1}, "runtime_kind": {"type": "string", "enum": ["node", "electron-main", "electron-preload", "electron-renderer"]}, "observation_ms": {"type": "integer", "minimum": 0, "default": 100}}},
+  "outputSchema": {"type": "object", "additionalProperties": false, "required": ["result"], "properties": {"result": {"type": "object"}}},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

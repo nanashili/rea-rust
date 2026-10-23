@@ -1,0 +1,42 @@
+{
+  "name": "decode_interface_builder",
+  "title": "Decode Interface Builder Archive",
+  "description": "Decode caller-supplied compiled storyboard or nib archive bytes, or project authenticated retained Interface Builder Evidence. The adapter is static and captured-only: it never opens paths, contacts an app bundle, instantiates archived classes, or mutates a workspace.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "bytes_base64": { "type": "string", "minLength": 1 },
+      "evidence": { "type": "object", "minProperties": 1 },
+      "max_documents": { "type": "integer", "minimum": 1, "maximum": 64 },
+      "max_objects": { "type": "integer", "minimum": 1, "maximum": 20000 },
+      "max_connections": { "type": "integer", "minimum": 1, "maximum": 40000 }
+    },
+    "allOf": [
+      {
+        "if": { "required": ["evidence"] },
+        "then": { "not": { "anyOf": [ { "required": ["path"] }, { "required": ["bytes_base64"] } ] } }
+      },
+      {
+        "if": { "required": ["bytes_base64"] },
+        "then": { "required": ["path"] }
+      }
+    ],
+    "anyOf": [
+      { "required": ["evidence"] },
+      { "required": ["path", "bytes_base64"] }
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "description": "Bounded decoded archive facts, graph projection, coverage, archive digest, and explicit limitations."
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

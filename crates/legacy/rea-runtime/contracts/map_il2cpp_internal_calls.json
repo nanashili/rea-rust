@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_internal_calls",
+  "title": "Map IL2CPP Internal Calls",
+  "description": "Correlate caller-supplied IL2CPP internal-call registry rows with optional managed method rows. The projection is bounded, read-only, and closed-world: it preserves unresolved and ambiguous matches and never opens an image, resolves a symbol, or executes a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "rows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "architecture": {},
+    "directInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["internal_calls"] },
+        { "required": ["internal_call_registry"] },
+        { "required": ["registry"] },
+        { "required": ["calls"] }
+      ],
+      "properties": {
+        "internal_calls": { "$ref": "#/$defs/rows" },
+        "internal_call_registry": { "$ref": "#/$defs/rows" },
+        "registry": { "$ref": "#/$defs/rows" },
+        "calls": { "$ref": "#/$defs/rows" },
+        "methods": { "$ref": "#/$defs/rows" },
+        "managed_methods": { "$ref": "#/$defs/rows" },
+        "signatures": { "$ref": "#/$defs/rows" },
+        "managed_signatures": { "$ref": "#/$defs/rows" },
+        "architecture": { "$ref": "#/$defs/architecture" }
+      }
+    },
+    "binaryInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["internal_calls"] },
+        { "required": ["internal_call_registry"] },
+        { "required": ["registry"] },
+        { "required": ["calls"] }
+      ],
+      "properties": {
+        "internal_calls": { "$ref": "#/$defs/rows" },
+        "internal_call_registry": { "$ref": "#/$defs/rows" },
+        "registry": { "$ref": "#/$defs/rows" },
+        "calls": { "$ref": "#/$defs/rows" }
+      }
+    },
+    "metadataInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "methods": { "$ref": "#/$defs/rows" },
+        "managed_methods": { "$ref": "#/$defs/rows" },
+        "signatures": { "$ref": "#/$defs/rows" },
+        "managed_signatures": { "$ref": "#/$defs/rows" }
+      }
+    },
+    "wrappedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binary"],
+      "properties": {
+        "binary": { "$ref": "#/$defs/binaryInput" },
+        "metadata": { "$ref": "#/$defs/metadataInput" },
+        "architecture": { "$ref": "#/$defs/architecture" }
+      }
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/directInput" },
+        { "$ref": "#/$defs/wrappedInput" }
+      ]
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_row",
+        "name",
+        "address",
+        "architecture",
+        "architecture_matches",
+        "resolution",
+        "matching_methods",
+        "matching_method_rows"
+      ],
+      "properties": {
+        "registry_row": { "type": "object", "additionalProperties": true },
+        "name": { "type": ["string", "null"] },
+        "address": {},
+        "architecture": {},
+        "architecture_matches": { "type": "boolean" },
+        "resolution": { "enum": ["resolved", "ambiguous", "unresolved", "unknown"] },
+        "matching_methods": { "type": "array", "maxItems": 200000, "items": { "type": "integer", "minimum": 0 } },
+        "matching_method_rows": { "$ref": "#/$defs/rows" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry_rows", "managed_method_rows", "resolved", "ambiguous", "unresolved", "unknown", "unresolved_names"],
+      "properties": {
+        "registry_rows": { "type": "integer", "minimum": 0 },
+        "managed_method_rows": { "type": "integer", "minimum": 0 },
+        "resolved": { "type": "integer", "minimum": 0 },
+        "ambiguous": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 },
+        "unknown": { "type": "integer", "minimum": 0 },
+        "unresolved_names": { "type": "array", "maxItems": 200000, "items": { "type": "string" } }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "items", "architecture", "coverage"],
+      "properties": {
+        "status": { "enum": ["complete", "partial"] },
+        "items": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/item" } },
+        "architecture": {},
+        "coverage": { "$ref": "#/$defs/coverage" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "discover_il2cpp_codegen_modules",
+  "title": "Discover Captured IL2CPP CodeGenModule Candidates",
+  "description": "Scan bounded caller-captured native image bytes for structurally plausible IL2CPP CodeGenModule records. Every candidate, ambiguity, mapping issue, and limitation is retained; the operation never opens a path, contacts a provider, executes a target, or selects a winner.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "bytes_base64",
+      "pointer_width",
+      "endianness",
+      "mappings",
+      "executable_ranges"
+    ],
+    "properties": {
+      "bytes_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "image_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "pointer_width": {
+        "enum": [
+          32,
+          64
+        ]
+      },
+      "endianness": {
+        "enum": [
+          "little",
+          "le",
+          "big",
+          "be"
+        ]
+      },
+      "mappings": {
+        "$ref": "#/$defs/mappings"
+      },
+      "address_mappings": {
+        "$ref": "#/$defs/mappings"
+      },
+      "executable_ranges": {
+        "type": "array",
+        "maxItems": 65536,
+        "items": {
+          "$ref": "#/$defs/range"
+        }
+      }
+    },
+    "$defs": {
+      "mapping": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "virtual_start",
+          "virtual_end",
+          "file_start",
+          "file_end"
+        ],
+        "properties": {
+          "virtual_start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "virtual_end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "file_start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "file_end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "mappings": {
+        "type": "array",
+        "maxItems": 65536,
+        "items": {
+          "$ref": "#/$defs/mapping"
+        }
+      },
+      "range": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation",
+      "candidates",
+      "scanned_offsets",
+      "truncated",
+      "limitations"
+    ],
+    "properties": {
+      "operation": {
+        "const": "discover_il2cpp_codegen_modules"
+      },
+      "candidates": {
+        "type": "array",
+        "maxItems": 100000,
+        "items": {
+          "$ref": "#/$defs/candidate"
+        }
+      },
+      "scanned_offsets": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "truncated": {
+        "type": "boolean"
+      },
+      "limitations": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "maxItems": 128
+      }
+    },
+    "$defs": {
+      "candidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "record_file_offset",
+          "record_byte_length",
+          "record_virtual_address",
+          "module_name",
+          "module_name_file_offset",
+          "module_name_virtual_address",
+          "method_pointer_count",
+          "method_pointer_table",
+          "method_pointer_table_file_offset",
+          "method_pointer_table_byte_length",
+          "method_pointers",
+          "disposition",
+          "issues",
+          "capture"
+        ],
+        "properties": {
+          "record_file_offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "record_byte_length": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "record_virtual_address": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "module_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "module_name_file_offset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "module_name_virtual_address": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "method_pointer_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 16777216
+          },
+          "method_pointer_table": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "method_pointer_table_file_offset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "method_pointer_table_byte_length": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "method_pointers": {
+            "type": "array",
+            "maxItems": 16777216,
+            "items": {
+              "$ref": "#/$defs/observation"
+            }
+          },
+          "disposition": {
+            "enum": [
+              "valid",
+              "ambiguous",
+              "rejected"
+            ]
+          },
+          "issues": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/$defs/issue"
+            }
+          },
+          "capture": {
+            "$ref": "#/$defs/capture"
+          }
+        }
+      },
+      "observation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "target_virtual_address",
+          "target_file_offset",
+          "mapping_count",
+          "executable_range_matches",
+          "disposition"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "target_virtual_address": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "target_file_offset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "mapping_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "executable_range_matches": {
+            "type": "array",
+            "maxItems": 65536,
+            "items": {
+              "$ref": "#/$defs/range"
+            }
+          },
+          "disposition": {
+            "enum": [
+              "valid",
+              "null",
+              "unmapped",
+              "ambiguous_mapping",
+              "outside_image",
+              "non_executable"
+            ]
+          }
+        }
+      },
+      "issue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "reason"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        }
+      },
+      "range": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "capture": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "reason",
+          "request",
+          "spans"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "ready",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 256
+          },
+          "request": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "spans": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

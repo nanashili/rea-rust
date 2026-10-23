@@ -1,0 +1,53 @@
+{
+  "name": "inspect_binary_layout",
+  "title": "Inspect Binary Layout",
+  "description": "Inspect caller-supplied bounded ELF bytes or replay retained layout Evidence without executing or mutating the artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true,
+    "anyOf": [
+      {
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "bytes_base64": { "type": "string" },
+          "bytes": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+          }
+        }
+      },
+      { "required": ["evidence"], "properties": { "evidence": { "type": "object" } } },
+      { "required": ["result"], "properties": { "result": { "type": "object" } } },
+      { "required": ["normalized_result"], "properties": { "normalized_result": { "type": "object" } } }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result", "provenance"],
+    "properties": {
+      "result": { "type": "object" },
+      "evidence_id": { "type": "string", "minLength": 1 },
+      "provenance": {
+        "type": "object",
+        "required": ["operation", "source", "execution"],
+        "additionalProperties": false,
+        "properties": {
+          "operation": { "const": "inspect_binary_layout" },
+          "source": {
+            "enum": [
+              "caller-supplied-artifact-bytes",
+              "caller-supplied-retained-result",
+              "authenticated-retained-evidence"
+            ]
+          },
+          "execution": { "enum": ["none", "unknown"] }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

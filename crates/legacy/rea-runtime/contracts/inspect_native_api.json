@@ -1,0 +1,8 @@
+{
+  "name": "inspect_native_api",
+  "title": "Inspect Native API Boundary",
+  "description": "Project a caller-supplied analyze_function Evidence record into a native API boundary while preserving confidence, dispatch evidence, limitations, and residual unknowns.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["evidence"], "properties": { "evidence": { "type": "object" }, "function": { "type": "object" } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["procedure", "boundary", "substeps", "unsupported_branches", "residual_unknowns"], "properties": { "procedure": { "type": "object" }, "boundary": { "type": "object" }, "substeps": { "type": "array" }, "unsupported_branches": { "type": "array" }, "residual_unknowns": { "type": "array" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

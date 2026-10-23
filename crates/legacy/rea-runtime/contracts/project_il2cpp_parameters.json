@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_parameters",
+  "title": "Project IL2CPP Method Parameters",
+  "description": "Project caller-supplied, already-decoded IL2CPP method and parameter rows into mapped parameter ranges and best-effort signatures. This read-only captured/static operation never opens an artifact, attaches to a process, invokes Unity or IL2CPP, executes target code, or mutates a target. Source rows and unresolved ranges remain explicit.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/metadataInput" }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "signedIndex": {
+        "type": "integer",
+        "minimum": -1,
+        "maximum": 9007199254740991
+      },
+      "sourceRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true
+      },
+      "rows": {
+        "type": "array",
+        "minItems": 0,
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/sourceRow" }
+      },
+      "methodRows": {
+        "type": "array",
+        "minItems": 0,
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/methodRow" }
+      },
+      "methodRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true,
+        "required": ["parameter_start", "parameter_count"],
+        "properties": {
+          "parameter_start": { "$ref": "#/$defs/signedIndexOrNull" },
+          "parameter_count": { "$ref": "#/$defs/index" },
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "method_index": { "$ref": "#/$defs/index" }
+        }
+      },
+      "signedIndexOrNull": {
+        "type": ["integer", "null"],
+        "minimum": -1,
+        "maximum": 9007199254740991
+      },
+      "typeFacts": {
+        "anyOf": [
+          {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/sourceRow" }
+          },
+          {
+            "type": "object",
+            "maxProperties": 200000,
+            "additionalProperties": true
+          }
+        ]
+      },
+      "tableProperties": {
+        "properties": {
+          "methods": { "$ref": "#/$defs/methodRows" },
+          "method_definitions": { "$ref": "#/$defs/methodRows" },
+          "parameters": { "$ref": "#/$defs/rows" },
+          "parameter_definitions": { "$ref": "#/$defs/rows" },
+          "type_facts": { "$ref": "#/$defs/typeFacts" }
+        },
+        "additionalProperties": false
+      },
+      "directInput": {
+        "allOf": [
+          { "$ref": "#/$defs/tableProperties" },
+          {
+            "type": "object",
+            "anyOf": [
+              { "required": ["methods", "parameters"] },
+              { "required": ["methods", "parameter_definitions"] },
+              { "required": ["method_definitions", "parameters"] },
+              { "required": ["method_definitions", "parameter_definitions"] }
+            ]
+          }
+        ]
+      },
+      "metadataInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata"],
+        "properties": {
+          "type_facts": { "$ref": "#/$defs/typeFacts" },
+          "metadata": {
+            "allOf": [
+              { "$ref": "#/$defs/tableProperties" },
+              {
+                "type": "object",
+                "anyOf": [
+                  { "required": ["methods", "parameters"] },
+                  { "required": ["methods", "parameter_definitions"] },
+                  { "required": ["method_definitions", "parameters"] },
+                  { "required": ["method_definitions", "parameter_definitions"] }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/item" }
+      },
+      "coverage": { "$ref": "#/$defs/coverage" }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "sourceRow": {
+        "type": "object",
+        "maxProperties": 130,
+        "additionalProperties": true
+      },
+      "signature": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "value", "reason"],
+        "properties": {
+          "status": { "enum": ["resolved", "unresolved"] },
+          "value": { "type": ["string", "null"] },
+          "reason": { "type": ["string", "null"] }
+        }
+      },
+      "parameter": {
+        "allOf": [
+          { "$ref": "#/$defs/sourceRow" },
+          {
+            "type": "object",
+            "required": ["parameter_index", "type_fact"]
+          }
+        ]
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "method",
+          "method_index",
+          "resolution",
+          "signature",
+          "parameters"
+        ],
+        "properties": {
+          "method": { "$ref": "#/$defs/sourceRow" },
+          "method_index": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+          "resolution": { "enum": ["mapped", "unknown", "out_of_range"] },
+          "signature": { "$ref": "#/$defs/signature" },
+          "parameters": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/parameter" }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "methods",
+          "parameters",
+          "valid_ranges",
+          "missing_ranges",
+          "out_of_range_ranges",
+          "overlapping_parameter_rows",
+          "unused_parameter_rows",
+          "range_count"
+        ],
+        "properties": {
+          "methods": { "$ref": "#/$defs/index" },
+          "parameters": { "$ref": "#/$defs/index" },
+          "valid_ranges": { "$ref": "#/$defs/index" },
+          "missing_ranges": { "$ref": "#/$defs/index" },
+          "out_of_range_ranges": { "$ref": "#/$defs/index" },
+          "range_count": { "$ref": "#/$defs/index" },
+          "overlapping_parameter_rows": { "$ref": "#/$defs/indexArray" },
+          "unused_parameter_rows": { "$ref": "#/$defs/indexArray" }
+        }
+      },
+      "indexArray": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/index" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

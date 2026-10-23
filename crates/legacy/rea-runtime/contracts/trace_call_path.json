@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_call_path",
+  "title": "Trace native call path",
+  "description": "Traverse retained direct caller or callee observations from a caller-supplied start selector. Unresolved expansions and partial relationship coverage remain unknown.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["start"],
+    "properties": {
+      "start": {"type": "string", "minLength": 1},
+      "goal": {"type": ["string", "null"]},
+      "direction": {"type": "string", "enum": ["forward", "backward"], "default": "forward"},
+      "observations": {"type": "array", "items": {"type": "object"}}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["start", "goal", "direction", "goal_status", "nodes", "edges", "traversal_path", "failures", "relationship_coverage", "traversal", "truncated", "residual_unknowns", "limitations"],
+    "additionalProperties": false,
+    "properties": {
+      "start": {"type": "string"},
+      "goal": {"type": ["string", "null"]},
+      "direction": {"enum": ["forward", "backward"]},
+      "goal_status": {"enum": ["not_requested", "reached", "not_reached", "unknown"]},
+      "nodes": {"type": "array", "items": {"type": "object", "required": ["address", "depth"]}},
+      "edges": {"type": "array", "items": {"type": "object", "required": ["source_address", "target_address", "discovery_depth"]}},
+      "traversal_path": {"type": "array", "items": {"type": "string"}},
+      "failures": {"type": "array", "items": {"type": "object", "required": ["address", "error"]}},
+      "relationship_coverage": {"type": "object"},
+      "traversal": {"type": "object", "required": ["nodes_visited"]},
+      "truncated": {"type": "boolean"},
+      "residual_unknowns": {"type": "array", "items": {"type": "string"}},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

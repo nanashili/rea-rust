@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "join_il2cpp_native_functions",
+  "title": "Join IL2CPP Native Functions",
+  "description": "Correlate caller-supplied IL2CPP method-address mappings with captured native function and optional decompilation facts. Matching requires the exact lowercase binary SHA-256, address space, and start address. Missing and ambiguous observations remain explicit. The operation never opens artifacts, invokes a provider, executes a target, or mutates state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "mappings": { "$ref": "#/$defs/identityRows" },
+      "method_addresses": { "$ref": "#/$defs/identityRows" },
+      "functions": { "$ref": "#/$defs/identityRows" },
+      "native_functions": { "$ref": "#/$defs/identityRows" },
+      "native_inventory": { "$ref": "#/$defs/identityRows" },
+      "decompilations": { "$ref": "#/$defs/identityRows" },
+      "decompilation_facts": { "$ref": "#/$defs/identityRows" }
+    },
+    "allOf": [
+      { "oneOf": [{ "required": ["mappings"] }, { "required": ["method_addresses"] }] },
+      { "oneOf": [{ "required": ["functions"] }, { "required": ["native_functions"] }, { "required": ["native_inventory"] }] }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mapping", "native_status", "decompilation_status", "native_functions", "decompilations"],
+          "properties": {
+            "mapping": { "type": "object" },
+            "native_status": { "enum": ["matched", "ambiguous", "missing_function"] },
+            "decompilation_status": { "enum": ["matched", "ambiguous", "missing_decompilation", "unavailable"] },
+            "native_functions": { "$ref": "#/$defs/identityRows" },
+            "decompilations": { "$ref": "#/$defs/identityRows" },
+            "unknowns": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+            "limitations": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mapping_rows", "native_function_rows", "decompilation_rows", "native_matched", "native_ambiguous", "native_missing_function", "decompilation_matched", "decompilation_ambiguous", "decompilation_missing"],
+        "properties": {
+          "mapping_rows": { "$ref": "#/$defs/count" },
+          "native_function_rows": { "$ref": "#/$defs/count" },
+          "decompilation_rows": { "$ref": "#/$defs/count" },
+          "native_matched": { "$ref": "#/$defs/count" },
+          "native_ambiguous": { "$ref": "#/$defs/count" },
+          "native_missing_function": { "$ref": "#/$defs/count" },
+          "decompilation_matched": { "$ref": "#/$defs/count" },
+          "decompilation_ambiguous": { "$ref": "#/$defs/count" },
+          "decompilation_missing": { "$ref": "#/$defs/count" }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0, "maximum": 200000 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["address_space"],
+      "properties": {
+        "binary_sha256": { "$ref": "#/$defs/sha256" },
+        "artifact_sha256": { "$ref": "#/$defs/sha256" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "address_space": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "start_address": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "anyOf": [
+        { "required": ["binary_sha256"] },
+        { "required": ["artifact_sha256"] },
+        { "required": ["sha256"] }
+      ],
+      "oneOf": [
+        { "required": ["start_address"] },
+        { "required": ["address"] }
+      ]
+    },
+    "identityRows": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/identity" } }
+  }
+}

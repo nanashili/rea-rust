@@ -1,0 +1,115 @@
+{
+  "name": "inspect_firmware_regions",
+  "title": "Inspect Retained Firmware Regions",
+  "description": "Validate a bounded caller-supplied Binwalk signature report for one selected firmware input. Preserves the selected path and SHA-256, tool identity, signature coverage and explicit limitations. Never invokes Binwalk, reads the firmware, executes extracted content or mutates the input.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "input_size", "input_sha256", "report", "engine"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Absolute path selected by the caller for the firmware input."
+      },
+      "input_size": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 134217728
+      },
+      "input_sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{64}$"
+      },
+      "report": {
+        "type": "array",
+        "maxItems": 100000
+      },
+      "engine": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version",
+          "executable_path",
+          "executable_sha256",
+          "source_revision",
+          "worker_count"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "executable_path": { "type": "string", "minLength": 1 },
+          "executable_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
+          },
+          "source_revision": { "type": "null" },
+          "worker_count": { "const": 1 }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "input_path",
+      "input_sha256",
+      "engine",
+      "input_size",
+      "regions",
+      "coverage",
+      "limitations"
+    ],
+    "properties": {
+      "input_path": { "type": "string", "minLength": 1 },
+      "input_sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{64}$"
+      },
+      "engine": { "$ref": "#/inputSchema/properties/engine" },
+      "input_size": { "type": "integer", "minimum": 1, "maximum": 134217728 },
+      "regions": {
+        "type": "array",
+        "maxItems": 100000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider_id",
+            "offset",
+            "reported_size",
+            "signature",
+            "description",
+            "reported_confidence",
+            "size_basis"
+          ],
+          "properties": {
+            "provider_id": { "type": "string" },
+            "offset": { "type": "integer", "minimum": 0 },
+            "reported_size": { "type": "integer", "minimum": 0 },
+            "signature": { "type": "string" },
+            "description": { "type": "string" },
+            "reported_confidence": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "size_basis": { "const": "provider_reported_validation_unknown" }
+          }
+        }
+      },
+      "coverage": { "const": "signature_scan" },
+      "limitations": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 1
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

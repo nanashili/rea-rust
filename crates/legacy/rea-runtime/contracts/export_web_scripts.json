@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "export_web_scripts",
+  "title": "Export web scripts",
+  "description": "Export JavaScript bytes already retained in a local browser capture into a caller-selected directory without refetching or executing the application.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["capture_path", "output_directory"],
+    "properties": {
+      "capture_path": {"type": "string", "minLength": 1},
+      "output_directory": {"type": "string", "minLength": 1}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

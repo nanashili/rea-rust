@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "get_navigation_context",
+  "title": "Get Native Navigation Context",
+  "description": "Project retained document, address, and containing procedure while validating observation provenance.",
+  "inputSchema": {"type":"object","additionalProperties":false,"required":["document","address","procedure","evidence_links","source_order"],"properties":{"requested_document":{"type":"string"},"document":{"type":"object"},"address":{"type":"object"},"procedure":{"type":"object"},"evidence_links":{"type":"array","items":{"type":"string"}},"source_order":{"type":"array","items":{"type":"object"}}}},
+  "outputSchema": {"type":"object","additionalProperties":false,"required":["result"],"properties":{"result":{"type":"object","additionalProperties":false,"required":["document","address","procedure"],"properties":{"document":{"type":"string"},"address":{"type":"string"},"procedure":{"type":["string","null"]}}}}},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

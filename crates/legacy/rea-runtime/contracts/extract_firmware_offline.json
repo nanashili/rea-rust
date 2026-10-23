@@ -1,0 +1,14 @@
+{
+  "name": "extract_firmware",
+  "title": "Project Supplied Firmware Extraction",
+  "description": "Bind a caller-selected immutable firmware source to a bounded extractor report and return a publication plan. This projection never invokes an extractor, writes output, or executes extracted content.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["request", "report"],
+    "properties": { "request": { "type": "object" }, "report": { "type": "object" } }
+  },
+  "outputSchema": { "type": "object", "required": ["files", "output_directory", "coverage"] },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

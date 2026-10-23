@@ -1,0 +1,14 @@
+{
+  "name": "compare_artifacts",
+  "title": "Compare Supplied Artifact Evidence",
+  "description": "Compare two complete caller-supplied artifact Evidence records and retain their identifiers and limitations in the derived result.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["left", "right"],
+    "properties": { "left": { "type": "object" }, "right": { "type": "object" } }
+  },
+  "outputSchema": { "type": "object", "required": ["evidence_id", "normalized_result"] },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

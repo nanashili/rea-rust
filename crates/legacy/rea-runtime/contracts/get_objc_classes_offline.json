@@ -1,0 +1,8 @@
+{
+  "name":"get_objc_classes",
+  "title":"Project Captured Objective-C Classes",
+  "description":"Classify Objective-C class names from caller-supplied authenticated symbol observations.",
+  "inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{"pattern":{"type":"string"},"names":{"type":"array","maxItems":200000,"items":{"type":"object","required":["address","name"]}},"evidence":{"type":"object"}}},
+  "outputSchema":{"type":"object","required":["count","classes"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

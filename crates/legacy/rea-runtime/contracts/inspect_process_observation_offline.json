@@ -1,0 +1,20 @@
+{
+  "name": "inspect_process_observation_offline",
+  "title": "Inspect supplied process observation",
+  "description": "Project caller-supplied process observations without discovering or controlling a process.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "source": { "type": "string", "minLength": 1 },
+      "observations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/observation" } },
+      "provenance": { "type": "array" },
+      "evidence_links": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["observations"],
+    "$defs": { "observation": { "type": "object", "required": ["pid", "generation", "state"], "properties": { "pid": { "type": "integer", "minimum": 1 }, "generation": {}, "state": {} }, "additionalProperties": true } }
+  },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

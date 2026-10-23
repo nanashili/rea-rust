@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_apktool_client",
+  "title": "Inspect Apktool client",
+  "description": "Inspect the caller-selected Apktool launcher: resolved command, selection source, and version. Decodes nothing and never installs Apktool or Java.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "client": { "type": "object" },
+      "report": { "type": "object" },
+      "evidence": { "type": "object" }
+    },
+    "oneOf": [
+      { "required": ["client"] },
+      { "required": ["report"] },
+      { "required": ["evidence"] }
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "required": ["client"],
+        "properties": {
+          "client": {
+            "type": "object",
+            "required": ["command", "command_source", "apktool_version"],
+            "properties": {
+              "command": {"type": "string", "minLength": 1},
+              "command_source": {"type": "string", "enum": ["environment", "path"]},
+              "apktool_version": {"type": ["string", "null"], "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

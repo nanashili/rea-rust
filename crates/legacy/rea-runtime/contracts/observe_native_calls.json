@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "observe_native_calls",
+  "title": "Observe retained native call capture",
+  "description": "Validate and retain one authenticated observe_native_calls Evidence record without launching a target, attaching LLDB, instrumenting a process, or contacting a provider.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "description": "Complete retained Evidence whose operation is observe_native_calls."
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": ["operation", "evidence_id", "normalized_result"],
+    "properties": {
+      "operation": { "const": "observe_native_calls" },
+      "evidence_id": { "type": "string", "minLength": 1 },
+      "normalized_result": { "type": "object" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

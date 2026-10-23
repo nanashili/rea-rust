@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "capture_electron_scenario",
+  "title": "Capture Electron scenario",
+  "description": "Run one provider-owned Electron scenario with bounded actions, event retention, and explicit cleanup state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["executable_path", "application_path"],
+    "properties": {
+      "executable_path": {"type": "string", "minLength": 1},
+      "application_path": {"type": "string", "minLength": 1},
+      "application_root": {"type": "string", "minLength": 1},
+      "args": {"type": "array", "items": {"type": "string"}, "default": []},
+      "actions": {"type": "array", "items": {"type": "object"}, "default": []}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": false, "openWorldHint": false, "readOnlyHint": true}
+}

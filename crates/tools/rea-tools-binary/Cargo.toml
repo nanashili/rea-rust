@@ -1,0 +1,23 @@
+[package]
+name = "rea-tools-binary"
+description = "Binary analysis session: provider selection, snapshots, official/enhanced tools and session workflows."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-analysis.workspace = true
+rea-mcp.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+sha2.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+
+[lints]
+workspace = true

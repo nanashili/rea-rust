@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_image",
+  "title": "Inspect Captured IL2CPP Native Image",
+  "description": "Map a bounded caller-supplied ELF, PE, or Mach-O image snapshot for IL2CPP address correlation. The operation preserves unsupported mappings and artifact identity, and never opens a path, executes a provider, attaches to a process, or mutates an artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["bytes_base64"],
+    "properties": {
+      "bytes_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "bytes": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": "^[^\\u0000]*$"
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "anyOf": [
+      {"required": ["bytes_base64"]},
+      {"required": ["bytes"]}
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "status", "artifact", "format", "architecture", "image_base", "segments", "executable_ranges", "limitations"],
+    "properties": {
+      "operation": {"const": "inspect_il2cpp_image"},
+      "status": {"enum": ["mapped", "unsupported"]},
+      "artifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "byte_count"],
+        "properties": {
+          "path": {"type": ["string", "null"], "maxLength": 4096},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "byte_count": {"type": "integer", "minimum": 1, "maximum": 268435456}
+        }
+      },
+      "format": {"type": ["string", "null"], "enum": ["elf", "macho", "pe", null]},
+      "architecture": {"type": ["string", "null"], "maxLength": 128},
+      "image_base": {"type": ["integer", "null"], "minimum": 0},
+      "segments": {
+        "type": "array",
+        "maxItems": 4096,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index", "name", "file_offset", "file_size", "virtual_address", "virtual_size", "readable", "writable", "executable", "format_details"],
+          "properties": {
+            "index": {"type": "integer", "minimum": 0},
+            "name": {"type": ["string", "null"], "maxLength": 512},
+            "file_offset": {"type": "integer", "minimum": 0},
+            "file_size": {"type": "integer", "minimum": 0},
+            "virtual_address": {"type": "integer", "minimum": 0},
+            "virtual_size": {"type": "integer", "minimum": 0},
+            "readable": {"type": "boolean"},
+            "writable": {"type": "boolean"},
+            "executable": {"type": "boolean"},
+            "format_details": {"type": "object", "additionalProperties": true}
+          }
+        }
+      },
+      "executable_ranges": {
+        "type": "array",
+        "maxItems": 4096,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": {"type": "integer", "minimum": 0},
+            "end": {"type": "integer", "minimum": 0}
+          }
+        }
+      },
+      "limitations": {
+        "type": "array",
+        "maxItems": 128,
+        "items": {"type": "string", "maxLength": 1024}
+      }
+    }
+  },
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false
+}

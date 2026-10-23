@@ -1,0 +1,120 @@
+{
+  "name": "inspect_packet_fields",
+  "title": "Inspect Packet Fields",
+  "description": "Discover protocol registrations or field definitions from the installed TShark 4.x glossary. The selection is preserved in Evidence; registrations describe tool capabilities and do not establish observed traffic.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": ["protocols", "fields"],
+        "default": "protocols"
+      },
+      "protocol": {
+        "anyOf": [
+          { "type": "string", "minLength": 1, "maxLength": 8192 },
+          { "type": "null" }
+        ],
+        "default": null
+      },
+      "query": { "type": "string", "maxLength": 8192, "default": "" },
+      "offset": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "default": 0
+      },
+      "limit": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          { "type": "null" }
+        ],
+        "default": 50
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "evidence_id", "subject", "provider", "analysis_profile",
+      "predicate_type", "operation", "parameters", "raw_result",
+      "normalized_result", "confidence", "authority", "environment",
+      "limitations", "relationship_coverage", "locations", "evidence_links"
+    ],
+    "properties": {
+      "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+      "subject": { "type": ["object", "null"] },
+      "provider": { "type": "object" },
+      "analysis_profile": { "type": ["object", "null"] },
+      "predicate_type": { "type": "string", "minLength": 1 },
+      "operation": { "const": "inspect_packet_fields" },
+      "parameters": { "type": "object" },
+      "raw_result": {},
+      "normalized_result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["selection", "records", "output_window", "diagnostics", "tool", "resource_limiter", "limits", "configuration", "hardware_acquisition"],
+        "properties": {
+          "selection": { "type": "object" },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source_line", "kind", "name", "abbreviation", "field_type", "parent_protocol", "display_base", "bitmask", "description"],
+              "properties": {
+                "source_line": { "type": "integer", "minimum": 1 },
+                "kind": { "enum": ["protocol", "field"] },
+                "name": { "type": "string" },
+                "abbreviation": { "type": "string" },
+                "field_type": { "type": ["string", "null"] },
+                "parent_protocol": { "type": ["string", "null"] },
+                "display_base": { "type": ["string", "null"] },
+                "bitmask": { "type": ["string", "null"] },
+                "description": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "output_window": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["examined", "matching", "returned", "has_more"],
+            "properties": {
+              "examined": { "type": "integer", "minimum": 0 },
+              "matching": { "type": "integer", "minimum": 0 },
+              "returned": { "type": "integer", "minimum": 0 },
+              "has_more": { "type": "boolean" }
+            }
+          },
+          "diagnostics": { "type": "string" },
+          "tool": { "type": "object" },
+          "resource_limiter": { "type": "object" },
+          "limits": { "type": "object" },
+          "configuration": { "const": "private-empty-personal-profile" },
+          "hardware_acquisition": { "const": "not-performed" }
+        }
+      },
+      "confidence": { "const": "observed" },
+      "authority": { "const": "shipped-tool" },
+      "environment": { "type": ["object", "null"] },
+      "limitations": { "type": "array", "items": { "type": "string" } },
+      "relationship_coverage": { "type": ["object", "null"] },
+      "locations": { "type": "array" },
+      "evidence_links": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

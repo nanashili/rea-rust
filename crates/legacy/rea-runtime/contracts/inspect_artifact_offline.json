@@ -1,0 +1,14 @@
+{
+  "name": "inspect_artifact",
+  "title": "Project Artifact Evidence",
+  "description": "Validate and project complete caller-supplied inspect_artifact or inventory_artifact Evidence. The handler opens no artifact and performs no extraction.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": { "evidence": { "type": "object" } }
+  },
+  "outputSchema": { "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

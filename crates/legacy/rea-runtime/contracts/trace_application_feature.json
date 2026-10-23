@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_application_feature",
+  "title": "Trace application feature",
+  "description": "Trace a typed seed through an authenticated JavaScript application graph while preserving static, native, inferred, and unknown facts.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["application", "seed"],
+    "properties": {
+      "application": {"type": "object"},
+      "native_observations": {"type": "array", "items": {"type": "object"}, "default": []},
+      "seed": {"type": "object"},
+      "direction": {"type": "string", "enum": ["outgoing", "incoming", "both"], "default": "both"}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

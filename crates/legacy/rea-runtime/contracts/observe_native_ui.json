@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "observe_native_ui",
+  "title": "Observe retained native UI Evidence",
+  "description": "Validate caller-supplied native UI observation Evidence. This operation never launches, queries, screenshots, automates, or mutates a live application.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": {
+      "evidence": { "$ref": "#/$defs/evidence" }
+    },
+    "$defs": {
+      "evidence": {
+        "type": "object",
+        "description": "Complete authenticated Evidence record whose operation is observe_native_ui. The record is returned intact so provider, subject, limitation, and source fields remain available.",
+        "minProperties": 1
+      },
+      "observation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target_sha256", "initial", "steps", "restore", "limitations"],
+        "properties": {
+          "target_sha256": { "type": "string" },
+          "initial": { "$ref": "#/$defs/snapshot" },
+          "steps": { "type": "array", "items": { "$ref": "#/$defs/step" } },
+          "restore": { "const": "leave-as-is" },
+          "limitations": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "snapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["window", "nodes", "truncated", "screenshot", "gaps"],
+        "properties": {
+          "window": { "$ref": "#/$defs/window" },
+          "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+          "truncated": { "type": "boolean" },
+          "screenshot": { "anyOf": [{ "$ref": "#/$defs/screenshot" }, { "type": "null" }] },
+          "gaps": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "window": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pid", "window_id", "executable", "launch_time", "title"],
+        "properties": {
+          "pid": { "type": "integer", "minimum": 1 },
+          "window_id": { "type": "integer", "minimum": 1 },
+          "executable": { "type": "string" },
+          "launch_time": { "type": "number" },
+          "title": { "type": "string" }
+        }
+      },
+      "node": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "role", "title", "value", "actions", "children_count"],
+        "properties": {
+          "path": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+          "role": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "value": { "type": ["string", "null"] },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "children_count": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      },
+      "screenshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mime_type", "base64", "sha256", "width", "height"],
+        "properties": {
+          "mime_type": { "const": "image/png" },
+          "base64": { "type": "string", "minLength": 4 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "step": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "kind", "before", "after", "outcome", "reason"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "kind": { "type": "string" },
+          "before": { "$ref": "#/$defs/snapshot" },
+          "after": { "anyOf": [{ "$ref": "#/$defs/snapshot" }, { "type": "null" }] },
+          "outcome": { "enum": ["completed", "failed", "cancelled"] },
+          "reason": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "description": "The complete authenticated Evidence envelope is returned unchanged after its normalized_result is validated.",
+    "required": ["operation", "evidence_id", "normalized_result"],
+    "properties": {
+      "operation": { "const": "observe_native_ui" },
+      "evidence_id": { "type": "string", "minLength": 1 },
+      "normalized_result": { "type": "object" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

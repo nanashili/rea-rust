@@ -1,0 +1,38 @@
+{
+  "name": "offline_identify_flutter_build",
+  "title": "Project Captured Flutter Build Facts",
+  "description": "Return caller-supplied Flutter build identification facts. APK acquisition and parsing remain outside this offline adapter.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["result"],
+        "additionalProperties": false,
+        "properties": { "result": { "type": "object" } }
+      },
+      {
+        "type": "object",
+        "required": ["normalized_result"],
+        "additionalProperties": false,
+        "properties": { "normalized_result": { "type": "object" } }
+      },
+      {
+        "type": "object",
+        "required": ["evidence"],
+        "additionalProperties": false,
+        "properties": { "evidence": { "type": "object" } }
+      }
+    ]
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": ["target", "flutter_detected", "abis", "coverage"]
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

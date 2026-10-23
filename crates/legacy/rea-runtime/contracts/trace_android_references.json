@@ -1,0 +1,30 @@
+{
+  "name": "trace_android_references",
+  "title": "Trace Android References",
+  "description": "Trace static DEX references to an exact Android class or selected method overload without executing the APK.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "class_name": { "type": "string", "minLength": 1 },
+      "method_name": { "type": "string", "minLength": 1 },
+      "overload_index": { "type": "integer", "minimum": 0 }
+    },
+    "required": ["path", "class_name"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

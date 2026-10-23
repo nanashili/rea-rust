@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "batch_decompile",
+  "title": "Batch decompile native procedures",
+  "description": "Decompile an ordered batch of provider-normalized procedure selectors, or project a retained batch result.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "addresses": {"type": "array", "maxItems": 64, "items": {"type": "string"}},
+      "evidence": {"type": "object"},
+      "result": {"type": "object"}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["items", "total", "succeeded", "failed"],
+    "properties": {
+      "items": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+      "total": {"type": "integer", "minimum": 0},
+      "succeeded": {"type": "integer", "minimum": 0},
+      "failed": {"type": "integer", "minimum": 0},
+      "durability": {"type": "object"}
+    },
+    "additionalProperties": false
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

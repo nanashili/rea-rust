@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_legacy_metadata",
+  "title": "Inspect Legacy IL2CPP Metadata Header",
+  "description": "Decode a caller-supplied IL2CPP metadata 24 through 28 header using an explicit version-specific pair layout. The operation is bounded, read-only, and capture-only; it does not infer row layouts or access native code.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["metadata_version", "bytes_base64", "layout"],
+    "properties": {
+      "metadata_version": { "type": "integer", "enum": [24, 25, 26, 27, 28] },
+      "bytes_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+      },
+      "layout": { "$ref": "#/$defs/layout" },
+      "artifact": { "$ref": "#/$defs/artifact" },
+      "ownership": { "$ref": "#/$defs/ownership" }
+    },
+    "$defs": {
+      "uint": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["header_pair_count", "header_size"],
+        "properties": {
+          "header_pair_count": { "type": "integer", "minimum": 1, "maximum": 128 },
+          "header_size": { "$ref": "#/$defs/uint" },
+          "section_names": {
+            "type": "array",
+            "maxItems": 128,
+            "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "tables": {
+            "type": "object",
+            "maxProperties": 64,
+            "additionalProperties": { "$ref": "#/$defs/table" }
+          },
+          "strings": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["section"],
+            "properties": { "section": { "type": "string", "minLength": 1, "maxLength": 256 } }
+          }
+        }
+      },
+      "artifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "id": { "type": "string", "minLength": 1, "maxLength": 256 }
+        }
+      },
+      "ownership": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/ownershipRow" }
+        }
+      },
+      "ownershipRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {},
+          "section": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "start": { "$ref": "#/$defs/uint" },
+          "count": { "$ref": "#/$defs/uint" },
+          "record_size": { "$ref": "#/$defs/uint" }
+        }
+      },
+      "table": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["section", "record_size", "fields"],
+        "properties": {
+          "section": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "record_size": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+          "count": { "$ref": "#/$defs/uint" },
+          "fields": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": { "$ref": "#/$defs/uint" }
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "metadata_version", "magic", "header", "artifact", "sections", "rows", "ownership", "coverage", "limitations"],
+    "properties": {
+      "operation": { "const": "inspect_il2cpp_legacy_metadata" },
+      "metadata_version": { "type": "integer", "enum": [24, 25, 26, 27, 28] },
+      "magic": { "const": 4205910959 },
+      "header": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["size", "pair_count", "layout_source"],
+        "properties": {
+          "size": { "$ref": "#/$defs/uint" },
+          "pair_count": { "type": "integer", "minimum": 1, "maximum": 128 },
+          "layout_source": { "const": "caller-supplied" }
+        }
+      },
+      "artifact": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["bytes"],
+        "properties": { "bytes": { "type": "integer", "minimum": 0, "maximum": 268435456 } }
+      },
+      "sections": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 128,
+        "items": { "$ref": "#/$defs/section" }
+      },
+      "rows": { "type": ["null", "object", "array"] },
+      "ownership": { "type": ["null", "object"] },
+      "coverage": {
+        "type": "object",
+        "required": ["header", "rows"],
+        "properties": {
+          "header": { "const": "complete" },
+          "rows": { "enum": ["complete", "unknown"] }
+        }
+      },
+      "limitations": { "type": "array", "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+    },
+    "$defs": {
+      "uint": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+      "section": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "name", "offset", "size", "count", "record_layout"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0, "maximum": 127 },
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "offset": { "$ref": "#/$defs/uint" },
+          "size": { "$ref": "#/$defs/uint" },
+          "count": { "type": ["null", "integer"], "minimum": 0, "maximum": 4294967295 },
+          "record_layout": { "type": ["null", "object"], "additionalProperties": true }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,21 @@
+[package]
+name = "rea-core"
+description = "REA domain semantics: Evidence, analysis errors, canonical JSON, cancellation and process facts."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "float_roundtrip"] }
+sha2.workspace = true
+ryu-js.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[lints.clippy]
+correctness = "deny"

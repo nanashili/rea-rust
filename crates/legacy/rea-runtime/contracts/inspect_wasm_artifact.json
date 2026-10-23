@@ -1,0 +1,38 @@
+{
+  "name": "inspect_wasm_artifact",
+  "title": "Inspect WASM Artifact",
+  "description": "Inspect a bounded caller-supplied WebAssembly snapshot or project authenticated inspect_wasm_artifact Evidence. The operation is read-only and performs no filesystem acquisition, module execution, decoder invocation, or network access.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bytes_base64"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "bytes_base64": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" }
+        }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence"],
+        "properties": {
+          "evidence": { "type": "object", "minProperties": 1 }
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object"
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

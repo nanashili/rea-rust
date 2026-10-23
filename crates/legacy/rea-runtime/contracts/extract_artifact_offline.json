@@ -1,0 +1,20 @@
+{
+  "name": "extract_artifact",
+  "title": "Project Supplied Artifact Bytes",
+  "description": "Validate caller-supplied inventory and observed entry bytes and return a deterministic extraction manifest. No files are created or deleted and no target content is executed.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "output_root", "integrity_policy", "inventory", "entries"],
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "output_root": { "type": "string", "minLength": 1 },
+      "integrity_policy": { "enum": ["fail", "record-and-continue"] },
+      "inventory": { "type": "object" },
+      "entries": { "type": "array" }
+    }
+  },
+  "outputSchema": { "type": "object", "required": ["artifacts", "containment_verified", "cleanup"] },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

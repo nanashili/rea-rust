@@ -1,0 +1,8 @@
+{
+  "name": "inspect_android_resource",
+  "title": "Inspect Android Resource",
+  "description": "Inspect retained Android resource entries and configuration variants using an exact resource selector without executing the APK.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "report": { "type": "object" }, "evidence": { "type": "object" }, "resource_id": { "type": "string", "minLength": 1 }, "package_id": { "type": "integer", "minimum": 0, "maximum": 4294967295 }, "type_id": { "type": "integer", "minimum": 0, "maximum": 4294967295 }, "entry_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 }, "name": { "type": "string", "minLength": 1 }, "locale": { "type": "string", "minLength": 1 }, "region": { "type": "string", "minLength": 1 }, "density": { "type": "integer", "minimum": 0, "maximum": 65535 }, "sdk": { "type": "integer", "minimum": 0, "maximum": 65535 }, "orientation": { "type": "integer", "minimum": 0, "maximum": 255 } }, "required": ["report"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

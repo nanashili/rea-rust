@@ -1,0 +1,554 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_registration_tables",
+  "title": "Project IL2CPP Registration Tables",
+  "description": "Validate caller-supplied, versioned IL2CPP registration-table layout facts and preserve every candidate, including ambiguous, rejected, and unknown observations. No registration root is discovered or selected by this operation.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "metadata_version",
+      "layout",
+      "candidates"
+    ],
+    "properties": {
+      "metadata_version": {
+        "enum": [
+          29,
+          31,
+          39
+        ]
+      },
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pointer_width",
+          "endianness",
+          "fields"
+        ],
+        "properties": {
+          "metadata_version": {
+            "enum": [
+              29,
+              31,
+              39
+            ]
+          },
+          "pointer_width": {
+            "enum": [
+              4,
+              8
+            ]
+          },
+          "endianness": {
+            "enum": [
+              "little",
+              "big"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/$defs/layoutField"
+            }
+          }
+        }
+      },
+      "candidates": {
+        "type": "array",
+        "maxItems": 4096,
+        "items": {
+          "$ref": "#/$defs/candidate"
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "operation",
+      "metadata_version",
+      "layout",
+      "status",
+      "candidates",
+      "coverage",
+      "limitations"
+    ],
+    "properties": {
+      "operation": {
+        "const": "project_il2cpp_registration_tables"
+      },
+      "metadata_version": {
+        "enum": [
+          29,
+          31,
+          39
+        ]
+      },
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "metadata_version",
+          "pointer_width",
+          "endianness",
+          "fields"
+        ],
+        "properties": {
+          "metadata_version": {
+            "enum": [
+              29,
+              31,
+              39
+            ]
+          },
+          "pointer_width": {
+            "enum": [
+              4,
+              8
+            ]
+          },
+          "endianness": {
+            "enum": [
+              "little",
+              "big"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/$defs/layoutField"
+            }
+          }
+        }
+      },
+      "status": {
+        "enum": [
+          "complete",
+          "partial",
+          "ambiguous"
+        ]
+      },
+      "candidates": {
+        "type": "array",
+        "maxItems": 4096,
+        "items": {
+          "$ref": "#/$defs/projectedCandidate"
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_count",
+          "candidate_selection",
+          "states"
+        ],
+        "properties": {
+          "candidate_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "candidate_selection": {
+            "enum": [
+              "unique_input",
+              "ambiguous_input"
+            ]
+          },
+          "states": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "enum": [
+                "validated",
+                "ambiguous",
+                "rejected",
+                "unknown"
+              ]
+            }
+          }
+        }
+      },
+      "limitations": {
+        "type": "array",
+        "maxItems": 16,
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    }
+  },
+  "$defs": {
+    "layoutField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "index",
+        "count_offset",
+        "pointer_offset",
+        "element_width"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "count_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "pointer_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "element_width": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            4,
+            8,
+            16,
+            32,
+            64
+          ]
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fields"
+      ],
+      "properties": {
+        "root_file_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "root_address": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "state": {
+          "enum": [
+            "validated",
+            "ambiguous",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/fieldFact"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "method_pointer_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "method_pointers": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {}
+        }
+      }
+    },
+    "fieldFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "count",
+        "pointer"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "pointer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "source_address": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "available_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "projectedCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "fields",
+        "evidence"
+      ],
+      "properties": {
+        "root_file_offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "root_address": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "state": {
+          "enum": [
+            "validated",
+            "ambiguous",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/projectedField"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "method_pointer_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "method_pointers": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {
+            "$ref": "#/$defs/projectedMethodPointer"
+          }
+        },
+        "method_pointer_count_match": {
+          "type": "boolean"
+        }
+      }
+    },
+    "projectedField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "count",
+        "pointer",
+        "layout_name",
+        "required_bytes",
+        "valid",
+        "resolution",
+        "source_span"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16777216
+        },
+        "pointer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "source_address": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "available_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "layout_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "required_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "resolution": {
+          "enum": [
+            "validated",
+            "unknown"
+          ]
+        },
+        "source_span": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start",
+                "end",
+                "length",
+                "available_bytes"
+              ],
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 18446744073709551615
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 18446744073709551615
+                },
+                "length": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 18446744073709551615
+                },
+                "available_bytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "projectedMethodPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "source",
+        "pointer",
+        "resolution"
+      ],
+      "properties": {
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "source": {},
+        "pointer": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolution": {
+          "enum": [
+            "mapped",
+            "unknown",
+            "ambiguous"
+          ]
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

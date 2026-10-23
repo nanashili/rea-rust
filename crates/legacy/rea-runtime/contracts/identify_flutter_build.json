@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "identify_flutter_build",
+  "title": "Identify Flutter Build",
+  "description": "Inspect a caller-selected Flutter APK using bounded local ZIP parsing.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["path"],
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1 }
+    }
+  },
+  "outputSchema": { "$ref": "#/$defs/result" },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "required": ["target", "flutter_detected", "abis", "coverage"],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "object",
+          "required": ["path", "bytes", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "bytes": { "type": "integer", "minimum": 0 },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "flutter_detected": { "type": "boolean" },
+        "abis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["abi", "libapp", "libflutter"],
+            "additionalProperties": false,
+            "properties": {
+              "abi": { "type": "string", "minLength": 1 },
+              "libapp": { "$ref": "#/$defs/libapp" },
+              "libflutter": { "$ref": "#/$defs/libflutter" }
+            }
+          }
+        },
+        "coverage": { "enum": ["complete", "partial"] }
+      }
+    },
+    "libapp": {
+      "type": "object",
+      "required": [
+        "present",
+        "bytes",
+        "sha256",
+        "elf_header_valid",
+        "snapshot_hash_sources",
+        "snapshot_hash_candidates",
+        "snapshot_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "present": { "type": "boolean" },
+        "bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "elf_header_valid": { "type": ["boolean", "null"] },
+        "snapshot_hash_sources": { "type": "integer", "minimum": 0 },
+        "snapshot_hash_candidates": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[0-9a-f]{32}$" }
+        },
+        "snapshot_hash": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{32}$"
+        }
+      }
+    },
+    "libflutter": {
+      "type": "object",
+      "required": [
+        "present",
+        "bytes",
+        "sha256",
+        "build_id",
+        "build_id_candidates",
+        "dart_version",
+        "dart_version_capped",
+        "toolchain_lines",
+        "toolchain_capped"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "present": { "type": "boolean" },
+        "bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "build_id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{8,128}$"
+        },
+        "build_id_candidates": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "type": "string", "pattern": "^[0-9a-f]{8,128}$" }
+        },
+        "dart_version": { "type": ["string", "null"] },
+        "dart_version_capped": { "type": "boolean" },
+        "toolchain_lines": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "toolchain_capped": { "type": "boolean" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "analyze_swift_types",
+  "title": "Analyze Captured Swift Type Evidence",
+  "description": "Categorize caller-supplied Swift procedures and same-address mangled symbol aliases from retained inventory Evidence or static facts without opening an artifact or invoking a demangler.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["procedures"],
+        "additionalProperties": false,
+        "properties": {
+          "procedures": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": {
+              "type": "object",
+              "required": ["address", "name"],
+              "additionalProperties": false,
+              "properties": {
+                "address": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "symbols": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": {
+              "type": "object",
+              "required": ["address", "name"],
+              "additionalProperties": false,
+              "properties": {
+                "address": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "category": {
+            "enum": ["classes", "structs", "enums", "protocols", "extensions", "other"]
+          },
+          "pattern": {"type": "string"}
+        }
+      },
+      {
+        "type": "object",
+        "required": ["evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {"type": "object", "minProperties": 1},
+          "category": {
+            "enum": ["classes", "structs", "enums", "protocols", "extensions", "other"]
+          },
+          "pattern": {"type": "string"}
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["total", "categories", "unclassified", "limitations"],
+    "additionalProperties": false,
+    "properties": {
+      "total": {"type": "integer", "minimum": 0},
+      "categories": {
+        "type": "object",
+        "required": ["classes", "structs", "enums", "protocols", "extensions", "other"],
+        "additionalProperties": false,
+        "properties": {
+          "classes": {"$ref": "#/$defs/category"},
+          "structs": {"$ref": "#/$defs/category"},
+          "enums": {"$ref": "#/$defs/category"},
+          "protocols": {"$ref": "#/$defs/category"},
+          "extensions": {"$ref": "#/$defs/category"},
+          "other": {"$ref": "#/$defs/category"}
+        }
+      },
+      "unclassified": {
+        "type": "array",
+        "items": {"$ref": "#/$defs/unclassified"}
+      },
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    },
+    "$defs": {
+      "category": {
+        "type": "object",
+        "required": ["count", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "count": {"type": "integer", "minimum": 0},
+          "items": {"type": "array", "items": {"$ref": "#/$defs/item"}}
+        }
+      },
+      "item": {
+        "type": "object",
+        "required": ["address", "name", "mangled_names"],
+        "additionalProperties": false,
+        "properties": {
+          "address": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "mangled_names": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "unclassified": {
+        "type": "object",
+        "required": ["address", "name", "mangled_names", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "address": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "mangled_names": {"type": "array", "items": {"type": "string"}},
+          "reason": {"enum": ["category_not_decoded", "conflicting_categories"]}
+        }
+      }
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

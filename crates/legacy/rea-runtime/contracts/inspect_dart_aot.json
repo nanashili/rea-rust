@@ -1,0 +1,49 @@
+{
+  "name": "inspect_dart_aot",
+  "title": "Inspect Dart AOT Snapshot",
+  "description": "Inspect one ABI's Dart AOT snapshot inside an APK by pure parsing. The result preserves target and library identity, all four snapshot symbol sections and headers, snapshot hash candidates, and a bounded string-pool projection. String-pool entries are byte-pattern observations rather than deserialized Dart cluster semantics. No engine, target execution, or external lookup is performed.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\x00]*$",
+        "description": "Local APK file carrying a Flutter AOT payload"
+      },
+      "abi": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1010,
+        "pattern": "^[^/]*$",
+        "description": "Exact lib/ directory label; omitted selects arm64-v8a, x86_64, x86, armeabi-v7a, then remaining ABIs alphabetically"
+      },
+      "detail": {
+        "type": "string",
+        "enum": ["complete", "summary"],
+        "description": "Omit or use complete for the full retained observation; summary selects the identity and count projection"
+      }
+    },
+    "required": ["path"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "Evidence containing target, ABI, libapp snapshot facts, string_pool coverage and lower-bound counts, and producer limitations"
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

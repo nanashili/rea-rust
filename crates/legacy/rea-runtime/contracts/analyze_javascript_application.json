@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "analyze_javascript_application",
+  "title": "Analyze JavaScript application",
+  "description": "Analyze one local ASAR or extracted JavaScript application without executing it, preserving caller-selected sources and integrity policy.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["input_path"],
+    "properties": {
+      "input_path": {"type": "string", "minLength": 1},
+      "format": {"type": "string", "enum": ["auto", "asar", "directory"], "default": "auto"},
+      "integrity_policy": {"type": "string", "enum": ["fail", "record-and-continue"], "default": "fail"},
+      "source_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+      "detail": {"type": "string", "enum": ["full", "summary"], "default": "full"}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

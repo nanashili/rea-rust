@@ -1,0 +1,173 @@
+{
+  "name": "project_il2cpp_type_descriptors",
+  "title": "Project IL2CPP Type Descriptors",
+  "description": "Project caller-supplied captured IL2CPP type-descriptor rows into reference-preserving facts. The read-only projection does not decode artifacts, execute a target, or infer unresolved descriptor kinds and references.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "$ref": "#/$defs/directInput"
+      },
+      {
+        "$ref": "#/$defs/wrappedInput"
+      }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "descriptorRow": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "type": ["string", "null"] },
+          "type_kind": { "type": ["string", "null"] },
+          "typeKind": { "type": ["string", "null"] },
+          "element_type": { "type": ["string", "null"] },
+          "elementType": { "type": ["string", "null"] },
+          "type_index": { "$ref": "#/$defs/index" },
+          "typeIndex": { "$ref": "#/$defs/index" },
+          "class_index": { "$ref": "#/$defs/index" },
+          "classIndex": { "$ref": "#/$defs/index" },
+          "type_definition_index": { "$ref": "#/$defs/index" },
+          "element_type_index": { "$ref": "#/$defs/index" },
+          "elementTypeIndex": { "$ref": "#/$defs/index" },
+          "element_index": { "$ref": "#/$defs/index" },
+          "elementIndex": { "$ref": "#/$defs/index" },
+          "rank": { "$ref": "#/$defs/index" },
+          "array_rank": { "$ref": "#/$defs/index" },
+          "generic_parameter_index": { "$ref": "#/$defs/index" },
+          "parameter_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "arguments": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/referenceValue" }
+          },
+          "generic_arguments": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/referenceValue" }
+          },
+          "type_arguments": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/referenceValue" }
+          }
+        }
+      },
+      "referenceValue": {
+        "oneOf": [
+          { "$ref": "#/$defs/index" },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "type_index": { "$ref": "#/$defs/index" },
+              "typeIndex": { "$ref": "#/$defs/index" },
+              "index": { "$ref": "#/$defs/index" },
+              "metadata_index": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      },
+      "descriptorRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/descriptorRow" }
+      },
+      "directInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "oneOf": [
+          { "required": ["type_descriptors"] },
+          { "required": ["typeDescriptors"] },
+          { "required": ["typespecs"] },
+          { "required": ["type_specs"] },
+          { "required": ["descriptors"] }
+        ],
+        "properties": {
+          "type_descriptors": { "$ref": "#/$defs/descriptorRows" },
+          "typeDescriptors": { "$ref": "#/$defs/descriptorRows" },
+          "typespecs": { "$ref": "#/$defs/descriptorRows" },
+          "type_specs": { "$ref": "#/$defs/descriptorRows" },
+          "descriptors": { "$ref": "#/$defs/descriptorRows" }
+        }
+      },
+      "wrappedInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata"],
+        "properties": {
+          "metadata": {
+            "$ref": "#/$defs/directInput"
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "descriptors", "diagnostics", "coverage"],
+    "properties": {
+      "status": {
+        "enum": ["complete", "partial"]
+      },
+      "descriptors": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_index", "source", "kind", "resolution", "references", "details"],
+          "properties": {
+            "source_index": { "$ref": "#/$defs/index" },
+            "source": { "type": "object" },
+            "kind": { "type": "string" },
+            "resolution": { "enum": ["resolved", "unresolved"] },
+            "references": { "type": ["object", "null"] },
+            "details": { "type": ["object", "null"] }
+          }
+        }
+      },
+      "diagnostics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "row", "message"],
+          "properties": {
+            "kind": { "type": "string" },
+            "row": { "$ref": "#/$defs/index" },
+            "message": { "type": "string" }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["descriptors", "resolved", "unresolved"],
+        "properties": {
+          "descriptors": { "$ref": "#/$defs/index" },
+          "resolved": { "$ref": "#/$defs/index" },
+          "unresolved": { "$ref": "#/$defs/index" }
+        }
+      }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

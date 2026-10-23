@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_method_semantics",
+  "title": "Inspect IL2CPP Method Semantics",
+  "description": "Classify caller-supplied IL2CPP method-semantics rows using explicit method and association indices. This read-only operation is static/captured only and never opens artifacts, executes Unity or IL2CPP, or mutates a target. Unknown bits, invalid links, duplicates, and source rows remain explicit.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "rawSemantics": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 2,
+          "properties": {
+            "raw": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+            "value": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+          },
+          "anyOf": [
+            { "required": ["raw"] },
+            { "required": ["value"] }
+          ]
+        }
+      ]
+    },
+    "row": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": true,
+      "required": ["semantics"],
+      "properties": {
+        "method_index": { "$ref": "#/$defs/index" },
+        "methodIndex": { "$ref": "#/$defs/index" },
+        "association_index": { "$ref": "#/$defs/index" },
+        "associationIndex": { "$ref": "#/$defs/index" },
+        "association_kind": { "type": "string" },
+        "associationKind": { "type": "string" },
+        "semantics": { "$ref": "#/$defs/rawSemantics" },
+        "method_semantics": { "$ref": "#/$defs/rawSemantics" },
+        "methodSemantics": { "$ref": "#/$defs/rawSemantics" }
+      },
+      "anyOf": [
+        { "required": ["semantics"] },
+        { "required": ["method_semantics"] },
+        { "required": ["methodSemantics"] }
+      ]
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/row" }
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/rows" },
+        {
+          "type": "object",
+          "maxProperties": 8,
+          "additionalProperties": false,
+          "properties": {
+            "method_semantics": { "$ref": "#/$defs/rows" },
+            "methodSemantics": { "$ref": "#/$defs/rows" },
+            "semantics": { "$ref": "#/$defs/rows" },
+            "metadata": {
+              "type": "object",
+              "maxProperties": 8,
+              "additionalProperties": false,
+              "properties": {
+                "method_semantics": { "$ref": "#/$defs/rows" },
+                "methodSemantics": { "$ref": "#/$defs/rows" },
+                "semantics": { "$ref": "#/$defs/rows" }
+              },
+              "anyOf": [
+                { "required": ["method_semantics"] },
+                { "required": ["methodSemantics"] },
+                { "required": ["semantics"] }
+              ]
+            }
+          },
+          "anyOf": [
+            { "required": ["method_semantics"] },
+            { "required": ["methodSemantics"] },
+            { "required": ["semantics"] },
+            { "required": ["metadata"] }
+          ]
+        }
+      ]
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row", "method_index", "association_index", "association_kind", "semantics", "resolution"],
+      "properties": {
+        "row": { "type": "object", "additionalProperties": true },
+        "method_index": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] },
+        "association_index": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] },
+        "association_kind": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "semantics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["raw", "flags", "unknown_bits"],
+          "properties": {
+            "raw": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+            "flags": { "type": "array", "items": { "type": "string" }, "maxItems": 6 },
+            "unknown_bits": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+          }
+        },
+        "resolution": { "enum": ["linked", "invalid"] }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "items", "coverage", "limitations"],
+      "properties": {
+        "operation": { "const": "inspect_il2cpp_method_semantics" },
+        "items": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/item" } },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rows", "linked", "invalid_links", "duplicate_links", "unknown_semantics"],
+          "properties": {
+            "rows": { "$ref": "#/$defs/index" },
+            "linked": { "$ref": "#/$defs/index" },
+            "invalid_links": { "$ref": "#/$defs/index" },
+            "duplicate_links": { "$ref": "#/$defs/index" },
+            "unknown_semantics": { "$ref": "#/$defs/index" }
+          }
+        },
+        "limitations": { "type": "array", "items": { "type": "string" }, "maxItems": 16 }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

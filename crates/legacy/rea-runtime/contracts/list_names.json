@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_names",
+  "title": "List Captured Names",
+  "description": "Project retained analyzed symbol facts while preserving source order and explicit provider metadata.",
+  "inputSchema": { "type": "object", "additionalProperties": false, "properties": { "normalized_result": {}, "result": {}, "value": {}, "names": {}, "items": {}, "address": { "type": "string" }, "document": { "type": "string" } } },
+  "outputSchema": { "type": "array", "items": { "type": "object", "required": ["address", "value", "symbol"], "additionalProperties": false, "properties": { "address": { "type": "string" }, "value": { "type": "string" }, "symbol": { "type": "object", "required": ["primary", "dynamic", "external", "type", "source"], "additionalProperties": false, "properties": { "primary": { "type": "boolean" }, "dynamic": { "type": "boolean" }, "external": { "type": "boolean" }, "type": { "type": "string" }, "source": { "enum": ["default", "analysis", "ai", "imported", "user_defined"] } } } } } },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

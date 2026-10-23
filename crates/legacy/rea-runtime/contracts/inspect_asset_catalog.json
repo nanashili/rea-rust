@@ -1,0 +1,64 @@
+{
+  "name": "inspect_asset_catalog",
+  "title": "Inspect Apple Asset Catalog Facts",
+  "description": "Inspect a bounded caller-supplied asset catalog report or project authenticated Evidence without invoking assetutil or reading a bundle path.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "target_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "catalog_path": { "type": "string", "minLength": 1 },
+      "bytes_base64": { "type": "string", "minLength": 1, "maxLength": 89478488 },
+      "catalog_sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+      "resource_references": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_node_id", "source_path", "source_archive_sha256", "field", "key"],
+          "properties": {
+            "source_node_id": { "type": "string", "minLength": 1 },
+            "source_path": { "type": "string", "minLength": 1 },
+            "source_archive_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "field": { "type": "string", "minLength": 1 },
+            "key": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "offset": { "type": "integer", "minimum": 0, "default": 0 },
+      "limit": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 1000 },
+      "evidence": { "type": "object", "minProperties": 1 }
+    },
+    "anyOf": [
+      {
+        "required": ["target_sha256", "catalog_path", "bytes_base64"],
+        "not": { "required": ["evidence"] }
+      },
+      {
+        "required": ["evidence"],
+        "not": {
+          "anyOf": [
+            { "required": ["target_sha256"] },
+            { "required": ["catalog_path"] },
+            { "required": ["bytes_base64"] },
+            { "required": ["catalog_sha256"] },
+            { "required": ["resource_references"] },
+            { "required": ["offset"] },
+            { "required": ["limit"] }
+          ]
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "anyOf": [
+      { "required": ["target_sha256", "catalogs", "records", "limitations", "provenance"] },
+      { "required": ["evidence_id", "subject", "result", "provenance"] }
+    ],
+    "additionalProperties": true
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

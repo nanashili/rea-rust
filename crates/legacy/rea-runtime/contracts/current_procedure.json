@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "current_procedure",
+  "title": "Read current native procedure",
+  "description": "Return the exact retained current procedure name.",
+  "inputSchema": {"type": "object", "properties": {"result": {"type": "string"}, "normalized_result": {"type": "string"}, "value": {"type": "string"}, "evidence": {"type": "object"}}, "additionalProperties": true},
+  "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "string"}}, "additionalProperties": false},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

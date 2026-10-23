@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "correlate_il2cpp_decompilation",
+  "title": "Correlate captured IL2CPP metadata, CodeGenModule and native decompilation Evidence",
+  "description": "Join one authenticated metadata Evidence record with bounded captured CodeGenModule facts and native decompilation Evidence. The operation is static and read-only: it never opens artifacts, dereferences pointers, invokes a provider, executes a target, or mutates state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["metadata_evidence", "codegen_evidence", "native_evidence"],
+    "properties": {
+      "metadata_evidence": { "$ref": "#/$defs/metadataEvidence" },
+      "codegen_evidence": { "$ref": "#/$defs/codegenEvidenceRows" },
+      "native_evidence": { "$ref": "#/$defs/nativeEvidenceRows" }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "status", "items", "unresolved_method_rows", "metadata", "coverage"],
+    "properties": {
+      "operation": { "const": "correlate_il2cpp_decompilation" },
+      "status": { "enum": ["complete", "partial"] },
+      "items": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/item" } },
+      "unresolved_method_rows": { "type": "array", "maxItems": 200000, "items": { "type": "object" } },
+      "metadata": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source_evidence", "result"],
+        "properties": { "source_evidence": { "$ref": "#/$defs/evidenceSource" }, "result": { "type": "object" } }
+      },
+      "coverage": {
+        "type": "object", "additionalProperties": false,
+        "required": ["methods", "unresolved_method_rows", "codegen_modules", "native_evidence", "decompilation_join"],
+        "properties": {
+          "methods": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "unresolved_method_rows": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "codegen_modules": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "native_evidence": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "decompilation_join": { "type": ["object", "null"] }
+        }
+      }
+    }
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidenceId": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+    "evidenceSource": {
+      "type": "object", "additionalProperties": false, "required": ["evidence_id", "operation"],
+      "properties": { "evidence_id": { "$ref": "#/$defs/evidenceId" }, "operation": { "type": "string", "minLength": 1 } }
+    },
+    "metadataEvidence": {
+      "type": "object", "additionalProperties": false, "required": ["evidence_id", "operation", "normalized_result"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/evidenceId" }, "operation": { "const": "inspect_il2cpp_metadata" },
+        "subject_sha256": { "$ref": "#/$defs/sha256" }, "normalized_result": { "type": "object" }
+      }
+    },
+    "codegenEvidence": {
+      "type": "object", "additionalProperties": false, "required": ["evidence_id", "operation", "normalized_result"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/evidenceId" }, "operation": { "type": "string", "minLength": 1 },
+        "subject_sha256": { "$ref": "#/$defs/sha256" }, "normalized_result": { "type": "object" }
+      }
+    },
+    "codegenEvidenceRows": { "type": "array", "minItems": 1, "maxItems": 200000, "items": { "$ref": "#/$defs/codegenEvidence" } },
+    "nativeEvidence": {
+      "type": "object", "additionalProperties": false, "required": ["evidence_id", "operation", "normalized_result"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/evidenceId" },
+        "operation": { "enum": ["analyze_function", "procedure_info", "procedure_pseudo_code", "batch_decompile"] },
+        "subject_sha256": { "$ref": "#/$defs/sha256" }, "normalized_result": { "type": "object" }
+      }
+    },
+    "nativeEvidenceRows": { "type": "array", "minItems": 1, "maxItems": 200000, "items": { "$ref": "#/$defs/nativeEvidence" } },
+    "item": {
+      "type": "object", "additionalProperties": false, "required": ["status", "matches", "metadata_source_evidence"],
+      "properties": {
+        "method_mapping": { "type": "object" }, "mapping": { "type": "object" },
+        "method_token": { "type": ["integer", "string"] }, "method_name": { "type": "string" }, "module_name": { "type": "string" },
+        "method_pointer": { "type": ["integer", "string", "object", "null"] },
+        "status": { "enum": ["mapped", "ambiguous", "unknown", "unmapped"] },
+        "matches": { "type": "array", "maxItems": 200000, "items": { "type": "object" } },
+        "unknowns": { "type": "array", "maxItems": 16, "items": { "type": "string", "minLength": 1 } },
+        "metadata_source_evidence": { "$ref": "#/$defs/evidenceSource" }
+      }
+    }
+  }
+}

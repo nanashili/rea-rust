@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "address_name",
+  "title": "Read Native Address Name",
+  "description": "Return the retained nullable native annotation without changing address spelling.",
+  "inputSchema": {"type":"object","additionalProperties":false,"properties":{"operation":{"const":"address_name"},"address":{"type":"string"},"document":{"type":"string"},"evidence":{"type":"object"},"native_observation":{"type":"object"},"annotation":{"type":"object"}}},
+  "outputSchema": {"type":"string"},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

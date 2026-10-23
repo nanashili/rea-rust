@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "trace_web_module_imports",
+  "title": "Trace web module imports",
+  "description": "Trace one exported website JavaScript module's native imports and re-exports from a local manifest while preserving exact URL context and unknown computed imports.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["manifest_path", "script_index"],
+    "properties": {
+      "manifest_path": {"type": "string", "minLength": 1},
+      "script_index": {"type": "integer", "minimum": 0},
+      "importer_url": {"type": "string", "minLength": 1},
+      "source": {"type": "string"},
+      "artifacts": {
+        "type": "object",
+        "description": "Retained manifest/source/import-map facts produced by an owning artifact adapter.",
+        "required": ["manifest", "manifestFile", "sourceFile", "source"],
+        "properties": {
+          "manifest": {"type": "object"},
+          "manifestFile": {"type": "object"},
+          "sourceFile": {"type": "object"},
+          "source": {"type": "string"},
+          "importMap": {"type": ["object", "null"]}
+        }
+      },
+      "resolver_batch": {
+        "type": "object",
+        "description": "Optional retained native resolver batch bound to this trace request."
+      },
+      "import_map": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "base_url"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "base_url": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

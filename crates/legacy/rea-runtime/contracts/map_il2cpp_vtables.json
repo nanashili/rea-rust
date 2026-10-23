@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_vtables",
+  "title": "Map IL2CPP Vtables",
+  "description": "Project caller-supplied IL2CPP type vtable ranges, vtable method rows, and interface-offset rows. This bounded, read-only projection is static/captured-only: it does not decode artifacts, attach to a process, invoke Unity or IL2CPP, execute target code, or mutate a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/wrappedInput" }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "row": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "rows": {
+        "type": "array",
+        "maxItems": 200000
+      },
+      "typeRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/typeRow" }
+      },
+      "methodRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/methodRow" }
+      },
+      "typeRow": {
+        "type": "object",
+        "additionalProperties": true,
+        "oneOf": [
+          { "required": ["metadata_index"] },
+          { "required": ["type_index"] },
+          { "required": ["index"] }
+        ]
+      },
+      "methodRow": {
+        "type": "object",
+        "additionalProperties": true,
+        "oneOf": [
+          { "required": ["metadata_index"] },
+          { "required": ["method_index"] },
+          { "required": ["index"] }
+        ]
+      },
+      "slotRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {}
+      },
+      "interfaceRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/interfaceRow" }
+      },
+      "interfaceRow": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "type_index": { "$ref": "#/$defs/index" },
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "interface_type": { "$ref": "#/$defs/index" },
+          "offset": { "$ref": "#/$defs/index" },
+          "vtable_offset": { "$ref": "#/$defs/index" },
+          "method_index": { "$ref": "#/$defs/index" }
+        },
+        "oneOf": [
+          { "required": ["offset"] },
+          { "required": ["vtable_offset"] }
+        ]
+      },
+      "typeProperties": {
+        "types": { "$ref": "#/$defs/typeRows" },
+        "type_definitions": { "$ref": "#/$defs/typeRows" }
+      },
+      "metadataInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "types": { "$ref": "#/$defs/typeRows" },
+          "type_definitions": { "$ref": "#/$defs/typeRows" },
+          "methods": { "$ref": "#/$defs/methodRows" },
+          "method_definitions": { "$ref": "#/$defs/methodRows" }
+        },
+        "allOf": [
+          { "oneOf": [{ "required": ["types"] }, { "required": ["type_definitions"] }] },
+          { "oneOf": [{ "required": ["methods"] }, { "required": ["method_definitions"] }] }
+        ]
+      },
+      "binaryInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vtable_methods": { "$ref": "#/$defs/slotRows" },
+          "vtableMethods": { "$ref": "#/$defs/slotRows" },
+          "vtable_method_rows": { "$ref": "#/$defs/slotRows" },
+          "interface_offsets": { "$ref": "#/$defs/interfaceRows" },
+          "interfaceOffsets": { "$ref": "#/$defs/interfaceRows" },
+          "interface_offset_rows": { "$ref": "#/$defs/interfaceRows" }
+        },
+        "allOf": [
+          { "oneOf": [{ "required": ["vtable_methods"] }, { "required": ["vtableMethods"] }, { "required": ["vtable_method_rows"] }] },
+          { "oneOf": [{ "required": ["interface_offsets"] }, { "required": ["interfaceOffsets"] }, { "required": ["interface_offset_rows"] }] }
+        ]
+      },
+      "directInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "types": { "$ref": "#/$defs/typeRows" },
+          "type_definitions": { "$ref": "#/$defs/typeRows" },
+          "methods": { "$ref": "#/$defs/methodRows" },
+          "method_definitions": { "$ref": "#/$defs/methodRows" },
+          "vtable_methods": { "$ref": "#/$defs/slotRows" },
+          "vtableMethods": { "$ref": "#/$defs/slotRows" },
+          "vtable_method_rows": { "$ref": "#/$defs/slotRows" },
+          "interface_offsets": { "$ref": "#/$defs/interfaceRows" },
+          "interfaceOffsets": { "$ref": "#/$defs/interfaceRows" },
+          "interface_offset_rows": { "$ref": "#/$defs/interfaceRows" }
+        },
+        "allOf": [
+          { "oneOf": [{ "required": ["types"] }, { "required": ["type_definitions"] }] },
+          { "oneOf": [{ "required": ["methods"] }, { "required": ["method_definitions"] }] },
+          { "oneOf": [{ "required": ["vtable_methods"] }, { "required": ["vtableMethods"] }, { "required": ["vtable_method_rows"] }] },
+          { "oneOf": [{ "required": ["interface_offsets"] }, { "required": ["interfaceOffsets"] }, { "required": ["interface_offset_rows"] }] }
+        ]
+      },
+      "wrappedInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata", "binary"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/metadataInput" },
+          "binary": { "$ref": "#/$defs/binaryInput" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "types", "slots", "interface_offsets", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "types": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/typeProjection" }
+      },
+      "slots": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/slotProjection" }
+      },
+      "interface_offsets": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/interfaceProjection" }
+      },
+      "coverage": { "$ref": "#/$defs/coverage" }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "row": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "source": {},
+      "typeProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "type_index", "vtable", "resolution"],
+        "properties": {
+          "type": { "$ref": "#/$defs/row" },
+          "type_index": { "$ref": "#/$defs/index" },
+          "vtable": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/slotProjection" } },
+          "resolution": { "enum": ["projected", "invalid"] }
+        }
+      },
+      "slotProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot_index", "slot", "owners", "resolution", "method"],
+        "properties": {
+          "slot_index": { "$ref": "#/$defs/index" },
+          "slot": {},
+          "owners": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "resolution": { "enum": ["ambiguous", "unowned", "owned"] },
+          "method": { "anyOf": [{ "$ref": "#/$defs/row" }, { "type": "null" }] }
+        }
+      },
+      "interfaceProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row", "source", "type_index", "offset", "method", "resolution"],
+        "properties": {
+          "row": { "$ref": "#/$defs/index" },
+          "source": { "$ref": "#/$defs/row" },
+          "type_index": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] },
+          "offset": { "$ref": "#/$defs/index" },
+          "method": { "anyOf": [{ "$ref": "#/$defs/row" }, { "type": "null" }] },
+          "resolution": { "enum": ["ambiguous", "unresolved", "resolved"] }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["types", "slots", "covered_slots", "unresolved_slots", "ambiguous_slots", "invalid_type_ranges", "invalid_type_indices", "interface_offsets", "interface_ambiguous", "interface_unresolved"],
+        "properties": {
+          "types": { "$ref": "#/$defs/index" },
+          "slots": { "$ref": "#/$defs/index" },
+          "covered_slots": { "$ref": "#/$defs/index" },
+          "unresolved_slots": { "$ref": "#/$defs/index" },
+          "ambiguous_slots": { "$ref": "#/$defs/index" },
+          "invalid_type_ranges": { "$ref": "#/$defs/index" },
+          "invalid_type_indices": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "interface_offsets": { "$ref": "#/$defs/index" },
+          "interface_ambiguous": { "$ref": "#/$defs/index" },
+          "interface_unresolved": { "$ref": "#/$defs/index" }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

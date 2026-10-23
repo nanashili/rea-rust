@@ -1,0 +1,56 @@
+{
+  "name": "inspect_il2cpp_metadata",
+  "title": "Inspect IL2CPP Metadata",
+  "description": "Inspect a caller-selected Unity IL2CPP global-metadata.dat file or project an explicitly retained Evidence record. File inspection is read-only, uses an absolute path, creates Evidence, and never executes Unity or IL2CPP. Evidence projection never reopens the recorded path.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1, "pattern": "^[^\\x00]*$" },
+      "detail": { "type": "string", "enum": ["complete", "summary"] },
+      "evidence": {
+        "type": "object",
+        "required": ["operation", "normalized_result"],
+        "properties": {
+          "operation": { "const": "inspect_il2cpp_metadata" },
+          "normalized_result": { "type": "object" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "oneOf": [
+      { "required": ["path"] },
+      { "required": ["evidence"] }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["evidence_id", "subject", "provider", "operation", "normalized_result"],
+    "properties": {
+      "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+      "subject": { "type": "object" },
+      "provider": { "type": "object" },
+      "operation": { "const": "inspect_il2cpp_metadata" },
+      "normalized_result": { "type": "object" },
+      "parameters": { "type": "object" },
+      "raw_result": {},
+      "analysis_profile": {},
+      "confidence": { "type": "string" },
+      "authority": { "type": "string" },
+      "environment": {},
+      "limitations": { "type": "array" },
+      "relationship_coverage": {},
+      "locations": { "type": "array" },
+      "evidence_links": { "type": "array" }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

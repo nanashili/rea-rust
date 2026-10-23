@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "decode_android_resources",
+  "title": "Decode Android resources",
+  "description": "Replay a caller-supplied Apktool Android resource report. This captured-only adapter does not run Apktool, access ADB, or inspect device state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "report": { "type": "object" },
+      "evidence": { "type": "object" }
+    },
+    "oneOf": [
+      { "required": ["report"] },
+      { "required": ["evidence"] }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,126 @@
+# REA native workspace. `README.md` documents the crate map and the layering
+# rules; dependencies only point down this list (core → … → apps).
+[workspace]
+resolver = "3"
+members = [
+    # Domain semantics, Evidence and the deep-analysis provider contract.
+    "crates/core/rea-core",
+    "crates/core/rea-analysis",
+    # Bounded static readers for artifact formats.
+    "crates/formats/rea-rust-analysis",
+    # Host resource owners (files, processes, transports) and the C ABI.
+    "crates/platform/rea-host",
+    "crates/platform/rea-ffi",
+    # Shared application workflows used by every adapter.
+    "crates/application/rea-application",
+    # Deep-analysis providers behind `rea-analysis`.
+    "crates/providers/rea-provider-ghidra",
+    "crates/providers/rea-provider-hopper",
+    "crates/providers/rea-provider-ida",
+    "crates/providers/rea-provider-kuna",
+    # Tool runtime (frozen contracts, registry, MCP session) and the CLI adapter.
+    "crates/interfaces/rea-mcp",
+    "crates/interfaces/rea-cli",
+    # Tool families registered into the `rea-mcp` registry.
+    "crates/tools/rea-tools-android",
+    "crates/tools/rea-tools-application",
+    "crates/tools/rea-tools-artifacts",
+    "crates/tools/rea-tools-binary",
+    "crates/tools/rea-tools-captures",
+    "crates/tools/rea-tools-debug",
+    "crates/tools/rea-tools-enhanced",
+    "crates/tools/rea-tools-ledger",
+    "crates/tools/rea-tools-managed",
+    "crates/tools/rea-tools-process",
+    "crates/tools/rea-tools-web",
+    # Executables: the production `rea` composition root and the superseded
+    # experimental `rea-native` runtime.
+    "crates/apps/rea",
+    "crates/legacy/rea-runtime",
+]
+# The pre-existing optional provider retains its independently pinned build.
+exclude = ["ghidra-rust-worker"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+license = "MIT"
+publish = false
+
+# Every dependency is declared once, with an exact version. Members inherit with
+# `name.workspace = true` and list only the extra features they use.
+[workspace.dependencies]
+# Workspace crates.
+rea-analysis = { path = "crates/core/rea-analysis" }
+rea-application = { path = "crates/application/rea-application" }
+rea-cli = { path = "crates/interfaces/rea-cli" }
+rea-core = { path = "crates/core/rea-core" }
+rea-host = { path = "crates/platform/rea-host" }
+rea-mcp = { path = "crates/interfaces/rea-mcp" }
+rea-provider-ghidra = { path = "crates/providers/rea-provider-ghidra" }
+rea-provider-hopper = { path = "crates/providers/rea-provider-hopper" }
+rea-provider-ida = { path = "crates/providers/rea-provider-ida" }
+rea-provider-kuna = { path = "crates/providers/rea-provider-kuna" }
+rea-rust-analysis = { path = "crates/formats/rea-rust-analysis" }
+rea-tools-android = { path = "crates/tools/rea-tools-android" }
+rea-tools-application = { path = "crates/tools/rea-tools-application" }
+rea-tools-artifacts = { path = "crates/tools/rea-tools-artifacts" }
+rea-tools-binary = { path = "crates/tools/rea-tools-binary" }
+rea-tools-captures = { path = "crates/tools/rea-tools-captures" }
+rea-tools-debug = { path = "crates/tools/rea-tools-debug" }
+rea-tools-enhanced = { path = "crates/tools/rea-tools-enhanced" }
+rea-tools-ledger = { path = "crates/tools/rea-tools-ledger" }
+rea-tools-managed = { path = "crates/tools/rea-tools-managed" }
+rea-tools-process = { path = "crates/tools/rea-tools-process" }
+rea-tools-web = { path = "crates/tools/rea-tools-web" }
+
+# External crates.
+axum = { version = "=0.8.9", default-features = false }
+base64 = "=0.22.1"
+bytes = "=1.12.1"
+chrono = { version = "=0.4.45", default-features = false }
+# JavaScript/TypeScript parser for analyze_javascript_application / analyze_web_bundle
+# (approved oxc decision; 0.133.0 is the newest release whose MSRV fits rust-version 1.93; Babel differential tests in .cache/rust-migration/js-parse-diff).
+oxc_allocator = "=0.133.0"
+oxc_ast = "=0.133.0"
+oxc_parser = "=0.133.0"
+oxc_semantic = "=0.133.0"
+oxc_span = "=0.133.0"
+# Same engine release as the original runtime's bundled `evmole@0.9.3` npm package.
+evmole = { version = "=0.9.3", default-features = false }
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
+futures = "=0.3.34"
+http-body = "=1.1.0"
+libc = "=0.2.191"
+memchr = "=2.8.3"
+num-bigint = "=0.4.8"
+regex = "=1.13.1"
+rmcp = { version = "=3.6.0", default-features = false }
+rusqlite = "=0.40.2"
+rustix = "=1.1.5"
+ryu-js = "=1.0.2"
+serde = "=1.0.228"
+serde_json = "=1.0.151"
+sha1 = "=0.10.7"
+sha2 = "=0.10.9"
+signal-hook = { version = "=0.3.18", default-features = false }
+portable-pty = "=0.9.0"
+tempfile = "=3.27.0"
+tokio = "=1.52.0"
+tokio-util = "=0.7.20"
+tower = "=0.5.3"
+tungstenite = { version = "=0.29.0", default-features = false }
+# Unicode NFC for logical archive and bundle paths (`String.prototype.normalize("NFC")`).
+unicode-normalization = "=0.1.26"
+uuid = "=1.28.0"
+windows-sys = "=0.61.2"
+
+# Baseline lint policy. Crates that need FFI or stricter documentation keep an
+# explicit `[lints]` table instead (rea-core, rea-ffi, rea-host, rea-tools-android).
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

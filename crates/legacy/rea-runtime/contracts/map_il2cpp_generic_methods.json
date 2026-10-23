@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_generic_methods",
+  "title": "Map IL2CPP Generic Methods",
+  "description": "Correlate caller-supplied normalized MethodSpec rows with generic-method and adjustor-thunk pointer-table facts. The projection is bounded, read-only, and closed-world: missing or unresolved pointer facts remain explicit and are never inferred from a base method address.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["method_specs", "generic_method_pointers", "generic_adjustor_thunk_pointers"],
+        "properties": {
+          "method_specs": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/methodSpec"}},
+          "generic_method_pointers": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/pointer"}},
+          "generic_adjustor_thunk_pointers": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/pointer"}}
+        }
+      },
+      {
+        "required": ["metadata", "binary"],
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method_specs"],
+            "properties": {"method_specs": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/methodSpec"}}}
+          },
+          "binary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["generic_method_pointers", "generic_adjustor_thunk_pointers"],
+            "properties": {
+              "generic_method_pointers": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/pointer"}},
+              "generic_adjustor_thunk_pointers": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/pointer"}}
+            }
+          }
+        }
+      }
+    ],
+    "$defs": {
+      "index": {"type": "integer", "minimum": 0},
+      "optionalIndex": {"type": ["integer", "null"], "minimum": 0},
+      "methodSpec": {
+        "type": "object", "additionalProperties": false, "required": ["method_spec_index"],
+        "properties": {
+          "method_spec_index": {"$ref": "#/$defs/index"},
+          "generic_method_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_table_index": {"$ref": "#/$defs/optionalIndex"}
+        }
+      },
+      "pointer": {
+        "type": "object", "additionalProperties": false,
+        "anyOf": [{"required": ["generic_method_index"]}, {"required": ["pointer_index"]}, {"required": ["pointer_table_index"]}, {"required": ["method_spec_index"]}],
+        "properties": {
+          "generic_method_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_table_index": {"$ref": "#/$defs/optionalIndex"},
+          "method_spec_index": {"$ref": "#/$defs/optionalIndex"},
+          "address": {"type": ["string", "null"], "minLength": 1}
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": {"enum": ["complete", "partial"]},
+      "items": {
+        "type": "array", "maxItems": 200000,
+        "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["method_spec", "method_pointer", "adjustor_thunk_pointer", "resolution"],
+          "properties": {
+            "method_spec": {"$ref": "#/$defs/methodSpec"},
+            "method_pointer": {"anyOf": [{"$ref": "#/$defs/pointer"}, {"type": "null"}]},
+            "adjustor_thunk_pointer": {"anyOf": [{"$ref": "#/$defs/pointer"}, {"type": "null"}]},
+            "resolution": {"enum": ["mapped", "unknown", "unmapped"]}
+          }
+        }
+      },
+      "coverage": {
+        "type": "object", "additionalProperties": false,
+        "required": ["method_specs", "mapped", "unknown", "unmapped", "unmapped_method_spec_indices", "generic_method_pointer_rows", "generic_adjustor_thunk_pointer_rows"],
+        "properties": {
+          "method_specs": {"$ref": "#/$defs/index"}, "mapped": {"$ref": "#/$defs/index"}, "unknown": {"$ref": "#/$defs/index"}, "unmapped": {"$ref": "#/$defs/index"},
+          "unmapped_method_spec_indices": {"type": "array", "items": {"$ref": "#/$defs/index"}},
+          "generic_method_pointer_rows": {"$ref": "#/$defs/index"}, "generic_adjustor_thunk_pointer_rows": {"$ref": "#/$defs/index"}
+        }
+      }
+    },
+    "$defs": {
+      "index": {"type": "integer", "minimum": 0},
+      "optionalIndex": {"type": ["integer", "null"], "minimum": 0},
+      "methodSpec": {
+        "type": "object", "additionalProperties": false, "required": ["method_spec_index"],
+        "properties": {
+          "method_spec_index": {"$ref": "#/$defs/index"}, "generic_method_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_index": {"$ref": "#/$defs/optionalIndex"}, "pointer_table_index": {"$ref": "#/$defs/optionalIndex"}
+        }
+      },
+      "pointer": {
+        "type": "object", "additionalProperties": false,
+        "anyOf": [{"required": ["generic_method_index"]}, {"required": ["pointer_index"]}, {"required": ["pointer_table_index"]}, {"required": ["method_spec_index"]}],
+        "properties": {
+          "generic_method_index": {"$ref": "#/$defs/optionalIndex"}, "pointer_index": {"$ref": "#/$defs/optionalIndex"},
+          "pointer_table_index": {"$ref": "#/$defs/optionalIndex"}, "method_spec_index": {"$ref": "#/$defs/optionalIndex"},
+          "address": {"type": ["string", "null"], "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "optionalIndex": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "methodSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_spec_index"],
+      "properties": {
+        "method_spec_index": { "$ref": "#/$defs/index" },
+        "generic_method_index": { "$ref": "#/$defs/optionalIndex" },
+        "pointer_index": { "$ref": "#/$defs/optionalIndex" },
+        "pointer_table_index": { "$ref": "#/$defs/optionalIndex" }
+      }
+    },
+    "pointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["generic_method_index"] },
+        { "required": ["pointer_index"] },
+        { "required": ["pointer_table_index"] },
+        { "required": ["method_spec_index"] }
+      ],
+      "properties": {
+        "generic_method_index": { "$ref": "#/$defs/optionalIndex" },
+        "pointer_index": { "$ref": "#/$defs/optionalIndex" },
+        "pointer_table_index": { "$ref": "#/$defs/optionalIndex" },
+        "method_spec_index": { "$ref": "#/$defs/optionalIndex" },
+        "address": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      }
+    },
+    "methodSpecRows": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/methodSpec" }
+    },
+    "pointerRows": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/pointer" }
+    },
+    "directInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_specs",
+        "generic_method_pointers",
+        "generic_adjustor_thunk_pointers"
+      ],
+      "properties": {
+        "method_specs": { "$ref": "#/$defs/methodSpecRows" },
+        "generic_method_pointers": { "$ref": "#/$defs/pointerRows" },
+        "generic_adjustor_thunk_pointers": { "$ref": "#/$defs/pointerRows" }
+      }
+    },
+    "metadataInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_specs"],
+      "properties": {
+        "method_specs": { "$ref": "#/$defs/methodSpecRows" }
+      }
+    },
+    "binaryInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generic_method_pointers",
+        "generic_adjustor_thunk_pointers"
+      ],
+      "properties": {
+        "generic_method_pointers": { "$ref": "#/$defs/pointerRows" },
+        "generic_adjustor_thunk_pointers": { "$ref": "#/$defs/pointerRows" }
+      }
+    },
+    "wrappedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata", "binary"],
+      "properties": {
+        "metadata": { "$ref": "#/$defs/metadataInput" },
+        "binary": { "$ref": "#/$defs/binaryInput" }
+      }
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/directInput" },
+        { "$ref": "#/$defs/wrappedInput" }
+      ]
+    },
+    "outputItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_spec",
+        "method_pointer",
+        "adjustor_thunk_pointer",
+        "resolution"
+      ],
+      "properties": {
+        "method_spec": { "$ref": "#/$defs/methodSpec" },
+        "method_pointer": {
+          "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }]
+        },
+        "adjustor_thunk_pointer": {
+          "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }]
+        },
+        "resolution": {
+          "enum": ["mapped", "unknown", "unmapped"]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_specs",
+        "mapped",
+        "unknown",
+        "unmapped",
+        "unmapped_method_spec_indices",
+        "generic_method_pointer_rows",
+        "generic_adjustor_thunk_pointer_rows"
+      ],
+      "properties": {
+        "method_specs": { "$ref": "#/$defs/index" },
+        "mapped": { "$ref": "#/$defs/index" },
+        "unknown": { "$ref": "#/$defs/index" },
+        "unmapped": { "$ref": "#/$defs/index" },
+        "unmapped_method_spec_indices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/index" }
+        },
+        "generic_method_pointer_rows": { "$ref": "#/$defs/index" },
+        "generic_adjustor_thunk_pointer_rows": { "$ref": "#/$defs/index" }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "items", "coverage"],
+      "properties": {
+        "status": {
+          "enum": ["complete", "partial"]
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/outputItem" }
+        },
+        "coverage": { "$ref": "#/$defs/coverage" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

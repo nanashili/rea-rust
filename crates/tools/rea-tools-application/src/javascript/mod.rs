@@ -1,0 +1,22 @@
+//! JavaScript Application Graph workflows over authenticated Evidence.
+//!
+//! Compatibility owners: `src/server/registerApplicationTools/*.ts` and
+//! `src/application/javascript/JavaScriptApplicationWorkflowService.ts`.
+mod comparisons;
+mod export_shapes;
+mod feature_trace;
+mod graph_evidence;
+mod js;
+mod runtime_reconciliation;
+mod semantic_trace;
+mod workflow_evidence;
+
+use rea_mcp::Registry;
+
+pub fn register(registry: &mut Registry) {
+    comparisons::register(registry);
+    semantic_trace::register(registry);
+    feature_trace::register(registry);
+    export_shapes::register(registry);
+    runtime_reconciliation::register(registry);
+}

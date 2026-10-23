@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "capture_browser_scenario",
+  "title": "Capture browser scenario",
+  "description": "Run a caller-selected browser scenario and retain step-indexed events, network observations, and explicit completeness limits.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["browser", "start_url", "actions"],
+    "properties": {
+      "browser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode"],
+        "properties": {
+          "mode": {"enum": ["launch", "connect"]},
+          "executable_path": {"type": "string", "minLength": 1},
+          "headless": {"type": "boolean", "default": true},
+          "cdp_endpoint": {"type": "string", "minLength": 1},
+          "target_id": {"type": "string", "minLength": 1}
+        }
+      },
+      "start_url": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url"],
+        "properties": {
+          "url": {"type": "string", "minLength": 1},
+          "query": {"type": "array", "items": {"type": "object"}, "default": []}
+        }
+      },
+      "environment": {"type": "object"},
+      "actions": {
+        "type": "array",
+        "minItems": 1,
+        "items": {"type": "object"}
+      },
+      "storage": {"type": "object"},
+      "secrets": {"type": "array", "items": {"type": "object"}, "default": []},
+      "capture": {"type": "object"}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

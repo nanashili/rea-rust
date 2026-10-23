@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_architectures",
+  "title": "Project Captured Architecture Inventory",
+  "description": "Validate and project caller-supplied static architecture facts or authenticated retained architecture Evidence without invoking a provider.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {"type": "object", "required": ["evidence"], "additionalProperties": false, "properties": {"evidence": {"type": "object"}}},
+      {"type": "object", "required": ["result"], "additionalProperties": false, "properties": {"result": {"$ref": "#/$defs/architectureResult"}}},
+      {"type": "object", "required": ["normalized_result"], "additionalProperties": false, "properties": {"normalized_result": {"$ref": "#/$defs/architectureResult"}}},
+      {"type": "object", "required": ["architectures"], "additionalProperties": false, "properties": {"architectures": {"$ref": "#/$defs/architectureCoverage"}, "provenance": {"type": "array"}, "limitations": {"type": "array", "items": {"type": "string"}}}},
+      {"type": "object", "required": ["bytes"], "additionalProperties": false, "properties": {"bytes": {"type": "array", "maxItems": 268435456, "items": {"type": "integer", "minimum": 0, "maximum": 255}}}}
+    ]
+  },
+  "outputSchema": {"$ref": "#/$defs/architectureResult"},
+  "$defs": {
+    "architecture": {
+      "type": "object",
+      "required": ["name", "cpu_type", "cpu_subtype", "file_offset", "size", "alignment"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "cpu_type": {"type": ["string", "null"]},
+        "cpu_subtype": {"type": ["string", "null"]},
+        "cpu_type_code": {"type": ["integer", "null"], "minimum": 0},
+        "cpu_subtype_code": {"type": ["integer", "null"], "minimum": 0},
+        "cpu_subtype_base": {"type": ["integer", "null"], "minimum": 0},
+        "capabilities": {"type": ["string", "null"]},
+        "file_offset": {"type": ["integer", "null"], "minimum": 0},
+        "size": {"type": ["integer", "null"], "minimum": 0},
+        "alignment": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "architectureCoverage": {
+      "type": "object",
+      "required": ["items", "total", "exhaustive", "limitations"],
+      "additionalProperties": false,
+      "properties": {
+        "items": {"type": "array", "maxItems": 200000, "items": {"$ref": "#/$defs/architecture"}},
+        "total": {"type": ["integer", "null"], "minimum": 0},
+        "exhaustive": {"type": "boolean"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tool", "command", "tool_version", "version_reason", "executable_sha256", "exit", "stdout_bytes", "stderr_bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "tool": {"type": "string", "minLength": 1},
+          "command": {"type": "array", "items": {"type": "string"}},
+          "tool_version": {"type": ["string", "null"]},
+          "version_reason": {"type": ["string", "null"]},
+          "executable_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "exit": {"type": "object", "required": ["code", "signal"], "additionalProperties": false, "properties": {"code": {"type": ["integer", "null"]}, "signal": {"type": ["string", "null"]}}},
+          "stdout_bytes": {"type": "integer", "minimum": 0},
+          "stderr_bytes": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "architectureResult": {
+      "type": "object",
+      "required": ["architectures", "provenance", "limitations"],
+      "additionalProperties": false,
+      "properties": {
+        "architectures": {"$ref": "#/$defs/architectureCoverage"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

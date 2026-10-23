@@ -1,0 +1,32 @@
+[package]
+name = "rea-tools-managed"
+description = "Managed .NET static analysis and managed-code workflows."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-analysis.workspace = true
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+# SHA-256/SHA-1 digests of PE/CLI bytes and canonical projections.
+sha2.workspace = true
+sha1.workspace = true
+regex.workspace = true
+base64.workspace = true
+# WHATWG URL parsing for recorded transport URLs in grouping views (same
+# exact version rea-tools-web pins).
+url = "=2.5.8"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["fs"] }
+
+[lints]
+workspace = true

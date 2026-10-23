@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_segments",
+  "title": "List Captured Segments",
+  "description": "Project retained object-file section observations and preserve unavailable memory permissions as unknown.",
+  "inputSchema": { "type": "object" },
+  "outputSchema": { "type": "array", "items": { "type": "object", "required": ["name", "start", "end", "readable", "writable", "executable", "permissions", "provenance", "sections"], "properties": { "name": { "type": "string" }, "start": { "type": "string" }, "end": { "type": "string" }, "readable": { "type": ["boolean", "null"] }, "writable": { "type": ["boolean", "null"] }, "executable": { "type": ["boolean", "null"] }, "permissions": { "type": "object" }, "provenance": { "type": "string" }, "sections": { "type": "array" } }, "additionalProperties": false } },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

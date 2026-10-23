@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_packet_capture",
+  "title": "Inspect packet capture",
+  "description": "Project caller-supplied captured inspect_packet_capture Evidence or a previously decoded packet result. The native boundary is read-only and performs no TShark invocation, path access, live capture, or device communication. Captured bytes may accompany a result for artifact identity verification; raw bytes alone cannot establish selected TShark fields.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["evidence"],
+        "properties": {
+          "evidence": { "type": "object" }
+        }
+      },
+      {
+        "required": ["capture"],
+        "properties": {
+          "capture": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "result": { "type": "object" },
+              "normalized_result": { "type": "object" },
+              "bytes_base64": { "type": "string", "contentEncoding": "base64" }
+            },
+            "anyOf": [
+              { "required": ["result"] },
+              { "required": ["normalized_result"] }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "Evidence normalized_result containing artifact identity, exact selection, packet fields, output window, tool identity, diagnostics, limits, and provenance"
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

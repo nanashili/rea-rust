@@ -1,0 +1,21 @@
+{
+  "name": "inspect_signature",
+  "title": "Inspect Supplied Signature Capture",
+  "description": "Parse caller-supplied bounded codesign display output and optional metadata without invoking codesign or making a trust decision.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["output"],
+    "properties": {
+      "output": { "type": "string", "maxLength": 8388608 },
+      "unsigned": { "type": "boolean" },
+      "executable_paths": { "type": "array", "items": { "type": "string" } },
+      "entitlements": {},
+      "designated_requirement": { "type": ["string", "null"] },
+      "provenance": { "type": "array" }
+    }
+  },
+  "outputSchema": { "type": "object", "required": ["signed", "authorities", "limitations"] },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

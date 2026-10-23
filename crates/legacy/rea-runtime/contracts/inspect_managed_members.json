@@ -1,0 +1,91 @@
+{
+  "name": "inspect_managed_members",
+  "title": "Inspect Managed Members",
+  "description": "Project caller-supplied retained inspect_managed_members Evidence. The offline adapter authenticates the managed metadata report and preserves artifact, assembly, type, member, ambiguity, coverage, and uncertainty facts without reopening or executing the target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "description": "Complete authenticated Evidence produced by inspect_managed_members."
+      }
+    },
+    "required": ["evidence"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["path", "sha256", "members"],
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "members": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "assembly",
+          "references",
+          "module_references",
+          "exported_types",
+          "types",
+          "fields",
+          "methods",
+          "params",
+          "properties",
+          "events",
+          "generic_params",
+          "generic_constraints",
+          "method_specs",
+          "member_references",
+          "call_edges",
+          "field_accesses",
+          "selection"
+        ],
+        "properties": {
+          "module": { "type": ["object", "null"] },
+          "assembly": { "type": ["object", "null"] },
+          "references": { "type": "array" },
+          "module_references": { "type": "array" },
+          "exported_types": { "type": "array" },
+          "types": { "type": "array" },
+          "fields": { "type": "array" },
+          "methods": { "type": "array" },
+          "params": { "type": "array" },
+          "properties": { "type": "array" },
+          "events": { "type": "array" },
+          "generic_params": { "type": "array" },
+          "generic_constraints": { "type": "array" },
+          "method_specs": { "type": "array" },
+          "member_references": { "type": "array" },
+          "call_edges": { "type": "array" },
+          "field_accesses": { "type": "array" },
+          "selection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type_names", "unmatched_type_names"],
+            "properties": {
+              "type_names": {
+                "type": ["array", "null"],
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "unmatched_type_names": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

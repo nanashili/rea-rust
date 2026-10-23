@@ -1,0 +1,245 @@
+{
+  "name": "inspect_il2cpp_member_metadata",
+  "title": "Inspect IL2CPP Member Metadata",
+  "description": "Decode caller-supplied IL2CPP metadata member tables for fields, properties, events, and parameters. The projection is bounded and read-only; declaring types and member names remain unresolved unless the caller supplies ownership and related tables.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["metadata_version", "bytes_base64", "sections"],
+    "properties": {
+      "metadata_version": {
+        "type": "integer",
+        "enum": [29, 31, 39]
+      },
+      "bytes_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944,
+        "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+      },
+      "sections": {
+        "$ref": "#/$defs/sections"
+      },
+      "ownership": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fields": { "$ref": "#/$defs/ownershipRows" },
+          "properties": { "$ref": "#/$defs/ownershipRows" },
+          "events": { "$ref": "#/$defs/ownershipRows" },
+          "parameters": { "$ref": "#/$defs/ownershipRows" }
+        }
+      }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "optionalIndex": {
+        "type": "integer",
+        "minimum": -1,
+        "maximum": 4294967295
+      },
+      "section": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["offset", "size"],
+        "properties": {
+          "offset": { "$ref": "#/$defs/index" },
+          "size": { "$ref": "#/$defs/index" },
+          "count": {
+            "anyOf": [
+              { "$ref": "#/$defs/index" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "sections": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fields", "properties", "events", "parameters"],
+        "properties": {
+          "fields": { "$ref": "#/$defs/section" },
+          "properties": { "$ref": "#/$defs/section" },
+          "events": { "$ref": "#/$defs/section" },
+          "parameters": { "$ref": "#/$defs/section" }
+        }
+      },
+      "ownershipRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {}
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "metadata_version", "sections", "fields", "properties", "events", "parameters", "coverage", "limitations"],
+    "properties": {
+      "operation": { "const": "inspect_il2cpp_member_metadata" },
+      "metadata_version": { "type": "integer", "enum": [29, 31, 39] },
+      "sections": { "$ref": "#/$defs/sections" },
+      "fields": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/fieldRow" }
+      },
+      "properties": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/propertyRow" }
+      },
+      "events": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/eventRow" }
+      },
+      "parameters": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/parameterRow" }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field_rows", "property_rows", "event_rows", "parameter_rows", "ownership"],
+        "properties": {
+          "field_rows": { "$ref": "#/$defs/index" },
+          "property_rows": { "$ref": "#/$defs/index" },
+          "event_rows": { "$ref": "#/$defs/index" },
+          "parameter_rows": { "$ref": "#/$defs/index" },
+          "ownership": { "enum": ["caller-supplied", "unresolved"] }
+        }
+      },
+      "limitations": {
+        "type": "array",
+        "maxItems": 64,
+        "items": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "optionalIndex": {
+        "type": "integer",
+        "minimum": -1,
+        "maximum": 4294967295
+      },
+      "section": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["offset", "size", "count"],
+        "properties": {
+          "offset": { "$ref": "#/$defs/index" },
+          "size": { "$ref": "#/$defs/index" },
+          "count": {
+            "anyOf": [
+              { "$ref": "#/$defs/index" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "sections": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fields", "properties", "events", "parameters"],
+        "properties": {
+          "fields": { "$ref": "#/$defs/section" },
+          "properties": { "$ref": "#/$defs/section" },
+          "events": { "$ref": "#/$defs/section" },
+          "parameters": { "$ref": "#/$defs/section" }
+        }
+      },
+      "memberBase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata_index", "source_offset", "ownership", "ownership_status"],
+        "properties": {
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "source_offset": { "$ref": "#/$defs/index" },
+          "ownership": {},
+          "ownership_status": { "enum": ["provided", "unresolved"] }
+        }
+      },
+      "fieldRow": {
+        "allOf": [
+          { "$ref": "#/$defs/memberBase" },
+          {
+            "type": "object",
+            "required": ["name_index", "type_index", "token"],
+            "properties": {
+              "name_index": { "$ref": "#/$defs/index" },
+              "type_index": { "$ref": "#/$defs/index" },
+              "token": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      },
+      "propertyRow": {
+        "allOf": [
+          { "$ref": "#/$defs/memberBase" },
+          {
+            "type": "object",
+            "required": ["name_index", "getter_index", "setter_index", "attributes", "token"],
+            "properties": {
+              "name_index": { "$ref": "#/$defs/index" },
+              "getter_index": { "$ref": "#/$defs/optionalIndex" },
+              "setter_index": { "$ref": "#/$defs/optionalIndex" },
+              "attributes": { "$ref": "#/$defs/index" },
+              "token": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      },
+      "eventRow": {
+        "allOf": [
+          { "$ref": "#/$defs/memberBase" },
+          {
+            "type": "object",
+            "required": ["name_index", "type_index", "add_index", "remove_index", "raise_index", "token"],
+            "properties": {
+              "name_index": { "$ref": "#/$defs/index" },
+              "type_index": { "$ref": "#/$defs/index" },
+              "add_index": { "$ref": "#/$defs/optionalIndex" },
+              "remove_index": { "$ref": "#/$defs/optionalIndex" },
+              "raise_index": { "$ref": "#/$defs/optionalIndex" },
+              "token": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      },
+      "parameterRow": {
+        "allOf": [
+          { "$ref": "#/$defs/memberBase" },
+          {
+            "type": "object",
+            "required": ["name_index", "token", "type_index", "custom_attribute_index", "flags"],
+            "properties": {
+              "name_index": { "$ref": "#/$defs/index" },
+              "token": { "$ref": "#/$defs/index" },
+              "type_index": { "$ref": "#/$defs/index" },
+              "custom_attribute_index": { "$ref": "#/$defs/index" },
+              "flags": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

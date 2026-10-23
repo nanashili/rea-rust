@@ -1,0 +1,38 @@
+[package]
+name = "rea"
+description = "REA: reverse engineer anything from your terminal or agent (native runtime)."
+# Tracks the npm package version rather than the workspace version.
+version = "6.7.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "rea"
+path = "src/main.rs"
+
+[dependencies]
+rea-core.workspace = true
+rea-analysis.workspace = true
+rea-mcp.workspace = true
+rea-cli.workspace = true
+rea-tools-ledger.workspace = true
+rea-tools-artifacts.workspace = true
+rea-tools-captures.workspace = true
+rea-tools-android.workspace = true
+rea-tools-web.workspace = true
+rea-tools-managed.workspace = true
+rea-tools-application.workspace = true
+rea-tools-debug.workspace = true
+rea-tools-process.workspace = true
+rea-tools-binary.workspace = true
+rea-tools-enhanced.workspace = true
+rea-provider-hopper.workspace = true
+rea-provider-ghidra.workspace = true
+rea-provider-ida.workspace = true
+rea-provider-kuna.workspace = true
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+
+[lints]
+workspace = true

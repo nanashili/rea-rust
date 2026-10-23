@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_typespecs",
+  "title": "Project IL2CPP TypeSpecs",
+  "description": "Project caller-supplied normalized IL2CPP TypeSpec rows with type definitions, generic instantiations, and generic arguments. This read-only captured/static operation preserves source rows and unresolved or ambiguous references; it does not decode artifacts, execute a target, or infer missing type facts.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/wrappedInput" }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "sourceRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true
+      },
+      "reference": {
+        "anyOf": [
+          { "$ref": "#/$defs/index" },
+          { "type": "string", "maxLength": 4096 },
+          { "type": "null" },
+          {
+            "type": "object",
+            "maxProperties": 128,
+            "additionalProperties": true
+          }
+        ]
+      },
+      "argumentIndices": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/index" }
+      },
+      "typeSpecRow": {
+        "allOf": [
+          { "$ref": "#/$defs/sourceRow" },
+          {
+            "properties": {
+              "type_spec_index": { "$ref": "#/$defs/index" },
+              "typespec_index": { "$ref": "#/$defs/index" },
+              "index": { "$ref": "#/$defs/index" },
+              "type_index": { "$ref": "#/$defs/reference" },
+              "type_definition_index": { "$ref": "#/$defs/reference" },
+              "type": { "$ref": "#/$defs/reference" },
+              "generic_instantiation_index": { "$ref": "#/$defs/reference" },
+              "generic_class_index": { "$ref": "#/$defs/reference" },
+              "generic_class": { "$ref": "#/$defs/reference" },
+              "generic_argument_indices": { "$ref": "#/$defs/argumentIndices" },
+              "argument_indices": { "$ref": "#/$defs/argumentIndices" },
+              "generic_argument_start": { "$ref": "#/$defs/index" },
+              "argument_start": { "$ref": "#/$defs/index" },
+              "generic_argument_count": { "$ref": "#/$defs/index" },
+              "argument_count": { "$ref": "#/$defs/index" }
+            }
+          }
+        ]
+      },
+      "typeRows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/sourceRow" }
+      },
+      "typeSpecRows": {
+        "type": "array",
+        "minItems": 0,
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/typeSpecRow" }
+      },
+      "directInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type_specs": { "$ref": "#/$defs/typeSpecRows" },
+          "typeSpecifications": { "$ref": "#/$defs/typeSpecRows" },
+          "typespecs": { "$ref": "#/$defs/typeSpecRows" },
+          "types": { "$ref": "#/$defs/typeRows" },
+          "type_definitions": { "$ref": "#/$defs/typeRows" },
+          "typeDefinitions": { "$ref": "#/$defs/typeRows" },
+          "generic_instantiations": { "$ref": "#/$defs/typeRows" },
+          "generic_classes": { "$ref": "#/$defs/typeRows" },
+          "genericClasses": { "$ref": "#/$defs/typeRows" },
+          "generic_arguments": { "$ref": "#/$defs/typeRows" },
+          "type_arguments": { "$ref": "#/$defs/typeRows" },
+          "genericArguments": { "$ref": "#/$defs/typeRows" }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["type_specs"] },
+              { "required": ["typeSpecifications"] },
+              { "required": ["typespecs"] }
+            ]
+          }
+        ]
+      },
+      "wrappedInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/directInput" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "diagnostics", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/item" }
+      },
+      "diagnostics": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "oneOf": [
+            { "$ref": "#/$defs/missingGenericArgumentsDiagnostic" },
+            { "$ref": "#/$defs/duplicateTypeSpecDiagnostic" },
+            { "$ref": "#/$defs/unresolvedGenericArgumentTypesDiagnostic" }
+          ]
+        }
+      },
+      "coverage": { "$ref": "#/$defs/coverage" }
+    },
+    "$defs": {
+      "missingGenericArgumentsDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "row", "type_spec_index", "indices"],
+        "properties": {
+          "kind": { "const": "missing_generic_arguments" },
+          "row": { "$ref": "#/$defs/index" },
+          "type_spec_index": { "$ref": "#/$defs/index" },
+          "indices": { "$ref": "#/$defs/indexArray" }
+        }
+      },
+      "duplicateTypeSpecDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "type_spec_index", "count"],
+        "properties": {
+          "kind": { "const": "duplicate_type_spec_index" },
+          "type_spec_index": { "$ref": "#/$defs/index" },
+          "count": { "$ref": "#/$defs/index" }
+        }
+      },
+      "unresolvedGenericArgumentTypesDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "row", "type_spec_index", "count"],
+        "properties": {
+          "kind": { "const": "unresolved_generic_argument_types" },
+          "row": { "$ref": "#/$defs/index" },
+          "type_spec_index": { "$ref": "#/$defs/index" },
+          "count": { "$ref": "#/$defs/index" }
+        }
+      },
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "indexArray": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/index" }
+      },
+      "resolution": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "reference"],
+        "properties": {
+          "status": { "enum": ["resolved", "unresolved", "ambiguous", "missing", "unknown"] },
+          "index": { "$ref": "#/$defs/index" },
+          "reference": {},
+          "row": { "$ref": "#/$defs/sourceRow" },
+          "rows": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/sourceRow" }
+          }
+        }
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_index",
+          "type_spec_index",
+          "source",
+          "type_reference",
+          "type",
+          "generic_instantiation_reference",
+          "generic_instantiation",
+          "argument_status",
+          "arguments"
+        ],
+        "properties": {
+          "source_index": { "$ref": "#/$defs/index" },
+          "type_spec_index": { "$ref": "#/$defs/index" },
+          "source": { "$ref": "#/$defs/sourceRow" },
+          "type_reference": {},
+          "type": { "$ref": "#/$defs/resolution" },
+          "generic_instantiation_reference": {},
+          "generic_instantiation": { "$ref": "#/$defs/resolution" },
+          "argument_status": { "enum": ["resolved", "partial", "empty", "unknown"] },
+          "arguments": {
+            "type": "array",
+            "maxItems": 200000,
+            "items": { "$ref": "#/$defs/projectedArgument" }
+          }
+        }
+      },
+      "projectedArgument": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "type_reference", "type"],
+        "properties": {
+          "source": { "$ref": "#/$defs/sourceRow" },
+          "type_reference": {},
+          "type": { "$ref": "#/$defs/resolution" }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type_specs",
+          "type_definitions",
+          "generic_instantiations",
+          "generic_arguments",
+          "resolved_types",
+          "unresolved_types",
+          "resolved_instantiations",
+          "unresolved_instantiations",
+          "unresolved_argument_types",
+          "attached_arguments"
+        ],
+        "properties": {
+          "type_specs": { "$ref": "#/$defs/index" },
+          "type_definitions": { "$ref": "#/$defs/index" },
+          "generic_instantiations": { "$ref": "#/$defs/index" },
+          "generic_arguments": { "$ref": "#/$defs/index" },
+          "resolved_types": { "$ref": "#/$defs/index" },
+          "unresolved_types": { "$ref": "#/$defs/index" },
+          "resolved_instantiations": { "$ref": "#/$defs/index" },
+          "unresolved_instantiations": { "$ref": "#/$defs/index" },
+          "unresolved_argument_types": { "$ref": "#/$defs/index" },
+          "attached_arguments": { "$ref": "#/$defs/index" }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

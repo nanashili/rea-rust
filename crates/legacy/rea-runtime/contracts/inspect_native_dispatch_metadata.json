@@ -1,0 +1,8 @@
+{
+  "name": "inspect_native_dispatch_metadata",
+  "title": "Inspect Native Dispatch Metadata",
+  "description": "Classify caller-supplied Objective-C and Swift symbol records into dispatch metadata while retaining partial decode status, source locations, and coverage unknowns.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["names"], "properties": { "names": { "type": "array", "items": { "type": "object" } }, "max_records": { "type": "integer", "minimum": 1, "maximum": 20000 } }, "additionalProperties": false },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["objc_classes", "objc_dispatch_implementations", "swift_symbols", "coverage"], "properties": { "objc_classes": { "type": "array" }, "objc_dispatch_implementations": { "type": "array" }, "swift_symbols": { "type": "array" }, "coverage": { "type": "object" }, "db_save_result": {} }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

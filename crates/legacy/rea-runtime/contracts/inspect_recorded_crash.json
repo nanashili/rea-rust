@@ -1,0 +1,28 @@
+{
+  "name": "inspect_recorded_crash",
+  "title": "Inspect captured recorded crash",
+  "description": "Project authenticated caller-supplied recorded-crash Evidence without opening a path, attaching to a process, or executing a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "evidence": { "type": "object" },
+      "provenance": { "type": "array" },
+      "evidence_links": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["evidence"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["normalized_result", "operation"],
+    "properties": {
+      "operation": { "const": "inspect_recorded_crash" },
+      "normalized_result": { "type": "object" },
+      "limitations": { "type": "array" }
+    },
+    "additionalProperties": true
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

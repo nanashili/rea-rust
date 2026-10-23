@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "scan_il2cpp_registration_candidates",
+  "title": "Scan IL2CPP Registration Candidates",
+  "description": "Inspect bounded caller-captured IL2CPP bytes together with explicit address mappings, version facts, and pointer-layout facts. The operation reports every structurally supported registration candidate and its validation state without selecting a winner, contacting a provider, executing target code, or mutating an artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["bytes", "mappings", "version", "pointer_layout"],
+    "properties": {
+      "bytes": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["encoding", "value"],
+        "properties": {
+          "encoding": { "enum": ["hex", "base64"] },
+          "value": { "type": "string", "minLength": 1, "maxLength": 33554432 },
+          "base_address": { "type": "string", "minLength": 1 },
+          "file_offset": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        }
+      },
+      "mappings": {
+        "type": "array",
+        "maxItems": 4096,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "start", "size"],
+          "properties": {
+            "kind": { "enum": ["file", "virtual", "section", "segment", "data"] },
+            "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "start": { "type": "string", "minLength": 1 },
+            "size": { "type": "integer", "minimum": 1, "maximum": 33554432 },
+            "file_offset": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "permissions": { "type": "string", "maxLength": 16 },
+            "initialized": { "type": "boolean" }
+          }
+        }
+      },
+      "version": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "raw": { "type": ["integer", "string", "null"] },
+          "normalized": { "type": ["integer", "string", "null"] },
+          "source": { "type": ["string", "null"], "maxLength": 256 },
+          "known": { "type": "boolean" }
+        }
+      },
+      "pointer_layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pointer_width", "endianness"],
+        "properties": {
+          "pointer_width": { "enum": [4, 8] },
+          "endianness": { "enum": ["little", "big", "unknown"] },
+          "alignment": { "type": ["integer", "null"], "minimum": 1, "maximum": 64 },
+          "registration_entry_width": { "type": ["integer", "null"], "minimum": 1, "maximum": 64 },
+          "metadata_entry_width": { "type": ["integer", "null"], "minimum": 1, "maximum": 64 }
+        }
+      },
+      "limit": { "type": "integer", "minimum": 1, "maximum": 1024 },
+      "cursor": { "type": ["string", "null"], "maxLength": 4096 }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["candidates", "validation_states", "ambiguity", "coverage", "limitations"],
+    "properties": {
+      "candidates": {
+        "type": "array",
+        "maxItems": 1024,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate_id", "registration_pointer", "metadata_pointer", "validation_state", "reasons"],
+          "properties": {
+            "candidate_id": { "type": "string", "minLength": 1 },
+            "registration_pointer": { "type": "string", "minLength": 1 },
+            "metadata_pointer": { "type": "string", "minLength": 1 },
+            "registration_file_offset": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+            "metadata_file_offset": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+            "validation_state": { "$ref": "#/$defs/validationState" },
+            "reasons": { "type": "array", "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 512 } },
+            "evidence": { "type": "array", "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }
+          }
+        }
+      },
+      "validation_states": {
+        "type": "array",
+        "maxItems": 1024,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate_id", "state"],
+          "properties": {
+            "candidate_id": { "type": "string", "minLength": 1 },
+            "state": { "$ref": "#/$defs/validationState" },
+            "checks": { "type": "array", "maxItems": 64, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }
+          }
+        }
+      },
+      "ambiguity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "candidate_ids"],
+        "properties": {
+          "state": { "enum": ["none", "multiple", "unresolved", "unknown"] },
+          "candidate_ids": { "type": "array", "maxItems": 1024, "items": { "type": "string", "minLength": 1 } },
+          "reason": { "type": ["string", "null"], "maxLength": 1024 }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bytes_examined", "mappings_examined", "complete"],
+        "properties": {
+          "bytes_examined": { "type": "integer", "minimum": 0, "maximum": 33554432 },
+          "mappings_examined": { "type": "integer", "minimum": 0, "maximum": 4096 },
+          "complete": { "type": "boolean" }
+        }
+      },
+      "limitations": { "type": "array", "maxItems": 128, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } },
+      "next_cursor": { "type": ["string", "null"], "maxLength": 4096 }
+    }
+  },
+  "$defs": {
+    "validationState": {
+      "enum": ["supported", "ambiguous", "indeterminate", "rejected"]
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

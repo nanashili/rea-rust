@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "decompile_jeb_item",
+  "title": "Project Retained JEB Decompiled Item",
+  "description": "Project one authenticated retained JEB decompilation Evidence record. The handler accepts captured Evidence only; it never opens a JEB project, contacts a live JEB client, or executes the target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "required": ["evidence_id", "operation", "provider", "normalized_result"],
+        "properties": {
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "operation": { "const": "decompile_jeb_item" },
+          "provider": {
+            "type": "object",
+            "required": ["id", "name", "version"],
+            "properties": {
+              "id": { "const": "jeb" },
+              "name": { "type": "string", "minLength": 1 },
+              "version": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          },
+          "normalized_result": {
+            "type": "object",
+            "required": ["engine", "unit_path", "item_address", "item_kind", "text"],
+            "properties": {
+              "engine": { "type": "object" },
+              "unit_path": { "type": ["string", "null"] },
+              "item_address": { "type": "string", "minLength": 1 },
+              "item_kind": { "enum": ["type", "method"] },
+              "text": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/evidence",
+    "$defs": {
+      "engine": {
+        "type": "object",
+        "required": ["name", "version", "endpoint", "gui_client"],
+        "properties": {
+          "name": { "const": "jeb" },
+          "version": { "type": ["string", "null"] },
+          "endpoint": { "type": "string", "minLength": 1 },
+          "gui_client": { "type": ["boolean", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "decompileResult": {
+        "type": "object",
+        "required": ["engine", "unit_path", "item_address", "item_kind", "text"],
+        "properties": {
+          "engine": { "$ref": "#/$defs/engine" },
+          "unit_path": { "type": ["string", "null"] },
+          "item_address": { "type": "string", "minLength": 1 },
+          "item_kind": { "enum": ["type", "method"] },
+          "text": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "provider": {
+        "type": "object",
+        "required": ["id", "name", "version"],
+        "properties": {
+          "id": { "const": "jeb" },
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": ["string", "null"] }
+        },
+        "additionalProperties": true
+      },
+      "evidence": {
+        "type": "object",
+        "required": ["evidence_id", "operation", "provider", "normalized_result", "limitations"],
+        "properties": {
+          "evidence_id": { "type": "string", "minLength": 1 },
+          "operation": { "const": "decompile_jeb_item" },
+          "provider": { "$ref": "#/$defs/provider" },
+          "normalized_result": { "$ref": "#/$defs/decompileResult" },
+          "limitations": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

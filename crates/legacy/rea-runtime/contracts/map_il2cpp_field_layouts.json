@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_field_layouts",
+  "title": "Map IL2CPP Field Layouts",
+  "description": "Correlate caller-supplied normalized IL2CPP field metadata with recovered field-layout rows. This bounded, read-only, captured-only projection preserves source rows and keeps missing layouts distinct from present layouts whose offsets are unknown.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/wrappedInput" }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "optionalIndex": {
+        "anyOf": [
+          { "$ref": "#/$defs/index" },
+          { "type": "null" }
+        ]
+      },
+      "typeRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true,
+        "properties": {
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "type_index": { "$ref": "#/$defs/index" },
+          "field_start": { "$ref": "#/$defs/index" },
+          "field_count": { "$ref": "#/$defs/index" },
+          "fieldStart": { "$ref": "#/$defs/index" },
+          "fieldCount": { "$ref": "#/$defs/index" }
+        },
+        "anyOf": [
+          { "required": ["metadata_index"] },
+          { "required": ["type_index"] }
+        ]
+      },
+      "fieldRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true,
+        "properties": {
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "field_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "declaring_type": {},
+          "declaring_type_index": {}
+        },
+        "anyOf": [
+          { "required": ["metadata_index"] },
+          { "required": ["field_index"] },
+          { "required": ["index"] }
+        ]
+      },
+      "layoutRow": {
+        "type": "object",
+        "maxProperties": 128,
+        "additionalProperties": true,
+        "properties": {
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "field_index": { "$ref": "#/$defs/index" },
+          "index": { "$ref": "#/$defs/index" },
+          "offset": {
+            "anyOf": [
+              { "$ref": "#/$defs/index" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "anyOf": [
+          { "required": ["metadata_index"] },
+          { "required": ["field_index"] },
+          { "required": ["index"] }
+        ]
+      },
+      "types": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/typeRow" }
+      },
+      "fields": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/fieldRow" }
+      },
+      "layouts": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/layoutRow" }
+      },
+      "metadataInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "types": { "$ref": "#/$defs/types" },
+          "type_definitions": { "$ref": "#/$defs/types" },
+          "fields": { "$ref": "#/$defs/fields" },
+          "field_definitions": { "$ref": "#/$defs/fields" }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["types"] },
+              { "required": ["type_definitions"] }
+            ]
+          },
+          {
+            "anyOf": [
+              { "required": ["fields"] },
+              { "required": ["field_definitions"] }
+            ]
+          }
+        ]
+      },
+      "binaryInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field_layouts": { "$ref": "#/$defs/layouts" },
+          "field_offsets": { "$ref": "#/$defs/layouts" },
+          "field_layout_rows": { "$ref": "#/$defs/layouts" }
+        },
+        "anyOf": [
+          { "required": ["field_layouts"] },
+          { "required": ["field_offsets"] },
+          { "required": ["field_layout_rows"] }
+        ]
+      },
+      "directInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "types": { "$ref": "#/$defs/types" },
+          "type_definitions": { "$ref": "#/$defs/types" },
+          "fields": { "$ref": "#/$defs/fields" },
+          "field_definitions": { "$ref": "#/$defs/fields" },
+          "field_layouts": { "$ref": "#/$defs/layouts" },
+          "field_offsets": { "$ref": "#/$defs/layouts" },
+          "field_layout_rows": { "$ref": "#/$defs/layouts" }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["types"] },
+              { "required": ["type_definitions"] }
+            ]
+          },
+          {
+            "anyOf": [
+              { "required": ["fields"] },
+              { "required": ["field_definitions"] }
+            ]
+          },
+          {
+            "anyOf": [
+              { "required": ["field_layouts"] },
+              { "required": ["field_offsets"] },
+              { "required": ["field_layout_rows"] }
+            ]
+          }
+        ]
+      },
+      "wrappedInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata", "binary"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/metadataInput" },
+          "binary": { "$ref": "#/$defs/binaryInput" }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "declaring_type", "field_layout", "resolution"],
+          "properties": {
+            "field": { "$ref": "#/$defs/row" },
+            "declaring_type": {},
+            "field_layout": {
+              "anyOf": [
+                { "$ref": "#/$defs/row" },
+                { "type": "null" }
+              ]
+            },
+            "resolution": { "enum": ["mapped", "unknown", "unmapped"] }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["types", "fields", "mapped", "unknown", "unmapped", "unmapped_field_indices", "field_layout_rows"],
+        "properties": {
+          "types": { "$ref": "#/$defs/count" },
+          "fields": { "$ref": "#/$defs/count" },
+          "mapped": { "$ref": "#/$defs/count" },
+          "unknown": { "$ref": "#/$defs/count" },
+          "unmapped": { "$ref": "#/$defs/count" },
+          "unmapped_field_indices": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/index" } },
+          "field_layout_rows": { "$ref": "#/$defs/count" }
+        }
+      }
+    },
+    "$defs": {
+      "count": { "type": "integer", "minimum": 0, "maximum": 200000 },
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "row": { "type": "object", "maxProperties": 128, "additionalProperties": true }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

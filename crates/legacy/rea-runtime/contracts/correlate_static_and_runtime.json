@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "correlate_static_and_runtime",
+  "title": "Correlate static and runtime Evidence",
+  "description": "Evaluate every explicit caller-declared hypothesis between exact static comparison findings and runtime comparison dimensions. Similar names or paths are never auto-matched, consistent cochange never proves causality, and unknown or truncated inputs remain unresolved. Returns all correlations and their complete Evidence closure inline.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["static_comparisons", "runtime_comparisons", "mappings"],
+    "properties": {
+      "static_comparisons": {
+        "type": "array",
+        "minItems": 1,
+        "items": {"type": "object"}
+      },
+      "runtime_comparisons": {
+        "type": "array",
+        "minItems": 1,
+        "items": {"type": "object"}
+      },
+      "mappings": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["static", "runtime", "side_alignment", "hypothesis"],
+          "properties": {
+            "static": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["comparison_evidence_id", "selector"],
+              "properties": {
+                "comparison_evidence_id": {"type": "string", "minLength": 1},
+                "selector": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind", "logical_path"],
+                      "properties": {
+                        "kind": {"const": "artifact"},
+                        "logical_path": {"type": "string", "minLength": 1}
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind", "dimension"],
+                      "properties": {
+                        "kind": {"const": "function"},
+                        "dimension": {
+                          "enum": [
+                            "identity", "pseudocode", "assembly", "comments",
+                            "calls", "references", "strings_names", "cfg"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "runtime": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["comparison_evidence_id", "dimension"],
+              "properties": {
+                "comparison_evidence_id": {"type": "string", "minLength": 1},
+                "dimension": {
+                  "enum": ["interaction", "exit", "filesystem", "process", "terminal"]
+                }
+              }
+            },
+            "side_alignment": {"enum": ["left_to_left", "left_to_right"]},
+            "hypothesis": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["statement", "expected_pattern"],
+              "properties": {
+                "statement": {"type": "string", "minLength": 1},
+                "expected_pattern": {
+                  "enum": ["cochanged", "static_only", "runtime_only", "both_unchanged"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["status", "summary", "correlations", "evidence_links", "limitations"],
+    "properties": {
+      "status": {"enum": ["correlated", "contradicted", "unknown", "truncated"]},
+      "summary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hypotheses", "contradictions", "unresolved"],
+        "properties": {
+          "hypotheses": {"type": "integer", "minimum": 0},
+          "contradictions": {"type": "integer", "minimum": 0},
+          "unresolved": {"type": "integer", "minimum": 0}
+        }
+      },
+      "correlations": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "correlation_id", "static", "runtime", "side_alignment",
+                "hypothesis", "observed_pattern", "classification",
+                "evidence_links", "limitations"
+              ],
+              "properties": {
+                "correlation_id": {"type": "string", "minLength": 1},
+                "static": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "comparison_evidence_id", "selector", "status",
+                    "conclusion_kind"
+                  ],
+                  "properties": {
+                    "comparison_evidence_id": {"type": "string", "minLength": 1},
+                    "selector": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind", "logical_path"],
+                          "properties": {
+                            "kind": {"const": "artifact"},
+                            "logical_path": {"type": "string", "minLength": 1}
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind", "dimension"],
+                          "properties": {
+                            "kind": {"const": "function"},
+                            "dimension": {
+                              "enum": [
+                                "identity", "pseudocode", "assembly", "comments",
+                                "calls", "references", "strings_names", "cfg"
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "unchanged", "changed", "unknown", "truncated",
+                        "added", "removed", "modified", "ambiguous"
+                      ]
+                    },
+                    "conclusion_kind": {
+                      "enum": ["derived_relationship", "contradiction", "unresolved_branch"]
+                    }
+                  }
+                },
+                "runtime": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["comparison_evidence_id", "dimension", "status"],
+                  "properties": {
+                    "comparison_evidence_id": {"type": "string", "minLength": 1},
+                    "dimension": {
+                      "enum": ["interaction", "exit", "filesystem", "process", "terminal"]
+                    },
+                    "status": {
+                      "enum": ["unchanged", "changed", "unknown", "truncated"]
+                    }
+                  }
+                },
+                "side_alignment": {"enum": ["left_to_left", "left_to_right"]},
+                "hypothesis": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["statement", "expected_pattern"],
+                  "properties": {
+                    "statement": {"type": "string", "minLength": 1},
+                    "expected_pattern": {
+                      "enum": ["cochanged", "static_only", "runtime_only", "both_unchanged"]
+                    }
+                  }
+                },
+                "observed_pattern": {
+                  "enum": [
+                    "cochanged", "static_only", "runtime_only", "both_unchanged",
+                    "unknown", "truncated"
+                  ]
+                },
+                "classification": {
+                  "enum": ["hypothesis", "contradiction", "unresolved_branch"]
+                },
+                "evidence_links": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {"type": "string", "minLength": 1}
+                },
+                "limitations": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }
+      },
+      "evidence_links": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "inspect_sqlite_database",
+  "title": "Inspect Captured SQLite Database",
+  "description": "Project a caller-supplied SQLite observation or authenticated Evidence without opening, executing, or modifying a database.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["request", "database"],
+        "properties": {
+          "request": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1, "pattern": "^[^\\u0000]*$" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "table": { "type": "string" },
+              "columns": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "schema_scope": { "enum": ["inventory", "selected_table", "database"] },
+              "row_limit": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "database": { "type": "object" }
+        }
+      },
+      {
+        "required": ["evidence"],
+        "properties": { "evidence": { "type": "object" } }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result", "provenance"],
+    "properties": {
+      "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+      "result": { "type": "object" },
+      "provenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "execution"],
+        "properties": {
+          "source": { "type": "string" },
+          "execution": { "type": "string" },
+          "source_path": { "type": "string" },
+          "source_sha256": { "type": "string" }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

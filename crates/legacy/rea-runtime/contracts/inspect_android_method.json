@@ -1,0 +1,8 @@
+{
+  "name": "inspect_android_method",
+  "title": "Inspect Android Method",
+  "description": "Inspect one exact Android DEX method overload without executing the APK.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "report": { "type": "object" }, "evidence": { "type": "object" }, "class_name": { "type": "string", "minLength": 1 }, "method_name": { "type": "string", "minLength": 1 }, "overload_index": { "type": "integer", "minimum": 0 } }, "required": ["report", "class_name", "method_name"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object", "required": ["class_name", "dex_entry", "dex_method_index", "method", "overload_index", "overload_count", "code", "annotations", "call_sites", "code_item_offset", "coverage", "unknowns"], "properties": { "class_name": { "type": "string" }, "dex_entry": { "type": "string" }, "dex_method_index": { "type": "integer", "minimum": 0 }, "method": { "type": "object" }, "overload_index": { "type": "integer", "minimum": 0 }, "overload_count": { "type": "integer", "minimum": 1 }, "code": { "type": ["object", "null"] }, "annotations": { "type": "array" }, "call_sites": { "type": "array" }, "code_item_offset": { "type": ["integer", "null"] }, "coverage": { "type": "string", "enum": ["complete", "partial"] }, "unknowns": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

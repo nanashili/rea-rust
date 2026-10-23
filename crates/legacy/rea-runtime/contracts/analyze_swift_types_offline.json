@@ -1,0 +1,8 @@
+{
+  "name": "analyze_swift_types",
+  "title": "Analyze Supplied Swift Symbol Inventory",
+  "description": "Categorize caller-supplied Swift procedures and same-address mangled symbol aliases without opening an artifact or invoking a demangler.",
+  "inputSchema": {"$schema":"https://json-schema.org/draft/2020-12/schema","oneOf":[{"type":"object","additionalProperties":false,"required":["procedures"],"properties":{"procedures":{"type":"array","maxItems":200000,"items":{"type":"object","additionalProperties":false,"required":["address","name"],"properties":{"address":{"type":"string","minLength":1},"name":{"type":"string","minLength":1}}}},"symbols":{"type":"array","maxItems":200000,"items":{"type":"object","additionalProperties":false,"required":["address","name"],"properties":{"address":{"type":"string","minLength":1},"name":{"type":"string","minLength":1}}}},"category":{"enum":["classes","structs","enums","protocols","extensions","other"]},"pattern":{"type":"string"}}},{"type":"object","additionalProperties":false,"required":["evidence"],"properties":{"evidence":{"type":"object","minProperties":1},"category":{"enum":["classes","structs","enums","protocols","extensions","other"]},"pattern":{"type":"string"}}}]},
+  "outputSchema":{"type":"object","required":["total","categories","unclassified","limitations"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

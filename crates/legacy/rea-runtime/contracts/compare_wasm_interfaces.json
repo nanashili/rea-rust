@@ -1,0 +1,29 @@
+{
+  "name": "compare_wasm_interfaces",
+  "title": "Compare WASM Interfaces",
+  "description": "Compare two authenticated inspect_wasm_artifact Evidence records by import, export, or both directions. Duplicate names and incomplete interface inventories remain explicitly unknown.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "left": { "type": "object" },
+      "right": { "type": "object" },
+      "scope": { "type": "string", "enum": ["imports", "exports", "both"] }
+    },
+    "required": ["left", "right", "scope"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

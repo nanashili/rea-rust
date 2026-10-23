@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_web_network_capture",
+  "title": "Inspect web network capture",
+  "description": "Inspect a caller-selected local HAR, mitmproxy, Fiddler SAZ, or aioquic qlog capture offline without contacting recorded destinations. The result preserves producer record ordinals, source locations, binary and numeric sidecars, redactions, limitations, artifact identity, runtime attribution, and explicit unknowns.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["capture_path", "format"],
+    "properties": {
+      "capture_path": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\u0000]*$",
+        "description": "Absolute local capture path."
+      },
+      "format": {
+        "type": "string",
+        "enum": ["har", "mitmproxy", "saz", "qlog"]
+      },
+      "record_ordinals": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "description": "Optional zero-based producer record ordinals in caller-selected order."
+      },
+      "sensitive_values": {
+        "type": "array",
+        "default": [],
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": "Literal values explicitly excluded from payloads, coordinates, artifact identity, and diagnostic text."
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "The exact webNetworkCaptureSchema result produced by the application owner."
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

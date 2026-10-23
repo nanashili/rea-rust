@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "compare_web_captures",
+  "title": "Compare web captures",
+  "description": "Compare two complete normalized JavaScript browser captures across stable evidence dimensions while preserving changed, unchanged, and unknown outcomes.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["before", "after"],
+        "properties": {
+          "before": {"$ref": "#/$defs/passiveSnapshot"},
+          "after": {"$ref": "#/$defs/passiveSnapshot"}
+        }
+      },
+      {
+        "required": ["before_scenario", "after_scenario"],
+        "properties": {
+          "before_scenario": {"$ref": "#/$defs/scenarioCapture"},
+          "after_scenario": {"$ref": "#/$defs/scenarioCapture"},
+          "normalization": {"$ref": "#/$defs/normalization"}
+        }
+      }
+    ],
+    "$defs": {
+      "passiveSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "oneOf": [
+          {"required": ["inspection"]},
+          {"required": ["evidence"]}
+        ],
+        "properties": {
+          "inspection": {"type": "object"},
+          "evidence": {"type": "object"},
+          "webmcp": {"type": ["object", "null"]}
+        }
+      },
+      "scenarioCapture": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["browser", "scenario", "completeness", "steps"],
+        "properties": {
+          "browser": {"type": "object"},
+          "scenario": {"type": "object"},
+          "completeness": {"type": "object"},
+          "steps": {"type": "array", "minItems": 1},
+          "events": {"type": "object"}
+        }
+      },
+      "normalization": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["rule_id", "artifacts", "match", "replacement"],
+              "properties": {
+                "rule_id": {"type": "string", "minLength": 1},
+                "artifacts": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "match": {"type": "string", "minLength": 1},
+                "replacement": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {
+      "result": {"type": "object"},
+      "provenance": {
+        "type": "object",
+        "additionalProperties": {"type": "string"}
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

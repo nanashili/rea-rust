@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "capture_web_screenshot",
+  "title": "Capture web screenshot",
+  "description": "Capture one read-only visible-viewport PNG from a caller-selected CDP page without navigating or executing application code.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["cdp_endpoint", "target_id"],
+    "properties": {
+      "cdp_endpoint": {"type": "string", "minLength": 1},
+      "allowed_origins": {"type": "array", "items": {"type": "string"}, "default": []},
+      "target_id": {"type": "string", "minLength": 1}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

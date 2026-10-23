@@ -1,0 +1,41 @@
+{
+  "name": "compare_bundles",
+  "title": "Compare Evidence Bundles",
+  "description": "Compare two caller-selected canonical Evidence bundles without executing targets or changing either input.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "left_bundle_path": { "type": "string", "minLength": 1 },
+      "right_bundle_path": { "type": "string", "minLength": 1 },
+      "record_pairs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "left_evidence_id": { "type": "string", "pattern": "^ev_[0-9a-f]{64}$" },
+            "right_evidence_id": { "type": "string", "pattern": "^ev_[0-9a-f]{64}$" }
+          },
+          "required": ["left_evidence_id", "right_evidence_id"]
+        },
+        "default": []
+      }
+    },
+    "required": ["left_bundle_path", "right_bundle_path"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "properties": { "result": { "type": "object" } },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

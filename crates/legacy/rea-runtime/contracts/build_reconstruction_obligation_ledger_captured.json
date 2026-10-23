@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "build_reconstruction_obligation_ledger",
+  "title": "Build reconstruction obligation ledger from captured Evidence",
+  "description": "Reduce a complete authenticated Evidence bundle, reviewed obligations, and an explicit manifest into a deterministic ledger. This operation reads retained facts only and never executes a verifier, accesses a provider or target, or writes a project artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence_bundle", "reviewed_obligations", "manifest"],
+    "properties": {
+      "evidence_bundle": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifacts", "providers", "environments", "scenarios", "captures", "unknowns", "records"],
+        "properties": {
+          "artifacts": {"type": "array"},
+          "providers": {"type": "array"},
+          "environments": {"type": "array"},
+          "scenarios": {"type": "array"},
+          "captures": {"type": "array"},
+          "unknowns": {"type": "array"},
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id"],
+              "properties": {"evidence_id": {"type": "string", "minLength": 1}}
+            }
+          }
+        }
+      },
+      "reviewed_obligations": {"type": "array"},
+      "manifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bindings", "contradictions"],
+        "properties": {
+          "bindings": {"type": "array"},
+          "contradictions": {"type": "array"}
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "ledger_id", "closure_digest", "status", "coverage", "summary", "reports", "ownership_graph", "dependency_graph", "obligations", "evidence_links", "limitations"],
+    "properties": {
+      "schema": {"const": "ReconstructionObligationLedger"},
+      "ledger_id": {"type": "string", "minLength": 1},
+      "closure_digest": {"type": "string", "minLength": 1},
+      "status": {"enum": ["unknown", "failed", "open", "ready"]},
+      "coverage": {"type": "object"},
+      "summary": {"type": "object"},
+      "reports": {"type": "object"},
+      "ownership_graph": {"type": "array"},
+      "dependency_graph": {"type": "array"},
+      "obligations": {"type": "array"},
+      "evidence_links": {"type": "array"},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

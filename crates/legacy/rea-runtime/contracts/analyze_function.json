@@ -1,0 +1,8 @@
+{
+  "name": "analyze_function",
+  "title": "Analyze Native Function",
+  "description": "Normalize caller-supplied native function Evidence without opening an analysis database or executing the artifact. Provider identity, provenance, coverage, and unknowns are retained.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "required": ["evidence"], "properties": { "evidence": { "type": "object", "description": "Authenticated retained Evidence whose operation is analyze_function." } } },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["dossier", "source_evidence"], "properties": { "dossier": { "type": "object" }, "limitations": { "type": "array" }, "relationship_coverage": { "type": "object" }, "selection": { "type": "object" }, "source_evidence": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

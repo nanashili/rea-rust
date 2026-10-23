@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "build_il2cpp_static_report",
+  "title": "Build a captured IL2CPP static reconstruction report",
+  "description": "Compose retained IL2CPP metadata, CodeGenModule, method-address, and member projections into one static report. The workflow preserves source Evidence, coverage, unresolved facts, ambiguities, disagreements, and caller-supplied limitations. It never opens an artifact, invokes a provider, executes a target, dereferences a pointer, or mutates state.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [],
+    "properties": {
+      "metadata_evidence": { "$ref": "#/$defs/metadataInput" },
+      "metadata": { "$ref": "#/$defs/metadataInput" },
+      "codegen_modules": { "$ref": "#/$defs/rows" },
+      "modules": { "$ref": "#/$defs/rows" },
+      "method_addresses": { "$ref": "#/$defs/rows" },
+      "method_address_rows": { "$ref": "#/$defs/rows" },
+      "methods": { "$ref": "#/$defs/rows" },
+      "members": { "$ref": "#/$defs/rows" },
+      "member_rows": { "$ref": "#/$defs/rows" },
+      "type_members": { "$ref": "#/$defs/rows" },
+      "limitations": { "$ref": "#/$defs/limitations" }
+    },
+    "allOf": [
+      { "anyOf": [{ "required": ["metadata_evidence"] }, { "required": ["metadata"] }] }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "status", "metadata", "codegen_modules", "method_addresses", "members", "method_correlations", "source_evidence", "coverage", "unknowns", "ambiguities", "disagreements", "limitations"],
+    "properties": {
+      "operation": { "const": "build_il2cpp_static_report" },
+      "status": { "enum": ["complete", "partial"] },
+      "metadata": { "type": "object" },
+      "codegen_modules": { "$ref": "#/$defs/rows" },
+      "method_addresses": { "$ref": "#/$defs/rows" },
+      "members": { "$ref": "#/$defs/rows" },
+      "method_correlations": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/methodCorrelation" }
+      },
+      "source_evidence": {
+        "type": "array",
+        "maxItems": 600000,
+        "items": { "type": ["object", "array", "string"] }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codegen_modules", "method_addresses", "members", "method_correlations", "method_correlations_matched", "method_correlations_unresolved", "method_correlations_ambiguous", "method_address_rows_without_metadata", "limitations"],
+        "properties": {
+          "codegen_modules": { "$ref": "#/$defs/count" },
+          "method_addresses": { "$ref": "#/$defs/count" },
+          "members": { "$ref": "#/$defs/count" },
+          "method_correlations": { "$ref": "#/$defs/count" },
+          "method_correlations_matched": { "$ref": "#/$defs/count" },
+          "method_correlations_unresolved": { "$ref": "#/$defs/count" },
+          "method_correlations_ambiguous": { "$ref": "#/$defs/count" },
+          "method_address_rows_without_metadata": { "$ref": "#/$defs/count" },
+          "limitations": { "$ref": "#/$defs/count" }
+        }
+      },
+      "unknowns": { "$ref": "#/$defs/messages" },
+      "ambiguities": { "$ref": "#/$defs/messages" },
+      "disagreements": { "$ref": "#/$defs/messages" },
+      "limitations": { "$ref": "#/$defs/limitations" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "$defs": {
+    "metadataInput": { "type": "object" },
+    "rows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "type": "object" }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2000 }
+    },
+    "messages": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2000 }
+    },
+    "count": { "type": "integer", "minimum": 0, "maximum": 200000 },
+    "methodCorrelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method_key", "status", "method", "address_rows"],
+      "properties": {
+        "method_key": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "status": { "enum": ["matched", "ambiguous", "unresolved"] },
+        "method": { "type": "object" },
+        "address_rows": { "$ref": "#/$defs/rows" },
+        "source_evidence": { "type": "array", "maxItems": 600000, "items": { "type": ["object", "array", "string"] } }
+      }
+    }
+  }
+}

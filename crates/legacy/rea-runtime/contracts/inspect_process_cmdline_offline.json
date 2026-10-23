@@ -1,0 +1,8 @@
+{
+  "name": "inspect_process_cmdline_offline",
+  "title": "Inspect supplied process command line",
+  "description": "Project caller-supplied command-line observations while retaining raw argument boundaries and generation identity.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "source": { "type": "string" }, "observations": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["pid", "generation", "state"], "additionalProperties": true } }, "provenance": { "type": "array" }, "evidence_links": { "type": "array", "items": { "type": "string" } } }, "required": ["observations"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

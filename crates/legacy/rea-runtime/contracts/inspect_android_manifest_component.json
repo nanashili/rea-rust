@@ -1,0 +1,8 @@
+{
+  "name": "inspect_android_manifest_component",
+  "title": "Inspect Android Manifest Component",
+  "description": "Inspect one exact binary Android manifest component and preserve exported, permission, process, intent-filter, and source-location facts without executing the APK.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "package": { "type": "object" }, "kind": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 } }, "required": ["package", "kind", "name"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

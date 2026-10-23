@@ -1,0 +1,31 @@
+[package]
+name = "rea-application"
+description = "Shared REA application workflows: artifact inspection, Evidence projection, record retention and bundles."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-rust-analysis.workspace = true
+base64.workspace = true
+oxc_allocator.workspace = true
+oxc_ast.workspace = true
+oxc_parser.workspace = true
+oxc_semantic.workspace = true
+oxc_span.workspace = true
+flate2 = { workspace = true, features = ["runtime_detection"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+sha2.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+rusqlite = { workspace = true, features = ["bundled"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true

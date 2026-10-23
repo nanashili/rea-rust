@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_default_values",
+  "title": "Map IL2CPP Default Values",
+  "description": "Project caller-supplied IL2CPP field and parameter default rows against a bounded captured data blob. Only explicit primitive or string encodings are decoded. Raw bytes, source rows, ownership ambiguity, overlap, malformed ranges, and unresolved reasons remain visible. This operation is static and captured-only: it does not read files, invoke providers, execute Unity, attach to a process, or mutate a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "u64": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615
+    },
+    "base64": {
+      "type": "string",
+      "maxLength": 357913944,
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+    },
+    "sourceRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 32
+    },
+    "defaultRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 32,
+      "properties": {
+        "field_index": { "$ref": "#/$defs/u64" },
+        "parameter_index": { "$ref": "#/$defs/u64" },
+        "index": { "$ref": "#/$defs/u64" },
+        "data_index": { "$ref": "#/$defs/u64" },
+        "data_offset": { "$ref": "#/$defs/u64" },
+        "data_size": { "$ref": "#/$defs/u64" },
+        "data_length": { "$ref": "#/$defs/u64" },
+        "size": { "$ref": "#/$defs/u64" },
+        "length": { "$ref": "#/$defs/u64" },
+        "value_type": { "type": "string", "maxLength": 128 },
+        "type_name": { "type": "string", "maxLength": 256 },
+        "encoding": { "type": "string", "maxLength": 128 },
+        "endianness": { "enum": ["little", "big", "le", "be"] }
+      }
+    },
+    "ownerRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 32
+    },
+    "rowList": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/defaultRow" }
+    },
+    "ownerList": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/ownerRow" }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 64,
+      "properties": {
+        "field_defaults": { "$ref": "#/$defs/rowList" },
+        "fieldDefaultValues": { "$ref": "#/$defs/rowList" },
+        "parameter_defaults": { "$ref": "#/$defs/rowList" },
+        "parameterDefaultValues": { "$ref": "#/$defs/rowList" },
+        "fields": { "$ref": "#/$defs/ownerList" },
+        "field_definitions": { "$ref": "#/$defs/ownerList" },
+        "parameters": { "$ref": "#/$defs/ownerList" },
+        "parameter_definitions": { "$ref": "#/$defs/ownerList" },
+        "field_ranges": { "$ref": "#/$defs/ownerList" },
+        "type_definitions": { "$ref": "#/$defs/ownerList" },
+        "parameter_ranges": { "$ref": "#/$defs/ownerList" },
+        "method_definitions": { "$ref": "#/$defs/ownerList" }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 64,
+      "required": ["field_defaults", "parameter_defaults"],
+      "properties": {
+        "default_data_base64": { "$ref": "#/$defs/base64" },
+        "data_base64": { "$ref": "#/$defs/base64" },
+        "default_value_data_base64": { "$ref": "#/$defs/base64" },
+        "field_defaults": { "$ref": "#/$defs/rowList" },
+        "fieldDefaultValues": { "$ref": "#/$defs/rowList" },
+        "parameter_defaults": { "$ref": "#/$defs/rowList" },
+        "parameterDefaultValues": { "$ref": "#/$defs/rowList" },
+        "metadata": { "$ref": "#/$defs/metadata" }
+      },
+      "anyOf": [
+        { "required": ["default_data_base64"] },
+        { "required": ["data_base64"] },
+        { "required": ["default_value_data_base64"] }
+      ]
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 16,
+      "required": ["kind", "source", "source_index", "resolution"],
+      "properties": {
+        "kind": { "enum": ["field", "parameter"] },
+        "source": { "$ref": "#/$defs/sourceRow" },
+        "source_index": { "anyOf": [{ "$ref": "#/$defs/u64" }, { "type": "null" }] },
+        "owners": { "type": "array", "maxItems": 16 },
+        "owner": {},
+        "raw_bytes_base64": { "$ref": "#/$defs/base64" },
+        "resolution": { "enum": ["mapped", "unknown"] },
+        "reason": { "type": "string", "maxLength": 256 },
+        "value": {}
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "items", "coverage", "limitations"],
+      "properties": {
+        "status": { "enum": ["complete", "partial"] },
+        "items": {
+          "type": "array",
+          "maxItems": 400000,
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field_defaults", "parameter_defaults", "mapped", "unknown", "overlapping", "data_bytes"],
+          "properties": {
+            "field_defaults": { "type": "integer", "minimum": 0, "maximum": 200000 },
+            "parameter_defaults": { "type": "integer", "minimum": 0, "maximum": 200000 },
+            "mapped": { "type": "integer", "minimum": 0, "maximum": 400000 },
+            "unknown": { "type": "integer", "minimum": 0, "maximum": 400000 },
+            "overlapping": { "type": "integer", "minimum": 0, "maximum": 400000 },
+            "data_bytes": { "type": "integer", "minimum": 0, "maximum": 268435456 }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "type": "string", "maxLength": 512 }
+        }
+      }
+    }
+  },
+  "readOnlyHint": true,
+  "idempotentHint": true,
+  "openWorldHint": false
+}

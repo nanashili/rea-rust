@@ -1,0 +1,175 @@
+{
+  "name": "verify_reconstruction",
+  "title": "Verify Reconstruction",
+  "description": "Evaluate a finite typed reconstruction specification against retained comparison Evidence. A pass covers only declared comparable claims; it does not establish global implementation equivalence.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "specification": {
+        "$ref": "#/$defs/reconstructionSpecification"
+      }
+    },
+    "required": ["specification"],
+    "$defs": {
+      "reconstructionSpecification": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "claims": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/reconstructionClaim" }
+          }
+        },
+        "required": ["name", "claims"]
+      },
+      "reconstructionClaim": {
+        "oneOf": [
+          { "$ref": "#/$defs/behavioralClaim" },
+          { "$ref": "#/$defs/functionClaim" },
+          { "$ref": "#/$defs/artifactClaim" }
+        ]
+      },
+      "claimCommon": {
+        "type": "object",
+        "properties": {
+          "claim_id": { "$ref": "#/$defs/claimId" },
+          "title": { "type": "string", "minLength": 1 },
+          "comparison_evidence_id": { "$ref": "#/$defs/evidenceId" }
+        },
+        "required": ["claim_id", "title", "comparison_evidence_id"]
+      },
+      "behavioralClaim": {
+        "allOf": [
+          { "$ref": "#/$defs/claimCommon" },
+          {
+            "unevaluatedProperties": false,
+            "properties": {
+              "kind": { "const": "behavioral" },
+              "dimension": {
+                "enum": ["overall", "terminal", "interaction", "exit", "filesystem", "process"]
+              }
+            },
+            "required": ["kind", "dimension"]
+          }
+        ]
+      },
+      "functionClaim": {
+        "allOf": [
+          { "$ref": "#/$defs/claimCommon" },
+          {
+            "unevaluatedProperties": false,
+            "properties": {
+              "kind": { "const": "structural-function" },
+              "dimension": {
+                "enum": ["overall", "identity", "pseudocode", "assembly", "comments", "calls", "references", "strings_names", "cfg"]
+              }
+            },
+            "required": ["kind", "dimension"]
+          }
+        ]
+      },
+      "artifactClaim": {
+        "allOf": [
+          { "$ref": "#/$defs/claimCommon" },
+          {
+            "unevaluatedProperties": false,
+            "properties": {
+              "kind": { "const": "structural-artifact" },
+              "dimension": { "const": "overall" }
+            },
+            "required": ["kind", "dimension"]
+          }
+        ]
+      },
+      "claimId": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9._:\\x2f\\x2d]{0,199}$"
+      },
+      "evidenceId": {
+        "type": "string",
+        "pattern": "^ev_[a-f0-9]{64}$"
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "status": { "enum": ["pass", "fail", "unknown"] },
+      "specification_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+      "summary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "total": { "type": "integer", "minimum": 1 },
+          "passed": { "type": "integer", "minimum": 0 },
+          "failed": { "type": "integer", "minimum": 0 },
+          "unknown": { "type": "integer", "minimum": 0 },
+          "behavioral": { "type": "integer", "minimum": 0 },
+          "structural": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["total", "passed", "failed", "unknown", "behavioral", "structural"]
+      },
+      "claims": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/$defs/claimResult" } }
+        }
+      },
+      "recommended_probes": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/recommendedProbe" }
+      },
+      "evidence_links": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/evidenceId" } },
+      "limitations": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["status", "specification_sha256", "summary", "claims", "recommended_probes", "evidence_links", "limitations"],
+    "$defs": {
+      "evidenceId": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
+      "unknownId": { "type": "string", "pattern": "^unk_[a-f0-9]{64}$" },
+      "claimId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._:\\x2f\\x2d]{0,199}$" },
+      "claimResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": { "$ref": "#/$defs/claimId" },
+          "kind": { "enum": ["behavioral", "structural-function", "structural-artifact"] },
+          "dimension": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["pass", "fail", "unknown"] },
+          "observed_status": { "enum": ["unchanged", "added", "removed", "changed", "truncated", "unknown", "contradiction"] },
+          "comparison_evidence_id": { "$ref": "#/$defs/evidenceId" },
+          "left_evidence_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceId" } },
+          "right_evidence_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceId" } },
+          "evidence_links": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/evidenceId" } },
+          "unknown_ids": { "type": "array", "items": { "$ref": "#/$defs/unknownId" } },
+          "limitations": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["claim_id", "kind", "dimension", "status", "observed_status", "comparison_evidence_id", "left_evidence_ids", "right_evidence_ids", "evidence_links", "unknown_ids", "limitations"]
+      },
+      "recommendedProbe": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "operation": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "claim_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/claimId" } },
+          "unknown_ids": { "type": "array", "items": { "$ref": "#/$defs/unknownId" } }
+        },
+        "required": ["operation", "rationale", "claim_ids", "unknown_ids"]
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

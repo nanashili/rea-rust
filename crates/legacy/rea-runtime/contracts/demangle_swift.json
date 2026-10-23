@@ -1,0 +1,80 @@
+{
+  "name": "demangle_swift",
+  "title": "Demangle Swift Symbols",
+  "description": "Pair caller-supplied Swift symbols with captured swift-demangle output or authenticated demangle_swift Evidence. The native runtime never launches a host demangler.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "symbols": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\n\\u0000]*$"
+        }
+      },
+      "stdout": {
+        "type": "string",
+        "maxLength": 8388608
+      },
+      "provenance": { "type": "array" },
+      "limitations": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "evidence": { "type": "object" }
+    },
+    "anyOf": [
+      {
+        "required": ["symbols", "stdout"],
+        "not": { "required": ["evidence"] }
+      },
+      {
+        "required": ["evidence"],
+        "not": {
+          "anyOf": [
+            { "required": ["symbols"] },
+            { "required": ["stdout"] }
+          ]
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["symbols", "provenance", "limitations"],
+    "properties": {
+      "symbols": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["input", "output", "status"],
+          "properties": {
+            "input": { "type": "string" },
+            "output": { "type": "string" },
+            "status": {
+              "type": "string",
+              "enum": ["demangled", "unchanged", "invalid"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "provenance": { "type": "array" },
+      "limitations": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

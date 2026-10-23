@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "compare_web_screenshots",
+  "title": "Compare web screenshots",
+  "description": "Compare two retained PNG artifacts by pixel values without OCR, navigation, or image mutation.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["before", "after"],
+    "properties": {
+      "before": {"$ref": "#/$defs/screenshotInput"},
+      "after": {"$ref": "#/$defs/screenshotInput"},
+      "channel_threshold": {"type": "integer", "minimum": 0, "maximum": 255, "default": 0}
+    },
+    "$defs": {
+      "pngArtifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "bytes", "media_type", "data_base64"],
+        "properties": {
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "bytes": {"type": "integer", "minimum": 1},
+          "media_type": {"const": "image/png"},
+          "data_base64": {"type": "string", "minLength": 4}
+        }
+      },
+      "screenshotInput": {
+        "anyOf": [
+          {"$ref": "#/$defs/pngArtifact"},
+          {
+            "type": "object",
+            "required": ["artifact"],
+            "properties": {
+              "artifact": {"$ref": "#/$defs/pngArtifact"},
+              "limitations": {"type": "array", "items": {"type": "string"}},
+              "evidence_id": {"type": "string", "minLength": 1},
+              "evidence": {"type": "object"}
+            },
+            "additionalProperties": true
+          }
+        ]
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result", "provenance"],
+    "properties": {
+      "result": {"type": "object"},
+      "provenance": {
+        "type": "object",
+        "required": ["source", "execution", "before", "after"],
+        "properties": {
+          "source": {"const": "caller-supplied-captured-screenshots"},
+          "execution": {"const": "none"},
+          "before": {"$ref": "#/$defs/imageProvenance"},
+          "after": {"$ref": "#/$defs/imageProvenance"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "$defs": {
+      "imageProvenance": {
+        "type": "object",
+        "required": ["sha256", "bytes", "media_type"],
+        "properties": {
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "bytes": {"type": "integer", "minimum": 1},
+          "media_type": {"const": "image/png"},
+          "evidence_id": {"type": "string", "minLength": 1},
+          "limitations": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

@@ -1,0 +1,1424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_electron_page",
+  "title": "Inspect Electron page",
+  "description": "Passively inspect one Electron file page by supplying its loopback CDP endpoint and target ID. The provider rechecks that the target currently exists at that endpoint and is a local file page. Returns frames, DOM structure, resource paths, and scripts without evaluating renderer JavaScript or invoking Electron APIs. The selected endpoint exposes every local file page and its metadata to this tool.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "description": "Provide a complete input group: cdp_endpoint + target_id + [observation_ms] + [include_script_sources]; cdp_endpoint + target_id + include_script_sources + [observation_ms].",
+    "examples": [
+      {
+        "cdp_endpoint": "http://127.0.0.1:9223",
+        "target_id": "TARGET_ID_FROM_LIST_ELECTRON_TARGETS"
+      }
+    ],
+    "minProperties": 2,
+    "properties": {
+      "cdp_endpoint": {
+        "description": "Literal loopback Chrome DevTools Protocol endpoint.",
+        "minLength": 1,
+        "type": "string"
+      },
+      "include_script_sources": {
+        "default": false,
+        "description": "Whether to include script sources in the result.",
+        "type": "boolean"
+      },
+      "observation_ms": {
+        "default": 100,
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "target_id": {
+        "description": "Exact CDP target identifier selected from the endpoint's target listing.",
+        "minLength": 1,
+        "type": "string"
+      }
+    },
+    "required": [
+      "cdp_endpoint",
+      "target_id"
+    ],
+    "type": "object"
+  },
+  "outputSchema": {
+    "$defs": {
+      "__schema0": {
+        "pattern": "^ev_[a-f0-9]{64}$",
+        "type": "string"
+      },
+      "__schema1": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "architecture": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "x86",
+                          "x86_64",
+                          "arm",
+                          "arm64",
+                          "mips",
+                          "riscv",
+                          "powerpc",
+                          "hexagon"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "digest": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "format": {
+                    "enum": [
+                      "hopper",
+                      "analysis-database",
+                      "mach-o",
+                      "elf",
+                      "pe",
+                      "dos-mz",
+                      "dos-com",
+                      "zip",
+                      "ipa",
+                      "apk",
+                      "msix",
+                      "appx",
+                      "hap",
+                      "hsp",
+                      "app-pack",
+                      "asar",
+                      "dmg",
+                      "pkg",
+                      "plist",
+                      "javascript",
+                      "source-map",
+                      "directory",
+                      "file",
+                      "unknown",
+                      "mach-o-universal",
+                      "javascript-bundle",
+                      "entitlements"
+                    ],
+                    "type": "string"
+                  },
+                  "local_path": {
+                    "$ref": "#/$defs/__schema5"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "name",
+                  "digest",
+                  "local_path",
+                  "format",
+                  "architecture"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "architecture": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "6502",
+                          "x86",
+                          "x86_64",
+                          "arm",
+                          "arm64",
+                          "mips",
+                          "riscv",
+                          "powerpc",
+                          "m68k",
+                          "hexagon"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "digest": {
+                    "$ref": "#/$defs/__schema3"
+                  },
+                  "format": {
+                    "const": "raw-binary",
+                    "type": "string"
+                  },
+                  "local_path": {
+                    "$ref": "#/$defs/__schema5"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "name",
+                  "digest",
+                  "local_path",
+                  "format",
+                  "architecture"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema10": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema11": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema12": {
+        "anyOf": [
+          {},
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema13": {
+        "additionalProperties": false,
+        "properties": {
+          "browser": {
+            "additionalProperties": false,
+            "properties": {
+              "js_version": {
+                "type": "string"
+              },
+              "product": {
+                "type": "string"
+              },
+              "protocol_version": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "string"
+              },
+              "user_agent": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "product",
+              "protocol_version",
+              "revision",
+              "user_agent",
+              "js_version"
+            ],
+            "type": "object"
+          },
+          "capture_window": {
+            "additionalProperties": false,
+            "properties": {
+              "ended_at": {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "type": "string"
+              },
+              "observation_ms": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "started_at": {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "started_at",
+              "ended_at",
+              "observation_ms"
+            ],
+            "type": "object"
+          },
+          "completeness": {
+            "additionalProperties": false,
+            "properties": {
+              "attach_limited_sections": {
+                "items": {
+                  "$ref": "#/$defs/__schema16"
+                },
+                "type": "array"
+              },
+              "conditions": {
+                "items": {
+                  "$ref": "#/$defs/__schema15"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              "dropped_events": {
+                "additionalProperties": false,
+                "properties": {
+                  "console_events": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "network_requests": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "scripts": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeline_events": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "total": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "webmcp_tools": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "websocket_connections": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "websocket_frames": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "scripts",
+                  "network_requests",
+                  "console_events",
+                  "websocket_connections",
+                  "websocket_frames",
+                  "webmcp_tools",
+                  "timeline_events",
+                  "total"
+                ],
+                "type": "object"
+              },
+              "excluded": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "anyOf": [
+                        {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason": {
+                      "enum": [
+                        "disallowed_origin",
+                        "unsupported_url",
+                        "unattributed_origin",
+                        "not_approved",
+                        "out_of_target_scope",
+                        "provider_unavailable",
+                        "invalid_protocol_value",
+                        "resource_budget_exhausted"
+                      ],
+                      "type": "string"
+                    },
+                    "section": {
+                      "$ref": "#/$defs/__schema16"
+                    }
+                  },
+                  "required": [
+                    "section",
+                    "reason",
+                    "count"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "policy_filtered_sections": {
+                "items": {
+                  "$ref": "#/$defs/__schema16"
+                },
+                "type": "array"
+              },
+              "status": {
+                "$ref": "#/$defs/__schema15"
+              },
+              "truncated_sections": {
+                "items": {
+                  "$ref": "#/$defs/__schema16"
+                },
+                "type": "array"
+              },
+              "unavailable_sections": {
+                "items": {
+                  "$ref": "#/$defs/__schema16"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "status",
+              "conditions",
+              "policy_filtered_sections",
+              "attach_limited_sections",
+              "truncated_sections",
+              "unavailable_sections",
+              "excluded",
+              "dropped_events"
+            ],
+            "type": "object"
+          },
+          "dom": {
+            "additionalProperties": false,
+            "properties": {
+              "nodes": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attribute_names": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "index": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "node_name": {
+                      "type": "string"
+                    },
+                    "node_type": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "node_value_length": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "parent_index": {
+                      "maximum": 9007199254740991,
+                      "minimum": -1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "index",
+                    "parent_index",
+                    "node_type",
+                    "node_name",
+                    "node_value_length",
+                    "attribute_names"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "total_nodes": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total_nodes",
+              "nodes"
+            ],
+            "type": "object"
+          },
+          "frames": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "file_path": {
+                  "type": "string"
+                },
+                "frame_id": {
+                  "type": "string"
+                },
+                "parent_frame_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "frame_id",
+                "parent_frame_id",
+                "file_path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resources": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "content_size": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "file_path": {
+                  "type": "string"
+                },
+                "mime_type": {
+                  "type": "string"
+                },
+                "resource_key": {
+                  "pattern": "^electron_resource_[a-f0-9]{64}$",
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "resource_key",
+                "file_path",
+                "type",
+                "mime_type",
+                "content_size"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "scripts": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cdp_hash": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/__schema17"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Producer-reported script hash; null when unavailable."
+                    },
+                    "file_path": {
+                      "type": "string"
+                    },
+                    "frame_id": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
+                    "is_module": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/__schema19"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Producer-reported module classification; null when unavailable."
+                    },
+                    "language": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "length": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/__schema18"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Producer-reported script length; null when unavailable."
+                    },
+                    "script_key": {
+                      "pattern": "^electron_script_[a-f0-9]{64}$",
+                      "type": "string"
+                    },
+                    "source": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "included": {
+                              "const": false,
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "included",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "artifact": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "bytes": {
+                                  "$ref": "#/$defs/__schema21"
+                                },
+                                "charset": {
+                                  "$ref": "#/$defs/__schema23"
+                                },
+                                "media_type": {
+                                  "$ref": "#/$defs/__schema22"
+                                },
+                                "sha256": {
+                                  "$ref": "#/$defs/__schema20"
+                                },
+                                "text": {
+                                  "$ref": "#/$defs/__schema24"
+                                }
+                              },
+                              "required": [
+                                "sha256",
+                                "bytes",
+                                "media_type",
+                                "charset",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "included": {
+                              "const": true,
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "included",
+                            "artifact"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "script_key",
+                    "frame_id",
+                    "file_path",
+                    "cdp_hash",
+                    "length",
+                    "is_module",
+                    "language",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "total": {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "items"
+            ],
+            "type": "object"
+          },
+          "target": {
+            "additionalProperties": false,
+            "properties": {
+              "attached": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/__schema14"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Discovery-reported debugger attachment state; null means unknown"
+              },
+              "file_path": {
+                "type": "string"
+              },
+              "target_id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_id",
+              "type",
+              "title",
+              "file_path",
+              "attached"
+            ],
+            "type": "object"
+          },
+          "workers": {
+            "default": [],
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "attached": {
+                  "type": "boolean"
+                },
+                "file_path": {
+                  "type": "string"
+                },
+                "opener_target_id": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "parent_frame_id": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "type",
+                "file_path",
+                "attached",
+                "opener_target_id",
+                "parent_frame_id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "browser",
+          "target",
+          "capture_window",
+          "completeness",
+          "frames",
+          "dom",
+          "scripts",
+          "resources",
+          "workers",
+          "limitations"
+        ],
+        "type": "object"
+      },
+      "__schema14": {
+        "type": "boolean"
+      },
+      "__schema15": {
+        "enum": [
+          "complete_within_window",
+          "policy_filtered",
+          "attach_limited",
+          "truncated"
+        ],
+        "type": "string"
+      },
+      "__schema16": {
+        "enum": [
+          "frames",
+          "dom",
+          "accessibility",
+          "scripts",
+          "script_sources",
+          "resources",
+          "network_requests",
+          "network_initiators",
+          "console_events",
+          "console_text",
+          "websocket_connections",
+          "websocket_frames",
+          "websocket_shapes",
+          "json_body_shapes",
+          "workers",
+          "storage",
+          "storage_keys",
+          "metadata",
+          "webmcp_tools",
+          "screenshot",
+          "source_maps",
+          "timeline"
+        ],
+        "type": "string"
+      },
+      "__schema17": {
+        "type": "string"
+      },
+      "__schema18": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "__schema19": {
+        "type": "boolean"
+      },
+      "__schema2": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema20": {
+        "pattern": "^[a-f0-9]{64}$",
+        "type": "string"
+      },
+      "__schema21": {
+        "maximum": 9007199254740991,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "__schema22": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema23": {
+        "const": "utf-8",
+        "type": "string"
+      },
+      "__schema24": {
+        "type": "string"
+      },
+      "__schema25": {
+        "enum": [
+          "observed",
+          "derived",
+          "inferred"
+        ],
+        "type": "string"
+      },
+      "__schema26": {
+        "enum": [
+          "shipped-artifact",
+          "controlled-replay",
+          "historical-reference",
+          "external-service",
+          "analyst-inference"
+        ],
+        "type": "string"
+      },
+      "__schema27": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "architecture": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "isolation": {
+                "enum": [
+                  "none",
+                  "process",
+                  "container",
+                  "virtual-machine"
+                ],
+                "type": "string"
+              },
+              "platform": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "platform",
+              "architecture",
+              "isolation"
+            ],
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema28": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "__schema29": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema30"
+                  },
+                  "status": {
+                    "const": "complete",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema30"
+                  },
+                  "limitations": {
+                    "items": {
+                      "$ref": "#/$defs/__schema32"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "limited_directions": {
+                    "$ref": "#/$defs/__schema33"
+                  },
+                  "status": {
+                    "const": "partial",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "limitations"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "diagnostics": {
+                    "$ref": "#/$defs/__schema30"
+                  },
+                  "limited_directions": {
+                    "$ref": "#/$defs/__schema33"
+                  },
+                  "reason": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "status": {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema3": {
+        "additionalProperties": false,
+        "properties": {
+          "sha256": {
+            "$ref": "#/$defs/__schema4"
+          }
+        },
+        "required": [
+          "sha256"
+        ],
+        "type": "object"
+      },
+      "__schema30": {
+        "items": {
+          "$ref": "#/$defs/__schema31"
+        },
+        "minItems": 1,
+        "type": "array"
+      },
+      "__schema31": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema32": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "__schema33": {
+        "anyOf": [
+          {
+            "items": {
+              "$ref": "#/$defs/__schema35"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema34"
+              }
+            ],
+            "type": "array"
+          },
+          {
+            "items": {
+              "$ref": "#/$defs/__schema37"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema36"
+              }
+            ],
+            "type": "array"
+          },
+          {
+            "items": {
+              "$ref": "#/$defs/__schema40"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/__schema38"
+              },
+              {
+                "$ref": "#/$defs/__schema39"
+              }
+            ],
+            "type": "array"
+          }
+        ]
+      },
+      "__schema34": {
+        "const": "callers",
+        "type": "string"
+      },
+      "__schema35": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema34"
+          }
+        ]
+      },
+      "__schema36": {
+        "const": "callees",
+        "type": "string"
+      },
+      "__schema37": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema36"
+          }
+        ]
+      },
+      "__schema38": {
+        "const": "callers",
+        "type": "string"
+      },
+      "__schema39": {
+        "const": "callees",
+        "type": "string"
+      },
+      "__schema4": {
+        "pattern": "^[a-f0-9]{64}$",
+        "type": "string"
+      },
+      "__schema40": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/__schema38"
+          },
+          {
+            "$ref": "#/$defs/__schema39"
+          }
+        ]
+      },
+      "__schema41": {
+        "items": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "address": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "address",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "address"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "end": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "address-range",
+                  "type": "string"
+                },
+                "start": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "start",
+                "end"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "artifact-path",
+                  "type": "string"
+                },
+                "path": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "path"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "file-offset",
+                  "type": "string"
+                },
+                "offset": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "offset"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "end": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "kind": {
+                  "const": "file-offset-range",
+                  "type": "string"
+                },
+                "start": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "kind",
+                "start",
+                "end"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "type": "array"
+      },
+      "__schema42": {
+        "items": {
+          "pattern": "^ev_[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "__schema5": {
+        "pattern": "^[^\\x00]*$",
+        "type": "string"
+      },
+      "__schema6": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "type": "object"
+      },
+      "__schema7": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "digest": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "parameters": {
+                "$ref": "#/$defs/__schema9"
+              },
+              "provider": {
+                "$ref": "#/$defs/__schema8"
+              }
+            },
+            "required": [
+              "provider",
+              "parameters",
+              "digest"
+            ],
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "__schema8": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "type": "object"
+      },
+      "__schema9": {
+        "additionalProperties": {},
+        "type": "object"
+      }
+    },
+    "$id": "urn:rea:tool-output:sha256:c99d11f9b73faa83f152e22847c5053884e1b00d2c79fa1b1890dc62c4477d7e",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "analysis_profile": {
+        "$ref": "#/$defs/__schema7"
+      },
+      "authority": {
+        "$ref": "#/$defs/__schema26"
+      },
+      "confidence": {
+        "$ref": "#/$defs/__schema25"
+      },
+      "environment": {
+        "$ref": "#/$defs/__schema27"
+      },
+      "evidence_id": {
+        "$ref": "#/$defs/__schema0"
+      },
+      "evidence_links": {
+        "$ref": "#/$defs/__schema42"
+      },
+      "limitations": {
+        "$ref": "#/$defs/__schema28"
+      },
+      "locations": {
+        "$ref": "#/$defs/__schema41"
+      },
+      "normalized_result": {
+        "$ref": "#/$defs/__schema13"
+      },
+      "operation": {
+        "$ref": "#/$defs/__schema11"
+      },
+      "parameters": {
+        "$ref": "#/$defs/__schema9"
+      },
+      "predicate_type": {
+        "$ref": "#/$defs/__schema10"
+      },
+      "provider": {
+        "$ref": "#/$defs/__schema6"
+      },
+      "raw_result": {
+        "$ref": "#/$defs/__schema12"
+      },
+      "relationship_coverage": {
+        "$ref": "#/$defs/__schema29"
+      },
+      "subject": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "required": [
+      "evidence_id",
+      "subject",
+      "provider",
+      "analysis_profile",
+      "predicate_type",
+      "operation",
+      "parameters",
+      "raw_result",
+      "normalized_result",
+      "confidence",
+      "authority",
+      "environment",
+      "limitations",
+      "relationship_coverage",
+      "locations",
+      "evidence_links"
+    ],
+    "type": "object"
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

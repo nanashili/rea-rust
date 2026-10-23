@@ -1,0 +1,48 @@
+{
+  "name": "inspect_desktop_application",
+  "title": "Project Desktop Application Evidence",
+  "description": "Project caller-supplied retained inspect_desktop_application Evidence. The offline adapter authenticates the Evidence record and returns its bounded static report without opening, launching, extracting, or mutating a desktop application.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "description": "Complete authenticated Evidence produced by inspect_desktop_application."
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "root",
+      "files",
+      "omissions",
+      "candidates",
+      "components",
+      "next_probes",
+      "coverage",
+      "limitations"
+    ],
+    "properties": {
+      "root": { "type": "object" },
+      "files": { "type": "array" },
+      "omissions": { "type": "array" },
+      "candidates": { "type": "array" },
+      "components": { "type": "array" },
+      "next_probes": { "type": "array" },
+      "coverage": { "type": "object" },
+      "limitations": { "type": "array", "items": { "type": "string" } }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

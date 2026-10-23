@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_strings",
+  "title": "List Captured Strings",
+  "description": "Project retained string observations, optionally selecting one exact address, without rereading target bytes.",
+  "inputSchema": { "type": "object", "additionalProperties": false, "properties": { "address": { "type": "string", "minLength": 1 }, "document": { "type": "string", "minLength": 1 }, "strings": { "type": "array", "maxItems": 200000 }, "inventory": { "type": "array", "maxItems": 200000 }, "evidence": { "type": "object" }, "native_observation": { "type": "object" }, "observations": { "type": "array", "maxItems": 200000, "items": { "type": "object" } } } },
+  "outputSchema": { "type": "array", "items": { "type": "object", "required": ["address", "value"], "properties": { "address": { "type": "string" }, "value": { "type": "string" }, "provider_value": { "type": "string" }, "decoding": { "type": "object" }, "string": { "type": "object" } }, "additionalProperties": false } },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

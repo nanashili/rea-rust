@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_codegen_module_layout",
+  "title": "Inspect Captured IL2CPP CodeGenModule Layout",
+  "description": "Decode a bounded caller-supplied IL2CPP CodeGenModule record using an explicit versioned layout. Pointer values are preserved as captured integers; the operation never dereferences a process, opens a path, invokes a provider, executes Unity, or mutates an artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["layout", "record_bytes_base64"],
+    "properties": {
+      "layout": { "$ref": "#/$defs/layout" },
+      "record_bytes_base64": { "$ref": "#/$defs/recordBytes" },
+      "name_bytes_base64": { "$ref": "#/$defs/nameBytes" },
+      "method_pointers_bytes_base64": { "$ref": "#/$defs/pointerBytes" },
+      "module_name": { "type": "string", "maxLength": 4096 }
+    },
+    "$defs": {
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "pointer_width", "endianness", "name_pointer_offset", "method_pointer_count_offset", "method_pointers_offset"],
+        "properties": {
+          "version": { "type": "integer", "minimum": 0 },
+          "pointer_width": { "enum": [4, 8] },
+          "endianness": { "enum": ["little", "big"] },
+          "name_pointer_offset": { "type": "integer", "minimum": 0 },
+          "method_pointer_count_offset": { "type": "integer", "minimum": 0 },
+          "method_pointers_offset": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "recordBytes": {
+        "type": "string",
+        "maxLength": 5464,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "nameBytes": {
+        "type": "string",
+        "maxLength": 5464,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      },
+      "pointerBytes": {
+        "type": "string",
+        "maxLength": 5592408,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["operation", "layout", "module_name", "name_pointer", "method_pointer_count", "method_pointers", "method_pointers_pointer", "source"],
+    "properties": {
+      "operation": { "const": "inspect_il2cpp_codegen_module_layout" },
+      "layout": { "$ref": "#/$defs/layout" },
+      "module_name": { "type": ["string", "null"], "maxLength": 4096 },
+      "name_pointer": { "type": "integer", "minimum": 0 },
+      "method_pointer_count": { "type": "integer", "minimum": 0, "maximum": 200000 },
+      "method_pointers_pointer": { "type": "integer", "minimum": 0 },
+      "method_pointers": {
+        "type": ["array", "null"],
+        "maxItems": 200000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["slot", "address"],
+          "properties": {
+            "slot": { "type": "integer", "minimum": 0 },
+            "address": { "type": "integer", "minimum": 0 }
+          }
+        }
+      },
+      "source": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_bytes", "pointer_table_captured"],
+        "properties": {
+          "record_bytes": { "type": "integer", "minimum": 0, "maximum": 4096 },
+          "pointer_table_captured": { "type": "boolean" }
+        }
+      }
+    },
+    "$defs": {
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "pointer_width", "endianness", "name_pointer_offset", "method_pointer_count_offset", "method_pointers_offset"],
+        "properties": {
+          "version": { "type": "integer", "minimum": 0 },
+          "pointer_width": { "enum": [4, 8] },
+          "endianness": { "enum": ["little", "big"] },
+          "name_pointer_offset": { "type": "integer", "minimum": 0 },
+          "method_pointer_count_offset": { "type": "integer", "minimum": 0 },
+          "method_pointers_offset": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

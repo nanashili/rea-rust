@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "label_il2cpp_symbols",
+  "title": "Label IL2CPP Symbols",
+  "description": "Derive stable managed labels from caller-supplied IL2CPP type and method metadata. This bounded, read-only projection is captured-only: it never opens an artifact, invokes Unity or IL2CPP, executes target code, or claims native symbols or recovered bodies.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      { "$ref": "#/$defs/directInput" },
+      { "$ref": "#/$defs/metadataInput" }
+    ],
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "row": { "type": "object", "maxProperties": 128, "additionalProperties": true },
+      "rows": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/row" } },
+      "directInput": {
+        "type": "object",
+        "required": ["types", "methods"],
+        "properties": {
+          "types": { "$ref": "#/$defs/rows" },
+          "methods": { "$ref": "#/$defs/rows" }
+        },
+        "additionalProperties": false
+      },
+      "metadataInput": {
+        "type": "object",
+        "required": ["metadata"],
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "required": ["types", "methods"],
+            "properties": {
+              "types": { "$ref": "#/$defs/rows" },
+              "methods": { "$ref": "#/$defs/rows" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "types", "methods", "coverage"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "types": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/typeProjection" }
+      },
+      "methods": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/methodProjection" }
+      },
+      "coverage": { "$ref": "#/$defs/coverage" }
+    },
+    "$defs": {
+      "index": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "source": {},
+      "label": { "type": ["string", "null"] },
+      "typeProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "metadata_index", "managed_label", "label_status", "native_symbol", "native_body"],
+        "properties": {
+          "source": { "$ref": "#/$defs/source" },
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "managed_label": { "$ref": "#/$defs/label" },
+          "label_status": { "enum": ["resolved", "unknown"] },
+          "native_symbol": { "type": "null" },
+          "native_body": { "type": "null" }
+        }
+      },
+      "methodProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "metadata_index", "managed_label", "label_status", "signature_status", "native_symbol", "native_body"],
+        "properties": {
+          "source": { "$ref": "#/$defs/source" },
+          "metadata_index": { "$ref": "#/$defs/index" },
+          "managed_label": { "$ref": "#/$defs/label" },
+          "label_status": { "enum": ["resolved", "unknown"] },
+          "signature_status": { "enum": ["resolved", "unknown", "invalid"] },
+          "native_symbol": { "type": "null" },
+          "native_body": { "type": "null" }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["types", "resolved_types", "methods", "resolved_methods", "native_symbols", "native_bodies"],
+        "properties": {
+          "types": { "$ref": "#/$defs/index" },
+          "resolved_types": { "$ref": "#/$defs/index" },
+          "methods": { "$ref": "#/$defs/index" },
+          "resolved_methods": { "$ref": "#/$defs/index" },
+          "native_symbols": { "const": "unknown" },
+          "native_bodies": { "const": "unknown" }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

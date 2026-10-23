@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "project_il2cpp_string_literals",
+  "title": "Project IL2CPP String Literals",
+  "description": "Project caller-supplied IL2CPP string-literal rows against captured data bytes. This read-only projection preserves raw rows, offsets, bytes, malformed spans, invalid UTF-8, and unresolved decoding without opening an artifact, executing a target, or contacting a provider.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "anyOf": [
+      {
+        "$ref": "#/$defs/rootInput"
+      },
+      {
+        "$ref": "#/$defs/wrappedInput"
+      }
+    ],
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "data": {
+        "type": "string",
+        "contentEncoding": "base64",
+        "maxLength": 357913944
+      },
+      "rows": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": {}
+      },
+      "rowFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "literals": { "$ref": "#/$defs/rows" },
+          "string_literals": { "$ref": "#/$defs/rows" },
+          "string_literal_rows": { "$ref": "#/$defs/rows" },
+          "stringLiteralRows": { "$ref": "#/$defs/rows" },
+          "stringLiterals": { "$ref": "#/$defs/rows" }
+        },
+        "oneOf": [
+          { "required": ["literals"], "properties": { "literals": {} } },
+          { "required": ["string_literals"], "properties": { "string_literals": {} } },
+          { "required": ["string_literal_rows"], "properties": { "string_literal_rows": {} } },
+          { "required": ["stringLiteralRows"], "properties": { "stringLiteralRows": {} } },
+          { "required": ["stringLiterals"], "properties": { "stringLiterals": {} } }
+        ]
+      },
+      "dataFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data_base64": { "$ref": "#/$defs/data" },
+          "literal_data_base64": { "$ref": "#/$defs/data" },
+          "string_literal_data_base64": { "$ref": "#/$defs/data" },
+          "stringLiteralDataBase64": { "$ref": "#/$defs/data" },
+          "bytes_base64": { "$ref": "#/$defs/data" }
+        },
+        "oneOf": [
+          { "required": ["data_base64"], "properties": { "data_base64": {} } },
+          { "required": ["literal_data_base64"], "properties": { "literal_data_base64": {} } },
+          { "required": ["string_literal_data_base64"], "properties": { "string_literal_data_base64": {} } },
+          { "required": ["stringLiteralDataBase64"], "properties": { "stringLiteralDataBase64": {} } },
+          { "required": ["bytes_base64"], "properties": { "bytes_base64": {} } }
+        ]
+      },
+      "rootInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "literals": { "$ref": "#/$defs/rows" },
+          "string_literals": { "$ref": "#/$defs/rows" },
+          "string_literal_rows": { "$ref": "#/$defs/rows" },
+          "stringLiteralRows": { "$ref": "#/$defs/rows" },
+          "stringLiterals": { "$ref": "#/$defs/rows" },
+          "data_base64": { "$ref": "#/$defs/data" },
+          "literal_data_base64": { "$ref": "#/$defs/data" },
+          "string_literal_data_base64": { "$ref": "#/$defs/data" },
+          "stringLiteralDataBase64": { "$ref": "#/$defs/data" },
+          "bytes_base64": { "$ref": "#/$defs/data" },
+          "metadata": { "$ref": "#/$defs/rowFields" },
+          "binary": { "$ref": "#/$defs/dataFields" }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["literals"], "properties": { "literals": {} } },
+              { "required": ["string_literals"], "properties": { "string_literals": {} } },
+              { "required": ["string_literal_rows"], "properties": { "string_literal_rows": {} } },
+              { "required": ["stringLiteralRows"], "properties": { "stringLiteralRows": {} } },
+              { "required": ["stringLiterals"], "properties": { "stringLiterals": {} } },
+              { "required": ["metadata"], "properties": { "metadata": {} } }
+            ]
+          },
+          {
+            "anyOf": [
+              { "required": ["data_base64"], "properties": { "data_base64": {} } },
+              { "required": ["literal_data_base64"], "properties": { "literal_data_base64": {} } },
+              { "required": ["string_literal_data_base64"], "properties": { "string_literal_data_base64": {} } },
+              { "required": ["stringLiteralDataBase64"], "properties": { "stringLiteralDataBase64": {} } },
+              { "required": ["bytes_base64"], "properties": { "bytes_base64": {} } },
+              { "required": ["binary"], "properties": { "binary": {} } }
+            ]
+          }
+        ]
+      },
+      "wrappedInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metadata"],
+        "properties": {
+          "metadata": { "$ref": "#/$defs/rowFields" },
+          "data_base64": { "$ref": "#/$defs/data" },
+          "literal_data_base64": { "$ref": "#/$defs/data" },
+          "string_literal_data_base64": { "$ref": "#/$defs/data" },
+          "stringLiteralDataBase64": { "$ref": "#/$defs/data" },
+          "bytes_base64": { "$ref": "#/$defs/data" },
+          "binary": { "$ref": "#/$defs/dataFields" }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["data_base64"], "properties": { "data_base64": {} } },
+              { "required": ["literal_data_base64"], "properties": { "literal_data_base64": {} } },
+              { "required": ["string_literal_data_base64"], "properties": { "string_literal_data_base64": {} } },
+              { "required": ["stringLiteralDataBase64"], "properties": { "stringLiteralDataBase64": {} } },
+              { "required": ["bytes_base64"], "properties": { "bytes_base64": {} } },
+              { "required": ["binary"], "properties": { "binary": {} } }
+            ]
+          }
+        ]
+      },
+      "literal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decoding", "error", "offset", "length"],
+        "properties": {
+          "decoding": { "enum": ["malformed_span"] },
+          "error": { "type": "string" },
+          "offset": { "$ref": "#/$defs/index" },
+          "length": { "$ref": "#/$defs/index" }
+        }
+      },
+      "decodedLiteral": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["offset", "length", "end", "bytes_base64", "decoding", "utf8"],
+        "properties": {
+          "offset": { "$ref": "#/$defs/index" },
+          "length": { "$ref": "#/$defs/index" },
+          "end": { "$ref": "#/$defs/index" },
+          "bytes_base64": { "$ref": "#/$defs/data" },
+          "decoding": { "enum": ["utf8", "invalid_utf8", "unknown"] },
+          "utf8": { "type": ["string", "null"] },
+          "utf8_error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["valid_up_to", "error_len"],
+            "properties": {
+              "valid_up_to": { "$ref": "#/$defs/index" },
+              "error_len": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] }
+            }
+          }
+        }
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row_index", "row", "literal"],
+        "properties": {
+          "row_index": { "$ref": "#/$defs/index" },
+          "row": {},
+          "identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "index"],
+            "properties": {
+              "kind": { "const": "il2cpp_string_literal" },
+              "index": {},
+              "token": {}
+            }
+          },
+          "literal": {
+            "oneOf": [
+              { "$ref": "#/$defs/decodedLiteral" },
+              { "$ref": "#/$defs/literal" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["decoding", "error"],
+                "properties": {
+                  "decoding": { "enum": ["malformed_row"] },
+                  "error": { "type": "string" }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "diagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "rows"],
+        "properties": {
+          "kind": { "enum": ["duplicate_span", "overlapping_span"] },
+          "rows": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              { "$ref": "#/$defs/index" },
+              { "$ref": "#/$defs/index" }
+            ],
+            "items": false
+          },
+          "offset": { "$ref": "#/$defs/index" },
+          "end": { "$ref": "#/$defs/index" },
+          "intersection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["offset", "end"],
+            "properties": {
+              "offset": { "$ref": "#/$defs/index" },
+              "end": { "$ref": "#/$defs/index" }
+            }
+          }
+        },
+        "oneOf": [
+          { "required": ["offset", "end"], "properties": { "offset": {}, "end": {} }, "not": { "required": ["intersection"], "properties": { "intersection": {} } } },
+          { "required": ["intersection"], "properties": { "intersection": {} }, "not": { "required": ["offset"], "properties": { "offset": {} } } }
+        ]
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["status", "items", "coverage", "diagnostics"],
+    "properties": {
+      "status": { "enum": ["complete", "partial"] },
+      "items": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/item" }
+      },
+      "coverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rows", "valid_utf8", "invalid_utf8", "malformed", "data_bytes"],
+        "properties": {
+          "rows": { "$ref": "#/$defs/index" },
+          "valid_utf8": { "$ref": "#/$defs/index" },
+          "invalid_utf8": { "$ref": "#/$defs/index" },
+          "malformed": { "$ref": "#/$defs/index" },
+          "data_bytes": { "$ref": "#/$defs/index" }
+        }
+      },
+      "diagnostics": {
+        "type": "array",
+        "maxItems": 200000,
+        "items": { "$ref": "#/$defs/diagnostic" }
+      }
+    },
+    "$defs": {
+      "index": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "data": {
+        "type": "string",
+        "contentEncoding": "base64",
+        "maxLength": 357913944
+      },
+      "decodedLiteral": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["offset", "length", "end", "bytes_base64", "decoding", "utf8"],
+        "properties": {
+          "offset": { "$ref": "#/$defs/index" },
+          "length": { "$ref": "#/$defs/index" },
+          "end": { "$ref": "#/$defs/index" },
+          "bytes_base64": { "$ref": "#/$defs/data" },
+          "decoding": { "enum": ["utf8", "invalid_utf8", "unknown"] },
+          "utf8": { "type": ["string", "null"] },
+          "utf8_error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["valid_up_to", "error_len"],
+            "properties": {
+              "valid_up_to": { "$ref": "#/$defs/index" },
+              "error_len": { "anyOf": [{ "$ref": "#/$defs/index" }, { "type": "null" }] }
+            }
+          }
+        }
+      },
+      "malformedSpan": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decoding", "error", "offset", "length"],
+        "properties": {
+          "decoding": { "const": "malformed_span" },
+          "error": { "type": "string" },
+          "offset": { "$ref": "#/$defs/index" },
+          "length": { "$ref": "#/$defs/index" }
+        }
+      },
+      "malformedRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decoding", "error"],
+        "properties": {
+          "decoding": { "const": "malformed_row" },
+          "error": { "type": "string" }
+        }
+      },
+      "item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row_index", "row", "literal"],
+        "properties": {
+          "row_index": { "$ref": "#/$defs/index" },
+          "row": {},
+          "identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "index"],
+            "properties": {
+              "kind": { "const": "il2cpp_string_literal" },
+              "index": {},
+              "token": {}
+            }
+          },
+          "literal": {
+            "oneOf": [
+              { "$ref": "#/$defs/decodedLiteral" },
+              { "$ref": "#/$defs/malformedSpan" },
+              { "$ref": "#/$defs/malformedRow" }
+            ]
+          }
+        }
+      },
+      "diagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "rows"],
+        "properties": {
+          "kind": { "enum": ["duplicate_span", "overlapping_span"] },
+          "rows": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              { "$ref": "#/$defs/index" },
+              { "$ref": "#/$defs/index" }
+            ],
+            "items": false
+          },
+          "offset": { "$ref": "#/$defs/index" },
+          "end": { "$ref": "#/$defs/index" },
+          "intersection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["offset", "end"],
+            "properties": {
+              "offset": { "$ref": "#/$defs/index" },
+              "end": { "$ref": "#/$defs/index" }
+            }
+          }
+        },
+        "oneOf": [
+          { "required": ["offset", "end"], "properties": { "offset": {}, "end": {} }, "not": { "required": ["intersection"], "properties": { "intersection": {} } } },
+          { "required": ["intersection"], "properties": { "intersection": {} }, "not": { "required": ["offset"], "properties": { "offset": {} } } }
+        ]
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

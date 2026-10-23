@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "pull_adb_file",
+  "title": "Pull ADB File",
+  "description": "Validate retained file pull metadata; no device or host path access occurs.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Captured adapter input or retained Evidence. This contract grants no ADB or filesystem authority."
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "result"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "result": {
+        "type": "object",
+        "description": "Application projection derived only from caller-supplied captured facts."
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

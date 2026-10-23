@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "find_changed_behavior",
+  "title": "Find changed behavior",
+  "description": "Aggregate caller-supplied process, function, or artifact comparison Evidence while preserving source Evidence links and separating runtime observations from static behavior candidates.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["comparisons"],
+    "properties": {
+      "comparisons": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Authenticated comparison Evidence. The complete source record, including provider, operation, normalized result, limitations, and evidence links, is retained for application-level validation."
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["behavior_status", "summary", "findings", "evidence_links", "limitations"],
+    "properties": {
+      "behavior_status": {
+        "type": "string",
+        "enum": ["observed_changed", "observed_unchanged", "unknown", "truncated"]
+      },
+      "summary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["observed_changes", "static_candidates", "contradictions", "unresolved"],
+        "properties": {
+          "observed_changes": {"type": "integer", "minimum": 0},
+          "static_candidates": {"type": "integer", "minimum": 0},
+          "contradictions": {"type": "integer", "minimum": 0},
+          "unresolved": {"type": "integer", "minimum": 0}
+        }
+      },
+      "findings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scope", "dimension", "classification", "status", "source_comparison_id", "evidence_links", "limitations"],
+              "properties": {
+                "scope": {"type": "string", "enum": ["runtime", "protocol", "resource", "static_candidate"]},
+                "dimension": {"type": "string", "minLength": 1},
+                "classification": {"type": "string", "enum": ["observed_change", "derived_relationship", "contradiction", "unresolved_branch"]},
+                "status": {"type": "string", "enum": ["unchanged", "added", "removed", "changed", "truncated", "unknown", "contradiction"]},
+                "source_comparison_id": {"$ref": "#/$defs/evidenceId"},
+                "evidence_links": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/evidenceId"}},
+                "limitations": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }
+      },
+      "evidence_links": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/evidenceId"}},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    },
+    "$defs": {
+      "evidenceId": {"type": "string", "pattern": "^ev_[a-f0-9]{64}$"}
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

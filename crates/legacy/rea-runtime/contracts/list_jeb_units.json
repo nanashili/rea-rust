@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_jeb_units",
+  "title": "List JEB project units",
+  "description": "List captured JEB project units by path and type with optional filtering and pagination.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {"$ref": "#/$defs/capturedPage"},
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence"],
+        "properties": {
+          "evidence": {
+            "type": "object",
+            "required": ["evidence_id", "operation", "provider", "normalized_result"],
+            "properties": {
+              "evidence_id": {"type": "string", "minLength": 1},
+              "operation": {"const": "list_jeb_units"},
+              "provider": {"type": "object", "required": ["id", "name", "version"]},
+              "normalized_result": {"$ref": "#/$defs/capturedPage"}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["normalized_result"],
+        "properties": {"normalized_result": {"$ref": "#/$defs/capturedPage"}}
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["result"],
+        "properties": {"result": {"$ref": "#/$defs/capturedPage"}}
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value"],
+        "properties": {"value": {"$ref": "#/$defs/capturedPage"}}
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["engine", "filter", "parent_unit_path", "index", "count", "units", "coverage"],
+    "properties": {
+      "engine": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "endpoint", "gui_client"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "version": {"type": ["string", "null"]},
+          "endpoint": {"type": "string", "minLength": 1},
+          "gui_client": {"type": ["boolean", "null"]}
+        }
+      },
+      "filter": {"type": ["string", "null"]},
+      "parent_unit_path": {"type": ["string", "null"]},
+      "index": {"type": "integer", "minimum": 0},
+      "count": {"type": "integer", "minimum": 1},
+      "units": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unit_path", "unit_type"],
+          "properties": {
+            "unit_path": {"type": "string"},
+            "unit_type": {"type": "string"}
+          }
+        }
+      },
+      "coverage": {"enum": ["complete", "partial"]}
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "$defs": {
+    "capturedPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "filter", "parent_unit_path", "index", "count", "units", "coverage"],
+      "properties": {
+        "engine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version", "endpoint", "gui_client"],
+          "properties": {
+            "name": {"const": "jeb"},
+            "version": {"type": ["string", "null"]},
+            "endpoint": {"type": "string", "minLength": 1},
+            "gui_client": {"type": ["boolean", "null"]}
+          }
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "session_id": {"type": ["string", "null"]},
+            "project_id": {"type": ["string", "null"]}
+          }
+        },
+        "filter": {"type": ["string", "null"]},
+        "parent_unit_path": {"type": ["string", "null"]},
+        "index": {"type": "integer", "minimum": 0},
+        "count": {"type": "integer", "minimum": 1, "maximum": 100},
+        "units": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["unit_path", "unit_type"],
+            "properties": {
+              "unit_path": {"type": "string", "minLength": 1},
+              "unit_type": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "coverage": {"enum": ["complete", "partial"]}
+      }
+    }
+  }
+}

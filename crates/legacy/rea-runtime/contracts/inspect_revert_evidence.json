@@ -1,0 +1,8 @@
+{
+  "name": "inspect_evm_revert",
+  "title": "Inspect Revert Evidence",
+  "description": "Decode a local EVM revert carrier offline while preserving unknown selector data.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "path": { "type": "string", "minLength": 1 }, "encoding": { "type": "string", "enum": ["raw", "hex"], "default": "raw" } }, "required": ["path"] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

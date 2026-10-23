@@ -1,0 +1,50 @@
+{
+  "name": "inspect_evm_interface",
+  "title": "Inspect EVM Interface",
+  "description": "Project caller-supplied EVM interface observations or authenticated inspect_evm_interface Evidence. The native boundary does not open artifacts, contact an EVM node, execute a provider, or mutate a target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "evidence": { "type": "object" }
+        },
+        "required": ["evidence"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "request": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string", "minLength": 1, "pattern": "^[^\\u0000]*$" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "report": { "type": "object" }
+            },
+            "required": ["path", "sha256", "report"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["request"],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "evidence_id": { "type": "string" },
+      "operation": { "const": "inspect_evm_interface" },
+      "normalized_result": { "type": "object" },
+      "result": { "type": "object" },
+      "provenance": { "type": "object" }
+    },
+    "additionalProperties": true
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

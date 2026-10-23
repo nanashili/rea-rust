@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_adb_client",
+  "title": "Inspect ADB Client",
+  "description": "Inspect a caller-selected adb client from captured version output without contacting a device.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["selection", "probe"],
+    "properties": {
+      "selection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["binary_path", "path_source"],
+        "properties": {
+          "binary_path": {"type": "string", "minLength": 1},
+          "path_source": {"type": "string", "enum": ["environment", "path"]}
+        }
+      },
+      "probe": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stdout"],
+        "properties": {
+          "stdout": {"type": "string"},
+          "stderr": {"type": "string", "default": ""}
+        }
+      }
+    },
+    "description": "Caller-captured bounded output from `adb version`; this contract grants no ADB or filesystem authority."
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "result"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["client", "contacted_adb_server"],
+        "properties": {
+          "client": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["binary_path", "path_source", "version", "installed_path"],
+            "properties": {
+              "binary_path": {"type": "string", "minLength": 1},
+              "path_source": {"type": "string", "enum": ["environment", "path"]},
+              "version": {"type": ["string", "null"]},
+              "installed_path": {"type": ["string", "null"]}
+            }
+          },
+          "contacted_adb_server": {"const": false}
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

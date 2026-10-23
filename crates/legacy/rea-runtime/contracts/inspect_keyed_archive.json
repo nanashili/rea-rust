@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_keyed_archive",
+  "title": "Inspect Keyed Archive Facts",
+  "description": "Project caller-supplied decoded NSKeyedArchiver facts or captured Evidence without opening a path, deserializing classes, or contacting a provider.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "target_sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+      "archive_path": {"type": "string", "minLength": 1},
+      "archive_sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+      "archive_format": {"enum": ["binary-plist", "xml-plist"]},
+      "value": {},
+      "evidence": {"type": "object", "minProperties": 1},
+      "root": {"type": "string"},
+      "offset": {"type": "integer", "minimum": 0, "default": 0},
+      "limit": {"type": "integer", "minimum": 1, "maximum": 20000, "default": 20000}
+    },
+    "oneOf": [
+      {"required": ["target_sha256", "archive_path", "archive_sha256", "archive_format", "value"]},
+      {"required": ["evidence"]}
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["target_sha256", "archive_path", "archive_sha256", "archive_format", "roots", "objects", "references", "total_objects", "total_references", "offset", "next_offset", "truncated", "limitations"],
+    "additionalProperties": false,
+    "properties": {
+      "target_sha256": {"type": "string"},
+      "archive_path": {"type": "string"},
+      "archive_sha256": {"type": "string"},
+      "archive_format": {"enum": ["binary-plist", "xml-plist"]},
+      "roots": {"type": "object"},
+      "objects": {"type": "array"},
+      "references": {"type": "array"},
+      "total_objects": {"type": "integer", "minimum": 0},
+      "total_references": {"type": "integer", "minimum": 0},
+      "offset": {"type": "integer", "minimum": 0},
+      "next_offset": {"type": ["integer", "null"], "minimum": 0},
+      "truncated": {"type": "boolean"},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

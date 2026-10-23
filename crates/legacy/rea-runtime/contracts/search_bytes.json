@@ -1,0 +1,109 @@
+{
+  "name": "search_bytes",
+  "title": "Search Retained Bytes",
+  "description": "Search caller-supplied initialized memory blocks for a masked byte pattern without contacting a provider.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["pattern", "blocks"],
+    "properties": {
+      "pattern": { "type": "string", "minLength": 1 },
+      "mask": { "type": "string", "minLength": 1 },
+      "document": { "type": "string", "minLength": 1 },
+      "start": { "type": "string", "minLength": 1 },
+      "end": { "type": "string", "minLength": 1 },
+      "limit": { "type": "integer", "minimum": 1, "maximum": 1000 },
+      "cursor": { "type": "string", "minLength": 1 },
+      "blocks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["segment", "start", "end", "bytes_hex"],
+          "properties": {
+            "segment": { "type": "string", "minLength": 1 },
+            "start": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 },
+            "bytes_hex": { "type": "string", "pattern": "^(?:[0-9a-fA-F]{2})*$" },
+            "file_offset": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "initialized": { "type": "boolean" },
+            "loaded": { "type": "boolean" }
+          }
+        }
+      },
+      "procedures": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["address", "name", "start", "end"],
+          "properties": {
+            "address": { "type": "string", "minLength": 1 },
+            "name": { "type": "string", "minLength": 1 },
+            "start": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["matches", "searched", "complete", "next_cursor"],
+    "properties": {
+      "matches": {
+        "type": "array",
+        "maxItems": 1000,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["address", "segment", "file_offset", "procedure"],
+          "properties": {
+            "address": { "type": "string" },
+            "segment": { "type": "string" },
+            "file_offset": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+            "procedure": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["address", "name"],
+              "properties": { "address": { "type": "string" }, "name": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "searched": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["blocks", "bytes", "skipped_uninitialized", "skipped_not_loaded"],
+        "properties": {
+          "blocks": { "$ref": "#/$defs/coverageBlock" },
+          "bytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "skipped_uninitialized": { "$ref": "#/$defs/coverageBlock" },
+          "skipped_not_loaded": { "$ref": "#/$defs/coverageBlock" }
+        }
+      },
+      "complete": { "type": "boolean" },
+      "next_cursor": { "type": ["string", "null"] }
+    }
+  },
+  "$defs": {
+    "coverageBlock": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["segment", "start", "end", "bytes"],
+        "properties": {
+          "segment": { "type": "string" },
+          "start": { "type": "string" },
+          "end": { "type": "string" },
+          "bytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        }
+      }
+    }
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

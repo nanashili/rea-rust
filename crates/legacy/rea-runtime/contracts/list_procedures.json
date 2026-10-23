@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_procedures",
+  "title": "List Captured Procedures",
+  "description": "Project retained procedure observations without rerunning provider analysis.",
+  "inputSchema": { "type": "object", "additionalProperties": false, "properties": { "document": { "type": "string", "minLength": 1 }, "procedures": { "type": "array", "maxItems": 200000 }, "evidence": { "type": "object" }, "observations": { "type": "array", "maxItems": 200000, "items": { "type": "object" } } } },
+  "outputSchema": { "type": "array", "items": { "type": "object", "required": ["address", "value"], "properties": { "address": { "type": "string" }, "value": { "type": "string" }, "symbol": { "type": "object" }, "procedure": { "type": "object" }, "string": { "type": "object" } }, "additionalProperties": false } },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

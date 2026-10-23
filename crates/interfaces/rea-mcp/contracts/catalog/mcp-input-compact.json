@@ -1,0 +1,6198 @@
+{
+ "inspect_desktop_application": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "max_entries": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 100000
+   },
+   "max_probe_bytes": {
+    "type": "integer",
+    "minimum": 4096,
+    "maximum": 67108864
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "summary",
+     "complete"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "annotate_native_function": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string",
+    "minLength": 1
+   },
+   "name": {
+    "type": "string",
+    "minLength": 1
+   },
+   "comment": {
+    "type": "string"
+   },
+   "inline_comment": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_native_load_image": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "inspect_native_data_type": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "type": {
+    "type": "string",
+    "minLength": 1
+   },
+   "address": {
+    "type": "string",
+    "minLength": 1
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_native_instruction": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string",
+    "minLength": 1
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "resolve_native_call_targets": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string",
+    "minLength": 1
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "address_name": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "comment": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "current_address": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "current_procedure": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "current_document": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "goto_address": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "inline_comment": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_bookmarks": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_documents": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "list_names": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_procedures": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_segments": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_strings": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "next_address": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "prev_address": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "procedure_address": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_assembly": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_callees": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_callers": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_info": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "read_function_instructions": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "search_bytes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pattern": {
+    "type": "string"
+   },
+   "mask": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   },
+   "start": {
+    "type": "string"
+   },
+   "end": {
+    "type": "string"
+   },
+   "limit": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000
+   },
+   "cursor": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "pattern"
+  ],
+  "additionalProperties": false
+ },
+ "read_bytes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "length": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 9007199254740991
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "address_to_file_offset": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_references": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "direction": {
+    "type": "string",
+    "enum": [
+     "incoming",
+     "outgoing"
+    ]
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "procedure_pseudo_code": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "resolve_containing_procedure": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "search_procedures": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pattern": {
+    "type": "string",
+    "minLength": 1
+   },
+   "mode": {
+    "type": "string",
+    "enum": [
+     "literal",
+     "regex"
+    ]
+   },
+   "case_sensitive": {
+    "type": "boolean"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "pattern"
+  ],
+  "additionalProperties": false
+ },
+ "search_strings": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pattern": {
+    "type": "string",
+    "minLength": 1
+   },
+   "mode": {
+    "type": "string",
+    "enum": [
+     "literal",
+     "regex"
+    ]
+   },
+   "case_sensitive": {
+    "type": "boolean"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "pattern"
+  ],
+  "additionalProperties": false
+ },
+ "set_address_name": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "name": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address",
+   "name"
+  ],
+  "additionalProperties": false
+ },
+ "set_addresses_names": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "names": {
+    "type": "object",
+    "propertyNames": {
+     "type": "string"
+    },
+    "additionalProperties": {
+     "type": "string"
+    }
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "names"
+  ],
+  "additionalProperties": false
+ },
+ "set_bookmark": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "name": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "set_comment": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "comment": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address",
+   "comment"
+  ],
+  "additionalProperties": false
+ },
+ "set_inline_comment": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "comment": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address",
+   "comment"
+  ],
+  "additionalProperties": false
+ },
+ "unset_bookmark": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "document": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "xrefs": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string"
+   },
+   "address": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "trace_native_values": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string",
+    "minLength": 1
+   },
+   "max_depth": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 16
+   },
+   "max_functions": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 64
+   },
+   "max_call_sites": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 4096
+   },
+   "max_nodes": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 20000
+   },
+   "max_edges": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 40000
+   },
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 5000
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_native_dispatch_metadata": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "max_records": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 20000
+   }
+  },
+  "additionalProperties": false
+ },
+ "get_objc_classes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pattern": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "get_objc_protocols": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "batch_decompile": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "addresses": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   }
+  },
+  "additionalProperties": false
+ },
+ "get_call_graph": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string"
+   },
+   "direction": {
+    "type": "string",
+    "enum": [
+     "forward",
+     "backward"
+    ]
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ },
+ "analyze_swift_types": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "category": {
+    "type": "string",
+    "enum": [
+     "classes",
+     "structs",
+     "enums",
+     "protocols",
+     "extensions",
+     "other"
+    ]
+   },
+   "pattern": {
+    "type": "string"
+   }
+  },
+  "additionalProperties": false
+ },
+ "find_xrefs_to_name": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "name": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "name"
+  ],
+  "additionalProperties": false
+ },
+ "binary_overview": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "analyze_function": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_native_api": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "procedure": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "procedure"
+  ],
+  "additionalProperties": false
+ },
+ "trace_feature": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "query": {
+    "type": "string",
+    "minLength": 1
+   },
+   "case_sensitive": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "query"
+  ],
+  "additionalProperties": false
+ },
+ "trace_call_path": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "start": {
+    "type": "string"
+   },
+   "goal": {
+    "type": "string"
+   },
+   "direction": {
+    "type": "string",
+    "enum": [
+     "forward",
+     "backward"
+    ]
+   }
+  },
+  "required": [
+   "start"
+  ],
+  "additionalProperties": false
+ },
+ "trace_native_ui_action": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "action": {
+    "type": "string",
+    "minLength": 1
+   },
+   "max_depth": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 32
+   },
+   "max_nodes": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 2000
+   },
+   "max_edges": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 5000
+   }
+  },
+  "required": [
+   "action"
+  ],
+  "additionalProperties": false
+ },
+ "observe_native_ui": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pid": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "window_id": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "screenshot": {
+    "type": "boolean"
+   },
+   "accessibility": {
+    "type": "boolean"
+   },
+   "max_nodes": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "pid",
+   "window_id"
+  ],
+  "additionalProperties": false
+ },
+ "capture_native_ui_scenario": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "pid": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "window_id": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "screenshot": {
+    "type": "boolean"
+   },
+   "accessibility": {
+    "type": "boolean"
+   },
+   "max_nodes": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "steps": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "click"
+        },
+        "path": {
+         "maxItems": 32,
+         "type": "array",
+         "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         }
+        }
+       },
+       "required": [
+        "kind",
+        "path"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "scroll"
+        },
+        "path": {
+         "maxItems": 32,
+         "type": "array",
+         "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         }
+        },
+        "direction": {
+         "type": "string",
+         "enum": [
+          "increment",
+          "decrement"
+         ]
+        }
+       },
+       "required": [
+        "kind",
+        "path",
+        "direction"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "key-entry"
+        },
+        "path": {
+         "maxItems": 32,
+         "type": "array",
+         "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         }
+        },
+        "text": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "kind",
+        "path",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "wait"
+        },
+        "milliseconds": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 180000
+        }
+       },
+       "required": [
+        "kind",
+        "milliseconds"
+       ],
+       "additionalProperties": false
+      }
+     ]
+    }
+   }
+  },
+  "required": [
+   "pid",
+   "window_id",
+   "steps"
+  ],
+  "additionalProperties": false
+ },
+ "observe_native_calls": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "breakpoints": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "function"
+        },
+        "name": {
+         "type": "string",
+         "minLength": 1,
+         "pattern": "^[^\\x00]*$"
+        },
+        "module": {
+         "type": "string",
+         "minLength": 1,
+         "pattern": "^[^\\x00]*$"
+        }
+       },
+       "required": [
+        "kind",
+        "name"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "objc-method"
+        },
+        "selector": {
+         "type": "string",
+         "minLength": 1,
+         "allOf": [
+          {
+           "pattern": "^[^\\x00]*$"
+          },
+          {
+           "pattern": "^[^\\s\\x5b\\x5d]+$"
+          }
+         ]
+        },
+        "class_name": {
+         "type": "string",
+         "minLength": 1,
+         "allOf": [
+          {
+           "pattern": "^[^\\x00]*$"
+          },
+          {
+           "pattern": "^[^\\s\\x5b\\x5d]+$"
+          }
+         ]
+        },
+        "method_type": {
+         "type": "string",
+         "enum": [
+          "instance",
+          "class",
+          "any"
+         ]
+        }
+       },
+       "required": [
+        "kind",
+        "selector"
+       ],
+       "additionalProperties": false
+      }
+     ]
+    }
+   },
+   "arguments": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "environment": {
+    "type": "object",
+    "propertyNames": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^[^=\\x00]+$"
+    },
+    "additionalProperties": {
+     "type": "string",
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "working_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "duration_ms": {
+    "type": "integer",
+    "minimum": 100,
+    "maximum": 600000
+   },
+   "max_events": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 100000
+   },
+   "argument_registers": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 8
+   },
+   "backtrace_frames": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 64
+   }
+  },
+  "required": [
+   "breakpoints"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_macho": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_signature": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "inspect_plist": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_architectures": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "demangle_swift": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "symbols": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "allOf": [
+      {
+       "pattern": "^[^\\n]*$"
+      },
+      {
+       "pattern": "^[^\\x00]*$"
+      }
+     ]
+    }
+   }
+  },
+  "required": [
+   "symbols"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_artifact": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "integrity_policy": {
+    "type": "string",
+    "enum": [
+     "fail",
+     "record-and-continue"
+    ]
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "extract_artifact": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "integrity_policy": {
+    "type": "string",
+    "enum": [
+     "fail",
+     "record-and-continue"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "decode_interface_builder": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "max_documents": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 64
+   },
+   "max_objects": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 20000
+   },
+   "max_connections": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 40000
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_keyed_archive": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "root": {
+    "type": "string"
+   },
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 20000
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_asset_catalog": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 10000
+   }
+  },
+  "additionalProperties": false
+ },
+ "trace_dylib_resolution": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "roots": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^(?:[^\\x2f\\\\\\x00.][^\\x2f\\\\\\x00]*|\\.[^\\x2f\\\\\\x00.][^\\x2f\\\\\\x00]*|\\.\\.[^\\x2f\\\\\\x00]+)(?:\\x2f(?:[^\\x2f\\\\\\x00.][^\\x2f\\\\\\x00]*|\\.[^\\x2f\\\\\\x00.][^\\x2f\\\\\\x00]*|\\.\\.[^\\x2f\\\\\\x00]+))*$"
+    }
+   },
+   "architecture": {
+    "type": "string",
+    "enum": [
+     "arm64",
+     "arm64e",
+     "x86_64"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_managed_artifact": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_managed_members": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   },
+   "type_names": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    },
+    "uniqueItems": true
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_managed_native_boundaries": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "additionalProperties": false
+ },
+ "compare_managed_members": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   }
+  },
+  "required": [
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "verify_managed_native_boundaries": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "managed_boundaries": {
+    "type": "object"
+   },
+   "native_observations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    },
+    "description": "Native function or export Evidence records"
+   }
+  },
+  "required": [
+   "managed_boundaries",
+   "native_observations"
+  ],
+  "additionalProperties": false
+ },
+ "import_managed_reconstruction": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "static_members": {
+    "type": "object"
+   },
+   "decompiler": {
+    "type": "object"
+   },
+   "methods": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "notes": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "static_members",
+   "decompiler",
+   "methods"
+  ],
+  "additionalProperties": false
+ },
+ "project_managed_application_graph": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Provide a complete input group: managed_artifact + [managed_members] + [managed_native_boundaries]; managed_members + [managed_artifact] + [managed_native_boundaries]; managed_native_boundaries + [managed_artifact] + [managed_members]. Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "managed_artifact": {
+    "type": "object"
+   },
+   "managed_members": {
+    "type": "object"
+   },
+   "managed_native_boundaries": {
+    "type": "object"
+   }
+  },
+  "minProperties": 1,
+  "additionalProperties": false
+ },
+ "inspect_with_objdump": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Provide a complete input group: path + operation + [follow_debug_links]; path + operation + [follow_debug_links] + [symbol]; operation.",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1
+   },
+   "operation": {
+    "anyOf": [
+     {
+      "type": "string",
+      "enum": [
+       "file_headers",
+       "section_headers",
+       "symbols",
+       "relocations",
+       "dwarf",
+       "disassemble_all"
+      ]
+     },
+     {
+      "type": "string",
+      "const": "disassemble"
+     },
+     {
+      "type": "string",
+      "const": "architectures"
+     }
+    ]
+   },
+   "follow_debug_links": {
+    "type": "boolean"
+   },
+   "symbol": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "operation"
+  ],
+  "minProperties": 1,
+  "additionalProperties": false
+ },
+ "execute_rizin_command": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1
+   },
+   "command": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "path",
+   "command"
+  ],
+  "additionalProperties": false
+ },
+ "list_frida_devices": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "remote": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "type": "string",
+      "minLength": 1
+     },
+     "keepalive_interval": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "address"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "additionalProperties": false
+ },
+ "list_frida_processes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "device_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "remote": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "type": "string",
+      "minLength": 1
+     },
+     "keepalive_interval": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "address"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "additionalProperties": false,
+  "description": "Provide exactly one of device_id or remote. device_id selects a device (use \"local\" for this host); remote requires an address."
+ },
+ "start_frida_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "mode": {
+    "type": "string",
+    "enum": [
+     "attach",
+     "spawn"
+    ]
+   },
+   "device_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "remote": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "type": "string",
+      "minLength": 1
+     },
+     "keepalive_interval": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "pid": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "program": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "argv": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   }
+  },
+  "required": [
+   "mode"
+  ],
+  "additionalProperties": false
+ },
+ "load_frida_script": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "source_kind": {
+    "type": "string",
+    "enum": [
+     "inline",
+     "file"
+    ]
+   },
+   "source": {
+    "type": "string"
+   },
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "session_id",
+   "source_kind"
+  ],
+  "additionalProperties": false
+ },
+ "resume_frida_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "unload_frida_script": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "script_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id",
+   "script_id"
+  ],
+  "additionalProperties": false
+ },
+ "frida_session_status": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "close_frida_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "instrument_with_frida": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "mode": {
+    "type": "string",
+    "enum": [
+     "attach",
+     "spawn"
+    ]
+   },
+   "device_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "remote": {
+    "type": "object",
+    "properties": {
+     "address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "type": "string",
+      "minLength": 1
+     },
+     "keepalive_interval": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "pid": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "program": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "argv": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   },
+   "source_kind": {
+    "type": "string",
+    "enum": [
+     "inline",
+     "file"
+    ]
+   },
+   "source": {
+    "type": "string"
+   },
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "duration_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 60000
+   }
+  },
+  "required": [
+   "mode",
+   "source_kind"
+  ],
+  "additionalProperties": false
+ },
+ "list_cutter_sessions": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "cutter_command": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "expected_generation": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "command": {
+    "type": "string",
+    "minLength": 1
+   },
+   "json": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "session_id",
+   "expected_generation",
+   "command"
+  ],
+  "additionalProperties": false
+ },
+ "start_gdb_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "inferior_tty": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "additionalProperties": false
+ },
+ "gdb_console": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "command": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "session_id",
+   "command"
+  ],
+  "additionalProperties": false
+ },
+ "gdb_session_status": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "close_gdb_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "start_rizin_debug_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "inferior_tty": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "backend": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "path",
+   "inferior_tty"
+  ],
+  "additionalProperties": false
+ },
+ "rizin_debug_command": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "command": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "session_id",
+   "command"
+  ],
+  "additionalProperties": false
+ },
+ "rizin_debug_session_status": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "close_rizin_debug_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "session_id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   }
+  },
+  "required": [
+   "session_id"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_packet_capture": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "fields": {
+    "minItems": 1,
+    "maxItems": 1024,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 8192
+    }
+   },
+   "display_filter": {
+    "anyOf": [
+     {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "decode_as": {
+    "maxItems": 1024,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 8192
+    }
+   },
+   "packet_limit": {
+    "anyOf": [
+     {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 2147483647
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "two_pass": {
+    "type": "boolean"
+   },
+   "match_offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "match_limit": {
+    "anyOf": [
+     {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "required": [
+   "path",
+   "fields"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_packet_fields": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "kind": {
+    "type": "string",
+    "enum": [
+     "protocols",
+     "fields"
+    ]
+   },
+   "protocol": {
+    "anyOf": [
+     {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "query": {
+    "type": "string",
+    "maxLength": 8192
+   },
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "anyOf": [
+     {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "decode_signal_recording": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "decoders": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 8192
+   },
+   "input_format": {
+    "anyOf": [
+     {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "annotations": {
+    "anyOf": [
+     {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "line_offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "line_limit": {
+    "anyOf": [
+     {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "required": [
+   "path",
+   "decoders"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_signal_decoders": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "decoder": {
+    "anyOf": [
+     {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^[a-zA-Z0-9_+\\x2d]+$"
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "query": {
+    "type": "string",
+    "maxLength": 8192
+   },
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "anyOf": [
+     {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_android_package": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "search_android_classes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "query": {
+    "type": "string"
+   }
+  },
+  "required": [
+   "path",
+   "query"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_android_class": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "class_name": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "path",
+   "class_name"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_android_method": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "class_name": {
+    "type": "string",
+    "minLength": 1
+   },
+   "method_name": {
+    "type": "string",
+    "minLength": 1
+   },
+   "overload_index": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "path",
+   "class_name",
+   "method_name"
+  ],
+  "additionalProperties": false
+ },
+ "trace_android_references": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "class_name": {
+    "type": "string",
+    "minLength": 1
+   },
+   "method_name": {
+    "type": "string",
+    "minLength": 1
+   },
+   "overload_index": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "path",
+   "class_name"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_jeb_client": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "open_jeb_project": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "list_jeb_units": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "filter": {
+    "type": "string"
+   },
+   "parent_unit_path": {
+    "type": "string",
+    "minLength": 1
+   },
+   "index": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "count": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 100
+   }
+  },
+  "additionalProperties": false
+ },
+ "decompile_jeb_item": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "unit_path": {
+    "type": "string",
+    "minLength": 1
+   },
+   "item_address": {
+    "type": "string",
+    "minLength": 1
+   },
+   "item_kind": {
+    "type": "string",
+    "enum": [
+     "type",
+     "method"
+    ]
+   }
+  },
+  "required": [
+   "item_address",
+   "item_kind"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_binary_layout": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_analysis_view": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "source": {
+    "type": "object"
+   },
+   "view": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "source",
+   "view"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_pe_resources": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "max_file_bytes": {
+    "type": "integer",
+    "minimum": 64,
+    "maximum": 536870912
+   },
+   "max_entries": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 65536
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_go_binary": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_il2cpp_metadata": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_rust_binary": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "compare_wasm_interfaces": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left": {
+    "type": "object",
+    "description": "Exact complete inspect_wasm_artifact Evidence or retained session reference"
+   },
+   "right": {
+    "type": "object",
+    "description": "Exact complete inspect_wasm_artifact Evidence or retained session reference"
+   },
+   "scope": {
+    "type": "string",
+    "description": "Explicit interface selection; static equality does not establish runtime compatibility"
+   }
+  },
+  "required": [
+   "left",
+   "right",
+   "scope"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_wasm_artifact": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "glue_paths": {
+    "maxItems": 16,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "candidate_paths": {
+    "maxItems": 16,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_evm_interface": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "encoding": {
+    "type": "string",
+    "enum": [
+     "raw",
+     "hex"
+    ]
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path",
+   "encoding"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_sqlite_database": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "table": {
+    "type": "string"
+   },
+   "columns": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "type": "string"
+    }
+   },
+   "schema_scope": {
+    "type": "string",
+    "enum": [
+     "inventory",
+     "selected_table",
+     "database"
+    ]
+   },
+   "row_limit": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false,
+  "description": "When schema_scope is selected_table, also provide table. When row_limit is provided, also provide table. When columns is provided, also provide table.",
+  "if": {
+   "properties": {
+    "schema_scope": {
+     "const": "selected_table"
+    }
+   },
+   "required": [
+    "schema_scope"
+   ]
+  },
+  "then": {
+   "required": [
+    "table"
+   ]
+  }
+ },
+ "inspect_recorded_crash": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "include_debugger_context": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_firmware_regions": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "extract_firmware": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "range": {
+    "type": "object",
+    "properties": {
+     "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "length": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "offset",
+     "length"
+    ],
+    "additionalProperties": false
+   },
+   "max_depth": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 10
+   },
+   "max_output_bytes": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 536870912
+   },
+   "max_output_files": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 100000
+   }
+  },
+  "required": [
+   "path",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "trace_web_module_imports": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "manifest_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "script_index": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "importer_url": {
+    "type": "string",
+    "minLength": 1
+   },
+   "import_map": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$"
+     },
+     "base_url": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path",
+     "base_url"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "required": [
+   "manifest_path",
+   "script_index"
+  ],
+  "additionalProperties": false
+ },
+ "trace_web_source_location": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "manifest_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "script_index": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "source_map": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$"
+     },
+     "url": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path",
+     "url"
+    ],
+    "additionalProperties": false
+   },
+   "generated_position": {
+    "type": "object",
+    "properties": {
+     "line": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     },
+     "column": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "line",
+     "column"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "required": [
+   "manifest_path",
+   "script_index",
+   "source_map",
+   "generated_position"
+  ],
+  "additionalProperties": false
+ },
+ "observe_web_execution": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 2147483647
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_web_event_listeners": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "selector": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id",
+   "selector"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_web_network_capture": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "capture_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "format": {
+    "type": "string",
+    "enum": [
+     "har",
+     "mitmproxy",
+     "saz",
+     "qlog"
+    ]
+   },
+   "record_ordinals": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "type": "integer",
+     "minimum": 0,
+     "maximum": 9007199254740991
+    }
+   },
+   "sensitive_values": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "capture_path",
+   "format"
+  ],
+  "additionalProperties": false
+ },
+ "recover_javascript_sources": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "additional_paths": {
+    "maxItems": 16,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "extraction_mode": {
+    "type": "string",
+    "enum": [
+     "structural",
+     "heuristic",
+     "inspection"
+    ]
+   },
+   "rewrite_level": {
+    "type": "string",
+    "enum": [
+     "minimal",
+     "standard",
+     "aggressive"
+    ]
+   }
+  },
+  "required": [
+   "path",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_adb_client": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "list_adb_devices": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "inspect_adb_device": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "list_adb_packages": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "scope": {
+    "type": "string",
+    "enum": [
+     "all",
+     "third_party",
+     "system"
+    ]
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "pull_adb_package": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "package": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "serial",
+   "package",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "read_adb_logcat": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "count": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 10000
+   },
+   "buffer": {
+    "type": "string",
+    "enum": [
+     "main",
+     "system",
+     "radio",
+     "events",
+     "crash"
+    ]
+   },
+   "pid": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_adb_package": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "package": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$"
+   }
+  },
+  "required": [
+   "serial",
+   "package"
+  ],
+  "additionalProperties": false
+ },
+ "pull_adb_file": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "device_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^\\/[^\\x00]*$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "serial",
+   "device_path",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "push_adb_file": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "local_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "device_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^\\/[^\\x00]*$"
+   },
+   "overwrite": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "serial",
+   "local_path",
+   "device_path"
+  ],
+  "additionalProperties": false
+ },
+ "capture_adb_screen": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "serial",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "list_adb_processes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "list_adb_directory": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "device_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^\\/[^\\x00]*$"
+   }
+  },
+  "required": [
+   "serial",
+   "device_path"
+  ],
+  "additionalProperties": false
+ },
+ "list_adb_features": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "list_adb_services": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_adb_display": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_adb_window": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   }
+  },
+  "required": [
+   "serial"
+  ],
+  "additionalProperties": false
+ },
+ "read_adb_setting": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "namespace": {
+    "type": "string",
+    "enum": [
+     "system",
+     "secure",
+     "global"
+    ]
+   },
+   "key": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z0-9._\\x2d]+$"
+   }
+  },
+  "required": [
+   "serial",
+   "namespace",
+   "key"
+  ],
+  "additionalProperties": false
+ },
+ "collect_adb_bugreport": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "serial",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "resolve_adb_packages": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "query": {
+    "type": "string",
+    "minLength": 2,
+    "maxLength": 256
+   }
+  },
+  "required": [
+   "serial",
+   "query"
+  ],
+  "additionalProperties": false
+ },
+ "install_adb_package": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "apk_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "replace": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "serial",
+   "apk_path"
+  ],
+  "additionalProperties": false
+ },
+ "uninstall_adb_package": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "package": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$"
+   }
+  },
+  "required": [
+   "serial",
+   "package"
+  ],
+  "additionalProperties": false
+ },
+ "start_adb_app": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "package": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$"
+   }
+  },
+  "required": [
+   "serial",
+   "package"
+  ],
+  "additionalProperties": false
+ },
+ "start_adb_activity": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "action": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9._\\x2d]*$"
+   },
+   "data_uri": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 2048,
+    "pattern": "^[^\\x00\\s]+$"
+   },
+   "component": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 512,
+    "pattern": "^[A-Za-z0-9._\\x2d]+(\\/[A-Za-z0-9._\\x2d]*)?$"
+   },
+   "extras": {
+    "maxItems": 16,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "key": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 256,
+       "pattern": "^[A-Za-z0-9._\\x2d]+$"
+      },
+      "type": {
+       "type": "string",
+       "enum": [
+        "string",
+        "boolean",
+        "int",
+        "long",
+        "float"
+       ]
+      },
+      "value": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 2048,
+       "pattern": "^[^\\x00]*$"
+      }
+     },
+     "required": [
+      "key",
+      "type",
+      "value"
+     ],
+     "additionalProperties": false
+    }
+   }
+  },
+  "required": [
+   "serial",
+   "action"
+  ],
+  "additionalProperties": false
+ },
+ "stop_adb_app": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "serial": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[^\\x00\\s\"']+$"
+   },
+   "package": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$"
+   }
+  },
+  "required": [
+   "serial",
+   "package"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_pcap_client": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "inspect_pcap_capture": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "identify_flutter_build": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_dart_aot": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "abi": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\/]*$",
+    "maxLength": 1010
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_apktool_client": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {},
+  "additionalProperties": false
+ },
+ "decode_android_resources": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "include_strings": {
+    "type": "boolean"
+   },
+   "string_tables_only": {
+    "type": "boolean"
+   },
+   "locale": {
+    "type": "string",
+    "minLength": 2,
+    "maxLength": 23,
+    "pattern": "^(?:[a-z]{2,3}(?:-(?:r?[A-Z]{2}|[0-9]{3}))?|b\\+[a-z]{2,3}(?:\\+[A-Za-z0-9]{2,8})*)$"
+   },
+   "locales": {
+    "minItems": 1,
+    "maxItems": 20,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 2,
+     "maxLength": 23,
+     "pattern": "^(?:[a-z]{2,3}(?:-(?:r?[A-Z]{2}|[0-9]{3}))?|b\\+[a-z]{2,3}(?:\\+[A-Za-z0-9]{2,8})*)$"
+    }
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "export_web_scripts": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "capture_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "output_directory": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "capture_path",
+   "output_directory"
+  ],
+  "additionalProperties": false
+ },
+ "list_browser_targets": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   }
+  },
+  "required": [
+   "cdp_endpoint"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_web_page": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Provide a complete input group: cdp_endpoint + target_id + [allowed_origins] + [observation_ms] + [include_accessibility_text] + [include_console_text] + [include_json_body_shapes] + [include_websocket_shapes] + [include_storage_keys] + [include_storage_fingerprints] + [include_script_sources]; cdp_endpoint + target_id + include_script_sources + [allowed_origins] + [observation_ms] + [include_accessibility_text] + [include_console_text] + [include_json_body_shapes] + [include_websocket_shapes] + [include_storage_keys] + [include_storage_fingerprints].",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "include_accessibility_text": {
+    "type": "boolean"
+   },
+   "include_console_text": {
+    "type": "boolean"
+   },
+   "include_json_body_shapes": {
+    "type": "boolean"
+   },
+   "include_websocket_shapes": {
+    "type": "boolean"
+   },
+   "include_storage_keys": {
+    "type": "boolean"
+   },
+   "include_storage_fingerprints": {
+    "type": "boolean"
+   },
+   "include_script_sources": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "minProperties": 2,
+  "additionalProperties": false
+ },
+ "analyze_web_bundle": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "include_accessibility_text": {
+    "type": "boolean"
+   },
+   "include_console_text": {
+    "type": "boolean"
+   },
+   "include_json_body_shapes": {
+    "type": "boolean"
+   },
+   "include_websocket_shapes": {
+    "type": "boolean"
+   },
+   "include_storage_keys": {
+    "type": "boolean"
+   },
+   "include_storage_fingerprints": {
+    "type": "boolean"
+   },
+   "include_script_sources": {
+    "type": "boolean"
+   },
+   "fetch_source_maps": {
+    "type": "boolean"
+   },
+   "max_heap_mb": {
+    "type": "integer",
+    "minimum": 128,
+    "maximum": 16384
+   },
+   "analysis_timeout_ms": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 2147483647
+   },
+   "total_analysis_timeout_ms": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 2147483647
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "observe_web_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "discover_webmcp_tools": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "compare_web_captures": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Provide a complete input group: before + after; before_scenario + after_scenario + [normalization]. Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "before": {
+    "type": "object",
+    "description": "The earlier or left-hand observation to compare."
+   },
+   "after": {
+    "type": "object",
+    "description": "The later or right-hand observation to compare."
+   },
+   "before_scenario": {
+    "type": "object",
+    "description": "Earlier complete normalized_result from capture_browser_scenario."
+   },
+   "after_scenario": {
+    "type": "object",
+    "description": "Later complete normalized_result from capture_browser_scenario."
+   },
+   "normalization": {
+    "type": "object",
+    "description": "Exact-literal rules committed in the comparison result."
+   }
+  },
+  "minProperties": 2,
+  "additionalProperties": false
+ },
+ "capture_web_screenshot": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "allowed_origins": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "compare_web_screenshots": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "before": {
+    "type": "object",
+    "properties": {
+     "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+     },
+     "bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     },
+     "media_type": {
+      "type": "string",
+      "const": "image/png"
+     },
+     "data_base64": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "sha256",
+     "bytes",
+     "media_type",
+     "data_base64"
+    ]
+   },
+   "after": {
+    "type": "object",
+    "properties": {
+     "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+     },
+     "bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     },
+     "media_type": {
+      "type": "string",
+      "const": "image/png"
+     },
+     "data_base64": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "sha256",
+     "bytes",
+     "media_type",
+     "data_base64"
+    ]
+   },
+   "channel_threshold": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 255
+   }
+  },
+  "required": [
+   "before",
+   "after"
+  ],
+  "additionalProperties": false
+ },
+ "capture_browser_scenario": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "browser": {
+    "type": "object",
+    "description": "Required launch/connect selection. Launch uses the selected executable and an owned temporary profile; connect uses one loopback CDP endpoint and target."
+   },
+   "start_url": {
+    "type": "object",
+    "description": "Required initial HTTP(S) URL. Query values must be declared separately as public literals or secret references."
+   },
+   "environment": {
+    "type": "object",
+    "description": "Optional deterministic browser settings. Defaults to 1280x720, en-US, UTC, light mode, reduced motion, and blocked service workers."
+   },
+   "actions": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    },
+    "description": "Required sequence of explicit browser actions."
+   },
+   "storage": {
+    "type": "object",
+    "description": "Optional initial cookies, local storage, or session storage. Defaults to empty; every supplied value and origin must be declared and within the allowed origins."
+   },
+   "secrets": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    },
+    "description": "Optional environment-variable references for values used in actions, URLs, storage, or replay, and for redacting matching observed text. Secret values are never supplied inline."
+   },
+   "capture": {
+    "type": "object",
+    "description": "Optional retained artifacts and event families. Defaults to only a final sanitized URL; request screenshots, DOM, accessibility, history, storage, and event capture explicitly."
+   }
+  },
+  "required": [
+   "browser",
+   "start_url",
+   "actions"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_electron_fuses": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "list_electron_targets": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "cdp_endpoint"
+  ],
+  "additionalProperties": false
+ },
+ "inspect_electron_page": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Provide a complete input group: cdp_endpoint + target_id + [observation_ms] + [include_script_sources]; cdp_endpoint + target_id + include_script_sources + [observation_ms].",
+  "properties": {
+   "cdp_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "include_script_sources": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "cdp_endpoint",
+   "target_id"
+  ],
+  "minProperties": 2,
+  "additionalProperties": false
+ },
+ "analyze_javascript_application": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "input_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "format": {
+    "type": "string",
+    "enum": [
+     "auto",
+     "asar",
+     "directory"
+    ]
+   },
+   "integrity_policy": {
+    "type": "string",
+    "enum": [
+     "fail",
+     "record-and-continue"
+    ]
+   },
+   "source_paths": {
+    "minItems": 1,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "max_semantic_nodes": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000000
+   },
+   "max_semantic_nodes_per_file": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000000
+   },
+   "max_semantic_unknowns": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000000
+   },
+   "max_semantic_unknowns_per_file": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000000
+   },
+   "max_heap_mb": {
+    "type": "integer",
+    "minimum": 128,
+    "maximum": 16384
+   },
+   "analysis_timeout_ms": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 2147483647
+   },
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   }
+  },
+  "required": [
+   "input_path"
+  ],
+  "additionalProperties": false
+ },
+ "reconcile_javascript_runtime": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "static_layers": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "runtime_observations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "static_layers",
+   "runtime_observations"
+  ],
+  "additionalProperties": false
+ },
+ "capture_electron_scenario": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "executable_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "application_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "application_root": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "args": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "actions": {
+    "type": "array",
+    "items": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "step_id": {
+         "type": "string",
+         "minLength": 1
+        },
+        "kind": {
+         "type": "string",
+         "const": "click"
+        },
+        "selector": {
+         "type": "string",
+         "minLength": 1
+        },
+        "window_index": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        }
+       },
+       "required": [
+        "step_id",
+        "kind",
+        "selector"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "step_id": {
+         "type": "string",
+         "minLength": 1
+        },
+        "kind": {
+         "type": "string",
+         "const": "wait"
+        },
+        "duration_ms": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        "window_index": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        }
+       },
+       "required": [
+        "step_id",
+        "kind",
+        "duration_ms"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "step_id": {
+         "type": "string",
+         "minLength": 1
+        },
+        "kind": {
+         "type": "string",
+         "const": "renderer-reload"
+        },
+        "window_index": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        }
+       },
+       "required": [
+        "step_id",
+        "kind"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "step_id": {
+         "type": "string",
+         "minLength": 1
+        },
+        "kind": {
+         "type": "string",
+         "const": "renderer-crash"
+        },
+        "window_index": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        }
+       },
+       "required": [
+        "step_id",
+        "kind"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "step_id": {
+         "type": "string",
+         "minLength": 1
+        },
+        "kind": {
+         "type": "string",
+         "const": "deep-link"
+        },
+        "delivery": {
+         "type": "string",
+         "enum": [
+          "open-url",
+          "second-instance"
+         ]
+        },
+        "url": {
+         "type": "string",
+         "minLength": 1
+        }
+       },
+       "required": [
+        "step_id",
+        "kind",
+        "delivery",
+        "url"
+       ],
+       "additionalProperties": false
+      }
+     ]
+    }
+   }
+  },
+  "required": [
+   "executable_path",
+   "application_path"
+  ],
+  "additionalProperties": false
+ },
+ "list_javascript_runtime_targets": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "inspector_endpoint": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "inspector_endpoint"
+  ],
+  "additionalProperties": false
+ },
+ "observe_javascript_runtime": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "inspector_endpoint": {
+    "type": "string",
+    "minLength": 1
+   },
+   "target_id": {
+    "type": "string",
+    "minLength": 1
+   },
+   "runtime_kind": {
+    "type": "string",
+    "enum": [
+     "node",
+     "electron-main",
+     "electron-preload",
+     "electron-renderer"
+    ]
+   },
+   "observation_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "required": [
+   "inspector_endpoint",
+   "target_id"
+  ],
+  "additionalProperties": false
+ },
+ "trace_application_feature": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "native_observations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "seed": {
+    "type": "object"
+   },
+   "direction": {
+    "type": "string",
+    "description": "Direction in which to traverse or compare relationships."
+   },
+   "application": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "seed",
+   "application"
+  ],
+  "additionalProperties": false
+ },
+ "trace_javascript_semantics": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "application": {
+    "type": "object"
+   },
+   "query": {
+    "type": "object",
+    "description": "Non-empty feature or text query to investigate."
+   }
+  },
+  "required": [
+   "application",
+   "query"
+  ],
+  "additionalProperties": false
+ },
+ "compare_application_versions": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left_native_observations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "right_native_observations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   }
+  },
+  "required": [
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "compare_source_to_bundle": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "reference": {
+    "type": "object"
+   },
+   "application": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "reference",
+   "application"
+  ],
+  "additionalProperties": false
+ },
+ "compare_javascript_export_shapes": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left_module_path": {
+    "type": "string",
+    "description": "Local filesystem path for left module."
+   },
+   "left_export_name": {
+    "type": "string"
+   },
+   "right_module_path": {
+    "type": "string",
+    "description": "Local filesystem path for right module."
+   },
+   "right_export_name": {
+    "type": "string"
+   },
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   }
+  },
+  "required": [
+   "left_module_path",
+   "left_export_name",
+   "right_module_path",
+   "right_export_name",
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "build_reconstruction_obligation_ledger": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "evidence_bundle": {
+    "type": "object"
+   },
+   "reviewed_obligations": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "manifest": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "evidence_bundle",
+   "reviewed_obligations",
+   "manifest"
+  ],
+  "additionalProperties": false
+ },
+ "evaluate_reconstruction_coverage": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "coverage": {
+    "type": "object",
+    "description": "Exact reconstruction-coverage commitment to verify."
+   },
+   "boundary_id": {
+    "type": "string",
+    "description": "Exact reconstruction boundary identifier to evaluate."
+   }
+  },
+  "required": [
+   "coverage",
+   "boundary_id"
+  ],
+  "additionalProperties": false
+ },
+ "project_android_application_graph": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "inventory_evidence": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "inventory_evidence"
+  ],
+  "additionalProperties": false
+ },
+ "project_apple_application_graph": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "inventory_evidence": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "inventory_evidence"
+  ],
+  "additionalProperties": false
+ },
+ "project_harmony_application_graph": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "inventory_evidence": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "inventory_evidence"
+  ],
+  "additionalProperties": false
+ },
+ "open_binary": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "provider_id": {
+    "anyOf": [
+     {
+      "type": "string",
+      "const": "auto"
+     },
+     {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9\\x2d]*$"
+     }
+    ]
+   },
+   "snapshot_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "close_binary": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "snapshot_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "overwrite": {
+    "type": "boolean"
+   }
+  },
+  "additionalProperties": false
+ },
+ "binary_session": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "expected_package_version": {
+    "type": "string",
+    "minLength": 1
+   },
+   "expected_catalog_digest": {
+    "type": "string",
+    "pattern": "^[a-f0-9]{64}$"
+   },
+   "expected_server_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "additionalProperties": false
+ },
+ "export_evidence_bundle": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "overwrite": {
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "import_evidence_bundle": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   }
+  },
+  "required": [
+   "path"
+  ],
+  "additionalProperties": false
+ },
+ "get_evidence_bundle": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "detail": {
+    "type": "string",
+    "enum": [
+     "complete",
+     "summary"
+    ]
+   },
+   "filters": {
+    "type": "object",
+    "properties": {
+     "evidence_id": {
+      "type": "string",
+      "pattern": "^ev_[a-f0-9]{64}$"
+     },
+     "operation": {
+      "type": "string",
+      "minLength": 1
+     },
+     "target_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+     },
+     "analysis_profile_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+     },
+     "procedure_address": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "additionalProperties": false
+   }
+  },
+  "additionalProperties": false
+ },
+ "capture_process_scenario": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "executable": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "arguments": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "working_directory": {
+    "type": "string",
+    "pattern": "^[^\\x00]*$"
+   },
+   "environment": {
+    "type": "object",
+    "propertyNames": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^(?:[^=\\x00R][^=\\x00]*|R(?:[^=\\x00E][^=\\x00]*|E(?:[^=\\x00A][^=\\x00]*|A(?:[^=\\x00_][^=\\x00]*|_(?:[^=\\x00P][^=\\x00]*|P(?:[^=\\x00R][^=\\x00]*|R(?:[^=\\x00O][^=\\x00]*|O(?:[^=\\x00C][^=\\x00]*|C(?:[^=\\x00E][^=\\x00]*|E(?:[^=\\x00S][^=\\x00]*|S(?:[^=\\x00S][^=\\x00]*|S(?:[^=\\x00_][^=\\x00]*|_(?:[^=\\x00R][^=\\x00]*|R(?:[^=\\x00U][^=\\x00]*|U(?:[^=\\x00N][^=\\x00]*|N(?:[^=\\x00_][^=\\x00]*|_(?:[^=\\x00I][^=\\x00]*|I(?:[^=\\x00D][^=\\x00]*|D[^=\\x00]+)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)?)$"
+    },
+    "additionalProperties": {
+     "type": "string",
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "filesystem_observation_paths": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "minLength": 1,
+     "pattern": "^[^\\x00]*$"
+    }
+   },
+   "terminal": {
+    "type": "object",
+    "properties": {
+     "columns": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+     },
+     "rows": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+     },
+     "scrollback": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "events": {
+    "type": "array",
+    "items": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "at_ms": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        "type": {
+         "type": "string",
+         "const": "input"
+        },
+        "data": {
+         "type": "string"
+        },
+        "sensitive": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "at_ms",
+        "type",
+        "data"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "at_ms": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        "type": {
+         "type": "string",
+         "const": "resize"
+        },
+        "columns": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 65535
+        },
+        "rows": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 65535
+        }
+       },
+       "required": [
+        "at_ms",
+        "type",
+        "columns",
+        "rows"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "at_ms": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        "type": {
+         "type": "string",
+         "const": "signal"
+        },
+        "signal": {
+         "type": "string",
+         "enum": [
+          "SIGINT",
+          "SIGTERM",
+          "SIGKILL"
+         ]
+        }
+       },
+       "required": [
+        "at_ms",
+        "type",
+        "signal"
+       ],
+       "additionalProperties": false
+      }
+     ]
+    }
+   },
+   "timeout_ms": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "idle_timeout_ms": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "settle_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "finalization_ms": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limits": {
+    "type": "object",
+    "properties": {
+     "output_bytes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "files": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "file_bytes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "processes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "filesystem_depth": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "normalization": {
+    "type": "object",
+    "properties": {
+     "paths": {
+      "type": "boolean"
+     },
+     "pids": {
+      "type": "boolean"
+     },
+     "ports": {
+      "type": "boolean"
+     },
+     "time_bucket_ms": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "patterns": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "pattern": {
+         "type": "string"
+        },
+        "replacement": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "pattern",
+        "replacement"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "additionalProperties": false
+   }
+  },
+  "required": [
+   "executable"
+  ],
+  "additionalProperties": false
+ },
+ "compare_process_captures": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   },
+   "trace_spec": {
+    "type": "object"
+   },
+   "max_capture_age_ms": {
+    "type": "integer",
+    "description": "Maximum permitted capture age ms for this operation."
+   }
+  },
+  "required": [
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "compare_artifacts": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   }
+  },
+  "required": [
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "compare_functions": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "left": {
+    "type": "object",
+    "description": "Left-hand input used for comparison or differential execution."
+   },
+   "right": {
+    "type": "object",
+    "description": "Right-hand input used for comparison or differential execution."
+   }
+  },
+  "required": [
+   "left",
+   "right"
+  ],
+  "additionalProperties": false
+ },
+ "compare_bundles": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "left_bundle_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "right_bundle_path": {
+    "type": "string",
+    "minLength": 1,
+    "pattern": "^[^\\x00]*$"
+   },
+   "record_pairs": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "left_evidence_id": {
+       "type": "string",
+       "pattern": "^ev_[a-f0-9]{64}$"
+      },
+      "right_evidence_id": {
+       "type": "string",
+       "pattern": "^ev_[a-f0-9]{64}$"
+      }
+     },
+     "required": [
+      "left_evidence_id",
+      "right_evidence_id"
+     ]
+    }
+   }
+  },
+  "required": [
+   "left_bundle_path",
+   "right_bundle_path"
+  ],
+  "additionalProperties": false
+ },
+ "find_changed_behavior": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "comparisons": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    },
+    "description": "Validated comparison Evidence records to aggregate."
+   }
+  },
+  "required": [
+   "comparisons"
+  ],
+  "additionalProperties": false
+ },
+ "build_call_path": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "functions": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "start": {
+    "type": "object"
+   },
+   "goal": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "functions",
+   "start",
+   "goal"
+  ],
+  "additionalProperties": false
+ },
+ "correlate_static_and_runtime": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "static_comparisons": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "runtime_comparisons": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   },
+   "mappings": {
+    "type": "array",
+    "items": {
+     "type": [
+      "null",
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string"
+     ],
+     "items": {}
+    }
+   }
+  },
+  "required": [
+   "static_comparisons",
+   "runtime_comparisons",
+   "mappings"
+  ],
+  "additionalProperties": false
+ },
+ "verify_reconstruction": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Advertised in reduced form by the compact input schema profile; the server still validates complete canonical inputs.",
+  "properties": {
+   "specification": {
+    "type": "object"
+   }
+  },
+  "required": [
+   "specification"
+  ],
+  "additionalProperties": false
+ },
+ "list_unknowns": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "status": {
+    "type": "string",
+    "enum": [
+     "open",
+     "investigating",
+     "blocked",
+     "contradicted",
+     "resolved"
+    ]
+   },
+   "severity": {
+    "type": "string",
+    "enum": [
+     "low",
+     "medium",
+     "high",
+     "critical"
+    ]
+   },
+   "domain": {
+    "type": "string",
+    "minLength": 1
+   },
+   "offset": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "limit": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   }
+  },
+  "additionalProperties": false
+ },
+ "record_unknown": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "question": {
+    "type": "string",
+    "minLength": 1
+   },
+   "severity": {
+    "type": "string",
+    "enum": [
+     "low",
+     "medium",
+     "high",
+     "critical"
+    ]
+   },
+   "domain": {
+    "type": "string",
+    "minLength": 1
+   },
+   "comparison_conclusion_scope": {
+    "type": "object",
+    "properties": {
+     "comparison_evidence_id": {
+      "type": "string",
+      "pattern": "^ev_[a-f0-9]{64}$"
+     },
+     "dimensions": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+       "anyOf": [
+        {
+         "type": "string",
+         "const": "overall"
+        },
+        {
+         "type": "string",
+         "enum": [
+          "identity",
+          "pseudocode",
+          "assembly",
+          "comments",
+          "calls",
+          "references",
+          "strings_names",
+          "cfg"
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "required": [
+     "comparison_evidence_id",
+     "dimensions"
+    ],
+    "additionalProperties": false
+   },
+   "required_authority": {
+    "anyOf": [
+     {
+      "type": "string",
+      "enum": [
+       "shipped-artifact",
+       "controlled-replay",
+       "historical-reference",
+       "external-service",
+       "analyst-inference"
+      ]
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "required_confidence": {
+    "type": "string",
+    "enum": [
+     "observed",
+     "derived",
+     "inferred"
+    ]
+   },
+   "required_environment": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "id": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "platform": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "architecture": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "isolation": {
+        "anyOf": [
+         {
+          "type": "string",
+          "enum": [
+           "none",
+           "process",
+           "container",
+           "virtual-machine"
+          ]
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "platform",
+       "architecture",
+       "isolation"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "recommended_probes": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "operation": {
+       "type": "string",
+       "minLength": 1
+      },
+      "rationale": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "required": [
+      "operation",
+      "rationale"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "relationships": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "type": {
+       "type": "string",
+       "enum": [
+        "depends-on",
+        "related-to",
+        "contradicts"
+       ]
+      },
+      "unknown_id": {
+       "type": "string",
+       "pattern": "^unk_[a-f0-9]{64}$"
+      }
+     },
+     "required": [
+      "type",
+      "unknown_id"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "supporting_evidence_ids": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^ev_[a-f0-9]{64}$"
+    }
+   },
+   "contradicting_evidence_ids": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^ev_[a-f0-9]{64}$"
+    }
+   }
+  },
+  "required": [
+   "question",
+   "severity",
+   "domain",
+   "required_authority",
+   "required_confidence",
+   "required_environment",
+   "recommended_probes",
+   "relationships"
+  ],
+  "additionalProperties": false
+ },
+ "update_unknown": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "unknown_id": {
+    "type": "string",
+    "pattern": "^unk_[a-f0-9]{64}$"
+   },
+   "expected_revision": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 9007199254740991
+   },
+   "status": {
+    "type": "string",
+    "enum": [
+     "open",
+     "investigating",
+     "blocked",
+     "contradicted",
+     "resolved"
+    ]
+   },
+   "severity": {
+    "type": "string",
+    "enum": [
+     "low",
+     "medium",
+     "high",
+     "critical"
+    ]
+   },
+   "supporting_evidence_ids": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^ev_[a-f0-9]{64}$"
+    }
+   },
+   "contradicting_evidence_ids": {
+    "type": "array",
+    "items": {
+     "type": "string",
+     "pattern": "^ev_[a-f0-9]{64}$"
+    }
+   },
+   "required_authority": {
+    "anyOf": [
+     {
+      "type": "string",
+      "enum": [
+       "shipped-artifact",
+       "controlled-replay",
+       "historical-reference",
+       "external-service",
+       "analyst-inference"
+      ]
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "required_confidence": {
+    "type": "string",
+    "enum": [
+     "observed",
+     "derived",
+     "inferred"
+    ]
+   },
+   "required_environment": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "id": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "platform": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "architecture": {
+        "anyOf": [
+         {
+          "type": "string",
+          "minLength": 1
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "isolation": {
+        "anyOf": [
+         {
+          "type": "string",
+          "enum": [
+           "none",
+           "process",
+           "container",
+           "virtual-machine"
+          ]
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "platform",
+       "architecture",
+       "isolation"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "recommended_probes": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "operation": {
+       "type": "string",
+       "minLength": 1
+      },
+      "rationale": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "required": [
+      "operation",
+      "rationale"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "relationships": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "type": {
+       "type": "string",
+       "enum": [
+        "depends-on",
+        "related-to",
+        "contradicts"
+       ]
+      },
+      "unknown_id": {
+       "type": "string",
+       "pattern": "^unk_[a-f0-9]{64}$"
+      }
+     },
+     "required": [
+      "type",
+      "unknown_id"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "resolution": {
+    "anyOf": [
+     {
+      "oneOf": [
+       {
+        "type": "object",
+        "properties": {
+         "disposition": {
+          "type": "string",
+          "const": "verified"
+         },
+         "rationale": {
+          "type": "string",
+          "minLength": 1
+         },
+         "evidence_ids": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "pattern": "^ev_[a-f0-9]{64}$"
+          }
+         }
+        },
+        "required": [
+         "disposition",
+         "rationale",
+         "evidence_ids"
+        ],
+        "additionalProperties": false
+       },
+       {
+        "type": "object",
+        "properties": {
+         "disposition": {
+          "type": "string",
+          "enum": [
+           "withdrawn",
+           "out-of-scope"
+          ]
+         },
+         "rationale": {
+          "type": "string",
+          "minLength": 1
+         },
+         "evidence_ids": {
+          "type": "array",
+          "items": {
+           "type": "string",
+           "pattern": "^ev_[a-f0-9]{64}$"
+          }
+         }
+        },
+        "required": [
+         "disposition",
+         "rationale",
+         "evidence_ids"
+        ],
+        "additionalProperties": false
+       }
+      ]
+     },
+     {
+      "type": "null"
+     }
+    ]
+   }
+  },
+  "required": [
+   "unknown_id",
+   "expected_revision",
+   "status",
+   "severity",
+   "supporting_evidence_ids",
+   "contradicting_evidence_ids",
+   "required_authority",
+   "required_confidence",
+   "required_environment",
+   "recommended_probes",
+   "relationships",
+   "resolution"
+  ],
+  "additionalProperties": false
+ },
+ "verify_unknown_resolution": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "unknown_id": {
+    "type": "string",
+    "pattern": "^unk_[a-f0-9]{64}$"
+   }
+  },
+  "required": [
+   "unknown_id"
+  ],
+  "additionalProperties": false
+ },
+ "get_navigation_context": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "document": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "additionalProperties": false
+ },
+ "inspect_address_context": {
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+   "address": {
+    "type": "string",
+    "minLength": 1
+   },
+   "document": {
+    "type": "string",
+    "minLength": 1
+   }
+  },
+  "required": [
+   "address"
+  ],
+  "additionalProperties": false
+ }
+}

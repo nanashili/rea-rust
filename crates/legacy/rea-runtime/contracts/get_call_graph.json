@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "get_call_graph",
+  "title": "Get native call graph",
+  "description": "Traverse caller-supplied analyze_function relationship Evidence. Address resolution and provider discovery are performed before this retained projection; missing dossiers and incomplete coverage remain explicit.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["address"],
+    "properties": {
+      "address": {"type": "string", "minLength": 1},
+      "direction": {"type": "string", "enum": ["forward", "backward"], "default": "forward"},
+      "functions": {"type": "array", "items": {"type": "object"}}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["graph", "limitations"],
+    "additionalProperties": false,
+    "properties": {
+      "graph": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "object", "additionalProperties": false, "required": ["address", "status", "calls", "relationship_coverage"], "properties": {"address": {"type": "string"}, "status": {"const": "ok"}, "calls": {"type": "array", "items": {"type": "string"}}, "relationship_coverage": {"type": "object"}, "limitations": {"type": "array", "items": {"type": "string"}}}},
+              {"type": "object", "additionalProperties": false, "required": ["address", "status", "error"], "properties": {"address": {"type": "string"}, "status": {"const": "error"}, "error": {"type": "object", "additionalProperties": false, "required": ["code", "category", "message", "retryable", "remediation"], "properties": {"code": {"type": "string"}, "category": {"type": "string"}, "message": {"type": "string", "minLength": 1}, "retryable": {"type": "boolean"}, "remediation": {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {"action": {"type": "string", "minLength": 1}}}, "details": {"type": "object"}}}}}
+            ]
+          }
+        }
+      },
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    }
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

@@ -1,0 +1,6913 @@
+{
+ "commands": [
+  {
+   "name": "address-to-file-offset",
+   "description": "Resolve an analysis address to its original file byte offset",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local executable path"
+     },
+     "address": {
+      "type": "string",
+      "description": "Exact provider memory address"
+     }
+    },
+    "required": [
+     "path",
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "analyze",
+   "description": "Get an overview of an app",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "App, program, or analysis database path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     },
+     "integrityPolicy": {
+      "description": "Behavior when declared application integrity does not match",
+      "type": "string",
+      "enum": [
+       "fail",
+       "record-and-continue"
+      ]
+     },
+     "sourcePath": {
+      "description": "Exact inventoried file path relative to the application root; repeat to select several. No implicit dependencies.",
+      "minItems": 1,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "analyze-javascript-application",
+   "description": "Statically reconstruct a local JavaScript/Electron application",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "ASAR or extracted application path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxSemanticNodes": {
+      "description": "Maximum retained semantic nodes across the application; defaults to 100000. Worker heap and parent result admission remain enforced.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+     },
+     "maxSemanticNodesPerFile": {
+      "description": "Maximum retained semantic nodes per source file; defaults to 20000, additionally bounded by max_semantic_nodes and memory/transfer limits.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+     },
+     "maxSemanticUnknowns": {
+      "description": "Maximum retained semantic unknown records across the application; defaults to 100000. Omitted emission occurrences are counted by family and reason.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+     },
+     "maxSemanticUnknownsPerFile": {
+      "description": "Maximum retained semantic unknown records per source file; defaults to 20000, additionally bounded by max_semantic_unknowns and memory/transfer limits.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+     },
+     "sourcePath": {
+      "description": "Exact inventoried file path relative to the application root; repeat to select several. No implicit dependencies.",
+      "minItems": 1,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "maxHeapMb": {
+      "description": "Maximum V8 old-space heap in MiB for the isolated JavaScript source analyzer; defaults to 1024. This does not change the CLI/MCP process heap. When REA runs on Bun, which ignores V8 heap flags, Windows instead limits the analyzer's committed memory to this budget plus a 512 MiB runtime reserve; other Bun hosts enforce no limit.",
+      "type": "integer",
+      "minimum": 128,
+      "maximum": 16384
+     },
+     "analysisTimeoutMs": {
+      "description": "Maximum startup, analysis and transfer time per JavaScript source, in milliseconds; defaults to 300000. On timeout, return collected partial Evidence and stop the analysis.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+     },
+     "artifactFormat": {
+      "description": "Application artifact format",
+      "default": "auto",
+      "type": "string",
+      "enum": [
+       "auto",
+       "asar",
+       "directory"
+      ]
+     },
+     "integrityPolicy": {
+      "description": "Behavior when declared application integrity does not match",
+      "default": "fail",
+      "type": "string",
+      "enum": [
+       "fail",
+       "record-and-continue"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "analyze-web-bundle",
+   "description": "Capture and statically analyze a page bundle, defaulting to the selected target origin",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 500,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "fetchSourceMaps": {
+      "description": "Fetch source maps referenced by captured scripts",
+      "default": false,
+      "type": "boolean"
+     },
+     "maxHeapMb": {
+      "description": "Maximum V8 old-space heap in MiB for the isolated inert-script analyzer; defaults to 1024. This is not a total process RSS limit. Bun ignores V8 flags; Windows Bun uses an owned process commit limit plus a 512 MiB runtime reserve, while other Bun hosts have no enforced memory limit.",
+      "type": "integer",
+      "minimum": 128,
+      "maximum": 16384
+     },
+     "analysisTimeoutMs": {
+      "description": "Maximum startup, analysis and result transfer time per captured script, in milliseconds; defaults to 30000. Timed-out scripts are explicit unknowns and other scripts may still be analyzed.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+     },
+     "totalAnalysisTimeoutMs": {
+      "description": "Maximum time for all captured-script analysis, in milliseconds; defaults to 300000. Capture and optional source-map fetching have separate budgets. Unstarted scripts remain explicit unknowns.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "annotate-native-function",
+   "description": "Edit function annotations and return refreshed analysis",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local executable path"
+     },
+     "procedure": {
+      "type": "string",
+      "description": "Exact function entry address or unique name"
+     }
+    },
+    "required": [
+     "path",
+     "procedure"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "name": {
+      "description": "Analyst function name",
+      "type": "string",
+      "minLength": 1
+     },
+     "comment": {
+      "description": "Regular entry comment; empty text clears it",
+      "type": "string"
+     },
+     "inline-comment": {
+      "description": "Inline entry comment; empty text clears it",
+      "type": "string"
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "build-reconstruction-obligation-ledger",
+   "description": "Generate a deterministic Evidence-backed reconstruction obligation ledger page",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capabilities",
+   "description": "List provider capabilities and side effects",
+   "args": null,
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-adb-screen",
+   "description": "Capture one screen frame as a digested PNG",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "output-directory": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local directory for screen.png"
+     }
+    },
+    "required": [
+     "output-directory"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-browser-scenario",
+   "description": "Run one bounded Playwright browser scenario and return Evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline browser scenario JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-electron-scenario",
+   "description": "Run one owned Electron scenario with cancellable actions",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline JSON or a JSON file matching capture_electron_scenario"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-native-ui-scenario",
+   "description": "Run declarative AX actions or waits in one exact native application window",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "pid": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Existing application PID"
+     },
+     "windowId": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Exact selected application window ID"
+     },
+     "screenshot": {
+      "description": "Capture only the selected window",
+      "default": true,
+      "type": "boolean"
+     },
+     "accessibility": {
+      "description": "Read the selected window accessibility tree",
+      "default": true,
+      "type": "boolean"
+     },
+     "maxNodes": {
+      "description": "Maximum accessibility nodes per capture",
+      "default": 500,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "steps": {
+      "description": "JSON array of declarative AX actions or waits",
+      "type": "string"
+     }
+    },
+    "required": [
+     "pid",
+     "windowId"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-process",
+   "description": "Capture one caller-selected process scenario",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "scenario": {
+      "type": "string",
+      "description": "Scenario JSON path"
+     }
+    },
+    "required": [
+     "scenario"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "capture-web-screenshot",
+   "description": "Capture one visible page viewport within the supplied origin scope",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "collect-adb-bugreport",
+   "description": "Collect and digest one device-generated bugreport archive",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "output-directory": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local directory for the bugreport zip"
+     }
+    },
+    "required": [
+     "output-directory"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare",
+   "description": "Compare two canonical Evidence bundles",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "left": {
+      "type": "string",
+      "description": "Left Evidence bundle JSON path"
+     },
+     "right": {
+      "type": "string",
+      "description": "Right Evidence bundle JSON path"
+     }
+    },
+    "required": [
+     "left",
+     "right"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": [
+    "compare-bundles"
+   ],
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-application-versions",
+   "description": "Compare two authenticated JavaScript Application Graph versions",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-javascript-export-shapes",
+   "description": "Compare exact static JavaScript export return shapes without execution",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-managed-members",
+   "description": "Compare managed PE/CLI member inventories by exact declared type, name, and signature; names alone never form a match",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "leftPath": {
+      "type": "string",
+      "description": "Baseline managed PE executable or assembly"
+     },
+     "rightPath": {
+      "type": "string",
+      "description": "Candidate managed PE executable or assembly"
+     }
+    },
+    "required": [
+     "leftPath",
+     "rightPath"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-process-captures",
+   "description": "Compare two process capture Evidence JSON files",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "left": {
+      "type": "string",
+      "description": "Left capture Evidence JSON path"
+     },
+     "right": {
+      "type": "string",
+      "description": "Right capture Evidence JSON path"
+     },
+     "traceSpec": {
+      "description": "Optional partial-order or finite-trace specification path",
+      "type": "string"
+     }
+    },
+    "required": [
+     "left",
+     "right"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-source-to-bundle",
+   "description": "Compare committed historical source with authenticated application Evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-wasm-interfaces",
+   "description": "Compare core WASM interfaces from two exact inspection Evidence records",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "input": {
+      "type": "string",
+      "description": "Inline JSON or input file containing left/right complete Evidence and required scope"
+     }
+    },
+    "required": [
+     "input"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-web-captures",
+   "description": "Compare two normalized passive captures or recorded browser scenarios",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "beforeJson": {
+      "type": "string",
+      "description": "Earlier normalized web capture JSON or JSON file path"
+     },
+     "afterJson": {
+      "type": "string",
+      "description": "Later normalized web capture JSON or JSON file path"
+     }
+    },
+    "required": [
+     "beforeJson",
+     "afterJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "normalizationJson": {
+      "description": "Recorded literal normalization policy JSON or JSON file path for browser scenarios",
+      "default": "{\"rules\":[]}",
+      "type": "string"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "compare-web-screenshots",
+   "description": "Compare two self-verifying PNG artifact JSON values",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "beforeJson": {
+      "type": "string",
+      "description": "Earlier screenshot artifact JSON or JSON file path"
+     },
+     "afterJson": {
+      "type": "string",
+      "description": "Later screenshot artifact JSON or JSON file path"
+     }
+    },
+    "required": [
+     "beforeJson",
+     "afterJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "channelThreshold": {
+      "description": "Per-channel difference threshold for changed pixels",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "cutter-command",
+   "description": "Execute one Rizin command in a selected live Cutter instance",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "sessionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      "description": "Session ID copied from list-cutter-sessions."
+     },
+     "expectedGeneration": {
+      "description": "Session generation returned by list-cutter-sessions.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "command": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One unrestricted Rizin command to run in Cutter."
+     }
+    },
+    "required": [
+     "sessionId",
+     "expectedGeneration",
+     "command"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "jsonOutput": {
+      "description": "Return command-specific JSON output when available (independent of CLI output formatting).",
+      "type": "boolean"
+     },
+     "json": {
+      "description": "Deprecated compatibility input: use --json-output; pass --json=true or --json=false (bare --json formats CLI output).",
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "debug-with-gdb",
+   "description": "Run one unrestricted GDB console command in an ephemeral MI session; provide an inferior TTY so a live target can be safely detached",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "command": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One unrestricted GDB console command."
+     }
+    },
+    "required": [
+     "command"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inferiorTty": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Caller-selected durable TTY for output from a live GDB inferior."
+     }
+    },
+    "required": [
+     "inferiorTty"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "debug-with-rizin",
+   "description": "Run one unrestricted Rizin debugger command in an ephemeral session",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the local artifact to debug."
+     },
+     "command": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One unrestricted Rizin debugger command."
+     }
+    },
+    "required": [
+     "path",
+     "command"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inferiorTty": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Caller-selected Linux TTY for inferior stdout and stderr."
+     },
+     "backend": {
+      "description": "Optional Rizin IO debugger backend name.",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "inferiorTty"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "decode-android-resources",
+   "description": "Decode one APK's manifest, metadata, and string resources with apktool",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local APK file to decode"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "locale": {
+      "description": "Project strings from res/values-<locale>/strings.xml instead of the default table",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 23,
+      "pattern": "^(?:[a-z]{2,3}(?:-(?:r?[A-Z]{2}|[0-9]{3}))?|b\\+[a-z]{2,3}(?:\\+[A-Za-z0-9]{2,8})*)$"
+     },
+     "string-tables-only": {
+      "description": "Return selected strings only in string_tables, leaving top-level strings empty. Omit to preserve the primary strings field.",
+      "type": "boolean"
+     },
+     "locales": {
+      "description": "Repeat to project multiple localized string tables, e.g. --locales de --locales pt-BR",
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 2,
+       "maxLength": 23,
+       "pattern": "^(?:[a-z]{2,3}(?:-(?:r?[A-Z]{2}|[0-9]{3}))?|b\\+[a-z]{2,3}(?:\\+[A-Za-z0-9]{2,8})*)$"
+      }
+     },
+     "strings": {
+      "description": "Include string resources; use --no-strings to skip projecting them",
+      "default": true,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "decode-interface-builder",
+   "description": "Decode compiled storyboard and nib archives from an app bundle",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Apple .app bundle path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxDocuments": {
+      "description": "Maximum archives to decode",
+      "default": 64,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+     },
+     "maxObjects": {
+      "description": "Maximum graph objects",
+      "default": 20000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+     },
+     "maxConnections": {
+      "description": "Maximum decoded connections",
+      "default": 40000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 40000
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "decode-signal-recording",
+   "description": "Decode an existing signal recording with caller-supplied sigrok",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local signal recording"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "decoders": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192,
+      "description": "sigrok decoder stack, options and channel assignments, e.g. uart:rx=RX:baudrate=9600"
+     },
+     "input_format": {
+      "description": "Explicit sigrok input format and options; omitted means autodetection",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "annotations": {
+      "description": "Optional annotation selection, e.g. uart=rx-data",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "line_offset": {
+      "description": "Skip this many literal LF-separated output lines; default 0",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "line_limit": {
+      "description": "Returned output lines per page; default 50",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "all_lines": {
+      "description": "Return all remaining output lines instead of a bounded page",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "decoders"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "decompile",
+   "description": "Read one part of an app as code",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "address": {
+      "description": "Procedure name or address",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "procedure": {
+      "description": "Procedure name or address; use --procedure=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "decompile-jeb-item",
+   "description": "Decompile one JEB type or method to engine pseudo-code",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "item-address": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Type or method address within the unit, as listed by the engine"
+     },
+     "item-kind": {
+      "type": "string",
+      "enum": [
+       "type",
+       "method"
+      ],
+      "description": "Kind of item to decompile"
+     }
+    },
+    "required": [
+     "item-address",
+     "item-kind"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "unit-path": {
+      "description": "Target code unit; the engine's first code unit in the project when omitted",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "demangle-swift",
+   "description": "Demangle Swift symbols without Hopper",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Artifact path used for evidence identity"
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "allOf": [
+        {
+         "pattern": "^[^\\n]*$"
+        },
+        {
+         "pattern": "^[^\\x00]*$"
+        }
+       ]
+      },
+      "description": "Swift mangled symbols to demangle"
+     }
+    },
+    "required": [
+     "path",
+     "symbols"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "discover-webmcp-tools",
+   "description": "Passively discover page-declared WebMCP tools",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 100,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "doctor",
+   "description": "Check whether REA is ready",
+   "args": null,
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "target": {
+      "description": "Optional app path to check",
+      "type": "string"
+     },
+     "client": {
+      "description": "Agent registration whose readiness is required; repeatable",
+      "default": [],
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "provider": {
+      "description": "Deep-analysis provider whose readiness is required",
+      "default": [],
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "hopper",
+        "ghidra-rust",
+        "ida",
+        "jadx",
+        "kuna"
+       ]
+      }
+     },
+     "skill": {
+      "description": "Require the installed REA skill identity to be aligned",
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "environment-export",
+   "description": "Export an environment manifest and its capture Evidence as an agent environment bundle folder the agentenv framework runs with agent-env run",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "manifest": {
+      "type": "string",
+      "description": "Environment manifest Evidence JSON path (inspect-analysis-view environment-manifest output)"
+     },
+     "directory": {
+      "type": "string",
+      "description": "Bundle directory to create; must be absent or empty, nothing is overwritten"
+     }
+    },
+    "required": [
+     "manifest",
+     "directory"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "evidence": {
+      "type": "string",
+      "description": "Parent capture Evidence JSON path (inspect-web-network-capture or capture-browser-scenario output) the manifest cites"
+     },
+     "packageTarball": {
+      "description": "Packed rea-agents tarball (npm pack) copied into the env folder and installed by the Dockerfile instead of the registry package pinned to this version",
+      "type": "string"
+     },
+     "name": {
+      "description": "Env folder and env id (kebab-case); default the manifest's name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "evidence"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "environment-serve",
+   "description": "Serve an environment manifest as an agent environment that replays retained capture records over streamable HTTP until SIGINT or SIGTERM",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "manifest": {
+      "type": "string",
+      "description": "Environment manifest Evidence JSON path (inspect-analysis-view environment-manifest output)"
+     }
+    },
+    "required": [
+     "manifest"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "evidence": {
+      "type": "string",
+      "description": "Parent capture Evidence JSON path (inspect-web-network-capture or capture-browser-scenario output) the manifest cites"
+     },
+     "host": {
+      "description": "Listener address; default MCP_HOST, else 127.0.0.1",
+      "type": "string",
+      "minLength": 1
+     },
+     "port": {
+      "description": "Listener port; default MCP_PORT, else 0 for an ephemeral port",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+     }
+    },
+    "required": [
+     "evidence"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "evaluate-reconstruction-coverage",
+   "description": "Evaluate inline fail-closed reconstruction coverage",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "evidence-export",
+   "description": "Validate and atomically export canonical Evidence JSON",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "source": {
+      "type": "string",
+      "description": "Existing evidence bundle JSON path"
+     },
+     "output": {
+      "type": "string",
+      "description": "Canonical output JSON path"
+     }
+    },
+    "required": [
+     "source",
+     "output"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "overwrite": {
+      "description": "Replace output file",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "evidence-import",
+   "description": "Validate and import a bounded local Evidence bundle",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Evidence bundle JSON path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "execute-rizin-command",
+   "description": "Execute one Rizin command against a local artifact",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the local artifact to analyze."
+     },
+     "command": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One caller-selected Rizin command."
+     }
+    },
+    "required": [
+     "path",
+     "command"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "export-web-scripts",
+   "description": "Export retained website scripts into an absent directory for static JavaScript analysis",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "capturePath": {
+      "type": "string",
+      "description": "Absolute path to saved page or scenario capture JSON"
+     },
+     "outputDirectory": {
+      "type": "string",
+      "description": "Absolute absent directory for verified scripts and manifest"
+     }
+    },
+    "required": [
+     "capturePath",
+     "outputDirectory"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "extract-artifact",
+   "description": "Extract all regular artifact contents safely",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Application or package path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "integrityPolicy": {
+      "description": "Behavior when declared artifact integrity does not match",
+      "default": "fail",
+      "type": "string",
+      "enum": [
+       "fail",
+       "record-and-continue"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "extract-firmware",
+   "description": "Extract selected firmware bytes and return verified files and provenance",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Local firmware path; never executed"
+     },
+     "outputDirectory": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Absent output directory; parent must exist"
+     }
+    },
+    "required": [
+     "path",
+     "outputDirectory"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "offset": {
+      "description": "Selected byte offset; requires length",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "length": {
+      "description": "Selected byte length; requires offset",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "maxDepth": {
+      "description": "Extraction depth; reaching it yields partial analysis",
+      "default": 3,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+     },
+     "maxOutputBytes": {
+      "description": "Staging file-byte budget, checked during extraction; transient overshoot is possible",
+      "default": 268435456,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 536870912
+     },
+     "maxOutputFiles": {
+      "description": "Staging entry budget, including directories and links",
+      "default": 10000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "function",
+   "description": "Analyze one complete function with evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "address": {
+      "description": "Procedure name or address",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "procedure": {
+      "description": "Procedure name or address; use --procedure=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "identify-flutter-build",
+   "description": "Identify a Flutter build's Dart snapshot hash and engine facts by pure APK parsing",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Local APK file to inspect"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "import-managed-reconstruction",
+   "description": "Import decompiler-produced managed reconstruction against exact static member evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline managed reconstruction JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "import-reference-source",
+   "description": "Import a source tree as historical reference only",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "root": {
+      "type": "string",
+      "description": "Local source directory to import as historical reference"
+     }
+    },
+    "required": [
+     "root"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "detail": {
+      "description": "Complete committed graph or compact historical-source summary",
+      "default": "full",
+      "type": "string",
+      "enum": [
+       "full",
+       "summary"
+      ]
+     },
+     "outlineDepth": {
+      "description": "Summary outline path depth (default: 2; 0 omits entries); requires --detail summary",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect",
+   "description": "Inspect an app overview with evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App, program, or analysis database path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-adb-client",
+   "description": "Inspect the caller-selected adb client without contacting devices",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-adb-device",
+   "description": "Inspect one device's build identity through a fixed getprop whitelist",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-adb-display",
+   "description": "Report the display's declared size and density",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-adb-package",
+   "description": "Inspect one installed package's version, installer, and flags through dumpsys",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Package"
+     }
+    },
+    "required": [
+     "serial",
+     "package"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-adb-window",
+   "description": "Report the window manager's current focus declarations",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-analysis-view",
+   "description": "Project a selected view of completed binary-layout, JavaScript application, native function, artifact-inventory, desktop-directory, WASM, Mach-O, Interface Builder, EVM, managed, Android package, Dart AOT, web network capture or pcap Evidence JSON",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-android-class",
+   "description": "Inspect one exact APK class's member inventory",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local standalone APK path"
+     },
+     "className": {
+      "type": "string",
+      "description": "Exact fully qualified class name"
+     }
+    },
+    "required": [
+     "path",
+     "className"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-android-method",
+   "description": "Decompile one APK method with explicit overload selection",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local standalone APK path"
+     },
+     "className": {
+      "type": "string",
+      "description": "Exact fully qualified class name"
+     },
+     "methodName": {
+      "type": "string",
+      "description": "Exact declared method name"
+     }
+    },
+    "required": [
+     "path",
+     "className",
+     "methodName"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "overloadIndex": {
+      "description": "Explicit zero-based index among same-name methods; required when ambiguous",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-android-package",
+   "description": "Inspect APK declarations and decoded manifest without executing it",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local standalone APK path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-apktool-client",
+   "description": "Inspect the caller-selected apktool launcher without decoding anything",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-artifact",
+   "description": "Inspect one artifact and return all available observations and next probes",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Application or package path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "integrityPolicy": {
+      "description": "Behavior when declared artifact integrity does not match",
+      "default": "fail",
+      "type": "string",
+      "enum": [
+       "fail",
+       "record-and-continue"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-asset-catalog",
+   "description": "Inspect compiled Apple asset catalog metadata",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Apple .app bundle path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "offset": {
+      "description": "First metadata record",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "description": "Maximum records to return",
+      "default": 1000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-binary-layout",
+   "description": "Inspect binary file/linked layout without executing the selected object",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local ELF binary or relocatable object"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-dart-aot",
+   "description": "Inspect one ABI's Dart AOT snapshot: sections, headers, and the string pool",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Local APK file carrying a Flutter AOT payload"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "abi": {
+      "description": "Exact lib/ directory label reported by identify_flutter_build; defaults to arm64-v8a, x86_64, x86, armeabi-v7a, then remaining ABIs alphabetically",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\/]*$",
+      "maxLength": 1010
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-desktop-application",
+   "description": "Identify desktop runtime candidates from bounded directory and header observations",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local installation directory"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "max_entries": {
+      "description": "Maximum directory entries to examine; exhaustion leaves partial coverage",
+      "default": 20000,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 100000
+     },
+     "detail": {
+      "description": "Deliver complete Evidence, or a summary with --evidence_output",
+      "default": "complete",
+      "type": "string",
+      "enum": [
+       "complete",
+       "summary"
+      ]
+     },
+     "evidence_output": {
+      "description": "Save complete Evidence as a bundle; required for summary delivery. Never overwrites.",
+      "type": "string",
+      "minLength": 1
+     },
+     "max_probe_bytes": {
+      "description": "Maximum total bytes read from selected file ranges",
+      "default": 8388608,
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 67108864
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-electron-fuses",
+   "description": "Inspect packaged Electron fuse bytes without launching the application",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local Electron .app, Electron Framework binary, PE executable, or ELF executable"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-electron-page",
+   "description": "Passively inspect one Electron file page",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Literal-loopback Electron CDP endpoint"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-electron-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 100,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "includeScriptSources": {
+      "description": "Include JavaScript source text",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-evidence-bundle",
+   "description": "Inspect complete or selected discovery metadata from a local Evidence bundle",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "JSON or JSON file with absolute path, detail and optional record filters"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-evm-interface",
+   "description": "Infer interface candidates from explicit local EVM bytecode",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local bytecode carrier"
+     },
+     "encoding": {
+      "type": "string",
+      "enum": [
+       "raw",
+       "hex"
+      ],
+      "description": "Selected carrier representation"
+     }
+    },
+    "required": [
+     "path",
+     "encoding"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-firmware-regions",
+   "description": "Inspect firmware signature candidates without extracting them",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Local firmware path; never executed"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-go-binary",
+   "description": "Inspect embedded Go compiler, modules and build settings without target execution",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local ELF, PE or thin Mach-O image"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-il2cpp-metadata",
+   "description": "Inventory IL2CPP global-metadata.dat images, types and methods",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local global-metadata.dat (version 29, 31 or 39)"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "detail": {
+      "description": "Deliver complete Evidence, or a summary with --evidence_output",
+      "default": "complete",
+      "type": "string",
+      "enum": [
+       "complete",
+       "summary"
+      ]
+     },
+     "evidence_output": {
+      "description": "Save complete Evidence as a bundle; required for summary delivery. Never overwrites.",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-jeb-client",
+   "description": "Inspect the running JEB MCP client without opening a target",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-keyed-archive",
+   "description": "Inspect a Foundation keyed archive as an object-reference graph",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Foundation plist archive or Apple app bundle"
+     },
+     "archive": {
+      "description": "Relative archive path when the target is a bundle",
+      "default": ".",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "root": {
+      "description": "Named $top archive root",
+      "type": "string"
+     },
+     "offset": {
+      "description": "First original object-table index",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "description": "Maximum object-table entries to return",
+      "default": 20000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-macho",
+   "description": "Run inspect_macho without launching Hopper",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Mach-O or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-managed-artifact",
+   "description": "Inspect PE/CLI identity without loading target code",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Managed PE executable or assembly path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-managed-members",
+   "description": "Inspect PE/CLI metadata members, signatures, CIL anchors, and ldstr string literals without loading target code",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Managed PE executable or assembly path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "type": {
+      "description": "Inspect only members declared by this exact type full name, and the string literals they load, such as System.Threading.Monitor; a nested type is named by its bare name, which selects every nested type of that name (repeatable)",
+      "minItems": 1,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "description": "Exact declaring-type full_name: namespace-qualified for top-level types (System.Threading.Monitor); nested types report their bare name, so it selects every nested type of that name"
+      },
+      "uniqueItems": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-managed-native-boundaries",
+   "description": "Inspect PE/CLI PInvoke and native implementation boundary declarations without loading target code",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Managed PE executable or assembly path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-native-api",
+   "description": "Reconstruct one native function API boundary with evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "address": {
+      "type": "string",
+      "description": "Procedure name or address"
+     }
+    },
+    "required": [
+     "path",
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-native-data-type",
+   "description": "Inspect one recovered database type or typed data object",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "type": {
+      "description": "Exact database type category path",
+      "type": "string"
+     },
+     "address": {
+      "description": "Exact native address",
+      "type": "string"
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-native-dispatch-metadata",
+   "description": "Inspect typed Objective-C and Swift dispatch metadata",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Target path used to bind the result evidence"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxRecords": {
+      "description": "Maximum symbol records to inspect",
+      "default": 5000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+     },
+     "snapshot": {
+      "description": "Load or update the local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-native-instruction",
+   "description": "Inspect one native instruction with decoded operand facts",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     },
+     "address": {
+      "type": "string",
+      "description": "Exact native address"
+     }
+    },
+    "required": [
+     "path",
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-native-load-image",
+   "description": "Verify loaded native bytes, source mappings, relocations and entry",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local executable path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-packet-capture",
+   "description": "Inspect an existing packet capture with caller-supplied TShark",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local packet capture"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "fields": {
+      "minItems": 1,
+      "maxItems": 1024,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 8192
+      },
+      "description": "TShark field names to return, e.g. ip.addr, usb.endpoint_address, btatt.opcode; frame.number is always included"
+     },
+     "display_filter": {
+      "description": "Optional Wireshark display filter (-Y), applied within the read limit",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "decode_as": {
+      "description": "Explicit TShark decode-as selections, e.g. tcp.port==8888,http",
+      "default": [],
+      "maxItems": 1024,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 8192
+      }
+     },
+     "packet_limit": {
+      "description": "Maximum input packets to read before filtering; omitted scans to EOF within resource limits",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 2147483647
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "two_pass": {
+      "description": "Use two-pass analysis for fields requiring later packets; false requests a single pass",
+      "default": true,
+      "type": "boolean"
+     },
+     "match_offset": {
+      "description": "Skip this many matching packets after filtering; default 0",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "match_limit": {
+      "description": "Returned matching frames per page; default 50",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "all_matches": {
+      "description": "Return all remaining matching frames instead of a bounded page",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "fields"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-packet-fields",
+   "description": "Search installed TShark protocol and field definitions",
+   "args": null,
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "kind": {
+      "description": "Return protocol registrations or field definitions; defaults to protocols",
+      "default": "protocols",
+      "type": "string",
+      "enum": [
+       "protocols",
+       "fields"
+      ]
+     },
+     "protocol": {
+      "description": "Exact protocol abbreviation; selects that protocol or its registered fields",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "query": {
+      "description": "Case-insensitive literal substring in name, abbreviation or field description",
+      "default": "",
+      "type": "string",
+      "maxLength": 8192
+     },
+     "offset": {
+      "description": "Number of matching records to skip; defaults to 0",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "description": "Maximum matching records to return; defaults to 50",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "all": {
+      "description": "Return all remaining matches within resource limits",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-pcap-capture",
+   "description": "Inspect one pcap/pcapng capture: endpoints, DNS, TLS SNI, and protocol distribution",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local pcap or pcapng capture file to inspect"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-pcap-client",
+   "description": "Inspect the caller-selected tshark and capinfos binaries without reading a capture",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-pe-resources",
+   "description": "Inspect PE resource identities, payload ranges, hashes and icon-group relationships",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local PE32/PE32+ image"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxFileBytes": {
+      "description": "Maximum stable artifact bytes to read (default 64 MiB)",
+      "default": 67108864,
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 536870912
+     },
+     "maxEntries": {
+      "description": "Maximum resource directory entries to examine; exceeding the budget fails without partial success",
+      "default": 16384,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65536
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-plist",
+   "description": "Parse app plist metadata without launching Hopper",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or Mach-O path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "relativePath": {
+      "description": "Plist path relative to the app root, or an absolute path (default: the bundle's Info.plist)",
+      "type": "string"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-recorded-crash",
+   "description": "Inspect supplied core registers/signals and optional debugger mapping evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local Linux ELF64 amd64 or AArch64 little-endian core"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "debuggerContext": {
+      "description": "Add BYO core-only GDB/pwndbg mapping candidates",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-rust-binary",
+   "description": "Inspect an embedded cargo-auditable Rust dependency list without target execution",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local ELF, PE or thin Mach-O image"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-signal-decoders",
+   "description": "Search installed sigrok decoders or selected decoder help",
+   "args": null,
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "decoder": {
+      "description": "Exact installed decoder ID for help; null searches the decoder catalog",
+      "default": null,
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 256,
+        "pattern": "^[a-zA-Z0-9_+\\x2d]+$"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "query": {
+      "description": "Case-insensitive literal substring in decoder ID/name or help lines; empty selects all",
+      "default": "",
+      "type": "string",
+      "maxLength": 8192
+     },
+     "offset": {
+      "description": "Number of matching decoders or help lines to skip; defaults to 0",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "description": "Maximum matching decoders or help lines to return; defaults to 50",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "all": {
+      "description": "Return all remaining matches",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-signature",
+   "description": "Run inspect_signature without launching Hopper",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Mach-O or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-sqlite-database",
+   "description": "Inspect SQLite schema and optional ordinary-table rows from a local snapshot",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local SQLite database snapshot"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "table": {
+      "description": "Exact ordinary table name to read",
+      "type": "string"
+     },
+     "column": {
+      "description": "Repeat to select exact row columns in the requested order; requires table",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "schemaScope": {
+      "description": "Compact inventory by default, or selected-table details when table is supplied; database requests full schema",
+      "type": "string",
+      "enum": [
+       "inventory",
+       "selected_table",
+       "database"
+      ]
+     },
+     "rowLimit": {
+      "description": "Positive safe integer row count; default 20; requires table",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-wasm-artifact",
+   "description": "Inspect an explicit local WASM artifact with WABT",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local WASM artifact"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "glue_paths": {
+      "description": "Selected local JavaScript glue paths",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "candidate_paths": {
+      "description": "Explicit local WASM candidates",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-web-event-listeners",
+   "description": "Inspect native listener source locations on the first main-document CSS match",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Existing loopback browser CDP endpoint"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Selected page target ID from list-browser-targets"
+     },
+     "selector": {
+      "type": "string",
+      "description": "Native CSS selector; inspect the first main-document match"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId",
+     "selector"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-web-network-capture",
+   "description": "Inspect retained HAR, native mitmproxy, Fiddler SAZ or aioquic qlog records without fetching recorded URLs",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "capturePath": {
+      "type": "string",
+      "description": "Absolute local capture path"
+     },
+     "format": {
+      "type": "string",
+      "enum": [
+       "har",
+       "mitmproxy",
+       "saz",
+       "qlog"
+      ],
+      "description": "Producer capture format"
+     }
+    },
+    "required": [
+     "capturePath",
+     "format"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "record": {
+      "description": "Zero-based producer ordinals; repeat to select several",
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 9007199254740991
+      }
+     },
+     "sensitiveValue": {
+      "description": "Literal string values explicitly marked sensitive; repeat as needed",
+      "default": [],
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-web-page",
+   "description": "Passively inspect one page through CDP, defaulting to its current origin",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 500,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "includeAccessibilityText": {
+      "description": "Include accessibility text",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeConsoleText": {
+      "description": "Include console message text",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeJsonBodyShapes": {
+      "description": "Include structural shapes of JSON response bodies",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeWebsocketShapes": {
+      "description": "Include structural shapes of WebSocket payloads",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeScriptSources": {
+      "description": "Include JavaScript source text",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeStorageKeys": {
+      "description": "Include storage key names without values",
+      "default": false,
+      "type": "boolean"
+     },
+     "includeStorageFingerprints": {
+      "description": "Include content-derived storage fingerprints",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "inspect-with-objdump",
+   "description": "Inspect a local artifact with GNU objdump and retain its raw output as Evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the local artifact to inspect."
+     },
+     "operation": {
+      "type": "string",
+      "enum": [
+       "file_headers",
+       "section_headers",
+       "symbols",
+       "relocations",
+       "dwarf",
+       "disassemble",
+       "disassemble_all"
+      ],
+      "description": "GNU objdump inspection operation to run."
+     }
+    },
+    "required": [
+     "path",
+     "operation"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "symbol": {
+      "description": "Native symbol to select with the disassemble operation; GNU objdump controls matching and boundaries.",
+      "type": "string"
+     },
+     "followDebugLinks": {
+      "description": "Follow local DWARF debug links. External debug-file identity is not bound to Evidence.",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "install-adb-package",
+   "description": "Install one local APK; --replace requests reinstall mode to keep existing app data",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "apk-path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local APK file to install"
+     }
+    },
+    "required": [
+     "serial",
+     "apk-path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "replace": {
+      "description": "Request reinstall mode and keep existing app data if present",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "instructions",
+   "description": "Read every raw instruction without decompiling",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "address": {
+      "description": "Procedure name or address",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "procedure": {
+      "description": "Procedure name or address; use --procedure=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "instrument-with-frida",
+   "description": "Run one Frida script against a selected process and detach",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "mode": {
+      "type": "string",
+      "enum": [
+       "attach",
+       "spawn"
+      ],
+      "description": "Attach to a PID or spawn a program"
+     },
+     "target": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Process ID for attach or program path for spawn"
+     }
+    },
+    "required": [
+     "mode",
+     "target"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "remoteAddress": {
+      "description": "Remote Frida host address, optionally with a port",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "description": "Remote authentication token",
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "description": "Remote TLS certificate",
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "description": "Remote connection origin",
+      "type": "string",
+      "minLength": 1
+     },
+     "keepaliveInterval": {
+      "description": "Remote keepalive interval in seconds",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "deviceId": {
+      "description": "Frida device identifier",
+      "type": "string",
+      "minLength": 1
+     },
+     "script": {
+      "description": "Inline JavaScript to load",
+      "type": "string"
+     },
+     "scriptFile": {
+      "description": "Path to JavaScript source file",
+      "type": "string",
+      "minLength": 1
+     },
+     "argument": {
+      "description": "Arguments passed to a spawned target",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "durationMs": {
+      "description": "Instrumentation duration in milliseconds",
+      "default": 1000,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60000
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-devices",
+   "description": "List attached devices with serial, state, transport, and inferred kind",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-directory",
+   "description": "List one device directory with kinds, permissions, and sizes",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "device-path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute device directory path to list"
+     }
+    },
+    "required": [
+     "serial",
+     "device-path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-features",
+   "description": "List the device's declared hardware and software features",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-packages",
+   "description": "List installed packages on one device with base APK device paths",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "scope": {
+      "description": "Restrict to third-party or system packages",
+      "default": "all",
+      "type": "string",
+      "enum": [
+       "all",
+       "third_party",
+       "system"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-processes",
+   "description": "List running processes exactly as ps -A reports them",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-adb-services",
+   "description": "List the device's binder services and interfaces",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-architectures",
+   "description": "Run list_architectures without launching Hopper",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Mach-O or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-browser-targets",
+   "description": "List page targets from a selected loopback CDP browser, optionally filtered by origin",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     }
+    },
+    "required": [
+     "endpoint"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-cutter-sessions",
+   "description": "List live Cutter instances connected through the REA Python plugin bridge",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-electron-targets",
+   "description": "List local file pages exposed by the selected Electron CDP endpoint",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Literal-loopback Electron CDP endpoint"
+     }
+    },
+    "required": [
+     "endpoint"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-frida-devices",
+   "description": "List local Frida devices and an optional remote endpoint",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "remoteAddress": {
+      "description": "Remote Frida host address, optionally with a port",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "description": "Remote authentication token",
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "description": "Remote TLS certificate",
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "description": "Remote connection origin",
+      "type": "string",
+      "minLength": 1
+     },
+     "keepaliveInterval": {
+      "description": "Remote keepalive interval in seconds",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-frida-processes",
+   "description": "List processes visible through a Frida device",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "remoteAddress": {
+      "description": "Remote Frida host address, optionally with a port",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     },
+     "token": {
+      "description": "Remote authentication token",
+      "type": "string",
+      "minLength": 1
+     },
+     "certificate": {
+      "description": "Remote TLS certificate",
+      "type": "string",
+      "minLength": 1
+     },
+     "origin": {
+      "description": "Remote connection origin",
+      "type": "string",
+      "minLength": 1
+     },
+     "keepaliveInterval": {
+      "description": "Remote keepalive interval in seconds",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "deviceId": {
+      "description": "Frida device identifier",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-javascript-runtime-targets",
+   "description": "List Node/Electron V8 Inspector targets",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Literal-loopback Inspector endpoint"
+     }
+    },
+    "required": [
+     "endpoint"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-jeb-units",
+   "description": "List JEB project units by path and type with optional filter",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "filter": {
+      "description": "Wildcard filter matched against unit paths; '*' allowed",
+      "type": "string"
+     },
+     "parent-unit-path": {
+      "description": "Restrict results to descendants of this unit path",
+      "type": "string",
+      "minLength": 1
+     },
+     "index": {
+      "description": "Zero-based index of the first result to return",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "count": {
+      "description": "Maximum results to return; the engine protocol caps pages at 100",
+      "default": 100,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "list-objdump-architectures",
+   "description": "List BFD targets advertised by the installed GNU objdump",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "observe-javascript-runtime",
+   "description": "Passively observe one exact Node/Electron Inspector target",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Literal-loopback Inspector endpoint"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target from list-javascript-runtime-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "runtimeKind": {
+      "description": "Declared target role; Inspector cannot authenticate the Electron role",
+      "type": "string",
+      "enum": [
+       "node",
+       "electron-main",
+       "electron-preload",
+       "electron-renderer"
+      ]
+     },
+     "observationMs": {
+      "description": "Observation window in milliseconds",
+      "default": 100,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "observe-native-calls",
+   "description": "Launch a Mach-O under LLDB and record entries into selected functions or Objective-C methods",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Mach-O or app path"
+     },
+     "inputJson": {
+      "type": "string",
+      "description": "Inline JSON or a JSON file path: breakpoints, arguments, environment, duration_ms, max_events, argument_registers, backtrace_frames"
+     }
+    },
+    "required": [
+     "path",
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "observe-native-ui",
+   "description": "Observe one already-running native application window by PID and window ID",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "pid": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Existing application PID"
+     },
+     "windowId": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Exact selected application window ID"
+     },
+     "screenshot": {
+      "description": "Capture only the selected window",
+      "default": true,
+      "type": "boolean"
+     },
+     "accessibility": {
+      "description": "Read the selected window accessibility tree",
+      "default": true,
+      "type": "boolean"
+     },
+     "maxNodes": {
+      "description": "Maximum accessibility nodes per capture",
+      "default": 500,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "pid",
+     "windowId"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "observe-web-execution",
+   "description": "Observe precise page execution; resets counters and temporarily disables optimization",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Existing loopback browser CDP endpoint"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Selected page target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 10000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "observe-web-session",
+   "description": "Observe user-driven page navigation during a chosen window",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "endpoint": {
+      "type": "string",
+      "description": "Loopback CDP HTTP endpoint or browser WebSocket URL"
+     },
+     "targetId": {
+      "type": "string",
+      "description": "Target ID from list-browser-targets"
+     }
+    },
+    "required": [
+     "endpoint",
+     "targetId"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "allowedOrigins": {
+      "description": "Optional exact-origin filter",
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "observationMs": {
+      "description": "Observation duration in milliseconds",
+      "default": 10000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "open-jeb-project",
+   "description": "Open or create a JEB project from an artifact or .jdb2 database",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Artifact file or existing .jdb2 project database, resolved by the running JEB client"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "project-android-application-graph",
+   "description": "Project authenticated APK inventory Evidence into an Android application graph",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "project-apple-application-graph",
+   "description": "Project authenticated IPA or macOS app inventory Evidence into an Apple application graph",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "project-harmony-application-graph",
+   "description": "Project authenticated HarmonyOS HAP, HSP, or App Pack inventory Evidence into an application graph",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "project-managed-application-graph",
+   "description": "Project authenticated managed static Evidence into an application graph",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline managed application graph JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "providers",
+   "description": "List configured analysis providers",
+   "args": null,
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "pull-adb-file",
+   "description": "Pull one device file to a local copy with a SHA-256 digest",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "device-path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute device path to pull"
+     }
+    },
+    "required": [
+     "serial",
+     "device-path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "output-directory": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local directory for the pulled file"
+     }
+    },
+    "required": [
+     "output-directory"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "pull-adb-package",
+   "description": "Pull one installed package's complete APK set with SHA-256 digests",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Installed package name"
+     }
+    },
+    "required": [
+     "serial",
+     "package"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "output-directory": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Local directory for the pulled APK set; a package-named subdirectory is created inside"
+     }
+    },
+    "required": [
+     "output-directory"
+    ],
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "push-adb-file",
+   "description": "Push one local file to the device; refuses existing targets without --overwrite",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "local-path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Existing local file"
+     },
+     "device-path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute device destination"
+     }
+    },
+    "required": [
+     "serial",
+     "local-path",
+     "device-path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "overwrite": {
+      "description": "Allow replacing an existing device file",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "read-adb-logcat",
+   "description": "Read a bounded dump of the device log for one buffer",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     }
+    },
+    "required": [
+     "serial"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "count": {
+      "description": "Number of most recent lines to read",
+      "default": 500,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+     },
+     "buffer": {
+      "description": "Log buffer to read",
+      "default": "main",
+      "type": "string",
+      "enum": [
+       "main",
+       "system",
+       "radio",
+       "events",
+       "crash"
+      ]
+     },
+     "pid": {
+      "description": "Restrict to one process id",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "read-adb-setting",
+   "description": "Read one settings value from system, secure, or global",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "namespace": {
+      "type": "string",
+      "enum": [
+       "system",
+       "secure",
+       "global"
+      ],
+      "description": "Settings namespace to read"
+     },
+     "key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Setting key to read"
+     }
+    },
+    "required": [
+     "serial",
+     "namespace",
+     "key"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "read-bytes",
+   "description": "Read exact provider memory bytes at one analysis address",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local executable path"
+     },
+     "address": {
+      "type": "string",
+      "description": "Exact provider memory address"
+     }
+    },
+    "required": [
+     "path",
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "length": {
+      "description": "Requested byte count",
+      "default": 256,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "reconcile-javascript-runtime",
+   "description": "Reconcile static application and passive runtime Evidence JSON",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline JSON or a JSON file path matching reconcile_javascript_runtime"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "recover-javascript-sources",
+   "description": "Recover readable JavaScript modules with source provenance and verified files",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Absolute UTF-8 JavaScript input; never executed"
+     },
+     "outputDirectory": {
+      "type": "string",
+      "description": "Absolute absent output directory"
+     }
+    },
+    "required": [
+     "path",
+     "outputDirectory"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "additionalPath": {
+      "description": "Related absolute UTF-8 JavaScript file; repeat for multiple chunks",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "extractionMode": {
+      "description": "Structural boundaries, heuristic fallback, or inspection-only regions",
+      "type": "string",
+      "enum": [
+       "structural",
+       "heuristic",
+       "inspection"
+      ]
+     },
+     "rewriteLevel": {
+      "description": "Upstream syntax recovery level; runtime equivalence remains unknown",
+      "type": "string",
+      "enum": [
+       "minimal",
+       "standard",
+       "aggressive"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "resolve-adb-packages",
+   "description": "Find installed packages by case-insensitive name substring",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "query": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Package-name substring to find"
+     }
+    },
+    "required": [
+     "serial",
+     "query"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "resolve-native-call-targets",
+   "description": "Resolve one static native call site",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     },
+     "address": {
+      "type": "string",
+      "description": "Exact native address"
+     }
+    },
+    "required": [
+     "path",
+     "address"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "search",
+   "description": "Search every analyzed string or procedure name",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "pattern": {
+      "description": "Literal text or regex pattern",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "pattern": {
+      "description": "Complete literal text or regex pattern; use --pattern=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "kind": {
+      "description": "Analyzed item kind to search",
+      "default": "strings",
+      "type": "string",
+      "enum": [
+       "strings",
+       "procedures"
+      ]
+     },
+     "mode": {
+      "description": "Interpret the pattern as literal text or a regex",
+      "default": "literal",
+      "type": "string",
+      "enum": [
+       "literal",
+       "regex"
+      ]
+     },
+     "caseSensitive": {
+      "description": "Match the pattern with exact letter case",
+      "default": false,
+      "type": "boolean"
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "search-android-classes",
+   "description": "Search APK class names; empty query inventories all classes",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local standalone APK path"
+     },
+     "query": {
+      "type": "string",
+      "description": "Case-sensitive class-name substring; empty lists all classes"
+     }
+    },
+    "required": [
+     "path",
+     "query"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "search-bytes",
+   "description": "Find masked byte patterns in initialized provider memory",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local executable path"
+     },
+     "pattern": {
+      "type": "string",
+      "description": "Hexadecimal byte pairs with ?? wildcards"
+     }
+    },
+    "required": [
+     "path",
+     "pattern"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "mask": {
+      "description": "Equal-length hexadecimal bit mask",
+      "type": "string"
+     },
+     "start": {
+      "description": "Inclusive start address",
+      "type": "string"
+     },
+     "end": {
+      "description": "Inclusive end address",
+      "type": "string"
+     },
+     "cursor": {
+      "description": "Continuation from the same query's next_cursor",
+      "type": "string"
+     },
+     "limit": {
+      "description": "Maximum matches on this page",
+      "default": 100,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "setup",
+   "description": "Configure agent integrations and optional analysis providers",
+   "args": null,
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "yes": {
+      "description": "Approve user-owned setup actions without prompting",
+      "default": false,
+      "type": "boolean"
+     },
+     "installHopper": {
+      "description": "Also approve Hopper installation with --yes",
+      "default": false,
+      "type": "boolean"
+     },
+     "client": {
+      "description": "Agent integration to configure; repeat for multiple agents",
+      "default": [],
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "skillClient": {
+      "description": "Existing client skill destination to update; repeatable",
+      "default": [],
+      "type": "array",
+      "items": {
+       "anyOf": [
+        {
+         "type": "string",
+         "const": "shared"
+        },
+        {
+         "type": "string"
+        }
+       ]
+      }
+     },
+     "allDetected": {
+      "description": "Configure every detected supported agent",
+      "default": false,
+      "type": "boolean"
+     },
+     "skill": {
+      "description": "Override the bundled skill included with agent integrations",
+      "type": "boolean"
+     },
+     "dryRun": {
+      "description": "Print the resolved plan without applying it",
+      "default": false,
+      "type": "boolean"
+     },
+     "accessible": {
+      "description": "Use sequential accessible setup prompts",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": {
+    "yes": "y"
+   },
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": "agent-only",
+   "extra_keys": {}
+  },
+  {
+   "name": "start-adb-activity",
+   "description": "Start an intent with am start (action, URI, component, extras)",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "action": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Intent action to start"
+     }
+    },
+    "required": [
+     "serial",
+     "action"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "data-uri": {
+      "description": "Intent data URI (-d)",
+      "type": "string",
+      "minLength": 1
+     },
+     "component": {
+      "description": "Explicit component in package/activity form (-n)",
+      "type": "string",
+      "minLength": 1
+     },
+     "extra": {
+      "description": "Typed extra as type:key:value (string, boolean, int, long, float), repeatable",
+      "default": [],
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "start-adb-app",
+   "description": "Start one installed app by resolving and launching its launcher activity",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Installed package to start"
+     }
+    },
+    "required": [
+     "serial",
+     "package"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "stop-adb-app",
+   "description": "Force-stop every process of one package",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Package to force-stop"
+     }
+    },
+    "required": [
+     "serial",
+     "package"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace",
+   "description": "Trace a literal feature through analyzed references",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "query": {
+      "description": "Literal feature query",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "query": {
+      "description": "Complete literal feature query; use --query=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "caseSensitive": {
+      "description": "Match the query with exact letter case",
+      "default": false,
+      "type": "boolean"
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-android-references",
+   "description": "Trace incoming APK using nodes for a class or selected method",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local standalone APK path"
+     },
+     "className": {
+      "type": "string",
+      "description": "Exact fully qualified class name"
+     }
+    },
+    "required": [
+     "path",
+     "className"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "methodName": {
+      "description": "Declared method name; omit for class references",
+      "type": "string"
+     },
+     "overloadIndex": {
+      "description": "Index among same-name methods from inspect-android-class",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-application-feature",
+   "description": "Trace a typed seed through authenticated application Evidence JSON",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-dylib-resolution",
+   "description": "Trace dyld load-path resolution for a Mach-O or every executable in an app bundle",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Mach-O file or Apple .app bundle path"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "root": {
+      "description": "Process root relative to the bundle or the Mach-O's directory (repeatable)",
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "architecture": {
+      "description": "Trace only this slice of each root",
+      "type": "string",
+      "enum": [
+       "arm64",
+       "arm64e",
+       "x86_64"
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-javascript-semantics",
+   "description": "Trace bounded static semantic relations through authenticated application Evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline workflow JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-native-ui-action",
+   "description": "Trace a compiled UI action selector to its native handler and direct callees",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Target path used to bind the result evidence"
+     },
+     "action": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A unique compiled UI action selector or interface object ID"
+     }
+    },
+    "required": [
+     "path",
+     "action"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxDepth": {
+      "description": "Maximum relationship depth",
+      "default": 8,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 32
+     },
+     "maxNodes": {
+      "description": "Maximum returned graph nodes",
+      "default": 250,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000
+     },
+     "maxEdges": {
+      "description": "Maximum returned graph edges",
+      "default": 500,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-native-values",
+   "description": "Trace bounded native def-use and call dependencies",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "Local native executable or app path"
+     },
+     "procedure": {
+      "type": "string",
+      "description": "Explicit native procedure symbol or address"
+     }
+    },
+    "required": [
+     "path",
+     "procedure"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "maxDepth": {
+      "description": "Maximum call traversal depth",
+      "default": 3,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+     },
+     "maxFunctions": {
+      "description": "Maximum function decompilations",
+      "default": 16,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+     },
+     "maxCallSites": {
+      "description": "Maximum static call-site resolutions",
+      "default": 256,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+     },
+     "maxNodes": {
+      "description": "Maximum retained graph nodes",
+      "default": 5000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+     },
+     "maxEdges": {
+      "description": "Maximum retained graph edges",
+      "default": 10000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 40000
+     },
+     "offset": {
+      "description": "First graph node index",
+      "default": 0,
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "description": "Maximum nodes on this page",
+      "default": 1000,
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-web-module-imports",
+   "description": "Trace one captured script's native imports to URLs and captured source candidates",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "manifestPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$",
+      "description": "Absolute path to an export_web_scripts manifest"
+     },
+     "scriptIndex": {
+      "description": "Zero-based manifest script index",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "manifestPath",
+     "scriptIndex"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "importerUrl": {
+      "description": "Explicit HTTP(S) module URL; useful when captured inline/base context is unknown",
+      "type": "string",
+      "minLength": 1
+     },
+     "importMapPath": {
+      "description": "Absolute local import-map JSON path; requires --import-map-base-url",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00]*$"
+     },
+     "importMapBaseUrl": {
+      "description": "HTTP(S) import-map base URL; requires --import-map-path",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "trace-web-source-location",
+   "description": "Trace one retained script position through an explicitly selected local source map",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "manifestPath": {
+      "type": "string",
+      "description": "Absolute export_web_scripts manifest path"
+     },
+     "scriptIndex": {
+      "description": "Zero-based manifest script index",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "sourceMapPath": {
+      "type": "string",
+      "description": "Absolute local source-map path"
+     },
+     "sourceMapUrl": {
+      "type": "string",
+      "description": "Absolute source-map URL context; no fetch"
+     },
+     "line": {
+      "description": "One-based generated line",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+     },
+     "column": {
+      "description": "Zero-based UTF-16 generated column",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "manifestPath",
+     "scriptIndex",
+     "sourceMapPath",
+     "sourceMapUrl",
+     "line",
+     "column"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "uninstall",
+   "description": "Remove REA-owned agent configuration and skill files",
+   "args": null,
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "purgeData": {
+      "description": "Also remove REA caches and state",
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "uninstall-adb-package",
+   "description": "Uninstall one package and its data from the device",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "serial": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Device serial exactly as `adb devices` reports it"
+     },
+     "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Installed package to uninstall"
+     }
+    },
+    "required": [
+     "serial",
+     "package"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "update",
+   "description": "Update this REA installation and verify the installed release",
+   "args": null,
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "verify-managed-native-boundaries",
+   "description": "Verify managed P/Invoke declarations against authenticated native Evidence",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "inputJson": {
+      "type": "string",
+      "description": "Inline managed/native verification JSON or JSON file path"
+     }
+    },
+    "required": [
+     "inputJson"
+    ],
+    "additionalProperties": false
+   },
+   "options": null,
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  },
+  {
+   "name": "xrefs",
+   "description": "List bounded references to an analyzed address",
+   "args": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "App or program path"
+     },
+     "address": {
+      "description": "Address or symbol name",
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "additionalProperties": false
+   },
+   "options": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "address": {
+      "description": "Address or symbol name; use --address=<value> for leading dashes",
+      "type": "string",
+      "minLength": 1
+     },
+     "snapshot": {
+      "description": "Load and update a local analysis snapshot",
+      "type": "string",
+      "minLength": 1
+     },
+     "provider": {
+      "description": "Bind deep analysis to a provider ID or use deterministic auto selection",
+      "anyOf": [
+       {
+        "type": "string",
+        "const": "auto"
+       },
+       {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9\\x2d]*$"
+       }
+      ]
+     }
+    },
+    "additionalProperties": false
+   },
+   "env": null,
+   "alias": null,
+   "aliases": null,
+   "examples": null,
+   "hint": null,
+   "usage": null,
+   "output_policy": null,
+   "extra_keys": {}
+  }
+ ],
+ "aliases": [
+  {
+   "name": "compare-bundles",
+   "target": true
+  }
+ ]
+}

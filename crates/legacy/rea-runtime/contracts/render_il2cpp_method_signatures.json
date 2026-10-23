@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "render_il2cpp_method_signatures",
+  "title": "Render IL2CPP Method Signatures",
+  "description": "Render signatures from caller-captured, normalized IL2CPP method, type, and parameter rows. The operation is read-only and captured/static only: it does not reopen files, acquire a target, execute code, or guess missing facts. Each item preserves unresolved reasons from the application projection.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "signedIndex": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "optionalIndex": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "optionalSignedIndex": {
+      "type": ["integer", "null"],
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "boundedString": {
+      "type": ["string", "null"],
+      "maxLength": 4096
+    },
+    "typeReference": {
+      "type": ["object", "integer", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "descriptor_index": { "$ref": "#/$defs/optionalIndex" },
+        "typespec_index": { "$ref": "#/$defs/optionalIndex" },
+        "kind": { "type": "string", "maxLength": 128 },
+        "name": { "$ref": "#/$defs/boundedString" },
+        "index": { "$ref": "#/$defs/optionalIndex" },
+        "method": { "type": ["boolean", "null"] },
+        "type_index": { "$ref": "#/$defs/optionalSignedIndex" },
+        "type": { "$ref": "#/$defs/typeReference" },
+        "element_type": { "$ref": "#/$defs/typeReference" },
+        "byref": { "type": ["boolean", "null"] },
+        "pointer": { "type": ["boolean", "null"] },
+        "array_rank": { "$ref": "#/$defs/optionalIndex" }
+      }
+    },
+    "typeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namespace": { "$ref": "#/$defs/boundedString" },
+        "name": { "$ref": "#/$defs/boundedString" },
+        "declaring_type": { "$ref": "#/$defs/optionalSignedIndex" },
+        "generic_arity": { "$ref": "#/$defs/optionalIndex" },
+        "generic_parameter_count": { "$ref": "#/$defs/optionalIndex" },
+        "generic_arguments": {
+          "type": ["array", "null"],
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/typeReference" }
+        }
+      }
+    },
+    "parameterRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/boundedString" },
+        "type": { "$ref": "#/$defs/typeReference" },
+        "type_index": { "$ref": "#/$defs/optionalSignedIndex" }
+      }
+    },
+    "genericContainerRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type_argc": { "$ref": "#/$defs/optionalIndex" },
+        "type_count": { "$ref": "#/$defs/optionalIndex" }
+      }
+    },
+    "descriptorRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "descriptor_index": { "$ref": "#/$defs/optionalIndex" },
+        "typespec_index": { "$ref": "#/$defs/optionalIndex" },
+        "kind": { "type": "string", "maxLength": 128 },
+        "name": { "$ref": "#/$defs/boundedString" },
+        "index": { "$ref": "#/$defs/optionalIndex" },
+        "method": { "type": ["boolean", "null"] },
+        "type_index": { "$ref": "#/$defs/optionalSignedIndex" },
+        "type": { "$ref": "#/$defs/typeReference" },
+        "element_type": { "$ref": "#/$defs/typeReference" },
+        "byref": { "type": ["boolean", "null"] },
+        "pointer": { "type": ["boolean", "null"] },
+        "array_rank": { "$ref": "#/$defs/optionalIndex" }
+      }
+    },
+    "methodRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata_index"],
+      "properties": {
+        "metadata_index": { "$ref": "#/$defs/index" },
+        "declaring_type": { "$ref": "#/$defs/optionalSignedIndex" },
+        "name": { "$ref": "#/$defs/boundedString" },
+        "generic_arity": { "$ref": "#/$defs/optionalIndex" },
+        "generic_parameter_count": { "$ref": "#/$defs/optionalIndex" },
+        "generic_container": { "$ref": "#/$defs/optionalSignedIndex" },
+        "generic_parameter_start": { "$ref": "#/$defs/optionalIndex" },
+        "return_type": { "$ref": "#/$defs/typeReference" },
+        "parameter_start": { "$ref": "#/$defs/optionalSignedIndex" },
+        "parameter_count": { "$ref": "#/$defs/optionalIndex" }
+      }
+    },
+    "rowCollection": {
+      "type": "array",
+      "maxItems": 200000
+    },
+    "metadataRows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["methods", "types"],
+      "properties": {
+        "methods": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/methodRow" } },
+        "types": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/typeRow" } },
+        "parameters": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/parameterRow" } },
+        "generic_containers": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/genericContainerRow" } },
+        "type_descriptors": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/descriptorRow" } },
+        "typeDescriptors": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/descriptorRow" } },
+        "typespecs": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/descriptorRow" } },
+        "type_specs": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/descriptorRow" } },
+        "typeSpecs": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/descriptorRow" } },
+        "generic_parameters": { "$ref": "#/$defs/rowCollection" },
+        "genericParameters": { "$ref": "#/$defs/rowCollection" }
+      }
+    },
+    "directInput": {
+      "$ref": "#/$defs/metadataRows"
+    },
+    "wrappedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata"],
+      "properties": { "metadata": { "$ref": "#/$defs/metadataRows" } }
+    },
+    "normalizedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalized_result"],
+      "properties": { "normalized_result": { "$ref": "#/$defs/metadataRows" } }
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/directInput" },
+        { "$ref": "#/$defs/wrappedInput" },
+        { "$ref": "#/$defs/normalizedInput" }
+      ]
+    },
+    "outputItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadata_index", "method", "signature", "resolution", "unresolved_reasons"],
+      "properties": {
+        "metadata_index": { "$ref": "#/$defs/index" },
+        "method": { "$ref": "#/$defs/methodRow" },
+        "signature": { "type": ["string", "null"], "maxLength": 65536 },
+        "resolution": { "enum": ["resolved", "unresolved"] },
+        "unresolved_reasons": { "type": "array", "maxItems": 200000, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "items", "coverage", "limitations"],
+      "properties": {
+        "operation": { "const": "render_il2cpp_method_signatures" },
+        "items": { "type": "array", "maxItems": 200000, "items": { "$ref": "#/$defs/outputItem" } },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["methods", "resolved"],
+          "properties": { "methods": { "$ref": "#/$defs/index" }, "resolved": { "$ref": "#/$defs/index" } }
+        },
+        "limitations": { "type": "array", "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

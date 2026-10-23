@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "build_call_path",
+  "title": "Build native call paths",
+  "description": "Enumerate shortest direct-callee paths from complete retained analyze_function Evidence. Cross-provider records and missing dossiers remain unknown.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["functions", "start", "goal"],
+    "properties": {
+      "functions": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+      "start": {"type": "object", "additionalProperties": false, "required": ["address"], "properties": {"address": {"type": "string", "minLength": 1}}},
+      "goal": {"type": "object", "additionalProperties": false, "required": ["address"], "properties": {"address": {"type": "string", "minLength": 1}}}
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": ["start", "goal", "explored", "evidence_links", "limitations", "status", "shortest_hops", "search_scope", "paths"],
+        "properties": {
+          "start": {"type": "string"}, "goal": {"type": "string"},
+          "explored": {"type": "object", "required": ["nodes", "edges", "depth_reached"]},
+          "evidence_links": {"type": "array", "items": {"type": "string"}},
+          "limitations": {"type": "array", "items": {"type": "string"}},
+          "status": {"const": "found"}, "shortest_hops": {"type": "integer", "minimum": 0},
+          "search_scope": {"type": "object", "required": ["exhaustive"]},
+          "paths": {"type": "array", "minItems": 1}
+        }
+      },
+      {
+        "type": "object",
+        "required": ["start", "goal", "explored", "evidence_links", "limitations", "status", "shortest_hops", "search_scope", "paths"],
+        "properties": {
+          "start": {"type": "string"}, "goal": {"type": "string"},
+          "explored": {"type": "object", "required": ["nodes", "edges", "depth_reached"]},
+          "evidence_links": {"type": "array", "items": {"type": "string"}},
+          "limitations": {"type": "array", "items": {"type": "string"}},
+          "status": {"enum": ["not_found", "unknown"]}, "shortest_hops": {"type": "null"},
+          "search_scope": {"type": "object", "required": ["exhaustive"]},
+          "paths": {"type": "array", "maxItems": 0}
+        }
+      }
+    ]
+  },
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

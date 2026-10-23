@@ -1,0 +1,136 @@
+{
+  "name": "decode_signal_recording",
+  "title": "Decode an existing signal recording",
+  "description": "Decode a caller-selected local logic or signal recording with sigrok-cli 0.7.2 on Linux. Decoder stack, channels, options, input format, annotation classes, and output paging are explicit. The operation reads only a private copy, performs no hardware acquisition or target execution, and preserves the selected path, source digest, producer text, stderr, tool identity, limits, and output coverage in Evidence.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "oneOf": [
+      {
+        "required": ["evidence"],
+        "properties": {"evidence": {"type": "object"}}
+      },
+      {
+        "required": ["result"],
+        "properties": {"result": {"$ref": "#/$defs/report"}}
+      },
+      {
+        "required": ["report"],
+        "properties": {"report": {"$ref": "#/$defs/report"}}
+      }
+    ],
+    "properties": {
+      "evidence": {"type": "object"},
+      "result": {"$ref": "#/$defs/report"},
+      "report": {"$ref": "#/$defs/report"},
+      "normalized_result": {"$ref": "#/$defs/report"},
+      "tool_output": {"$ref": "#/$defs/report"},
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Absolute local recording path"
+      },
+      "decoders": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 8192,
+        "description": "Sigrok decoder stack, options and channel assignments"
+      },
+      "input_format": {
+        "type": ["string", "null"],
+        "minLength": 1,
+        "maxLength": 8192,
+        "default": null,
+        "description": "Explicit sigrok input format and options; null requests autodetection"
+      },
+      "annotations": {
+        "type": ["string", "null"],
+        "minLength": 1,
+        "maxLength": 8192,
+        "default": null,
+        "description": "Optional annotation selection"
+      },
+      "line_offset": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "description": "Number of literal LF-separated output lines to skip"
+      },
+      "line_limit": {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "default": 50,
+        "description": "Maximum returned display lines; null returns all remaining lines"
+      }
+    },
+    "$defs": {
+      "report": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact", "selection", "annotations_text", "output_window", "diagnostics", "tool", "resource_limiter", "limits", "hardware_acquisition"],
+        "properties": {
+          "artifact": {"type": "object"},
+          "selection": {"type": "object"},
+          "annotations_text": {"type": "string"},
+          "output_window": {"type": "object"},
+          "diagnostics": {"type": "string"},
+          "tool": {"type": "object"},
+          "resource_limiter": {"type": "object"},
+          "limits": {"type": "object"},
+          "hardware_acquisition": {"const": "not-performed"}
+        }
+      }
+    },
+    "$comment": "Captured report or authenticated Evidence is projected without opening paths or invoking sigrok. Each retained selection rejects NUL and is bounded to 8,192 UTF-16 code units; encoded selector arguments are bounded to 32 KiB."
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["evidence_id", "normalized_result"],
+    "properties": {
+      "evidence_id": { "type": "string", "minLength": 1 },
+      "normalized_result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact", "selection", "annotations_text", "output_window", "diagnostics", "tool", "resource_limiter", "limits", "hardware_acquisition"],
+        "properties": {
+          "artifact": {
+            "type": "object",
+            "required": ["path", "sha256", "bytes"],
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "bytes": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "selection": { "type": "object" },
+          "annotations_text": { "type": "string" },
+          "output_window": {
+            "type": "object",
+            "required": ["total_lines", "returned_lines", "has_more"],
+            "properties": {
+              "total_lines": { "type": "integer", "minimum": 0 },
+              "returned_lines": { "type": "integer", "minimum": 0 },
+              "has_more": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          },
+          "diagnostics": { "type": "string" },
+          "tool": { "type": "object" },
+          "resource_limiter": { "type": "object" },
+          "limits": { "type": "object" },
+          "hardware_acquisition": { "const": "not-performed" }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

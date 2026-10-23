@@ -1,0 +1,8 @@
+{
+  "name": "capture_process_scenario_offline",
+  "title": "Retain supplied process scenario capture",
+  "description": "Retain an already captured process scenario; this operation performs no launch, attachment, memory read, or target control.",
+  "inputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": { "capture": { "type": "object" }, "scenario": { "type": "object" }, "provenance": { "type": "array" }, "evidence_links": { "type": "array", "items": { "type": "string" } } }, "oneOf": [{ "required": ["capture"] }, { "required": ["scenario"] }] },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

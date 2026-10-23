@@ -1,0 +1,39 @@
+{
+  "name": "inspect_managed_native_boundaries",
+  "title": "Inspect Managed Native Boundaries",
+  "description": "Project caller-supplied retained inspect_managed_native_boundaries Evidence. The offline adapter authenticates managed declarations and degraded native-boundary observations while preserving artifact identity, assembly/member relationships, unknowns, source coverage, and limitations; it never reopens or executes the target.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "evidence": {
+        "type": "object",
+        "description": "Complete authenticated Evidence produced by inspect_managed_native_boundaries."
+      }
+    },
+    "required": ["evidence"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["path", "sha256", "module_refs", "pinvoke_imports", "native_implementations", "summary", "coverage", "limitations"],
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "artifact": { "type": "object" },
+      "module": { "type": ["object", "null"] },
+      "metadata": { "type": "object" },
+      "identity_scope": { "type": "object" },
+      "cli_native": { "type": ["object", "null"] },
+      "module_refs": { "type": "array", "items": { "type": "object" } },
+      "pinvoke_imports": { "type": "array", "items": { "type": "object" } },
+      "native_implementations": { "type": "array", "items": { "type": "object" } },
+      "summary": { "type": "object" },
+      "coverage": { "type": "object" },
+      "limitations": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

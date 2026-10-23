@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_codegen_module_capture",
+  "title": "Inspect Captured IL2CPP CodeGenModule",
+  "description": "Decode a caller-supplied, bounded IL2CPP CodeGenModule record using an explicit versioned layout descriptor. The operation never dereferences process pointers, executes Unity or IL2CPP, reopens a path, or mutates an artifact. Unknown layout fields are rejected.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["layout", "record_bytes_base64"],
+    "properties": {
+      "layout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "pointer_width",
+          "endianness",
+          "name_pointer_offset",
+          "method_pointer_count_offset",
+          "method_pointers_offset"
+        ],
+        "properties": {
+          "version": { "type": "integer", "minimum": 0 },
+          "pointer_width": { "enum": [4, 8] },
+          "endianness": { "enum": ["little", "big"] },
+          "name_pointer_offset": { "type": "integer", "minimum": 0 },
+          "method_pointer_count_offset": { "type": "integer", "minimum": 0 },
+          "method_pointers_offset": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "record_bytes_base64": {
+        "type": "string",
+        "maxLength": 5464,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+        "description": "Base64 encoding of at most 4096 captured record bytes."
+      },
+      "name_bytes_base64": {
+        "type": "string",
+        "maxLength": 5464,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+        "description": "Optional NUL-terminated UTF-8 module-name capture of at most 4096 bytes."
+      },
+      "method_pointers_bytes_base64": {
+        "type": "string",
+        "maxLength": 5592408,
+        "pattern": "^[A-Za-z0-9+/]*={0,2}$",
+        "description": "Optional pointer-table capture of at most 4194304 bytes; entries use the declared pointer width and byte order."
+      },
+      "module_name": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation",
+          "layout",
+          "module_name",
+          "name_pointer",
+          "method_pointer_count",
+          "method_pointers_pointer",
+          "method_pointers",
+          "identity",
+          "limitations"
+        ],
+        "properties": {
+          "operation": { "const": "inspect_il2cpp_codegen_module_capture" },
+          "layout": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "pointer_width",
+              "endianness",
+              "name_pointer_offset",
+              "method_pointer_count_offset",
+              "method_pointers_offset"
+            ],
+            "properties": {
+              "version": { "type": "integer", "minimum": 0 },
+              "pointer_width": { "enum": [4, 8] },
+              "endianness": { "enum": ["little", "big"] },
+              "name_pointer_offset": { "type": "integer", "minimum": 0 },
+              "method_pointer_count_offset": { "type": "integer", "minimum": 0 },
+              "method_pointers_offset": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "module_name": { "type": ["string", "null"] },
+          "name_pointer": { "type": "integer", "minimum": 0 },
+          "method_pointer_count": { "type": "integer", "minimum": 0, "maximum": 200000 },
+          "method_pointers_pointer": { "type": "integer", "minimum": 0 },
+          "method_pointers": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["slot", "address"],
+              "properties": {
+                "slot": { "type": "integer", "minimum": 0 },
+                "address": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "maxItems": 200000
+          },
+          "identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["module_name", "name_pointer", "method_pointers_pointer"],
+            "properties": {
+              "module_name": { "type": ["string", "null"] },
+              "name_pointer": { "type": "integer", "minimum": 0 },
+              "method_pointers_pointer": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

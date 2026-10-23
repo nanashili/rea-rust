@@ -1,0 +1,32 @@
+{
+  "name": "inspect_artifact",
+  "title": "Inspect Artifact",
+  "description": "Project one existing artifact inventory for the caller-selected path and SHA-256 digest. Inspection preserves inventory provenance and does not reopen, extract, execute, or mutate the artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "sha256", "integrity_policy", "inventory"],
+    "properties": {
+      "path": { "type": "string", "minLength": 1, "pattern": "^[^\\u0000]*$" },
+      "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "integrity_policy": { "type": "string", "enum": ["fail", "record-and-continue"] },
+      "inventory": { "type": "object" }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["inspection_id", "subject", "inventory", "provenance", "coverage", "limitations"],
+    "properties": {
+      "inspection_id": { "type": "string", "pattern": "^ai_[0-9a-f]{64}$" },
+      "subject": { "type": "object" },
+      "inventory": { "type": "object" },
+      "provenance": { "type": "array" },
+      "coverage": { "type": "object" },
+      "limitations": { "type": "array", "items": { "type": "string" } }
+    },
+    "additionalProperties": false
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

@@ -1,0 +1,25 @@
+[package]
+name = "rea-rust-analysis"
+description = "Bounded static readers for native images, Rust/Go metadata, Apple, Android, .NET, EVM and SQLite artifacts."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rea-core.workspace = true
+base64.workspace = true
+flate2.workspace = true
+memchr.workspace = true
+rusqlite = { workspace = true, features = ["bundled"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+sha1.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

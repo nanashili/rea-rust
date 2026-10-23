@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_bookmarks",
+  "title": "List Captured Bookmarks",
+  "description": "Project retained bookmark Evidence without opening a provider document.",
+  "inputSchema": {"type":"object","additionalProperties":false,"properties":{"document":{"type":"string","minLength":1},"bookmarks":{"type":"array"},"inventory":{"type":"array"},"evidence":{"type":"object"},"native_observation":{"type":"object"},"observations":{"type":"array"}}},
+  "outputSchema": {"type":"array","items":{"type":"object","additionalProperties":false,"required":["address","name"],"properties":{"address":{"type":"string","minLength":1},"name":{"type":["string","null"]}}}},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

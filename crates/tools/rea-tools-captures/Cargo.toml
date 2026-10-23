@@ -1,0 +1,39 @@
+[package]
+name = "rea-tools-captures"
+description = "External-tool captures: TShark, sigrok, pcap, binwalk/unblob, objdump, rizin, pwntools and Flutter."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["tshark", "sigrok", "pcap", "firmware", "reverse", "pwntools", "flutter"]
+tshark = []
+sigrok = []
+pcap = []
+firmware = []
+reverse = []
+pwntools = []
+flutter = []
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+sha2.workspace = true
+tempfile.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+regex.workspace = true
+flate2 = { workspace = true, features = ["runtime_detection"] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+rustix = { workspace = true, features = ["fs", "process"] }
+
+[lints]
+workspace = true

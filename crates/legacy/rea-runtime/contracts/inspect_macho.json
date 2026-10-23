@@ -1,0 +1,64 @@
+{
+  "name": "inspect_macho",
+  "title": "Inspect Mach-O Bytes",
+  "description": "Inspect a bounded caller-supplied Mach-O byte snapshot or project authenticated inspect_macho Evidence without opening a path, launching a target, or invoking Apple tooling.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "path": { "type": "string", "minLength": 1 },
+      "bytes_base64": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 357913944
+      },
+      "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+      "evidence": { "type": "object" }
+    },
+    "anyOf": [
+      {
+        "required": ["path", "bytes_base64"],
+        "not": { "required": ["evidence"] }
+      },
+      {
+        "required": ["evidence"],
+        "not": {
+          "anyOf": [
+            { "required": ["path"] },
+            { "required": ["bytes_base64"] }
+          ]
+        }
+      }
+    ]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "anyOf": [
+      { "required": ["artifact", "limitations", "provenance"] },
+      { "required": ["evidence_id", "subject", "result", "provenance"] }
+    ],
+    "properties": {
+      "artifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "bytes"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "limitations": { "type": "array", "items": { "type": "string" } },
+      "provenance": { "type": "object" }
+    },
+    "additionalProperties": true
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

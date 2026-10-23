@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "observe_web_session",
+  "title": "Observe web session",
+  "description": "Observe one externally driven browser session for a bounded navigation-aware window while preserving redirects, lifecycle events, and scope failures.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["cdp_endpoint", "target_id"],
+    "properties": {
+      "cdp_endpoint": {"type": "string", "minLength": 1},
+      "allowed_origins": {"type": "array", "items": {"type": "string"}, "default": []},
+      "target_id": {"type": "string", "minLength": 1},
+      "observation_ms": {"type": "integer", "minimum": 1, "maximum": 2147483647, "default": 10000}
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {"result": {"type": "object"}}
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

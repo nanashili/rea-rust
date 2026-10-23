@@ -1,0 +1,18 @@
+{
+  "name": "project_managed_application_graph",
+  "title": "Project Managed Application Graph",
+  "description": "Project one or more caller-supplied managed artifact, member, or native-boundary Evidence records into an application graph without executing code or reopening artifacts.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "managed_artifact": { "type": "object", "minProperties": 1 },
+      "managed_members": { "type": "object", "minProperties": 1 },
+      "managed_native_boundaries": { "type": "object", "minProperties": 1 }
+    },
+    "minProperties": 1
+  },
+  "outputSchema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "required": ["result"], "properties": { "result": { "type": "object" } }, "additionalProperties": false },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

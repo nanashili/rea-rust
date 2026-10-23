@@ -1,0 +1,9 @@
+# Cargo build output of this workspace. Anchored so that source modules named
+# `target` (for example `crates/tools/rea-tools-binary/src/target/`) stay tracked.
+/target/
+
+# macOS metadata
+.DS_Store
+
+# Local decompiler output from third-party targets; never publish.
+/test/

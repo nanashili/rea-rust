@@ -1,0 +1,8 @@
+{
+  "name":"demangle_swift",
+  "title":"Project Captured Swift Demangling",
+  "description":"Pair caller-supplied Swift symbols with captured swift-demangle output while preserving provenance and limitations.",
+  "inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["symbols","stdout"],"properties":{"symbols":{"type":"array","items":{"type":"string","minLength":1,"pattern":"^[^\\n\\u0000]*$"}},"stdout":{"type":"string","maxLength":8388608},"provenance":{"type":"array"},"limitations":{"type":"array","items":{"type":"string"}}}},
+  "outputSchema":{"type":"object","required":["symbols","provenance","limitations"]},
+  "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
+}

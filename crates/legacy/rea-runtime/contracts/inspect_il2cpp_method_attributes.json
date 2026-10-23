@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_il2cpp_method_attributes",
+  "title": "Inspect IL2CPP Method Attributes",
+  "description": "Decode caller-supplied IL2CPP MethodAttributes and MethodImplAttributes bit fields. This read-only operation is static/captured only: it does not reopen files, acquire a target, execute Unity or IL2CPP, or mutate an artifact. Source rows, raw values, recognized flags, and unknown bits remain explicit.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "rawValue": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        {
+          "type": "object",
+          "maxProperties": 2,
+          "additionalProperties": false,
+          "properties": {
+            "raw": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "anyOf": [
+            { "required": ["raw"] },
+            { "required": ["value"] }
+          ]
+        }
+      ]
+    },
+    "methodRow": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": true,
+      "properties": {
+        "method_attributes": { "$ref": "#/$defs/rawValue" },
+        "methodAttributes": { "$ref": "#/$defs/rawValue" },
+        "attributes": { "$ref": "#/$defs/rawValue" },
+        "method_impl_attributes": { "$ref": "#/$defs/rawValue" },
+        "methodImplAttributes": { "$ref": "#/$defs/rawValue" },
+        "impl_attributes": { "$ref": "#/$defs/rawValue" },
+        "implAttributes": { "$ref": "#/$defs/rawValue" }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            { "required": ["method_attributes"] },
+            { "required": ["methodAttributes"] },
+            { "required": ["attributes"] }
+          ]
+        },
+        {
+          "anyOf": [
+            { "required": ["method_impl_attributes"] },
+            { "required": ["methodImplAttributes"] },
+            { "required": ["impl_attributes"] },
+            { "required": ["implAttributes"] }
+          ]
+        }
+      ]
+    },
+    "methodRows": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 200000,
+      "items": { "$ref": "#/$defs/methodRow" }
+    },
+    "table": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": false,
+      "properties": {
+        "methods": { "$ref": "#/$defs/methodRows" },
+        "method_definitions": { "$ref": "#/$defs/methodRows" },
+        "metadata_methods": { "$ref": "#/$defs/methodRows" }
+      },
+      "anyOf": [
+        { "required": ["methods"] },
+        { "required": ["method_definitions"] },
+        { "required": ["metadata_methods"] }
+      ]
+    },
+    "input": {
+      "oneOf": [
+        { "$ref": "#/$defs/table" },
+        {
+          "type": "object",
+          "maxProperties": 128,
+          "additionalProperties": false,
+          "required": ["metadata"],
+          "properties": {
+            "metadata": { "$ref": "#/$defs/table" }
+          }
+        }
+      ]
+    },
+    "methodAttributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw",
+        "member_access_raw",
+        "member_access",
+        "unmanaged_export",
+        "static",
+        "final",
+        "virtual",
+        "hide_by_sig",
+        "new_slot",
+        "check_access_on_override",
+        "abstract",
+        "special_name",
+        "runtime_special_name",
+        "pinvoke_impl",
+        "has_security",
+        "require_sec_object",
+        "unknown_bits"
+      ],
+      "properties": {
+        "raw": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "member_access_raw": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "member_access": {
+          "enum": [
+            "private_scope",
+            "private",
+            "fam_and_assem",
+            "assembly",
+            "family",
+            "fam_or_assem",
+            "public",
+            "unknown"
+          ]
+        },
+        "unmanaged_export": { "type": "boolean" },
+        "static": { "type": "boolean" },
+        "final": { "type": "boolean" },
+        "virtual": { "type": "boolean" },
+        "hide_by_sig": { "type": "boolean" },
+        "new_slot": { "type": "boolean" },
+        "check_access_on_override": { "type": "boolean" },
+        "abstract": { "type": "boolean" },
+        "special_name": { "type": "boolean" },
+        "runtime_special_name": { "type": "boolean" },
+        "pinvoke_impl": { "type": "boolean" },
+        "has_security": { "type": "boolean" },
+        "require_sec_object": { "type": "boolean" },
+        "unknown_bits": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      }
+    },
+    "implAttributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw",
+        "code_type",
+        "managed",
+        "unmanaged",
+        "no_inlining",
+        "forward_ref",
+        "synchronized",
+        "no_optimization",
+        "preserve_sig",
+        "aggressive_inlining",
+        "aggressive_optimization",
+        "internal_call",
+        "unknown_bits"
+      ],
+      "properties": {
+        "raw": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "code_type": { "enum": ["il", "native", "optil", "runtime"] },
+        "managed": { "type": "boolean" },
+        "unmanaged": { "type": "boolean" },
+        "no_inlining": { "type": "boolean" },
+        "forward_ref": { "type": "boolean" },
+        "synchronized": { "type": "boolean" },
+        "no_optimization": { "type": "boolean" },
+        "preserve_sig": { "type": "boolean" },
+        "aggressive_inlining": { "type": "boolean" },
+        "aggressive_optimization": { "type": "boolean" },
+        "internal_call": { "type": "boolean" },
+        "unknown_bits": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "row",
+        "owner",
+        "owner_status",
+        "method_attributes",
+        "method_impl_attributes"
+      ],
+      "properties": {
+        "row": { "$ref": "#/$defs/methodRow" },
+        "owner": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "index"],
+              "properties": {
+                "kind": { "const": "type" },
+                "index": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "indices"],
+              "properties": {
+                "kind": { "const": "type" },
+                "indices": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 128,
+                  "items": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["invalid_claims"],
+              "properties": {
+                "invalid_claims": {
+                  "type": "array",
+                  "maxItems": 4,
+                  "items": {}
+                }
+              }
+            }
+          ]
+        },
+        "owner_status": {
+          "enum": ["resolved", "unknown", "ambiguous", "invalid"]
+        },
+        "method_attributes": { "$ref": "#/$defs/methodAttributes" },
+        "method_impl_attributes": { "$ref": "#/$defs/implAttributes" }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "items", "coverage", "limitations"],
+      "properties": {
+        "operation": { "const": "inspect_il2cpp_method_attributes" },
+        "items": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["methods", "decoded"],
+          "properties": {
+            "methods": { "type": "integer", "minimum": 0, "maximum": 200000 },
+            "decoded": { "type": "integer", "minimum": 0, "maximum": 200000 },
+            "unresolved_owners": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200000
+            },
+            "ambiguous_owners": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200000
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

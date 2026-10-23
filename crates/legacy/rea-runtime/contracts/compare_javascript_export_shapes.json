@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "compare_javascript_export_shapes",
+  "title": "Compare JavaScript export shapes",
+  "description": "Compare static return shapes for one exact module/export selector on each of two authenticated JavaScript application graphs without executing JavaScript.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["left", "right", "left_module_path", "left_export_name", "right_module_path", "right_export_name"],
+    "properties": {
+      "left": {"type": "object"},
+      "right": {"type": "object"},
+      "left_module_path": {"type": "string", "minLength": 1},
+      "left_export_name": {"type": "string"},
+      "right_module_path": {"type": "string", "minLength": 1},
+      "right_export_name": {"type": "string"}
+    }
+  },
+  "outputSchema": {"type": "object", "additionalProperties": false, "required": ["result"], "properties": {"result": {"type": "object"}}},
+  "annotations": {"destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true}
+}

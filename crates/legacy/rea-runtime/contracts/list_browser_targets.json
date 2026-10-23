@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "list_browser_targets",
+  "title": "List browser targets",
+  "description": "List page targets exposed by a caller-selected loopback Chrome DevTools Protocol endpoint, optionally filtered by exact origin.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["cdp_endpoint"],
+    "properties": {
+      "cdp_endpoint": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Explicit-port loopback HTTP discovery endpoint."
+      },
+      "allowed_origins": {
+        "type": "array",
+        "items": {"type": "string", "minLength": 1},
+        "default": []
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["result"],
+    "properties": {
+      "result": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["browser", "targets", "excluded", "limitations"],
+        "properties": {
+          "browser": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["product", "protocol_version", "revision", "user_agent", "js_version"],
+            "properties": {
+              "product": {"type": "string"},
+              "protocol_version": {"type": "string"},
+              "revision": {"type": "string"},
+              "user_agent": {"type": "string"},
+              "js_version": {"type": "string"}
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["target_id", "type", "title", "url", "origin", "attached"],
+              "properties": {
+                "target_id": {"type": "string"},
+                "type": {"type": "string"},
+                "title": {"type": "string"},
+                "url": {"type": "string"},
+                "origin": {"type": "string"},
+                "attached": {"type": ["boolean", "null"]}
+              }
+            }
+          },
+          "excluded": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["disallowed_origin", "unsupported_url", "non_page"],
+            "properties": {
+              "disallowed_origin": {"type": "integer", "minimum": 0},
+              "unsupported_url": {"type": "integer", "minimum": 0},
+              "non_page": {"type": "integer", "minimum": 0}
+            }
+          },
+          "limitations": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  }
+}

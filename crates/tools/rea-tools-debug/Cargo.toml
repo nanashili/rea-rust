@@ -1,0 +1,60 @@
+[package]
+name = "rea-tools-debug"
+description = "GDB, Rizin debugger, Cutter, Frida and native UI/call observation tools."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[features]
+default = ["cutter", "native", "rizin", "gdb"]
+# Owned GDB/MI sessions (Linux; typed platform refusal elsewhere).
+gdb = ["debugger"]
+# Owned Rizin debugger sessions (Linux; typed platform refusal elsewhere).
+rizin = ["debugger"]
+# Shared owned-debugger lifecycle primitives used by gdb and rizin.
+debugger = []
+# Cutter bridge discovery and commands.
+cutter = ["dep:hmac"]
+# macOS native UI observation, UI scenarios and LLDB call observation.
+native = []
+# Frida device discovery and instrumentation sessions through frida-core.
+# Not a default: it links the pinned frida-core devkit that
+# `scripts/fetch-frida-devkit.sh --env` downloads (SHA-256 verified) and
+# exposes through REA_FRIDA_DEVKIT_DIR and BINDGEN_EXTRA_CLANG_ARGS.
+frida = ["dep:frida-sys"]
+
+[dependencies]
+rea-core.workspace = true
+rea-host.workspace = true
+rea-analysis.workspace = true
+rea-application.workspace = true
+rea-rust-analysis.workspace = true
+rea-mcp.workspace = true
+rea-tools-binary.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+sha2.workspace = true
+base64.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+regex.workspace = true
+# Requested shared change: move `hmac = "=0.12.1"` into
+# `[workspace.dependencies]`. Already present in Cargo.lock transitively;
+# used only by the `cutter` feature for the bridge's HMAC-SHA256 handshake.
+hmac = { version = "=0.12.1", optional = true }
+# New dependency (reported): raw frida-core bindings (wxWindows licence),
+# wrapped by the owned safe API in `src/frida/ffi.rs`. `auto-download` stays
+# off so cargo never fetches Frida over the network.
+frida-sys = { version = "=0.17.2", optional = true, default-features = false }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+tempfile.workspace = true
+rustix = { workspace = true, features = ["fs", "process", "termios"] }
+
+[lints.rust]
+# `deny` (not `forbid`) so the single frida-core FFI module can opt in
+# locally; every other module remains free of unsafe code.
+unsafe_code = "deny"

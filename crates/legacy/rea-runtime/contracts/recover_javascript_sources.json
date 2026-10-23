@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "recover_javascript_sources",
+  "title": "Recover JavaScript sources",
+  "description": "Recover readable modules from explicitly selected local JavaScript files into an absent output directory without executing application code.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path", "output_directory"],
+    "properties": {
+      "path": {"type": "string", "minLength": 1},
+      "additional_paths": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1}},
+      "output_directory": {"type": "string", "minLength": 1},
+      "extraction_mode": {"type": "string", "enum": ["structural", "heuristic", "inspection"], "default": "structural"},
+      "rewrite_level": {"type": "string", "enum": ["minimal", "standard", "aggressive"], "default": "standard"}
+    }
+  },
+  "outputSchema": {"type": "object", "additionalProperties": false, "required": ["result"], "properties": {"result": {"type": "object"}}},
+  "annotations": {"destructiveHint": false, "idempotentHint": false, "openWorldHint": false, "readOnlyHint": true}
+}

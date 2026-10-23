@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "map_il2cpp_method_specs",
+  "title": "Map IL2CPP Method Specs",
+  "description": "Correlate caller-supplied MethodSpec rows with generic methods, method definitions, declaring types, and generic instances. The projection is bounded, read-only, and preserves unresolved and ambiguous matches.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/input"
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$ref": "#/$defs/output"
+  },
+  "$defs": {
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "optionalIndex": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "methodSpec": {
+      "type": "object",
+      "anyOf": [
+        {"required": ["metadata_index"]},
+        {"required": ["index"]},
+        {"required": ["method_spec_index"]},
+        {"required": ["methodSpecIndex"]}
+      ],
+      "properties": {
+        "metadata_index": {"$ref": "#/$defs/index"},
+        "index": {"$ref": "#/$defs/index"},
+        "method_spec_index": {"$ref": "#/$defs/index"},
+        "methodSpecIndex": {"$ref": "#/$defs/index"},
+        "method_definition_index": {"$ref": "#/$defs/optionalIndex"},
+        "methodDefinitionIndex": {"$ref": "#/$defs/optionalIndex"},
+        "method_index": {"$ref": "#/$defs/optionalIndex"},
+        "methodIndex": {"$ref": "#/$defs/optionalIndex"},
+        "class_index": {"$ref": "#/$defs/optionalIndex"},
+        "classIndex": {"$ref": "#/$defs/optionalIndex"},
+        "type_definition_index": {"$ref": "#/$defs/optionalIndex"},
+        "typeDefinitionIndex": {"$ref": "#/$defs/optionalIndex"},
+        "generic_method_index": {"$ref": "#/$defs/optionalIndex"},
+        "genericMethodIndex": {"$ref": "#/$defs/optionalIndex"},
+        "generic_index": {"$ref": "#/$defs/optionalIndex"},
+        "genericIndex": {"$ref": "#/$defs/optionalIndex"},
+        "generic_instance_index": {"$ref": "#/$defs/optionalIndex"},
+        "genericInstanceIndex": {"$ref": "#/$defs/optionalIndex"},
+        "instance_index": {"$ref": "#/$defs/optionalIndex"},
+        "instanceIndex": {"$ref": "#/$defs/optionalIndex"}
+      },
+      "additionalProperties": true
+    },
+    "metadataRow": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "metadata_index": {"$ref": "#/$defs/optionalIndex"},
+        "index": {"$ref": "#/$defs/optionalIndex"},
+        "method_definition_index": {"$ref": "#/$defs/optionalIndex"},
+        "generic_method_index": {"$ref": "#/$defs/optionalIndex"},
+        "class_index": {"$ref": "#/$defs/optionalIndex"},
+        "generic_instance_index": {"$ref": "#/$defs/optionalIndex"}
+      }
+    },
+    "methodSpecRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {"$ref": "#/$defs/methodSpec"}
+    },
+    "metadataRows": {
+      "type": "array",
+      "maxItems": 200000,
+      "items": {"$ref": "#/$defs/metadataRow"}
+    },
+    "metadataInput": {
+      "type": "object",
+      "required": ["method_specs"],
+      "properties": {
+        "method_specs": {"$ref": "#/$defs/methodSpecRows"},
+        "generic_methods": {"$ref": "#/$defs/metadataRows"},
+        "methods": {"$ref": "#/$defs/metadataRows"},
+        "types": {"$ref": "#/$defs/metadataRows"},
+        "generic_instances": {"$ref": "#/$defs/metadataRows"}
+      },
+      "additionalProperties": false
+    },
+    "input": {
+      "oneOf": [
+        {"$ref": "#/$defs/metadataInput"},
+        {
+          "type": "object",
+          "required": ["metadata"],
+          "properties": {
+            "metadata": {"$ref": "#/$defs/metadataInput"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "match": {
+      "anyOf": [
+        {"$ref": "#/$defs/metadataRow"},
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": {"const": "ambiguous"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "outputItem": {
+      "type": "object",
+      "required": [
+        "method_spec_index",
+        "method_spec",
+        "generic_method",
+        "method_definition",
+        "declaring_type",
+        "generic_instance",
+        "class_instance",
+        "class_arguments",
+        "method_arguments",
+        "resolution"
+      ],
+      "properties": {
+        "method_spec_index": {"$ref": "#/$defs/index"},
+        "method_spec": {"$ref": "#/$defs/methodSpec"},
+        "generic_method": {"$ref": "#/$defs/match"},
+        "method_definition": {"$ref": "#/$defs/match"},
+        "declaring_type": {"$ref": "#/$defs/match"},
+        "generic_instance": {"$ref": "#/$defs/match"},
+        "class_instance": {"$ref": "#/$defs/match"},
+        "class_arguments": {"$ref": "#/$defs/argumentProjection"},
+        "method_arguments": {"$ref": "#/$defs/argumentProjection"},
+        "resolution": {"enum": ["resolved", "unknown", "ambiguous"]}
+      },
+      "additionalProperties": false
+    },
+    "argumentProjection": {
+      "type": "object",
+      "required": ["status", "arguments", "missing_indices"],
+      "properties": {
+        "status": {"enum": ["resolved", "unresolved", "ambiguous", "unknown", "not_provided"]},
+        "arguments": {"type": "array", "maxItems": 200000, "items": {"type": "object"}},
+        "missing_indices": {"type": "array", "items": {"$ref": "#/$defs/index"}}
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "method_specs",
+        "resolved",
+        "unknown",
+        "ambiguous",
+        "generic_methods",
+        "method_definitions",
+        "type_definitions",
+        "generic_instances"
+      ],
+      "properties": {
+        "method_specs": {"$ref": "#/$defs/index"},
+        "resolved": {"$ref": "#/$defs/index"},
+        "unknown": {"$ref": "#/$defs/index"},
+        "ambiguous": {"$ref": "#/$defs/index"},
+        "generic_methods": {"$ref": "#/$defs/index"},
+        "method_definitions": {"$ref": "#/$defs/index"},
+        "type_definitions": {"$ref": "#/$defs/index"},
+        "generic_instances": {"$ref": "#/$defs/index"}
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "required": ["status", "items", "coverage", "limitations"],
+      "properties": {
+        "status": {"enum": ["complete", "partial"]},
+        "items": {
+          "type": "array",
+          "maxItems": 200000,
+          "items": {"$ref": "#/$defs/outputItem"}
+        },
+        "coverage": {"$ref": "#/$defs/coverage"},
+        "limitations": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

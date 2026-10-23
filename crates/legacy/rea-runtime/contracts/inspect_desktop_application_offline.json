@@ -1,0 +1,14 @@
+{
+  "name": "inspect_desktop_application",
+  "title": "Project Desktop Application Evidence",
+  "description": "Reserved offline contract for projecting caller-supplied desktop application Evidence. The isolated Rust adapter fails closed until a bounded desktop producer is available.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["evidence"],
+    "properties": { "evidence": { "type": "object" } }
+  },
+  "outputSchema": { "type": "object" },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

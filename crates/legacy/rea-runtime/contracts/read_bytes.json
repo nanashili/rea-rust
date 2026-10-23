@@ -1,0 +1,49 @@
+{
+  "name": "read_bytes",
+  "title": "Read Retained Bytes",
+  "description": "Read a bounded initialized byte range from caller-supplied memory blocks without contacting a provider.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["address", "length", "blocks"],
+    "properties": {
+      "address": { "type": "string", "minLength": 1 },
+      "length": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+      "blocks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "anyOf": [
+            { "required": ["bytes_hex"], "not": { "required": ["bytes_base64"] } },
+            { "required": ["bytes_base64"], "not": { "required": ["bytes_hex"] } }
+          ],
+          "properties": {
+            "start": { "type": "string", "minLength": 1 },
+            "end": { "type": "string", "minLength": 1 },
+            "bytes_hex": { "type": "string", "pattern": "^(?:[0-9a-fA-F]{2})+$" },
+            "bytes_base64": { "type": "string" },
+            "initialized": { "type": "boolean" },
+            "loaded": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["address", "requested_bytes", "returned_bytes", "bytes_hex", "complete"],
+    "properties": {
+      "address": { "type": "string" },
+      "requested_bytes": { "type": "integer", "minimum": 1 },
+      "returned_bytes": { "type": "integer", "minimum": 0 },
+      "bytes_hex": { "type": "string", "pattern": "^(?:[0-9a-f]{2})*$" },
+      "complete": { "type": "boolean" }
+    }
+  },
+  "annotations": { "destructiveHint": false, "idempotentHint": true, "openWorldHint": false, "readOnlyHint": true }
+}

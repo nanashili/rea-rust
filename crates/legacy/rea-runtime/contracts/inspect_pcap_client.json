@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "inspect_pcap_client",
+  "title": "Inspect packet-capture client",
+  "description": "Inspect caller-selected tshark and capinfos selections from captured --version output. The public provider invokes each selected command with --version; this native adapter has no host-process authority and accepts only the resulting bounded observations. It reads no capture file and never installs Wireshark.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["tshark", "capinfos", "tshark_output", "capinfos_output"],
+    "additionalProperties": false,
+    "properties": {
+      "tshark": {
+        "type": "object",
+        "required": ["command", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "enum": ["environment", "path"] }
+        }
+      },
+      "capinfos": {
+        "type": "object",
+        "required": ["command", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "enum": ["environment", "path"] }
+        }
+      },
+      "tshark_output": {
+        "type": "object",
+        "required": ["stdout"],
+        "additionalProperties": false,
+        "properties": {
+          "stdout": { "type": "string", "maxLength": 65536 },
+          "stderr": { "type": "string", "maxLength": 65536 }
+        }
+      },
+      "capinfos_output": {
+        "type": "object",
+        "required": ["stdout"],
+        "additionalProperties": false,
+        "properties": {
+          "stdout": { "type": "string", "maxLength": 65536 },
+          "stderr": { "type": "string", "maxLength": 65536 }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["result"],
+    "additionalProperties": false,
+    "properties": {
+      "result": {
+        "type": "object",
+        "required": ["client"],
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "type": "object",
+            "required": ["tshark_command", "tshark_source", "tshark_version", "capinfos_command", "capinfos_source", "capinfos_version"],
+            "additionalProperties": false,
+            "properties": {
+              "tshark_command": { "type": "string", "minLength": 1 },
+              "tshark_source": { "type": "string", "enum": ["environment", "path"] },
+              "tshark_version": { "type": ["string", "null"], "minLength": 1 },
+              "capinfos_command": { "type": "string", "minLength": 1 },
+              "capinfos_source": { "type": "string", "enum": ["environment", "path"] },
+              "capinfos_version": { "type": ["string", "null"], "minLength": 1 }
+            }
+          }
+        }
+      },
+      "provenance": { "type": "object" }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

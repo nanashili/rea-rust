@@ -1,0 +1,128 @@
+{
+  "name": "inspect_analysis_view",
+  "title": "Inspect Analysis View",
+  "description": "Project a caller-selected summary or bounded view from complete retained analysis Evidence, including binary, desktop, JavaScript, native function, artifact inventory, WASM, Mach-O, Interface Builder, EVM, managed, web capture, PCAP, Android, Dart AOT, and IL2CPP results. The operation reads only the supplied Evidence and never reruns an analyzer or reopens its source artifact.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "parent_evidence": {
+        "type": "object",
+        "minProperties": 1,
+        "description": "A complete authenticated Evidence record retained from a supported analysis operation. The selected view is checked against the parent's operation and retained result shape."
+      },
+      "view": {
+        "type": "object",
+        "minProperties": 1,
+        "description": "A caller-selected bounded view supported by the parent Evidence operation. Collection pages, selectors, filters, and facet-specific requests retain their source identities and coverage."
+      }
+    },
+    "required": ["parent_evidence", "view"]
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "evidence_id",
+      "subject",
+      "provider",
+      "analysis_profile",
+      "predicate_type",
+      "operation",
+      "parameters",
+      "raw_result",
+      "normalized_result",
+      "confidence",
+      "authority",
+      "environment",
+      "limitations",
+      "relationship_coverage",
+      "locations",
+      "evidence_links"
+    ],
+    "properties": {
+      "evidence_id": { "type": "string", "pattern": "^ev_[0-9a-f]{64}$" },
+      "subject": {
+        "type": ["object", "null"],
+        "description": "The retained parent artifact subject, preserved on the derived view when the source Evidence carries one."
+      },
+      "provider": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "version"],
+        "properties": {
+          "id": { "const": "rea-analysis-view" },
+          "name": { "const": "REA analysis view projection" },
+          "version": { "const": "1" }
+        }
+      },
+      "analysis_profile": { "type": "null" },
+      "predicate_type": { "const": "rea.analysis-view" },
+      "operation": { "const": "inspect_analysis_view" },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["parent_evidence_id", "view"],
+        "properties": {
+          "parent_evidence_id": { "type": "string", "pattern": "^ev_[0-9a-f]{64}$" },
+          "view": { "type": "object", "minProperties": 1 }
+        }
+      },
+      "raw_result": { "type": "null" },
+      "normalized_result": { "type": "object", "minProperties": 1 },
+      "confidence": { "enum": ["derived", "inferred"] },
+      "authority": {
+        "enum": [
+          "shipped-artifact",
+          "controlled-replay",
+          "historical-reference",
+          "external-service",
+          "analyst-inference"
+        ]
+      },
+      "environment": { "type": "null" },
+      "limitations": { "type": "array", "items": { "type": "string" } },
+      "relationship_coverage": { "type": ["object", "null"] },
+      "locations": {
+        "type": "array",
+        "maxItems": 2,
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "path"],
+              "properties": {
+                "kind": { "const": "artifact-path" },
+                "path": { "type": "string" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "address"],
+              "properties": {
+                "kind": { "const": "address" },
+                "address": { "type": "string" }
+              }
+            }
+          ]
+        }
+      },
+      "evidence_links": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 1,
+        "items": { "type": "string", "pattern": "^ev_[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}
