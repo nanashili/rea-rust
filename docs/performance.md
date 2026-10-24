@@ -1,5 +1,8 @@
 # CPU and memory audit
 
+An [additional pass](performance-round2.md) measures further improvements against
+this first optimized version. The results below retain the first pass measurements.
+
 Baseline: `1cccbf665b82bd6228c3a9272b431b259b9e9c06`.
 
 ## Changes

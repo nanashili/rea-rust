@@ -46,11 +46,13 @@ impl std::error::Error for Error {
 
 struct Key {
     text: JsonText,
-    units: Vec<u16>,
+    // ASCII byte order is UTF-16 order. Borrow those bytes from `text` rather
+    // than allocating a second representation for ordinary JSON field names.
+    units: Option<Vec<u16>>,
 }
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        self.units == other.units
+        self.cmp(other) == Ordering::Equal
     }
 }
 impl Eq for Key {}
@@ -61,7 +63,25 @@ impl PartialOrd for Key {
 }
 impl Ord for Key {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.units.cmp(&other.units)
+        match (&self.units, &other.units) {
+            (None, None) => self.text.as_str().cmp(&other.text.as_str()),
+            (Some(left), Some(right)) => left.cmp(right),
+            (None, Some(right)) => self
+                .text
+                .as_str()
+                .expect("ASCII key")
+                .bytes()
+                .map(u16::from)
+                .cmp(right.iter().copied()),
+            (Some(left), None) => left.iter().copied().cmp(
+                other
+                    .text
+                    .as_str()
+                    .expect("ASCII key")
+                    .bytes()
+                    .map(u16::from),
+            ),
+        }
     }
 }
 
@@ -80,7 +100,11 @@ impl<'de> Deserialize<'de> for Object<'de> {
             ) -> Result<Self::Value, M::Error> {
                 let mut fields = BTreeMap::new();
                 while let Some((text, value)) = access.next_entry::<JsonText, &'de RawValue>()? {
-                    let units = text.utf16_units().map_err(de::Error::custom)?;
+                    let units = if text.as_str().is_some_and(str::is_ascii) {
+                        None
+                    } else {
+                        Some(text.utf16_units().map_err(de::Error::custom)?)
+                    };
                     // JSON.parse's duplicate-key rule is last value wins.
                     fields.insert(Key { text, units }, value);
                 }

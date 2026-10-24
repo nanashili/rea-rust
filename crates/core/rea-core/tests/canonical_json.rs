@@ -4,6 +4,19 @@ use serde_json::value::RawValue;
 use std::io;
 
 #[test]
+fn ascii_keys_compare_with_unicode_prefixes_and_lone_surrogates() {
+    let raw: &RawValue =
+        serde_json::from_str(r#"{"é":7,"a😀":6,"a\ud800":5,"aé":4,"a~":3,"aa":2,"a":1,"":0}"#)
+            .unwrap();
+    let mut output = Vec::new();
+    canonical_json::write(raw, &mut output).unwrap();
+    assert_eq!(
+        output,
+        r#"{"":0,"a":1,"aa":2,"a~":3,"aé":4,"a\ud800":5,"a😀":6,"é":7}"#.as_bytes()
+    );
+}
+
+#[test]
 fn agrees_with_original_rea_on_numbers_utf16_order_and_duplicate_keys() {
     // Generated with Node 24.18.0, digestCanonicalValue and canonicalize;
     // neither Rust serializer nor the function under test generated expectations.
