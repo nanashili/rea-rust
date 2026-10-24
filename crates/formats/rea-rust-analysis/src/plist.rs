@@ -4,7 +4,7 @@
 //! layer can retain the same contract as the TypeScript native provider.
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 pub const MAX_INPUT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_DATA_BYTES: usize = MAX_INPUT_BYTES;
@@ -121,10 +121,10 @@ pub fn read_keyed_archive_with_provenance(
     read_with_provenance_inner(bytes, source_path, Some(xml))
 }
 
-fn read_with_provenance_inner(
-    bytes: &[u8],
+fn read_with_provenance_inner<'a>(
+    bytes: &'a [u8],
     source_path: String,
-    decoded_xml: Option<String>,
+    decoded_xml: Option<Cow<'a, str>>,
 ) -> Result<ReadWithProvenance, Error> {
     if bytes.len() > MAX_INPUT_BYTES {
         return Err(Error::InputTooLarge);
@@ -371,7 +371,7 @@ fn preflight_xml_expansion(xml: &str) -> Result<(), Error> {
 
     let bytes = xml.as_bytes();
     let mut cursor = 0;
-    while let Some(relative_start) = bytes[cursor..].iter().position(|byte| *byte == b'<') {
+    while let Some(relative_start) = memchr::memchr(b'<', &bytes[cursor..]) {
         let start = cursor + relative_start;
         if let Some((terminator, prefix_length)) = xml_opaque_terminator(bytes, start) {
             let content_start = start + prefix_length;
@@ -417,9 +417,7 @@ fn xml_opaque_terminator(bytes: &[u8], start: usize) -> Option<(&'static [u8], u
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
+    memchr::memmem::find(haystack, needle)
 }
 
 fn xml_markup_end(bytes: &[u8], start: usize) -> Option<usize> {
@@ -608,7 +606,7 @@ fn bundle(value: &Value) -> Bundle {
     }
 }
 
-fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
+fn decode_xml_text(bytes: &[u8]) -> Result<Cow<'_, str>, Error> {
     let (encoding, payload) = if bytes.starts_with(&[0xff, 0xfe]) {
         ("utf-16le", &bytes[2..])
     } else if bytes.starts_with(&[0xfe, 0xff]) {
@@ -619,9 +617,8 @@ fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
 
     let text = if encoding == "utf-8" {
         let text = std::str::from_utf8(payload)
-            .map_err(|_| Error::Invalid("XML text bytes are invalid for UTF-8".into()))?
-            .to_owned();
-        text.strip_prefix('\u{feff}').unwrap_or(&text).to_owned()
+            .map_err(|_| Error::Invalid("XML text bytes are invalid for UTF-8".into()))?;
+        Cow::Borrowed(text.strip_prefix('\u{feff}').unwrap_or(text))
     } else {
         if payload.len() % 2 != 0 {
             return Err(Error::Invalid(
@@ -638,7 +635,7 @@ fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
                 }
             })
             .collect::<Vec<_>>();
-        decode_utf16_text(&words)
+        Cow::Owned(decode_utf16_text(&words))
     };
 
     if let Some(declared) = xml_declared_encoding(&text) {
@@ -956,20 +953,20 @@ fn openstep_key_string(value: &Value) -> String {
     }
 }
 
-struct Xml {
-    text: String,
+struct Xml<'a> {
+    text: Cow<'a, str>,
     pos: usize,
     depth: usize,
     nodes: usize,
     path: Vec<ValuePathSegment>,
     typed_scalar_paths: Vec<Vec<ValuePathSegment>>,
 }
-impl Xml {
-    fn new(bytes: &[u8]) -> Result<Self, Error> {
+impl<'a> Xml<'a> {
+    fn new(bytes: &'a [u8]) -> Result<Self, Error> {
         Ok(Self::from_text(decode_xml_text(bytes)?))
     }
 
-    fn from_text(text: String) -> Self {
+    fn from_text(text: Cow<'a, str>) -> Self {
         Self {
             text,
             pos: 0,
@@ -1277,10 +1274,15 @@ impl Xml {
                 out.insert(key, Value::String(String::new()));
                 break;
             }
-            let mut child_path = self.path.clone();
-            child_path.push(ValuePathSegment::Key(key.clone()));
-            self.typed_scalar_paths
-                .retain(|path| !path.starts_with(&child_path));
+            // Only a replacement can invalidate earlier provenance. Scanning
+            // every retained path for each new key makes typed dictionaries
+            // quadratic even when there are no duplicate keys.
+            if out.contains_key(&key) {
+                let mut child_path = self.path.clone();
+                child_path.push(ValuePathSegment::Key(key.clone()));
+                self.typed_scalar_paths
+                    .retain(|path| !path.starts_with(&child_path));
+            }
             self.path.push(ValuePathSegment::Key(key.clone()));
             let result = self.parse_value();
             self.path.pop();
@@ -1349,39 +1351,31 @@ impl Xml {
 fn validate_xml_entities(input: &str, source_base: usize) -> Result<(), Error> {
     let mut cursor = 0;
     while cursor < input.len() {
-        let remainder = &input[cursor..];
-        let next_entity = remainder.find('&');
-        let next_cdata = remainder.find("<![CDATA[");
-        let next_comment = remainder.find("<!--");
-        let next_instruction = remainder.find("<?");
-        let next_markup = [next_cdata, next_comment, next_instruction]
-            .into_iter()
-            .flatten()
-            .filter(|index| next_entity.is_none_or(|entity| *index < entity))
-            .min();
-        if let Some(markup) = next_markup {
-            let marker = &remainder[markup..];
-            let (content_offset, terminator) = if marker.starts_with("<![CDATA[") {
-                (9, "]]>")
-            } else if marker.starts_with("<!--") {
-                (4, "-->")
-            } else {
-                (2, "?>")
-            };
-            let start = cursor + markup + content_offset;
-            let Some(end) = input[start..].find(terminator) else {
-                return Err(Error::Invalid(format!(
-                    "XML markup section at source offset {} is unterminated",
-                    source_base + start
-                )));
-            };
-            cursor = start + end + terminator.len();
-            continue;
-        }
-        let Some(relative) = next_entity else {
+        // Scan once for the next entity or markup opener. Searching separately
+        // for three markup strings at every entity rescans the entire tail.
+        let Some(relative) = memchr::memchr2(b'&', b'<', &input.as_bytes()[cursor..]) else {
             break;
         };
         let start = cursor + relative;
+        if input.as_bytes()[start] == b'<' {
+            if let Some((terminator, prefix_length)) =
+                xml_opaque_terminator(input.as_bytes(), start)
+            {
+                let content_start = start + prefix_length;
+                let Some(end) =
+                    memchr::memmem::find(&input.as_bytes()[content_start..], terminator)
+                else {
+                    return Err(Error::Invalid(format!(
+                        "XML markup section at source offset {} is unterminated",
+                        source_base + content_start
+                    )));
+                };
+                cursor = content_start + end + terminator.len();
+            } else {
+                cursor = start + 1;
+            }
+            continue;
+        }
         let Some(end_relative) = input[start..].find(';') else {
             return Err(Error::Invalid(format!(
                 "XML entity reference at source offset {} is unterminated",
@@ -1438,36 +1432,61 @@ fn is_xml_character(value: u32) -> bool {
 }
 
 fn decode_entities(input: &str) -> String {
-    let mut output = input
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'");
+    if !input.as_bytes().contains(&b'&') {
+        return input.to_owned();
+    }
+    // Retain the original ordered replacement semantics, including ampersands
+    // that reveal a later named or numeric reference. Avoid copying stages
+    // whose pattern is absent.
+    let mut named = Cow::Borrowed(input);
+    for (pattern, replacement) in [
+        ("&amp;", "&"),
+        ("&lt;", "<"),
+        ("&gt;", ">"),
+        ("&quot;", "\""),
+        ("&apos;", "'"),
+    ] {
+        if named.contains(pattern) {
+            named = Cow::Owned(named.replace(pattern, replacement));
+        }
+    }
+    let Some(mut start) = named.find("&#") else {
+        return named.into_owned();
+    };
+    let mut output = String::with_capacity(named.len());
     let mut cursor = 0;
-    while let Some(start_rel) = output[cursor..].find("&#") {
-        let start = cursor + start_rel;
-        let Some(end_rel) = output[start..].find(';') else {
+    loop {
+        output.push_str(&named[cursor..start]);
+        let Some(end_rel) = named[start..].find(';') else {
+            output.push_str(&named[start..]);
             break;
         };
         let end = start + end_rel;
-        let token = &output[start + 2..end];
+        let token = &named[start + 2..end];
         let parsed = if let Some(hex) = token.strip_prefix('x').or_else(|| token.strip_prefix('X'))
         {
             u32::from_str_radix(hex, 16).ok()
         } else {
             token.parse::<u32>().ok()
         };
-        let Some(codepoint) = parsed.and_then(char::from_u32) else {
-            cursor = end + 1;
-            continue;
+        if let Some(codepoint) = parsed.and_then(char::from_u32) {
+            output.push(codepoint);
+        } else {
+            output.push_str(&named[start..=end]);
+        }
+        cursor = end + 1;
+        let Some(relative) = named[cursor..].find("&#") else {
+            output.push_str(&named[cursor..]);
+            break;
         };
-        output.replace_range(start..=end, &codepoint.to_string());
-        cursor = start + codepoint.len_utf8();
+        start = cursor + relative;
     }
     output
 }
-fn strip_cdata(input: &str) -> String {
+fn strip_cdata(input: &str) -> Cow<'_, str> {
+    if !input.contains("<![CDATA[") {
+        return Cow::Borrowed(input);
+    }
     let mut value = input.to_owned();
     while let Some(start) = value.find("<![CDATA[") {
         let Some(end_rel) = value[start + 9..].find("]]>") else {
@@ -1477,10 +1496,13 @@ fn strip_cdata(input: &str) -> String {
         let content = value[start + 9..end].to_owned();
         value.replace_range(start..end + 3, &content);
     }
-    value
+    Cow::Owned(value)
 }
 
-fn strip_nested_markup(input: &str) -> String {
+fn strip_nested_markup(input: &str) -> Cow<'_, str> {
+    if !input.contains('<') {
+        return Cow::Borrowed(input);
+    }
     let mut output = String::new();
     let mut cursor = 0;
     while let Some(relative_start) = input[cursor..].find('<') {
@@ -1525,7 +1547,7 @@ fn strip_nested_markup(input: &str) -> String {
             .map_or(input.len(), |end| tag_end + 1 + end + closing.len());
     }
     output.push_str(&input[cursor..]);
-    output
+    Cow::Owned(output)
 }
 
 fn find_scalar_closing_tag(text: &str, start: usize, name: &str) -> Option<usize> {
@@ -2123,6 +2145,65 @@ fn civil_from_days(days: i64) -> (i64, i64, i64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn entity_decoding_keeps_ordered_named_and_numeric_semantics() {
+        for (source, expected) in [
+            ("plain 😀 text", "plain 😀 text"),
+            ("&amp;lt;&amp;gt;&amp;quot;&amp;apos;", "<>\"'"),
+            ("&amp;amp;", "&amp;"),
+            ("&#65;&#x1f600;&#X42;", "A😀B"),
+            ("&amp;#65;", "A"),
+            ("&#38;#65;", "&#65;"),
+            ("a&#38;&#35;65;z", "a&#65;z"),
+            ("&#bogus;&#65;&#x110000;", "&#bogus;A&#x110000;"),
+            ("before&#unterminated", "before&#unterminated"),
+        ] {
+            assert_eq!(decode_entities(source), expected, "{source}");
+        }
+    }
+
+    #[test]
+    fn entity_validation_skips_opaque_sections_and_keeps_error_offsets() {
+        validate_xml_entities(
+            "<tag a='&amp;'>ok</tag><!--&invalid;--><![CDATA[&invalid;]]><?x &invalid;?>&#65;",
+            100,
+        )
+        .unwrap();
+        assert!(
+            matches!(validate_xml_entities("é<q>&invalid;", 100), Err(Error::Invalid(message)) if message.contains("offset 105"))
+        );
+        assert!(
+            matches!(validate_xml_entities("a<!--missing", 100), Err(Error::Invalid(message)) if message.contains("offset 105"))
+        );
+        assert!(
+            matches!(validate_xml_entities("a&#65", 100), Err(Error::Invalid(message)) if message.contains("offset 101"))
+        );
+    }
+
+    #[test]
+    fn typed_dictionary_replacements_remove_only_replaced_provenance() {
+        let xml = br#"<plist><dict>
+            <key>a</key><date>2025-01-01T00:00:00Z</date>
+            <key>b</key><dict><key>x</key><date>2025-01-01T00:00:00Z</date></dict>
+            <key>c</key><date>2025-01-01T00:00:00Z</date>
+            <key>a</key><string>ordinary</string>
+            <key>b</key><dict><key>y</key><date>2025-01-01T00:00:00Z</date></dict>
+        </dict></plist>"#;
+        let decoded = read_with_provenance(xml, "fixture".into()).unwrap();
+        assert_eq!(
+            decoded.typed_scalar_paths,
+            vec![
+                vec![ValuePathSegment::Key("c".into())],
+                vec![
+                    ValuePathSegment::Key("b".into()),
+                    ValuePathSegment::Key("y".into())
+                ],
+            ]
+        );
+        assert_eq!(decoded.report.value["a"], "ordinary");
+        assert!(decoded.report.value["b"].get("x").is_none());
+    }
 
     #[test]
     fn decodes_openstep_dictionary_arrays_strings_and_data() {

@@ -1218,7 +1218,7 @@ fn descriptor_observation_source() -> &'static str {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn descriptor_observation_source() -> &'static str {
     "unsupported.macos-process-descriptor-observer"
 }

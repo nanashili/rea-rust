@@ -12,7 +12,7 @@ use std::{
     cmp::Ordering,
     collections::BTreeMap,
     fmt,
-    io::{self, Write},
+    io::{self, BufWriter, Write},
 };
 
 /// Canonicalization failed rather than silently changing source meaning.
@@ -46,11 +46,13 @@ impl std::error::Error for Error {
 
 struct Key {
     text: JsonText,
-    units: Vec<u16>,
+    // ASCII byte order is UTF-16 order. Borrow those bytes from `text` rather
+    // than allocating a second representation for ordinary JSON field names.
+    units: Option<Vec<u16>>,
 }
 impl PartialEq for Key {
     fn eq(&self, other: &Self) -> bool {
-        self.units == other.units
+        self.cmp(other) == Ordering::Equal
     }
 }
 impl Eq for Key {}
@@ -61,7 +63,25 @@ impl PartialOrd for Key {
 }
 impl Ord for Key {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.units.cmp(&other.units)
+        match (&self.units, &other.units) {
+            (None, None) => self.text.as_str().cmp(&other.text.as_str()),
+            (Some(left), Some(right)) => left.cmp(right),
+            (None, Some(right)) => self
+                .text
+                .as_str()
+                .expect("ASCII key")
+                .bytes()
+                .map(u16::from)
+                .cmp(right.iter().copied()),
+            (Some(left), None) => left.iter().copied().cmp(
+                other
+                    .text
+                    .as_str()
+                    .expect("ASCII key")
+                    .bytes()
+                    .map(u16::from),
+            ),
+        }
     }
 }
 
@@ -80,7 +100,11 @@ impl<'de> Deserialize<'de> for Object<'de> {
             ) -> Result<Self::Value, M::Error> {
                 let mut fields = BTreeMap::new();
                 while let Some((text, value)) = access.next_entry::<JsonText, &'de RawValue>()? {
-                    let units = text.utf16_units().map_err(de::Error::custom)?;
+                    let units = if text.as_str().is_some_and(str::is_ascii) {
+                        None
+                    } else {
+                        Some(text.utf16_units().map_err(de::Error::custom)?)
+                    };
                     // JSON.parse's duplicate-key rule is last value wins.
                     fields.insert(Key { text, units }, value);
                 }
@@ -91,10 +115,19 @@ impl<'de> Deserialize<'de> for Object<'de> {
     }
 }
 
+// Keep one continuation per active container, rather than several pending
+// operations for every child. Arrays borrow their unconsumed source directly.
 enum Pending<'a> {
     Value(&'a RawValue, usize),
-    Bytes(&'static [u8]),
-    Text(JsonText),
+    Array {
+        remaining: &'a str,
+        depth: usize,
+    },
+    Object {
+        fields: std::collections::btree_map::IntoIter<Key, &'a RawValue>,
+        depth: usize,
+        first: bool,
+    },
 }
 
 /// Write canonical JSON, preserving escaped lone surrogates in keys and values.
@@ -107,9 +140,52 @@ pub fn write(raw: &RawValue, mut output: impl Write) -> Result<(), Error> {
     let mut numbers = ryu_js::Buffer::new();
     while let Some(next) = pending.pop() {
         match next {
-            Pending::Bytes(bytes) => output.write_all(bytes).map_err(Error::Io)?,
-            Pending::Text(text) => {
-                serde_json::to_writer(&mut output, &text).map_err(Error::Json)?
+            Pending::Array { remaining, depth } => {
+                let remaining = remaining.trim_start_matches([' ', '\t', '\r', '\n']);
+                if remaining.is_empty() {
+                    output.write_all(b"]").map_err(Error::Io)?;
+                    continue;
+                }
+                let remaining = if let Some(rest) = remaining.strip_prefix(',') {
+                    output.write_all(b",").map_err(Error::Io)?;
+                    rest
+                } else {
+                    remaining
+                };
+                // RawValue already validates the entire array, including its
+                // separators. StreamDeserializer locates one borrowed child.
+                let mut values =
+                    serde_json::Deserializer::from_str(remaining).into_iter::<&RawValue>();
+                let value = values
+                    .next()
+                    .expect("validated array child")
+                    .map_err(Error::Json)?;
+                pending.push(Pending::Array {
+                    remaining: &remaining[values.byte_offset()..],
+                    depth,
+                });
+                pending.push(Pending::Value(value, depth));
+            }
+            Pending::Object {
+                mut fields,
+                depth,
+                first,
+            } => {
+                if let Some((key, value)) = fields.next() {
+                    if !first {
+                        output.write_all(b",").map_err(Error::Io)?;
+                    }
+                    serde_json::to_writer(&mut output, &key.text).map_err(Error::Json)?;
+                    output.write_all(b":").map_err(Error::Io)?;
+                    pending.push(Pending::Object {
+                        fields,
+                        depth,
+                        first: false,
+                    });
+                    pending.push(Pending::Value(value, depth));
+                } else {
+                    output.write_all(b"}").map_err(Error::Io)?;
+                }
             }
             Pending::Value(raw, depth) => {
                 if depth > 1000 {
@@ -120,34 +196,30 @@ pub fn write(raw: &RawValue, mut output: impl Write) -> Result<(), Error> {
                         let Object(fields) =
                             serde_json::from_str(raw.get()).map_err(Error::Json)?;
                         output.write_all(b"{").map_err(Error::Io)?;
-                        pending.push(Pending::Bytes(b"}"));
-                        let length = fields.len();
-                        for (index, (key, value)) in fields.into_iter().rev().enumerate() {
-                            pending.push(Pending::Value(value, depth + 1));
-                            pending.push(Pending::Bytes(b":"));
-                            pending.push(Pending::Text(key.text));
-                            if index + 1 < length {
-                                pending.push(Pending::Bytes(b","));
-                            }
-                        }
+                        pending.push(Pending::Object {
+                            fields: fields.into_iter(),
+                            depth: depth + 1,
+                            first: true,
+                        });
                     }
                     Some(b'[') => {
-                        let values: Vec<&RawValue> =
-                            serde_json::from_str(raw.get()).map_err(Error::Json)?;
                         output.write_all(b"[").map_err(Error::Io)?;
-                        pending.push(Pending::Bytes(b"]"));
-                        let length = values.len();
-                        for (index, value) in values.into_iter().rev().enumerate() {
-                            pending.push(Pending::Value(value, depth + 1));
-                            if index + 1 < length {
-                                pending.push(Pending::Bytes(b","));
-                            }
-                        }
+                        let source = raw.get();
+                        pending.push(Pending::Array {
+                            remaining: &source[1..source.len() - 1],
+                            depth: depth + 1,
+                        });
                     }
                     Some(b'"') => {
-                        let text: JsonText =
-                            serde_json::from_str(raw.get()).map_err(Error::Json)?;
-                        serde_json::to_writer(&mut output, &text).map_err(Error::Json)?;
+                        if !raw.get().as_bytes().contains(&b'\\') {
+                            // Validated strings without escapes are already in
+                            // canonical form; avoid copying large text values.
+                            output.write_all(raw.get().as_bytes()).map_err(Error::Io)?;
+                        } else {
+                            let text: JsonText =
+                                serde_json::from_str(raw.get()).map_err(Error::Json)?;
+                            serde_json::to_writer(&mut output, &text).map_err(Error::Json)?;
+                        }
                     }
                     Some(b't' | b'f' | b'n') => {
                         output.write_all(raw.get().as_bytes()).map_err(Error::Io)?
@@ -182,7 +254,11 @@ impl Write for HashWriter {
 /// Returns the same representation/depth failures as [`write`].
 pub fn digest_raw(raw: &RawValue) -> Result<String, Error> {
     let mut output = HashWriter(Sha256::new());
-    write(raw, &mut output)?;
+    {
+        let mut buffered = BufWriter::new(&mut output);
+        write(raw, &mut buffered)?;
+        buffered.flush().map_err(Error::Io)?;
+    }
     Ok(format!("{:x}", output.0.finalize()))
 }
 

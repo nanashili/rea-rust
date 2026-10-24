@@ -38,6 +38,10 @@ process (no engine was launched); OS caches were not flushed; inputs are
 synthetic. They measure static CLI operations, not MCP session overhead, agent
 token cost or full provider investigations.
 
+The [CPU and memory audit](docs/performance.md) compares further Rust optimizations
+against this repository's original Rust code, with reproducible benchmarks and
+raw measurements.
+
 ### Native Ghidra worker
 
 Ghidra analysis runs in `ghidra-rust-worker/`, a Rust worker that replaces the

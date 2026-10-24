@@ -249,9 +249,7 @@ fn fuse_state(byte: u8) -> &'static str {
     }
 }
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
+    memchr::memmem::find(haystack, needle)
 }
 fn is_macho_magic(bytes: &[u8]) -> bool {
     matches!(
@@ -355,6 +353,29 @@ mod tests {
                 .limitations
                 .iter()
                 .any(|item| item.contains("unknown, not disabled"))
+        );
+    }
+
+    #[test]
+    fn scans_multiple_wires_with_offsets_and_enforces_capacity() {
+        let mut bytes = b"\x7fELF".to_vec();
+        for _ in 0..MAX_SENTINELS_PER_SLICE {
+            bytes.extend_from_slice(SENTINEL);
+            bytes.extend_from_slice(&[1, 1, b'1']);
+        }
+        let report = inspect(&bytes, String::new()).unwrap();
+        let sentinels = &report.slices[0].sentinels;
+        assert_eq!(sentinels.len(), MAX_SENTINELS_PER_SLICE);
+        assert_eq!(
+            sentinels.last().unwrap().sentinel_offset,
+            4 + (MAX_SENTINELS_PER_SLICE - 1) * (SENTINEL.len() + 3)
+        );
+        assert!(sentinels.iter().all(|wire| wire.complete));
+        bytes.extend_from_slice(SENTINEL);
+        assert!(
+            inspect(&bytes, String::new())
+                .unwrap_err()
+                .contains("capacity")
         );
     }
 }

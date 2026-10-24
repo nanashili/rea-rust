@@ -4,6 +4,19 @@ use serde_json::value::RawValue;
 use std::io;
 
 #[test]
+fn ascii_keys_compare_with_unicode_prefixes_and_lone_surrogates() {
+    let raw: &RawValue =
+        serde_json::from_str(r#"{"é":7,"a😀":6,"a\ud800":5,"aé":4,"a~":3,"aa":2,"a":1,"":0}"#)
+            .unwrap();
+    let mut output = Vec::new();
+    canonical_json::write(raw, &mut output).unwrap();
+    assert_eq!(
+        output,
+        r#"{"":0,"a":1,"aa":2,"a~":3,"aé":4,"a\ud800":5,"a😀":6,"é":7}"#.as_bytes()
+    );
+}
+
+#[test]
 fn agrees_with_original_rea_on_numbers_utf16_order_and_duplicate_keys() {
     // Generated with Node 24.18.0, digestCanonicalValue and canonicalize;
     // neither Rust serializer nor the function under test generated expectations.
@@ -74,5 +87,67 @@ fn does_not_swallow_a_failed_output_write() {
     let raw: &RawValue = serde_json::from_str("{}").unwrap();
     assert!(
         matches!(canonical_json::write(raw, Denied), Err(Error::Io(error)) if error.kind() == io::ErrorKind::PermissionDenied)
+    );
+}
+
+#[test]
+fn container_continuations_preserve_separators_and_nested_order() {
+    for (input, expected) in [
+        ("[ \n\t ]", "[]"),
+        (
+            "[ 1 ,\n [ ] , {\"z\":[],\"a\":{}} , 2 ]",
+            "[1,[],{\"a\":{},\"z\":[]},2]",
+        ),
+        (
+            r#"["a,b]}","\\",[true,false],null]"#,
+            r#"["a,b]}","\\",[true,false],null]"#,
+        ),
+        (
+            r#"{"z":0,"a":{"b":1,"b":2},"c":[{},[]]}"#,
+            r#"{"a":{"b":2},"c":[{},[]],"z":0}"#,
+        ),
+    ] {
+        let raw: &RawValue = serde_json::from_str(input).unwrap();
+        let mut bytes = Vec::new();
+        canonical_json::write(raw, &mut bytes).unwrap();
+        assert_eq!(bytes, expected.as_bytes());
+    }
+}
+
+#[test]
+fn unescaped_string_fast_path_matches_lossless_normalization() {
+    for (input, expected) in [
+        (r#""""#, r#""""#),
+        (
+            "\"ordinary / 😀 \u{2028}\u{2029}\"",
+            "\"ordinary / 😀 \u{2028}\u{2029}\"",
+        ),
+        (r#""\/\u0061\uD83D\uDE00""#, "\"/a😀\""),
+        (r#""\u0000\u000a\uD800""#, r#""\u0000\n\ud800""#),
+    ] {
+        let raw: &RawValue = serde_json::from_str(input).unwrap();
+        let mut bytes = Vec::new();
+        canonical_json::write(raw, &mut bytes).unwrap();
+        assert_eq!(bytes, expected.as_bytes());
+    }
+}
+
+#[test]
+fn wide_containers_keep_all_children_and_hash_the_emitted_bytes() {
+    use sha2::{Digest, Sha256};
+    let input = format!(
+        "[{}{{\"z\":0,\"a\":1}}]",
+        "[null,{},[],123],".repeat(10_000)
+    );
+    let raw: &RawValue = serde_json::from_str(&input).unwrap();
+    let mut bytes = Vec::new();
+    canonical_json::write(raw, &mut bytes).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+        serde_json::from_str::<serde_json::Value>(&input).unwrap()
+    );
+    assert_eq!(
+        canonical_json::digest_raw(raw).unwrap(),
+        format!("{:x}", Sha256::digest(&bytes))
     );
 }

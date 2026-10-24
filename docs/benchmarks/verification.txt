@@ -1,0 +1,36 @@
+Baseline revision: 1cccbf665b82bd6228c3a9272b431b259b9e9c06
+Rust toolchain: 1.93.1
+
+cargo test --locked -p rea-core -p rea-rust-analysis -p rea-mcp
+614 passed; 0 failed
+
+cargo test --locked -p rea-host fs::
+14 passed; 0 failed
+
+cargo test --locked -p rea-application --lib
+Before: 397 passed; 9 failed
+After: 397 passed; 9 failed
+Identical failures:
+il2cpp::field_layout_map::tests::distinguishes_missing_and_unknown_offsets
+il2cpp::field_layout_workflow::tests::reports_each_unresolved_owner_once
+javascript::feature_trace::tests::traces_matching_application_graph_and_links_native_evidence
+javascript::source_comparison::tests::ambiguous_paths_are_split
+javascript::source_comparison::tests::matches_exact_digest
+managed::native_verification::tests::classifies_decorated_candidates_as_inferred
+web::capture_comparison::tests::compares_http_request_metadata_and_body_shapes
+web::capture_comparison::tests::compares_websocket_connection_streams_as_a_group
+web::session_observation::tests::accepts_bounded_session_window
+
+Broader rea-host run: 89 passed; 1 failed; 2 ignored
+Failure: process::pty::tests::timeout_then_terminate_kills_group_including_grandchildren
+Reason: owned process group remained active after cleanup deadline
+The same targeted test fails on the baseline: 0 passed; 1 failed; 91 filtered out.
+
+cargo test --workspace --locked
+Blocked by pre-existing E0282 at crates/legacy/rea-runtime/src/mcp.rs:1192.
+
+cargo test --workspace --exclude rea-runtime --locked
+Blocked by missing bridge/native/{rea_lldb_tracer.py,ReaNativeUI.swift,NativeUIChildren.swift}, referenced by rea-tools-debug.
+
+Changed Rust files: rustfmt --check passed.
+Repository-wide cargo fmt --all -- --check reports pre-existing differences outside this change.
