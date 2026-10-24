@@ -1,0 +1,27 @@
+[
+  {
+    "path": "bridge/android/ReaJadxBridge.java",
+    "bytes": 27387,
+    "sha256": "a02b1ef0a4a40abd1ae310b9ee686ca163e0b59a3256df524c35b90ed17e9e63"
+  },
+  {
+    "path": "bridge/native/NativeUIChildren.swift",
+    "bytes": 879,
+    "sha256": "0bc2c5e124de2f070e2ec12c129d9402004ae539de2adff1bd896c183309be42"
+  },
+  {
+    "path": "bridge/native/ReaNativeUI.swift",
+    "bytes": 10933,
+    "sha256": "4413715438ea35edf9a872dd1cd2d4d7669ec8398fe3dc904fd0efad633a4615"
+  },
+  {
+    "path": "bridge/native/rea_lldb_tracer.py",
+    "bytes": 35098,
+    "sha256": "f8c5ffefa273202a15f88a03d853dc9fb93d27286ff600ed890fb5d1825f1d74"
+  },
+  {
+    "path": "bridge/native/test_rea_lldb_tracer.py",
+    "bytes": 14387,
+    "sha256": "f0d8384a77adce1847385b56d8029fdce482ae22a21cc48f1854e1ff36b74b67"
+  }
+]

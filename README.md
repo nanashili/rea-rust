@@ -17,30 +17,63 @@ no TypeScript fallback.
 
 ### Measured results
 
-Same machine (macOS arm64), same inputs, alternating fresh processes, three runs
-each. Both runtimes returned structurally identical Evidence. Original: Node
-24.18.0. Rust: 1.93.1 release build.
+**Rust started faster and used less memory in these tests. Java Ghidra handled
+one larger program that Rust Ghidra could not decompile.**
 
-| Workload | Runtime | Elapsed | CPU | Peak RSS |
-| --- | --- | ---: | ---: | ---: |
-| `--version` / `--help` | Original | 0.64 s | 0.93 s | ~315 MiB |
-| Small ELF inspection | Original | 0.55 s | 0.78 s | 346 MiB |
-| Small ELF inspection | Rust | < 0.01 s | < 0.01 s | 2.9 MiB |
-| ELF with 50,000 packages (5.6 MB JSON out) | Original | 1.01 s | 1.57 s | 500 MiB |
-| ELF with 50,000 packages (5.6 MB JSON out) | Rust | 0.17 s | 0.16 s | 59 MiB |
+We compared frozen TypeScript and Rust builds on the same Apple M1 Pro on
+24 October 2026. These results describe those builds, before the later Rust
+optimizations below. Lower times are better; one second is 1,000 milliseconds
+(ms). Each row uses seven sessions per version; repeated requests use 56 calls
+per version.
 
-On the 50,000-package workload the Rust binary is about 5.9x faster in wall
-time, uses 9.8x less CPU and 8.5x less memory. On small inputs, startup drops
-from over half a second and ~350 MiB to effectively instant and under 3 MiB.
+| What REA did                                     |   TypeScript |          Rust |
+| ------------------------------------------------ | -----------: | ------------: |
+| Start, then read build details from a Go program | 0.57 seconds | 0.064 seconds |
+| Start, then read a 25,000-package Rust test file | 0.89 seconds |  0.46 seconds |
+| Start, run nine Go checks and save results       | 1.15 seconds |  0.33 seconds |
+| Repeat a Go check while REA stays running        |       7.3 ms |       16.2 ms |
 
-Scope of these numbers: medians from macOS `time`; RSS is for the sole REA
-process (no engine was launched); OS caches were not flushed; inputs are
-synthetic. They measure static CLI operations, not MCP session overhead, agent
-token cost or full provider investigations.
+Startup explains much of the gain in the first three rows. Repeated Go metadata
+checks took longer in Rust. For the Go command, typical peak memory was
+**351 MiB for TypeScript versus 99 MiB for Rust**. MiB is a memory unit close to
+a megabyte; periodic measurements can miss brief spikes.
+
+All 84 metadata/startup runs completed, with the same tested analysis information
+and saved results. These were file-reading tasks with files already in the
+operating system's cache. Actual AI token costs were not measured. The
+[full comparison](experiments/analysis-efficiency/runtime-comparison/README.md)
+includes the raw results, exact versions, coverage gaps and reproduction steps.
 
 The [CPU and memory audit](docs/performance.md) compares further Rust optimizations
 against this repository's original Rust code, with reproducible benchmarks and
 raw measurements.
+
+### Ghidra decompilation
+
+Decompilation turns compiled functions back into C-like code. TypeScript used
+Java Ghidra 12.1.4; native REA used Rust Ghidra (`ghidra-decompiler` 2.1.0, based on
+Ghidra 12.2).
+
+| Same small C program                           | TypeScript + Java Ghidra | Native + Rust Ghidra |
+| ---------------------------------------------- | -----------------------: | -------------------: |
+| Start REA and get the first function's code    |             9.43 seconds |         0.39 seconds |
+| Start REA and get all three selected functions |             9.47 seconds |         0.43 seconds |
+| Request the same function again                |                  10.3 ms |               1.2 ms |
+| Peak memory for the complete session           |                1,022 MiB |              214 MiB |
+
+These are middle results from seven sessions per version. Most of the first-code
+difference was startup and preparation: once ready, the first decompilation
+request took about **16 ms in Java and 15 ms in Rust**. Both returned the three C
+functions and passed the checked source facts. Java displayed readable strings
+and names where Rust displayed addresses.
+
+**On the larger Go formatter, Java returned all three requested functions;
+Rust returned none because of an import-name collision.** That was one final
+attempt per engine, following qualification with the same outcome. The failed
+Rust attempt is not counted as faster decompilation. Different engine versions,
+analysis work and output quality limit the comparison. See the
+[Ghidra report](experiments/analysis-efficiency/runtime-comparison/GHIDRA.md)
+for code examples, exact timings and retained evidence.
 
 ### Native Ghidra worker
 

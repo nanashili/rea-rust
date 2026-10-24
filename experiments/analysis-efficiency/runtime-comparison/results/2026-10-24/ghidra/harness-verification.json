@@ -1,0 +1,32 @@
+{
+  "decompile_fixtures.py": {
+    "bytes": 17665,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/decompile_fixtures.py",
+    "sha256": "7aa33764e877127eaf186ea6ef76281720a4e213e4cf34e089221e1ea5a0a01e"
+  },
+  "fixtures.py": {
+    "bytes": 14934,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/fixtures.py",
+    "sha256": "4937d4373f48e65eb19f9219d85be8bb989a94a3963c2acfb7919103ba2f1120"
+  },
+  "prepare.py": {
+    "bytes": 20256,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/prepare.py",
+    "sha256": "9bc4d29287e1e44ee6372442f774e9fa50b974b6eef7ee5582d53815a1302d7d"
+  },
+  "prepare_decompile.py": {
+    "bytes": 18548,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/prepare_decompile.py",
+    "sha256": "1d091cd70223971945383b9e21aee290113a5488e42f8640f451a31a41a02fdf"
+  },
+  "run.py": {
+    "bytes": 25897,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/run.py",
+    "sha256": "b84380358e2e4ae9c6a158cbde9b930ec8b0c542466c102c2dd1c8ac2c9aa1d9"
+  },
+  "run_decompile.py": {
+    "bytes": 13963,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/run_decompile.py",
+    "sha256": "ebef26bcc580e5ee707d98e6c278911416078cd8d02be3bd8204675917686bc2"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "runs": [
+    {
+      "receipt": {
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/qualification/results.json",
+        "bytes": 47278,
+        "sha256": "ee56a89131504bed52169ea1eefaa2539463c6750d26f73fdc9bc6ba046b5dd7"
+      },
+      "qualification_only": true,
+      "failures": [
+        {
+          "task": "inspect_rust_stress",
+          "sample": 1,
+          "lane": "typescript",
+          "error": "RuntimeError: CLI exit 1: "
+        },
+        {
+          "task": "inspect_rust_stress",
+          "sample": 1,
+          "lane": "native",
+          "error": "RuntimeError: CLI exit 1: "
+        },
+        {
+          "task": "retained_session",
+          "sample": 1,
+          "lane": "typescript",
+          "error": "RuntimeError: retained_complete: tool failure: {'_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"invalid_request\",\"category\":\"invalid_input\",\"message\":\"Analysis input is invalid. Check the arguments and try again.\",\"retryable\":true,\"remediation\":{\"action\":\"Correct the listed arguments and retry.\"},\"details\":{\"operation\":\"get_evidence_bundle\",\"issues\":[{\"path\":[\"filters\"],\"reason\":\"invalid_value\",\"message\":\"Record filters require detail: summary; complete returns the canonical bundle.\",\"expected\":\"detail: summary\"}]}}}'}], 'isError': True}"
+        },
+        {
+          "task": "retained_session",
+          "sample": 1,
+          "lane": "native",
+          "error": "RuntimeError: retained_complete: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"invalid_request\",\"category\":\"invalid_input\",\"message\":\"Analysis input is invalid. Check the arguments and try again.\",\"retryable\":true,\"remediation\":{\"action\":\"Correct the listed arguments and retry.\"},\"details\":{\"issues\":[{\"path\":[\"filters\"],\"reason\":\"invalid_value\",\"message\":\"Record filters require detail: summary; complete returns the canonical bundle.\",\"expected\":\"detail: summary\"}],\"operation\":\"get_evidence_bundle\"}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}"
+        }
+      ]
+    },
+    {
+      "receipt": {
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/qualification-v3/results.json",
+        "bytes": 48541,
+        "sha256": "915d7e97499bec5d20378b634d31d64694da0d924e331f89cac39403e6496178"
+      },
+      "qualification_only": true,
+      "failures": [
+        {
+          "task": "retained_session",
+          "sample": 1,
+          "lane": "typescript",
+          "error": "RuntimeError: export: tool failure: {'content': [{'type': 'text', 'text': 'Input validation error: Invalid arguments for tool export_evidence_bundle: path: path must be an absolute local filesystem path (for example /tmp/rea/evidence.json or C:\\\\rea\\\\evidence.json)'}], 'isError': True}"
+        },
+        {
+          "task": "retained_session",
+          "sample": 1,
+          "lane": "native",
+          "error": "RuntimeError: export: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"invalid_request\",\"category\":\"invalid_input\",\"message\":\"Analysis input is invalid. Check the arguments and try again.\",\"retryable\":true,\"remediation\":{\"action\":\"Correct the listed arguments and retry.\"},\"details\":{\"operation\":\"export_evidence_bundle\",\"issues\":[{\"path\":[\"path\"],\"reason\":\"invalid_value\",\"message\":\"path must be an absolute local filesystem path (for example /tmp/rea/evidence.json or C:\\\\\\\\rea\\\\\\\\evidence.json)\"}]}}}'}], 'isError': True}"
+        }
+      ]
+    },
+    {
+      "receipt": {
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/qualification-v4/results.json",
+        "bytes": 72871,
+        "sha256": "be74bee75e4535e6bc35bc78e8f85f09cd0da1a90e1aac7318507bf0819a07a3"
+      },
+      "qualification_only": true,
+      "failures": []
+    }
+  ],
+  "oversized_rust_failure": {
+    "code": "resource_constraint",
+    "category": "resource_constraint",
+    "message": "Selected artifact /Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/fixtures/rust-stress.elf: normalized output exceeds 8388608 bytes",
+    "retryable": false,
+    "remediation": {
+      "action": "Discover retained records with get_evidence_bundle and detail: summary, then inspect compatible records through inspect_analysis_view using an exact Evidence reference. Export complete retained session evidence through export_evidence_bundle to a caller-selected path, or use complete CLI JSON output. The connection remains usable."
+    },
+    "details": {
+      "operation": "inspect_rust_binary",
+      "reason": "Selected artifact /Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/fixtures/rust-stress.elf: normalized output exceeds 8388608 bytes",
+      "reported_limits": {
+        "maximum_output_bytes": 8388608
+      },
+      "resource": "transport"
+    }
+  },
+  "note": "All qualification timings are excluded from the measured summaries."
+}

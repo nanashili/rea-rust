@@ -1,0 +1,173 @@
+{
+  "oracle_revision": "decompile-fixtures-v1",
+  "targets": {
+    "gofmt": {
+      "binary": {
+        "bytes": 2952114,
+        "path": "gofmt",
+        "sha256": "fb5bc1241a2e1a218afb069d7ee5e4269c3fe918a38fc03190fbc9cbb2bb69b1",
+        "source": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt"
+      },
+      "go_version_oracle": {
+        "command": [
+          "/opt/homebrew/bin/go",
+          "version",
+          "-m",
+          "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/gofmt"
+        ],
+        "stderr": "",
+        "stdout": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/gofmt: go1.26.5\n\tpath\tcmd/gofmt\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-gcflags=cmd/...=-dwarf=false\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n"
+      },
+      "source_facts": {
+        "expectations": {
+          "gofmtMain": {
+            "calls": ["processFile", "initParserMode", "initRewrite"]
+          },
+          "main": {
+            "calls": ["gofmtMain"],
+            "literals": ["2 << 20"]
+          },
+          "processFile": {
+            "calls": ["readFile", "format", "writeFile"],
+            "expressions": ["bytes.Equal(src, res)"]
+          }
+        },
+        "gofmtMain": {
+          "line": 382,
+          "source_file": "/opt/homebrew/Cellar/go/1.26.5/libexec/src/cmd/gofmt/gofmt.go"
+        },
+        "main": {
+          "line": 366,
+          "source_file": "/opt/homebrew/Cellar/go/1.26.5/libexec/src/cmd/gofmt/gofmt.go"
+        },
+        "processFile": {
+          "line": 238,
+          "source_file": "/opt/homebrew/Cellar/go/1.26.5/libexec/src/cmd/gofmt/gofmt.go"
+        }
+      },
+      "source_files": [
+        {
+          "bytes": 15695,
+          "path": "gofmt.go",
+          "sha256": "17df60fb5d231037f522d1476dd956cdccff58a314c1309e20cc8efc64d4d3c8",
+          "source": "/opt/homebrew/Cellar/go/1.26.5/libexec/src/cmd/gofmt/gofmt.go"
+        },
+        {
+          "bytes": 5166,
+          "path": "internal.go",
+          "sha256": "126694172e9e701d8f8d33ff6d40fde2cfab53c2695b6e4adcdc5223c9294a48",
+          "source": "/opt/homebrew/Cellar/go/1.26.5/libexec/src/cmd/gofmt/internal.go"
+        }
+      ],
+      "symbols": {
+        "gofmtMain": {
+          "address": "1001191b0",
+          "kind": "T",
+          "raw_name": "main.gofmtMain"
+        },
+        "main": {
+          "address": "100119070",
+          "kind": "T",
+          "raw_name": "main.main"
+        },
+        "processFile": {
+          "address": "100118610",
+          "kind": "T",
+          "raw_name": "main.processFile"
+        }
+      }
+    },
+    "small": {
+      "binary": {
+        "bytes": 51568,
+        "path": "inventory-debug",
+        "sha256": "cf90f7768723a8dcb992ab86d65d56018b9910104fdf6b31ff96373030e617b4"
+      },
+      "compile": {
+        "command": [
+          "/usr/bin/cc",
+          "-O0",
+          "-g",
+          "-fno-inline",
+          "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/inventory.c",
+          "-o",
+          "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/inventory-debug"
+        ],
+        "compiler": {
+          "command": ["/usr/bin/cc", "--version"],
+          "stderr": "",
+          "stdout": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.2.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin\n"
+        }
+      },
+      "expected_calls": {
+        "rea_ghidra_inventory_branch": ["rea_ghidra_inventory_leaf"],
+        "rea_ghidra_inventory_entry": [
+          "rea_ghidra_inventory_branch",
+          "rea_ghidra_inventory_indirect"
+        ]
+      },
+      "global_symbol": {
+        "address": "0000000100008000",
+        "kind": "D",
+        "raw_name": "_rea_ghidra_inventory_global"
+      },
+      "source": {
+        "bytes": 6052,
+        "path": "inventory.c",
+        "sha256": "5aae850103e68621c5a06dbdea8bfd594b5933639563fd0a6bff1e38fde2b188",
+        "source": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/tests/conformance/ghidra/inventory.c"
+      },
+      "source_facts": {
+        "expectations": {
+          "rea_ghidra_inventory_branch": {
+            "calls": ["rea_ghidra_inventory_leaf"],
+            "expressions": ["value > 10", "-value"],
+            "literals": ["10"]
+          },
+          "rea_ghidra_inventory_entry": {
+            "calls": [
+              "rea_ghidra_inventory_branch",
+              "rea_ghidra_inventory_indirect",
+              "rea_ghidra_inventory_dense_switch"
+            ],
+            "literals": ["35", "100"]
+          },
+          "rea_ghidra_inventory_leaf": {
+            "calls": ["puts"],
+            "expressions": ["value + rea_ghidra_inventory_global"],
+            "literals": ["REA_GHIDRA_LEAF_VALUE"]
+          }
+        },
+        "rea_ghidra_inventory_branch": {
+          "line": 60,
+          "source_file": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/inventory.c"
+        },
+        "rea_ghidra_inventory_entry": {
+          "line": 143,
+          "source_file": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/inventory.c"
+        },
+        "rea_ghidra_inventory_leaf": {
+          "line": 42,
+          "source_file": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/inventory.c"
+        }
+      },
+      "symbols": {
+        "rea_ghidra_inventory_branch": {
+          "address": "000000010000056c",
+          "kind": "T",
+          "raw_name": "_rea_ghidra_inventory_branch"
+        },
+        "rea_ghidra_inventory_entry": {
+          "address": "0000000100000b6c",
+          "kind": "T",
+          "raw_name": "_rea_ghidra_inventory_entry"
+        },
+        "rea_ghidra_inventory_leaf": {
+          "address": "00000001000004f8",
+          "kind": "T",
+          "raw_name": "_rea_ghidra_inventory_leaf"
+        }
+      }
+    }
+  }
+}

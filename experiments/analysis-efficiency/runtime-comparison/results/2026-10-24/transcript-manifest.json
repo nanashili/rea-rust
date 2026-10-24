@@ -1,0 +1,142 @@
+[
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-1-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-1-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-2-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-2-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-3-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-3-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-4-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-4-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-5-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-5-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-6-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-6-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-7-typescript.json",
+    "bytes": 3239354,
+    "sha256": "101867f011de4c9d7cf5b6be48e8cff3c274c76e2d7dee3a5e64bcd4effab929"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/catalog-7-native.json",
+    "bytes": 3246642,
+    "sha256": "69026882b573b6b05cf0cb16ce11c6b86518633a3ab6ce892018c0b12f8179cb"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-1-typescript.json",
+    "bytes": 3331963,
+    "sha256": "92456c75c9d7dca26fde89e7d80231f936a4cae8d856d339b7befefc5aa76906"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-1-native.json",
+    "bytes": 3339251,
+    "sha256": "029bbee17025c72d80b5bfcab915bc85f35b1dcde110b1ada4ccdea1966efae5"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-2-native.json",
+    "bytes": 3339251,
+    "sha256": "ef2df3ca535de02efb1a3cca4e23d1bbc0e4ef2024bca116c1c92250f7fcea3a"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-2-typescript.json",
+    "bytes": 3331963,
+    "sha256": "b17ede9bfe69d52f4427c572cc5f5448085334224c93b2f57ae4edc26dc44f2a"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-3-typescript.json",
+    "bytes": 3331963,
+    "sha256": "42a3c15af11edb7c9f2df82e6f71fa590ccb76478af6a67b89c9351cd495665b"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-3-native.json",
+    "bytes": 3339251,
+    "sha256": "f19717f33f9fed27d5a3f446482f48e374f4895a375f8a62fedef2b538121e60"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-4-native.json",
+    "bytes": 3339251,
+    "sha256": "1506c550f7973cdcc299659bd63366e605a4d474698e08d91daea1c6766193f6"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-4-typescript.json",
+    "bytes": 3331963,
+    "sha256": "9939c136f6b23ca743498639adb36b294362eae4d34d49d6d034d7bdd5fce7e5"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-5-typescript.json",
+    "bytes": 3331963,
+    "sha256": "6fa6b28c958892601c0e1b9515ea9a4a3bcb352d24acb2a81ae926665928d3f5"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-5-native.json",
+    "bytes": 3339251,
+    "sha256": "8e9232a5ce14f4df4513222ce5322940d507368ba043e20ba685f353cf20085d"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-6-native.json",
+    "bytes": 3339251,
+    "sha256": "5da67e5ca3e8254ae1e5e85a9209ccd40275486afe9e7bd139b784d9ae55f88b"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-6-typescript.json",
+    "bytes": 3331963,
+    "sha256": "905f2ebed148092a119b55d397501293c98a2dda59acb4c2f4be6aa7946d0691"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-7-typescript.json",
+    "bytes": 3331963,
+    "sha256": "9e819c77770438e1617f4964971aab3bcbd326e277417c6d2484431f9d433f98"
+  },
+  {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/measured-final/retained_session-7-native.json",
+    "bytes": 3339251,
+    "sha256": "e675c57a503710469dfb6ecf8caff69aa2c9ecafbb8f34a9fa6562effae4b5a3"
+  }
+]

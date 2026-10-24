@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "commands": {
+    "archive": [
+      "git",
+      "archive",
+      "--format=tar",
+      "833136507dd79d959340b09862a53af344e4f1b3"
+    ],
+    "typescript_dependency_check": [
+      "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+      "scripts/check-dependency-install.mjs"
+    ],
+    "typescript_build": [
+      "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/npm",
+      "run",
+      "compile"
+    ],
+    "typescript_check": [
+      "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+      "node_modules/typescript/bin/tsc",
+      "--noEmit"
+    ],
+    "native_check": [
+      "cargo",
+      "+1.93.1",
+      "check",
+      "--locked",
+      "-p",
+      "rea",
+      "--manifest-path",
+      "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/native/Cargo.toml"
+    ],
+    "native_build": [
+      "cargo",
+      "+1.93.1",
+      "build",
+      "--locked",
+      "--release",
+      "-p",
+      "rea",
+      "--manifest-path",
+      "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/native/Cargo.toml"
+    ]
+  },
+  "host": {
+    "system": "Darwin",
+    "release": "27.2.0",
+    "machine": "arm64",
+    "processor": "arm",
+    "sw_vers": {
+      "command": ["sw_vers"],
+      "returncode": 0,
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+      "stderr": ""
+    },
+    "sysctl -n hw.model": {
+      "command": ["sysctl", "-n", "hw.model"],
+      "returncode": 0,
+      "stdout": "MacBookPro18,1",
+      "stderr": ""
+    },
+    "sysctl -n hw.ncpu": {
+      "command": ["sysctl", "-n", "hw.ncpu"],
+      "returncode": 0,
+      "stdout": "10",
+      "stderr": ""
+    },
+    "sysctl -n hw.memsize": {
+      "command": ["sysctl", "-n", "hw.memsize"],
+      "returncode": 0,
+      "stdout": "34359738368",
+      "stderr": ""
+    }
+  },
+  "toolchains": {
+    "node": "v24.18.0",
+    "node_sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+    "npm": "11.16.0",
+    "typescript": "Version 7.0.2",
+    "cargo": "cargo 1.93.1 (083ac5135 2025-12-15)",
+    "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+  },
+  "typescript_package_lock": {
+    "baseline_sha256": "b0d2cf0da353f85a24e7de55521864fb1eae986d5469ef64ee932878dc5b823e",
+    "checkout_sha256": "b0d2cf0da353f85a24e7de55521864fb1eae986d5469ef64ee932878dc5b823e",
+    "dependency_sections_equal": true
+  },
+  "typescript_installation": {
+    "node_modules_reused_symlink": true,
+    "node_modules_target": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/node_modules",
+    "installed_package_lock_sha256": "62c7c92f3195b4601e74f14df70de17d074cac84e6382d1f5bbec98f51558bb7",
+    "direct_dependency_versions": {
+      "@babel/parser": {
+        "expected": "8.0.4",
+        "installed": "8.0.4"
+      },
+      "@babel/types": {
+        "expected": "8.0.4",
+        "installed": "8.0.4"
+      },
+      "@clack/prompts": {
+        "expected": "1.7.0",
+        "installed": "1.7.0"
+      },
+      "@electron/asar": {
+        "expected": "4.2.0",
+        "installed": "4.2.0"
+      },
+      "@fast-check/vitest": {
+        "expected": "0.5.0",
+        "installed": "0.5.0"
+      },
+      "@jridgewell/trace-mapping": {
+        "expected": "0.3.31",
+        "installed": "0.3.31"
+      },
+      "@lydell/node-pty": {
+        "expected": "1.1.0",
+        "installed": "1.1.0"
+      },
+      "@modelcontextprotocol/client": {
+        "expected": "2.3.1",
+        "installed": "2.3.1"
+      },
+      "@modelcontextprotocol/server": {
+        "expected": "2.3.1",
+        "installed": "2.3.1"
+      },
+      "@stryker-mutator/core": {
+        "expected": "10.0.0",
+        "installed": "10.0.0"
+      },
+      "@stryker-mutator/typescript-checker": {
+        "expected": "10.0.0",
+        "installed": "10.0.0"
+      },
+      "@stryker-mutator/vitest-runner": {
+        "expected": "10.0.0",
+        "installed": "10.0.0"
+      },
+      "@types/cross-spawn": {
+        "expected": "6.0.6",
+        "installed": "6.0.6"
+      },
+      "@types/node": {
+        "expected": "26.6.4",
+        "installed": "26.6.4"
+      },
+      "@types/semver": {
+        "expected": "7.7.1",
+        "installed": "7.7.1"
+      },
+      "@types/write-file-atomic": {
+        "expected": "4.0.3",
+        "installed": "4.0.3"
+      },
+      "@types/ws": {
+        "expected": "8.18.1",
+        "installed": "8.18.1"
+      },
+      "@vitest/coverage-v8": {
+        "expected": "5.0.3",
+        "installed": "5.0.3"
+      },
+      "@xmldom/xmldom": {
+        "expected": "0.9.12",
+        "installed": "0.9.12"
+      },
+      "@xterm/addon-serialize": {
+        "expected": "0.14.0",
+        "installed": "0.14.0"
+      },
+      "@xterm/headless": {
+        "expected": "6.0.0",
+        "installed": "6.0.0"
+      },
+      "@zip.js/zip.js": {
+        "expected": "2.15.0",
+        "installed": "2.15.0"
+      },
+      "ajv": {
+        "expected": "8.20.0",
+        "installed": "8.20.0"
+      },
+      "ajv-formats": {
+        "expected": "3.0.1",
+        "installed": "3.0.1"
+      },
+      "canonicalize": {
+        "expected": "3.0.0",
+        "installed": "3.0.0"
+      },
+      "cborg": {
+        "expected": "6.1.3",
+        "installed": "6.1.3"
+      },
+      "cross-spawn": {
+        "expected": "7.0.6",
+        "installed": "7.0.6"
+      },
+      "diff": {
+        "expected": "9.0.0",
+        "installed": "9.0.0"
+      },
+      "evmole": {
+        "expected": "0.9.3",
+        "installed": "0.9.3"
+      },
+      "har-schema": {
+        "expected": "2.0.0",
+        "installed": "2.0.0"
+      },
+      "husky": {
+        "expected": "9.1.7",
+        "installed": "9.1.7"
+      },
+      "ignore": {
+        "expected": "7.0.6",
+        "installed": "7.0.6"
+      },
+      "incur": {
+        "expected": "0.6.1",
+        "installed": "0.6.1"
+      },
+      "isomorphic-git": {
+        "expected": "1.38.7",
+        "installed": "1.38.7"
+      },
+      "jscpd": {
+        "expected": "5.0.12",
+        "installed": "5.0.12"
+      },
+      "jsonc-parser": {
+        "expected": "3.3.1",
+        "installed": "3.3.1"
+      },
+      "knip": {
+        "expected": "6.39.0",
+        "installed": "6.39.0"
+      },
+      "lint-staged": {
+        "expected": "16.4.0",
+        "installed": "16.4.0"
+      },
+      "lossless-json": {
+        "expected": "4.3.1",
+        "installed": "4.3.1"
+      },
+      "openpgp": {
+        "expected": "6.3.2",
+        "installed": "6.3.2"
+      },
+      "oxfmt": {
+        "expected": "0.72.0",
+        "installed": "0.72.0"
+      },
+      "oxlint": {
+        "expected": "1.87.0",
+        "installed": "1.87.0"
+      },
+      "parse5": {
+        "expected": "8.0.1",
+        "installed": "8.0.1"
+      },
+      "pino": {
+        "expected": "10.4.0",
+        "installed": "10.4.0"
+      },
+      "playwright-core": {
+        "expected": "1.58.2",
+        "installed": "1.58.2"
+      },
+      "plist": {
+        "expected": "5.0.0",
+        "installed": "5.0.0"
+      },
+      "rolldown": {
+        "expected": "1.2.12",
+        "installed": "1.2.12"
+      },
+      "saxes": {
+        "expected": "6.0.0",
+        "installed": "6.0.0"
+      },
+      "semver": {
+        "expected": "7.8.5",
+        "installed": "7.8.5"
+      },
+      "smol-toml": {
+        "expected": "1.9.0",
+        "installed": "1.9.0"
+      },
+      "stream-chain": {
+        "expected": "4.2.6",
+        "installed": "4.2.6"
+      },
+      "stream-json": {
+        "expected": "3.7.0",
+        "installed": "3.7.0"
+      },
+      "tokenx": {
+        "expected": "1.3.0",
+        "installed": "1.3.0"
+      },
+      "tsx": {
+        "expected": "4.23.15",
+        "installed": "4.23.15"
+      },
+      "turbo": {
+        "expected": "2.11.7",
+        "installed": "2.11.7"
+      },
+      "typescript": {
+        "expected": "7.0.2",
+        "installed": "7.0.2"
+      },
+      "typescript-termux": {
+        "expected": "5.9.3",
+        "installed": "5.9.3"
+      },
+      "typescript6": {
+        "expected": "6.0.3",
+        "installed": "6.0.3"
+      },
+      "vitepress": {
+        "expected": "1.6.4",
+        "installed": "1.6.4"
+      },
+      "vitest": {
+        "expected": "5.0.3",
+        "installed": "5.0.3"
+      },
+      "write-file-atomic": {
+        "expected": "7.0.0",
+        "installed": "7.0.0"
+      },
+      "ws": {
+        "expected": "8.21.0",
+        "installed": "8.21.0"
+      },
+      "yaml": {
+        "expected": "2.9.0",
+        "installed": "2.9.0"
+      },
+      "zod": {
+        "expected": "4.4.3",
+        "installed": "4.4.3"
+      }
+    }
+  },
+  "build_profiles": {
+    "typescript": {
+      "source": "git-archive",
+      "profile": "compile",
+      "features": []
+    },
+    "native": {
+      "source": "native-snapshot",
+      "profile": "release",
+      "features": [],
+      "locked": true
+    }
+  },
+  "typescript_source_manifest_sha256": "53d7caa98ade1226e38933ef4592e415348114fc7b171c0091a478209f56f57f",
+  "native_source_manifest_sha256": "4a1d552b83bddb9cb45d8d95e5716c85a450f8c30cbfe230959153324740be78",
+  "builds_requested": {
+    "typescript": true,
+    "native": true
+  },
+  "bridge_support_manifest_sha256": "20c5ec2c5562514f19733142107f04b0b7b498de7d7391e4687a67efca7db806",
+  "bridge_support_current_source_equal": true,
+  "resume_validation": {
+    "checkout_native_manifest_sha256": "4a1d552b83bddb9cb45d8d95e5716c85a450f8c30cbfe230959153324740be78",
+    "checkout_native_source_still_equal": true,
+    "checkout_package_lock_dependency_sections_equal": true
+  },
+  "original_provenance": {
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/provenance.json",
+    "bytes": 406466,
+    "sha256": "67d79c34056d9b1f24281deaae85d9587d3f2accf2f326944e27b1b33be3d550"
+  },
+  "git": {
+    "repository_head": "833136507dd79d959340b09862a53af344e4f1b3",
+    "repository_tree": "df69e47ef6cfc79ca1d3ce97f9dbda7714cca66a",
+    "baseline_ref": "833136507dd79d959340b09862a53af344e4f1b3",
+    "baseline_commit": "833136507dd79d959340b09862a53af344e4f1b3",
+    "baseline_tree": "df69e47ef6cfc79ca1d3ce97f9dbda7714cca66a",
+    "native_head": "1cccbf665b82bd6228c3a9272b431b259b9e9c06",
+    "native_tree": "c561345606117e269092cc4b8e47c26886450b84",
+    "repository_dirty": true,
+    "native_dirty": true
+  },
+  "builds": {
+    "typescript": {
+      "status": "complete",
+      "dist_manifest_sha256": "a2cca143da14a0b8d9a4462d71eb12c0165853e7039e692d3ce3275da59cced8",
+      "dist_files": 1800
+    },
+    "native": {
+      "status": "complete",
+      "result": {
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "bytes": 34643744,
+        "sha256": "50afe0ca0ec39120c45da65ff1bd47bb5e1dec6199d3d09857e19ad1a12bb0bf"
+      }
+    }
+  },
+  "source_manifests": {
+    "native-source-manifest.json": {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/native-source-manifest.json",
+      "bytes": 419740,
+      "sha256": "1dd0e6dd2e55286c3617e09c27491e46b276fa62566f4e9a1b51e01be148bb86",
+      "files": 2310,
+      "canonical_manifest_sha256": "4a1d552b83bddb9cb45d8d95e5716c85a450f8c30cbfe230959153324740be78"
+    },
+    "bridge-support-source-manifest.json": {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bridge-support-source-manifest.json",
+      "bytes": 800,
+      "sha256": "a689414f35586ec83adf2a8dfd70078814146d81f79858e4bf48966b6ebaf30b",
+      "files": 5,
+      "canonical_manifest_sha256": "20c5ec2c5562514f19733142107f04b0b7b498de7d7391e4687a67efca7db806"
+    }
+  },
+  "build_logs": [
+    {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/native-build.failed-missing-support.log",
+      "bytes": 33006,
+      "sha256": "79a60602f2603c73e5d79487b74a798b85f57f11add614e3e9f08448ff9c735b"
+    },
+    {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/native-build.log",
+      "bytes": 31339,
+      "sha256": "e8fff1a711d7cc72493352765380c9f6fb400c8c28777c092921bc1921a8c9cf"
+    },
+    {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript-build.log",
+      "bytes": 671,
+      "sha256": "a5181b9b37f2fe6269631feec95aa5eea1d556543cc78f17419b292329a231ec"
+    }
+  ],
+  "measurement_runtime": {
+    "python": "3.13.7",
+    "psutil": "7.2.2"
+  },
+  "reconstruction_limit": "Native includes uncommitted source. Its Git commit alone cannot recreate this build; the retained local snapshot and source manifests identify the measured files. Large original provenance, build logs and raw protocol transcripts remain local."
+}

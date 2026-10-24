@@ -1,0 +1,4348 @@
+{
+  "cache_policy": "fresh server/session and worker cache each invocation; OS filesystem cache not flushed; eight repeated requests in each live session",
+  "comparisons": [],
+  "cpu_policy": "wait4 root user+system time; includes only descendant CPU attributed by the OS when children are waited, not a separately sampled exact family CPU total",
+  "finished_at_utc": "2026-10-24T10:11:01.222026Z",
+  "fixture_manifest_sha256": "33b5ca2c60e2c156fe2a552fcbfe9ac5c6332173326cba4cbd0ca5e9b24c44ec",
+  "harness_sha256": {
+    "decompile_fixtures.py": "7aa33764e877127eaf186ea6ef76281720a4e213e4cf34e089221e1ea5a0a01e",
+    "fixtures.py": "4937d4373f48e65eb19f9219d85be8bb989a94a3963c2acfb7919103ba2f1120",
+    "prepare.py": "9bc4d29287e1e44ee6372442f774e9fa50b974b6eef7ee5582d53815a1302d7d",
+    "prepare_decompile.py": "1d091cd70223971945383b9e21aee290113a5488e42f8640f451a31a41a02fdf",
+    "run.py": "b84380358e2e4ae9c6a158cbde9b930ec8b0c542466c102c2dd1c8ac2c9aa1d9",
+    "run_decompile.py": "ebef26bcc580e5ee707d98e6c278911416078cd8d02be3bd8204675917686bc2"
+  },
+  "measurement_inputs": [
+    "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small",
+    "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt"
+  ],
+  "measurement_sets": [
+    {
+      "finished_at_utc": "2026-10-24T10:10:06.830160Z",
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small",
+      "rows": 14,
+      "schema": "rea-ghidra-decompile-benchmark-v1",
+      "started_at_utc": "2026-10-24T10:08:52.664664Z",
+      "summary": {
+        "small": {
+          "native": {
+            "cpu_ms": {
+              "max": 333.65799999999996,
+              "median": 280.105,
+              "min": 266.85900000000004
+            },
+            "first_decompile_ms": {
+              "max": 17.51125000009779,
+              "median": 15.373624992207624,
+              "min": 10.755499999504536
+            },
+            "first_result_ms": {
+              "max": 582.1370409976225,
+              "median": 392.2320830024546,
+              "min": 371.09212500217836
+            },
+            "ready_ms": {
+              "max": 564.7677079978166,
+              "median": 376.85020799108315,
+              "min": 355.82054099359084
+            },
+            "repeat_median_ms": {
+              "max": 1.4103129942668602,
+              "median": 1.1178330023540184,
+              "min": 1.0146869899472222
+            },
+            "sampled_family_peak_rss_bytes": {
+              "max": 231784448,
+              "median": 223887360,
+              "min": 220086272
+            },
+            "samples": 7,
+            "selected_complete_ms": {
+              "max": 616.4239999925485,
+              "median": 425.1745419896906,
+              "min": 391.1158749979222
+            },
+            "wall_ms": {
+              "max": 671.2130410014652,
+              "median": 489.01250000926666,
+              "min": 453.91545799793676
+            }
+          },
+          "typescript": {
+            "cpu_ms": {
+              "max": 15922.228000000001,
+              "median": 14975.273000000001,
+              "min": 14176.786
+            },
+            "first_decompile_ms": {
+              "max": 21.495209002750926,
+              "median": 16.329833000781946,
+              "min": 14.582083997083828
+            },
+            "first_result_ms": {
+              "max": 10388.526458002161,
+              "median": 9430.528708006022,
+              "min": 8474.911417011754
+            },
+            "ready_ms": {
+              "max": 10368.755832998431,
+              "median": 9413.25012499874,
+              "min": 8459.78262501012
+            },
+            "repeat_median_ms": {
+              "max": 14.709937007864937,
+              "median": 8.092166499409359,
+              "min": 7.322291494347155
+            },
+            "sampled_family_peak_rss_bytes": {
+              "max": 1082474496,
+              "median": 1071153152,
+              "min": 1054965760
+            },
+            "samples": 7,
+            "selected_complete_ms": {
+              "max": 10411.678249991382,
+              "median": 9465.446791000431,
+              "min": 8490.497874998255
+            },
+            "wall_ms": {
+              "max": 11014.985249988968,
+              "median": 9975.252958000056,
+              "min": 8963.228917011293
+            }
+          }
+        }
+      },
+      "token_method": {
+        "actual_model_usage": "unmeasured",
+        "estimator": "tokenx@1.3.0 estimateTokenCount default heuristic",
+        "limitations": "Not a model tokenizer. Client schema filtering, prompts, conversation replay, cache billing and model continuations are unmeasured. Catalog cost is included in output, not added twice.",
+        "serialization": "JSON.stringify of every request, notification and reply, once"
+      }
+    },
+    {
+      "finished_at_utc": "2026-10-24T10:11:01.222026Z",
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt",
+      "rows": 2,
+      "schema": "rea-ghidra-decompile-benchmark-v1",
+      "started_at_utc": "2026-10-24T10:10:18.973349Z",
+      "summary": {
+        "gofmt": {
+          "typescript": {
+            "cpu_ms": {
+              "max": 72503.03299999998,
+              "median": 72503.03299999998,
+              "min": 72503.03299999998
+            },
+            "first_decompile_ms": {
+              "max": 84.01783400040586,
+              "median": 84.01783400040586,
+              "min": 84.01783400040586
+            },
+            "first_result_ms": {
+              "max": 40303.45125000167,
+              "median": 40303.45125000167,
+              "min": 40303.45125000167
+            },
+            "ready_ms": {
+              "max": 40219.42012500949,
+              "median": 40219.42012500949,
+              "min": 40219.42012500949
+            },
+            "repeat_median_ms": {
+              "max": 50.19479200564092,
+              "median": 50.19479200564092,
+              "min": 50.19479200564092
+            },
+            "sampled_family_peak_rss_bytes": {
+              "max": 1602764800,
+              "median": 1602764800,
+              "min": 1602764800
+            },
+            "samples": 1,
+            "selected_complete_ms": {
+              "max": 40366.86362500768,
+              "median": 40366.86362500768,
+              "min": 40366.86362500768
+            },
+            "wall_ms": {
+              "max": 41537.461750005605,
+              "median": 41537.461750005605,
+              "min": 41537.461750005605
+            }
+          }
+        }
+      },
+      "token_method": {
+        "actual_model_usage": "unmeasured",
+        "estimator": "tokenx@1.3.0 estimateTokenCount default heuristic",
+        "limitations": "Not a model tokenizer. Client schema filtering, prompts, conversation replay, cache billing and model continuations are unmeasured. Catalog cost is included in output, not added twice.",
+        "serialization": "JSON.stringify of every request, notification and reply, once"
+      }
+    }
+  ],
+  "prepared_provenance_sha256": "a37a7cb7bbd3e62260ab6383a27e76999cd3f1672eb9c09bf9b48e432e3074a3",
+  "qualification_only": false,
+  "rows": [
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 14916.858999999999,
+      "discovery_ms": 1146.6264169866918,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-typescript/evidence.json",
+      "evidence_sha256": "48dcaac89a52104064e0eb129be16d36dda7def534dfc486f25dd65dc8d04584",
+      "exit_code": 0,
+      "first_decompile_ms": 16.257624985883012,
+      "first_result_ms": 9552.231958994525,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 16.257624985883012
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 16.93441600946244
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 5.064750002929941
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [13.3974609375, 13.95751953125, 13.70361328125],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 42.73099999409169,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 805.6676660053199
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 295.6400830007624
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1851.7110829998273
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6537.384875002317
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 16.178916994249448
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 16.823167010443285
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 4.9822080036392435
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.956625006860122
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.095917003927752
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 10.306333002517931
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.336457990575582
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.50229100312572
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.546291995211504
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.325375002343208
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.6242919963551685
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 404.33374998974614
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 9535.963833986898,
+      "repeat_median_ms": 8.039750500756782,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 12.038792003295384
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.1816250052070245
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 10.379542000009678
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.408332999446429
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.590041991439648
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.618999999365769
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.399333001463674
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.699959001503885
+        }
+      ],
+      "root_wait4_maxrss_bytes": 602947584,
+      "rss_samples": 623,
+      "sample": 1,
+      "sampled_family_peak_rss_bytes": 1054965760,
+      "selected_complete_ms": 9574.23662499059,
+      "status": "success",
+      "system_cpu_ms": 1419.628,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 13497.231,
+      "wall_ms": 10061.511666994193
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 280.105,
+      "discovery_ms": 189.3873750086641,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-native/evidence.json",
+      "evidence_sha256": "bdde9e824b34914fe64ebdba2ac2449a23a165915bcd2e0cdade73701482cc23",
+      "exit_code": 0,
+      "first_decompile_ms": 10.755499999504536,
+      "first_result_ms": 386.8535840010736,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 10.755499999504536
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 13.080582997645251
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 6.540540998685174
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [15.9140625, 14.470703125, 13.8876953125],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 43.07904199231416,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 48.80470799980685
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 95.96233400225174
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 30.624082995927893
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "3f38add0617d9c8fecefb1ee3de076bd8532d984823696d93f8167d3b01a720e",
+          "wall_ms": 155.78916599042714
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 10.649667005054653
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "207a34f6e0ec03be57b617c56bb4d614ec828280603a700f93ab84e1b9d76e52",
+          "wall_ms": 12.967292001121677
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "d30c46d0bc11d66a784b7900cade77ed9444c1944f4442f1c2bc3fd97645f597",
+          "wall_ms": 6.430290988646448
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 1.0171670001000166
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 0.9160420013358817
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 0.927500004763715
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 7.231874988065101
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 3.299459000118077
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 0.8999590063467622
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 0.8382919913856313
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e2ae00085aae696a76efa28cc7dbf10d53d3f3d377ec02ee1b0940c9c5e57ae6",
+          "wall_ms": 0.8206249913200736
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 29.311584003153257
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 376.08904200897086,
+      "repeat_median_ms": 1.0171874891966581,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1094999936176464
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.016874986817129
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0174999915761873
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 7.329667001613416
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 3.3929589990293607
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9798750106710941
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9200409986078739
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9017499978654087
+        }
+      ],
+      "root_wait4_maxrss_bytes": 174997504,
+      "rss_samples": 26,
+      "sample": 1,
+      "sampled_family_peak_rss_bytes": 223150080,
+      "selected_complete_ms": 406.4812920114491,
+      "status": "success",
+      "system_cpu_ms": 49.991,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-1-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 230.11399999999998,
+      "wall_ms": 455.1283750042785
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 266.85900000000004,
+      "discovery_ms": 181.6851659968961,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-native/evidence.json",
+      "evidence_sha256": "1fbd4c34918b9a7e4672273987a12ba821405b4d02e10dbd64d3957777cf50ea",
+      "exit_code": 0,
+      "first_decompile_ms": 15.262875007465482,
+      "first_result_ms": 371.09212500217836,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 15.262875007465482
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 14.679625004646368
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 5.3412499983096495
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [15.9140625, 14.470703125, 13.8876953125],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 44.821542003774084,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 46.87483300222084
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 87.07049999793526
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 29.772708992823027
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "a6d8e92d93a174718e493f1bff1e88b77b2fbcb64b6589bca0b7bbff8b06afcb",
+          "wall_ms": 144.05220800836105
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 15.159874994424172
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "60dd52f05c5cd147604fc875bbb46acbafcc9ad1ff83112eb9f68d6896702c9d",
+          "wall_ms": 14.582874995539896
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "6cf19041e9143fce60b081f2e491c8e36e97a07de99fb5cba004bab4576e5f69",
+          "wall_ms": 5.2322920091683045
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 11.098958013462834
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 1.1541249987203628
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 0.9382080024806783
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 0.8757909963605925
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 0.9045420010806993
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 0.8773329900577664
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 0.8644159970572218
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "80ad233976e0e799a6cdf00cfc60185234ca283ba05575e64bb693769fc3cf2d",
+          "wall_ms": 9.616292009013705
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 33.118833001935855
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 355.82054099359084,
+      "repeat_median_ms": 1.0146869899472222,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 11.205874994629994
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.251791007234715
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0316659900126979
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9623750083846971
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9977079898817465
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9644999954616651
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9520000021439046
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 9.728582997922786
+        }
+      ],
+      "root_wait4_maxrss_bytes": 176324608,
+      "rss_samples": 25,
+      "sample": 2,
+      "sampled_family_peak_rss_bytes": 224395264,
+      "selected_complete_ms": 391.1158749979222,
+      "status": "success",
+      "system_cpu_ms": 36.239,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 230.62,
+      "wall_ms": 453.91545799793676
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 14176.786,
+      "discovery_ms": 1027.570125006605,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-typescript/evidence.json",
+      "evidence_sha256": "1e9e8648d0e6e5faf95a90a4d85c7d3483c1b7cf5f01d9706010e522eddfafb6",
+      "exit_code": 0,
+      "first_decompile_ms": 15.119125004275702,
+      "first_result_ms": 8474.911417011754,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 15.119125004275702
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 11.506958995596506
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 4.075916993315332
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [16.6416015625, 14.64501953125, 13.95263671875],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 42.26241700234823,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 691.3656660035485
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 291.52199999953154
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1417.7281250013039
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6014.217000003555
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 15.038041994557716
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 11.436959001002833
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 4.002415997092612
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 9.700916998554021
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.589749994920567
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 12.084374990081415
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.393124996568076
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 9.628291998524219
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.853624996030703
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 9.665749996202067
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.48345800396055
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 394.73866698972415
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 8459.78262501012,
+      "repeat_median_ms": 7.322291494347155,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 9.78074999875389
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.663917003199458
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 12.15854100883007
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.460124997422099
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 9.71779199608136
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.9267909926129505
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 9.739917004480958
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.546750002191402
+        }
+      ],
+      "root_wait4_maxrss_bytes": 613384192,
+      "rss_samples": 558,
+      "sample": 2,
+      "sampled_family_peak_rss_bytes": 1067433984,
+      "selected_complete_ms": 8490.497874998255,
+      "status": "success",
+      "system_cpu_ms": 1254.184,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-2-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 12922.601999999999,
+      "wall_ms": 8963.228917011293
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 15453.422,
+      "discovery_ms": 1024.5850409992272,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-typescript/evidence.json",
+      "evidence_sha256": "4b2209a962449e1f03b1520699daa6230c7344e3fb0fb7cdc3d5ed30fe04c1b6",
+      "exit_code": 0,
+      "first_decompile_ms": 17.269374991883524,
+      "first_result_ms": 9430.528708006022,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 17.269374991883524
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 16.845374993863516
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 18.068083008984104
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [17.0703125, 14.76708984375, 13.99951171875],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 107.80325000814628,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 689.7102920047473
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 289.0548330033198
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1281.4965420111548
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 7106.903792009689
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 17.186125012813136
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 16.75562499440275
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 17.981124998186715
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 13.50458299566526
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 6.126166001195088
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 16.107375005958602
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.632957996567711
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 10.578792003798299
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.627916005323641
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.318250006297603
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.8822499957168475
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 406.3044580107089
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 9413.25012499874,
+      "repeat_median_ms": 8.505521494953427,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 13.594750009360723
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 6.346084002871066
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 16.19133299391251
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.715374994906597
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 10.664958987035789
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.706333002308384
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.396832996979356
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.975584000931121
+        }
+      ],
+      "root_wait4_maxrss_bytes": 621805568,
+      "rss_samples": 584,
+      "sample": 3,
+      "sampled_family_peak_rss_bytes": 1071153152,
+      "selected_complete_ms": 9465.446791000431,
+      "status": "success",
+      "system_cpu_ms": 1456.917,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 13996.505,
+      "wall_ms": 9975.252958000056
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 301.075,
+      "discovery_ms": 218.01429199695121,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-native/evidence.json",
+      "evidence_sha256": "ddb2202ad2f1bb1134a03dee32437847994b8547cd83080e6a9dcc2f506ec9ac",
+      "exit_code": 0,
+      "first_decompile_ms": 17.51125000009779,
+      "first_result_ms": 449.5224169950234,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 17.51125000009779
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 12.036750005790964
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 6.61604201013688
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [18.38818359375, 15.12060546875, 14.1337890625],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 45.18741699575912,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 72.80079199699685
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 97.67762500268873
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 45.844082997064106
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "882bc8585e6eb9dcabb59633b91a0c3e7992a1a7c417e1579059915443066f30",
+          "wall_ms": 167.85724999499507
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 17.3966659931466
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "c6d64fac611c99a580b17788ab752d70125ea1157ad7499be5a1a76ae640738f",
+          "wall_ms": 11.907207997865044
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "c343088630796c99c00dcaf4e3ab32084d4cad5c9aea15b65aeefc18faaf0fa9",
+          "wall_ms": 6.494707995443605
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 1.418542000465095
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 1.0215840011369437
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 7.2722920012893155
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 1.2668329873122275
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 1.0156670032301918
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 0.9227910049958155
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 0.8957920072134584
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "9c1af81ae2d945cd11e9bf805aa97a3e9a20854360a37ebf47bb400e33a6206d",
+          "wall_ms": 0.9148749959422275
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 27.826707999338396
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 432.00162499852013,
+      "repeat_median_ms": 1.1178330023540184,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.5217499894788489
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1197910062037408
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 11.380666997865774
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.3845000066794455
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.115874998504296
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0314579994883388
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.982540994300507
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.017999995383434
+        }
+      ],
+      "root_wait4_maxrss_bytes": 175767552,
+      "rss_samples": 28,
+      "sample": 3,
+      "sampled_family_peak_rss_bytes": 223887360,
+      "selected_complete_ms": 468.1807089946233,
+      "status": "success",
+      "system_cpu_ms": 65.702,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-3-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 235.373,
+      "wall_ms": 518.9237089944072
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 287.815,
+      "discovery_ms": 244.47574999067,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-native/evidence.json",
+      "evidence_sha256": "d5f8608fa6ecc6312534312f116871f31070d48d08ef3aab67cb823ed1440c79",
+      "exit_code": 0,
+      "first_decompile_ms": 14.50237499375362,
+      "first_result_ms": 438.9212499954738,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 14.50237499375362
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 6.820124996011145
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 10.526083002332598
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [18.99755859375, 15.30078125, 14.203125],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 91.11858299002051,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 48.260499999742024
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 103.59374999825377
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 30.880167003488168
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "7db6fb110f6958f6794fa923286d2ecfd8501d03ff1e3a253453f30fb9333721",
+          "wall_ms": 148.7242500006687
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 14.382249995833263
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb4b5568937999eccebe2e82e6e9568c5d467957f853ad03ead170256a73a66c",
+          "wall_ms": 6.700249999994412
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "2de247d03e01d61ca3b0c25bdb3d8a933654c7248b7175269fc25360937153a2",
+          "wall_ms": 10.407750000013039
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.2058329884894192
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.0700420098146424
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 0.9786250011529773
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.048292004270479
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.0762080055428669
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 10.528625003644265
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.2622079957509413
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "7c59fa7a78175a3183b35b9ed0a5146ca83b540caefce0d3fb4fe7a8c0e4b259",
+          "wall_ms": 1.1588749912334606
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 29.98608299822081
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 424.41016699012835,
+      "repeat_median_ms": 1.2262914970051497,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.305582991335541
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1738750035874546
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0635420039761811
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1588329944061115
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1777079926105216
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 10.624000002280809
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.3420000032056123
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.2748750013997778
+        }
+      ],
+      "root_wait4_maxrss_bytes": 184385536,
+      "rss_samples": 25,
+      "sample": 4,
+      "sampled_family_peak_rss_bytes": 231784448,
+      "selected_complete_ms": 456.2722919945372,
+      "status": "success",
+      "system_cpu_ms": 53.673,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 234.142,
+      "wall_ms": 509.33787498797756
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 14975.273000000001,
+      "discovery_ms": 1146.7172080010641,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-typescript/evidence.json",
+      "evidence_sha256": "a975761a58689977df952735631347fd1dc65bc7566c7f0a17c8b3035db21718",
+      "exit_code": 0,
+      "first_decompile_ms": 14.582083997083828,
+      "first_result_ms": 9031.91337500175,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 14.582083997083828
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 13.285749999340624
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 4.307708004489541
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [18.99755859375, 15.30078125, 14.203125],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 63.00974999612663,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 773.3077090088045
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 324.4035419920692
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1394.6044160111342
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6475.7424159906805
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 14.509250002447516
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 13.189833000069484
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 4.234833002556115
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 13.19449998845812
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.0107909919461235
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.13279200217221
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.325666988734156
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.040041004889645
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.392208007629961
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.899584002094343
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.291875011404045
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 406.77395899547264
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 9017.321833001915,
+      "repeat_median_ms": 8.092166499409359,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 13.278291997266933
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.081082999822684
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.19779200234916
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.372458002762869
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.103249998996034
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.467833001399413
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.987041987595148
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.361375002190471
+        }
+      ],
+      "root_wait4_maxrss_bytes": 621543424,
+      "rss_samples": 564,
+      "sample": 4,
+      "sampled_family_peak_rss_bytes": 1076035584,
+      "selected_complete_ms": 9049.510958007886,
+      "status": "success",
+      "system_cpu_ms": 1449.858,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-4-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 13525.415,
+      "wall_ms": 9547.623708000174
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 14893.011999999999,
+      "discovery_ms": 1137.2147910005879,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-typescript/evidence.json",
+      "evidence_sha256": "6eb830d20cf08189cd0b601268f90b164f07d7c9de6230da9779424e987a590d",
+      "exit_code": 0,
+      "first_decompile_ms": 16.329833000781946,
+      "first_result_ms": 8934.517415997107,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 16.329833000781946
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 13.10512499185279
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 5.054834007751197
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [19.9072265625, 15.619140625, 14.32861328125],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 109.02312499820255,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 768.5384590004105
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 320.5282499984605
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1504.5037920062896
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6276.1599169898545
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 16.232791997026652
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 13.024208004935645
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 4.985374995158054
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 15.428750004502945
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.941833991324529
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 9.63887499528937
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.786000004969537
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.3544160121819
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.0898340123239905
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.245332992984913
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 4.8281670024152845
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 393.5032910085283
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 8918.179540996789,
+      "repeat_median_ms": 7.441917005053256,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 15.506208001170307
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.017916992073879
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 9.715042004245333
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.858125001192093
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.424458003602922
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.168792005861178
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.319333003484644
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 4.9546669906703755
+        }
+      ],
+      "root_wait4_maxrss_bytes": 618037248,
+      "rss_samples": 553,
+      "sample": 5,
+      "sampled_family_peak_rss_bytes": 1070694400,
+      "selected_complete_ms": 8952.681915994617,
+      "status": "success",
+      "system_cpu_ms": 1458.761,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 13434.251,
+      "wall_ms": 9431.941290997202
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 272.24199999999996,
+      "discovery_ms": 190.90404199960176,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-native/evidence.json",
+      "evidence_sha256": "4f86f4fda51ed29f4dfd65f6d8e033ce61456d0f7cb845f327f6843430e4f31d",
+      "exit_code": 0,
+      "first_decompile_ms": 15.82629200129304,
+      "first_result_ms": 390.4045829985989,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 15.82629200129304
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 15.520165994530544
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 16.228291991865262
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [20.39501953125, 15.791015625, 14.39697265625],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 44.35912499320693,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 48.38574999303091
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 96.55887499684468
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 30.10179099510424
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "e341c07c1835358d0bed26f1b8aa9c7f136dc5f892fdb0d8bb329748b309dae5",
+          "wall_ms": 153.26025000831578
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 15.71841599070467
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "761c74daf661f468393d352e57c1e8ebd3aa6bf8e8ab096cbf7e0858ab10ec0e",
+          "wall_ms": 15.415707995998673
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "2b4c47b567bf344fe9d3cfb751a5a4a35129f243bc0b67dce0a5177412b6d3a1",
+          "wall_ms": 16.115041988086887
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 1.1346249957568944
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 1.0597919899737462
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 0.992832996416837
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 0.885583009221591
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 0.9350420004921034
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 10.11162500071805
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 1.326541998423636
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bb7e5efe63cee3f084e1a7a9db10474a9f8e32c3a58ff46ec5e5a5bc6b1bbbfa",
+          "wall_ms": 1.1509579926496372
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 36.91912500653416
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 374.56000001111533,
+      "repeat_median_ms": 1.1963119977735914,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.2862909934483469
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1540830018930137
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0863339994102716
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9689169964985922
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.021207994199358
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 10.218499999609776
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.455250006983988
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.2385409936541691
+        }
+      ],
+      "root_wait4_maxrss_bytes": 176455680,
+      "rss_samples": 27,
+      "sample": 5,
+      "sampled_family_peak_rss_bytes": 224526336,
+      "selected_complete_ms": 422.1563330065692,
+      "status": "success",
+      "system_cpu_ms": 42.89,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-5-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 229.352,
+      "wall_ms": 489.01250000926666
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 272.718,
+      "discovery_ms": 198.34383299166802,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-native/evidence.json",
+      "evidence_sha256": "1545baaebd79041d1a941905f93052e09efc3e17db3ed4720b73e74d12f5cac1",
+      "exit_code": 0,
+      "first_decompile_ms": 15.373624992207624,
+      "first_result_ms": 392.2320830024546,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 15.373624992207624
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 16.511000008904375
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 16.427791997557506
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [19.001953125, 15.57861328125, 14.330078125],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 45.073665998643264,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 49.15683300350793
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 101.10029099450912
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 30.576125005609356
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "95a2d0289e4bfbff48ce9f1fea16d5767bd8ed871e90b0cfa9a2466ceae9af28",
+          "wall_ms": 147.62241700373124
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 15.27604200236965
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "4a9113afaa9bd92f4a90aa548a1f128eb1f0ec782d260af8a4583fa63c97fc0f",
+          "wall_ms": 16.4024160039844
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "385317760279118fafed98298571ca7869cc177caee04d58cfe0bf93dedda45a",
+          "wall_ms": 16.30837500852067
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 1.070750004146248
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 0.9484170004725456
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 0.8846249984344468
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 0.9148329991148785
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 0.8241249888669699
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 0.8226250065490603
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 9.976959001505747
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "bd000adbd7126407852b223cbf12016ff066ea60fb7b9047df35c67f39a0de39",
+          "wall_ms": 1.0607080039335415
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 31.91370800777804
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 376.85020799108315,
+      "repeat_median_ms": 1.0188750020461157,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.154333003796637
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.0400000028312206
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.982375000603497
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9977500012610108
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9025839972309768
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 0.9052920067915693
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 10.059874999569729
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.139500003773719
+        }
+      ],
+      "root_wait4_maxrss_bytes": 172064768,
+      "rss_samples": 26,
+      "sample": 6,
+      "sampled_family_peak_rss_bytes": 220086272,
+      "selected_complete_ms": 425.1745419896906,
+      "status": "success",
+      "system_cpu_ms": 41.516,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 231.202,
+      "wall_ms": 476.90920799504966
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 15922.228000000001,
+      "discovery_ms": 1163.9017919951584,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-typescript/evidence.json",
+      "evidence_sha256": "52a27899044805a3340906bf03a74b9654fd195e55ce6279e0b334c737e28bfc",
+      "exit_code": 0,
+      "first_decompile_ms": 21.495209002750926,
+      "first_result_ms": 9566.84074999066,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 21.495209002750926
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 13.981124997371808
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 5.966999990050681
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [19.001953125, 15.57861328125, 14.330078125],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 55.60916700051166,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 745.7707089924952
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 370.02604200097267
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 1484.4936250010505
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6896.65262500057
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 21.398749988293275
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 13.88420800503809
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 5.839542005560361
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 16.32150000659749
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 17.86408299813047
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.614707997068763
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 6.405499996617436
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 11.573666997719556
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 6.090666996897198
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 6.139416000223719
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 18.13962499727495
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 432.1696250117384
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 9545.333916990785,
+      "repeat_median_ms": 14.468249995843507,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 16.41475000360515
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 17.949041997781023
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 17.21979200374335
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 6.495207999250852
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 11.667334008961916
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 12.521749988081865
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 6.222666997928172
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 18.27329199295491
+        }
+      ],
+      "root_wait4_maxrss_bytes": 625967104,
+      "rss_samples": 569,
+      "sample": 6,
+      "sampled_family_peak_rss_bytes": 1078247424,
+      "selected_complete_ms": 9586.79470900097,
+      "status": "success",
+      "system_cpu_ms": 1613.206,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-6-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 14309.022,
+      "wall_ms": 10157.959749994916
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 15489.654,
+      "discovery_ms": 1245.9103750006761,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-typescript/evidence.json",
+      "evidence_sha256": "f8ab4dbdf4dc4e5542d8519a5cfc393f39f81e6601e5b02c0ef7214ac74c1b7b",
+      "exit_code": 0,
+      "first_decompile_ms": 19.761667004786432,
+      "first_result_ms": 10388.526458002161,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 19.761667004786432
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "9e81dd5a2d1fe2f65699d4effb22504e5e07f311c5df69188dd96358172e07d9",
+          "status": "success",
+          "wall_ms": 17.264666996197775
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "4437105ab007eacf5bbceb67b0fcbe1e7e8ca5c6db8ffdbafd7a917fe3b937e6",
+          "status": "success",
+          "wall_ms": 5.882333003683016
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [18.1171875, 15.4951171875, 14.314453125],
+      "max_observed_family_processes": 4,
+      "max_sampling_gap_ms": 78.1181249913061,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 833.4982919914182
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 364.84137500519864
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 2697.6551250118064
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "9a83ec22680099d4fc4d6fcc7eddd682389543ec6b39b672278affff90b2b6a2",
+          "wall_ms": 6424.912250004127
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 19.674709008540958
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "fb573e5091833fb79f5432be05f72edde9a82bec6c40016ad6020d4d30d530f9",
+          "wall_ms": 17.186624987516552
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "608eadd145321f889575aa8ea7ccd4bdfdfea6bc4e6fc7ed2b9b66c3c220aebf",
+          "wall_ms": 5.797750010970049
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 12.859750000643544
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 15.551625008811243
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 12.489000000641681
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 5.562249993090518
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 22.57237500452902
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 13.68887499847915
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 10.11662499513477
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "8d59a014f0b0892e409d93c62cad19d8b8b0f93e9660c9a4594325b7d5b4aac1",
+          "wall_ms": 18.1243330007419
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 459.9436670105206
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": false,
+              "global_display": "symbol",
+              "global_symbol_seen": true,
+              "leaf_marker_display": "string_literal"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 10368.755832998431,
+      "repeat_median_ms": 14.709937007864937,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 12.940957996761426
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 15.63679100945592
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 18.04808300221339
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 5.6754999968688935
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 22.770208001020364
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 13.783083006273955
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 10.235541994916275
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "c0124e0ad00a541b673c45e9d47e2c2792665141f3caa67bd1f96c316d2f0720",
+          "status": "success",
+          "wall_ms": 18.208208988653496
+        }
+      ],
+      "root_wait4_maxrss_bytes": 629080064,
+      "rss_samples": 639,
+      "sample": 7,
+      "sampled_family_peak_rss_bytes": 1082474496,
+      "selected_complete_ms": 10411.678249991382,
+      "status": "success",
+      "system_cpu_ms": 1505.8700000000001,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 703,
+        "input_utf8_bytes": 2193,
+        "output_heuristic_tokens": 1022615,
+        "output_utf8_bytes": 3341692
+      },
+      "user_cpu_ms": 13983.784,
+      "wall_ms": 11014.985249988968
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 333.65799999999996,
+      "discovery_ms": 328.8066659879405,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-native/evidence.json",
+      "evidence_sha256": "a1b2efeffba8bdf38a07f67d5b1e1339a09de224110e52f9ad500e0f5a966135",
+      "exit_code": 0,
+      "first_decompile_ms": 17.35408400418237,
+      "first_result_ms": 582.1370409976225,
+      "functions": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "first_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 17.35408400418237
+        },
+        {
+          "name": "rea_ghidra_inventory_entry",
+          "phase": "additional_decompile",
+          "selector": "0x0000000100000b6c",
+          "sha256": "15a32ed622e91ef8316f8d052a21922a71e126940a759c1ac9bc954fedee8175",
+          "status": "success",
+          "wall_ms": 16.48429200577084
+        },
+        {
+          "name": "rea_ghidra_inventory_leaf",
+          "phase": "additional_decompile",
+          "selector": "0x00000001000004f8",
+          "sha256": "fe11927644ea7660689643556b75443274a965da954e22bd61cf0adebf2add32",
+          "status": "success",
+          "wall_ms": 17.79862499097362
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [16.17333984375, 15.16552734375, 14.2109375],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 66.23499999113847,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 143.80041700496804
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 128.43966600485146
+        },
+        {
+          "phase": "open",
+          "response_sha256": "f21df87ef7f822fa2ed8e12adbee521f439cf62d21e019aec5c33673501e14a6",
+          "wall_ms": 39.9236670054961
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "de045d36fa8e54392ceed489f9701fc0f7e8470c8540fa6ff77b0f0959a8dbd2",
+          "wall_ms": 190.8182500046678
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 17.236874991795048
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "f465afbe38d2b030f89b75a5f6dc7cf3088fdcd010e0bbb06a76faa9abc2f761",
+          "wall_ms": 16.3742910081055
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "16d5b4caf4d293e5f31d78931856c79785809f5dfd4643c51d45f39535363b2a",
+          "wall_ms": 17.679166994639672
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.447874994482845
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.3300830032676458
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.220791004016064
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.0822079930221662
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 11.329916000249796
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.309416998992674
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.134957987233065
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "e7d5656b5cc22bbfd34e1ac92c945791c9f8c0b0ee2bd5056147197e2116e76a",
+          "wall_ms": 1.2890409998362884
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 29.626125004142523
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "checks": {
+          "rea_ghidra_inventory_branch": {
+            "facts": {
+              "calls": ["rea_ghidra_inventory_leaf"],
+              "negative_path": true
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_entry": {
+            "facts": {
+              "calls": [
+                "rea_ghidra_inventory_branch",
+                "rea_ghidra_inventory_indirect",
+                "rea_ghidra_inventory_dense_switch"
+              ],
+              "constants": [35, 100]
+            },
+            "status": "success"
+          },
+          "rea_ghidra_inventory_leaf": {
+            "facts": {
+              "addition": true,
+              "calls": ["puts"],
+              "global_address_seen": true,
+              "global_display": "address",
+              "global_symbol_seen": false,
+              "leaf_marker_display": "raw_address_or_other"
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "small"
+      },
+      "rea_config_present": false,
+      "ready_ms": 564.7677079978166,
+      "repeat_median_ms": 1.4103129942668602,
+      "repeats": [
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.6280830022878945
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.475666998885572
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.334583997959271
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.1875000054715201
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 11.456042004283518
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.4175419928506017
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.2546249927254394
+        },
+        {
+          "name": "rea_ghidra_inventory_branch",
+          "phase": "repeat_decompile",
+          "selector": "0x000000010000056c",
+          "sha256": "1aad0d64af3e40b323340bc60cc31d52c01ab9b21483c22d67965c7cc4de2bd0",
+          "status": "success",
+          "wall_ms": 1.4030839956831187
+        }
+      ],
+      "root_wait4_maxrss_bytes": 174227456,
+      "rss_samples": 30,
+      "sample": 7,
+      "sampled_family_peak_rss_bytes": 222363648,
+      "selected_complete_ms": 616.4239999925485,
+      "status": "success",
+      "system_cpu_ms": 83.73599999999999,
+      "target": "small",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/small-7-native/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 991815,
+        "input_heuristic_tokens": 705,
+        "input_utf8_bytes": 2198,
+        "output_heuristic_tokens": 1057522,
+        "output_utf8_bytes": 3480713
+      },
+      "user_cpu_ms": 249.92199999999997,
+      "wall_ms": 671.2130410014652
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-typescript/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra",
+        "GHIDRA_INSTALL_DIR=/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+        "JAVA_HOME=/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/scripts/rea.mjs",
+        "mcp"
+      ],
+      "cpu_ms": 72503.03299999998,
+      "discovery_ms": 1172.8527910017874,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-typescript/evidence.json",
+      "evidence_sha256": "9b962ca46b19027072ed6a08839a741b60e03d33a4a2f2aabc08c2da2d428a14",
+      "exit_code": 0,
+      "first_decompile_ms": 84.01783400040586,
+      "first_result_ms": 40303.45125000167,
+      "functions": [
+        {
+          "name": "gofmtMain",
+          "phase": "first_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 84.01783400040586
+        },
+        {
+          "name": "main",
+          "phase": "additional_decompile",
+          "selector": "0x100119070",
+          "sha256": "d119ad275200520773743772e8e7f1470034f403b32cc6591a9bf08289a7433d",
+          "status": "success",
+          "wall_ms": 16.473625000799075
+        },
+        {
+          "name": "processFile",
+          "phase": "additional_decompile",
+          "selector": "0x100118610",
+          "sha256": "673fbecdd60e3395a44fa7cdbaa6ed9f94bc790d14ae7a25cf0f30d418002e4b",
+          "status": "success",
+          "wall_ms": 46.933667006669566
+        }
+      ],
+      "lane": "typescript",
+      "load_average_before": [15.1328125, 14.978515625, 14.16015625],
+      "max_observed_family_processes": 12,
+      "max_sampling_gap_ms": 93.01133299595676,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 779.7900830046274
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "42b8252afd287dc235be4f50fb3d52add7cf3635762f9633fb2e4c55dafa1357",
+          "wall_ms": 340.6175410054857
+        },
+        {
+          "phase": "open",
+          "response_sha256": "9f5c37b522ed140429b97137f98dc0bee2c55daad3264bee13857f8393caf2fe",
+          "wall_ms": 1549.0777090017218
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "4406a9b867ed3852ab156100391aeb8b42ac7f4419533a38e9a5e1df4b151a7b",
+          "wall_ms": 37484.862709010486
+        },
+        {
+          "phase": "first_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 83.74891699349973
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "5180a02c9b3ceae33c697870415dabb30c69b75d4fe886482b26a64c23a6301d",
+          "wall_ms": 16.36220799991861
+        },
+        {
+          "phase": "additional_decompile",
+          "response_sha256": "e5625bbb992596f3f9c99bbf09b114db37e3d6e00ed679c5652165dda6256da8",
+          "wall_ms": 46.64983299153391
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 49.838457998703234
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 49.31408300762996
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 48.75450000690762
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 49.32037499384023
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 49.73170800076332
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 55.63254099979531
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 50.041165988659486
+        },
+        {
+          "phase": "repeat_decompile",
+          "response_sha256": "cc3b041768fb1ca76633b66e4cdaea6eac149aff97dc3c327126511bd691d01c",
+          "wall_ms": 50.5809590104036
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 737.7624580112752
+        }
+      ],
+      "provider": "ghidra",
+      "quality": {
+        "checks": {
+          "gofmtMain": {
+            "facts": {
+              "limitation": "Go compiler/linker inlining and provider presentation can hide source calls",
+              "observed_calls": ["initRewrite"],
+              "source_backed": true,
+              "unverified_source_calls": ["processFile", "initParserMode"]
+            },
+            "status": "success"
+          },
+          "main": {
+            "facts": {
+              "limitation": "Go compiler/linker inlining and provider presentation can hide source calls",
+              "observed_calls": ["gofmtMain"],
+              "source_backed": true,
+              "unverified_source_calls": []
+            },
+            "status": "success"
+          },
+          "processFile": {
+            "facts": {
+              "limitation": "Go compiler/linker inlining and provider presentation can hide source calls",
+              "observed_calls": ["readFile", "format", "writeFile"],
+              "source_backed": true,
+              "unverified_source_calls": []
+            },
+            "status": "success"
+          }
+        },
+        "status": "passed",
+        "target": "gofmt"
+      },
+      "rea_config_present": false,
+      "ready_ms": 40219.42012500949,
+      "repeat_median_ms": 50.19479200564092,
+      "repeats": [
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 50.09158400935121
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 49.57566599478014
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 48.997833000612445
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 49.56595900875982
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 55.972415997530334
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 57.60337501124013
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 50.29800000193063
+        },
+        {
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "sha256": "3a474185865855b1ebfaebb0384f41d604bc833c03fe59f3229c83628c2df085",
+          "status": "success",
+          "wall_ms": 50.842791999457404
+        }
+      ],
+      "root_wait4_maxrss_bytes": 1114521600,
+      "rss_samples": 2475,
+      "sample": 1,
+      "sampled_family_peak_rss_bytes": 1602764800,
+      "selected_complete_ms": 40366.86362500768,
+      "status": "success",
+      "system_cpu_ms": 7093.989,
+      "target": "gofmt",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-typescript/transcript.json",
+      "transport_estimate": {
+        "catalog_heuristic_tokens": 989654,
+        "input_heuristic_tokens": 689,
+        "input_utf8_bytes": 2106,
+        "output_heuristic_tokens": 1638046,
+        "output_utf8_bytes": 5189676
+      },
+      "user_cpu_ms": 65409.043999999994,
+      "wall_ms": 41537.461750005605
+    },
+    {
+      "command": [
+        "/usr/bin/env",
+        "REA_CONFIG=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-native/absent-config.json",
+        "REA_ANALYSIS_PROVIDER=ghidra-rust",
+        "REA_GHIDRA_RUST_ENABLED=true",
+        "REA_GHIDRA_RUST_WORKER=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "REA_GHIDRA_RUST_CACHE_DIR=/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-native/worker-cache",
+        "REA_GHIDRA_RUST_TIMEOUT_MS=240000",
+        "REA_GHIDRA_RUST_DECOMPILE_THREADS=1",
+        "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "mcp"
+      ],
+      "cpu_ms": 351.05199999999996,
+      "discovery_ms": 201.29220800299663,
+      "environment_policy": "inherit ambient environment; force LC_ALL=C",
+      "evidence": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-native/evidence.json",
+      "evidence_sha256": "7af1bdde927a3f11dda5269f31f18e7769abe16a3377406a248d32126754ebc0",
+      "exit_code": 0,
+      "first_decompile_ms": 19.10212500661146,
+      "first_result_ms": 492.6897499972256,
+      "functions": [
+        {
+          "error": "RuntimeError: first_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "first_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 19.10212500661146
+        },
+        {
+          "error": "RuntimeError: additional_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "main",
+          "phase": "additional_decompile",
+          "selector": "0x100119070",
+          "status": "failure",
+          "wall_ms": 0.5011670000385493
+        },
+        {
+          "error": "RuntimeError: additional_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "processFile",
+          "phase": "additional_decompile",
+          "selector": "0x100118610",
+          "status": "failure",
+          "wall_ms": 0.23991700436454266
+        }
+      ],
+      "lane": "native",
+      "load_average_before": [20.544921875, 16.4375, 14.73486328125],
+      "max_observed_family_processes": 2,
+      "max_sampling_gap_ms": 44.512084001326,
+      "phases": [
+        {
+          "phase": "initialize",
+          "response_sha256": "0b353caacc045885b5ba6be69ad15ef1fa27fc14e8919c7a90ce9377e6d19126",
+          "wall_ms": 50.07608298910782
+        },
+        {
+          "phase": "catalog",
+          "response_sha256": "ab6cca76cb53f2472a1641a0004965264ca8dc25845824d593a11768bacdfdd4",
+          "wall_ms": 103.52045799663756
+        },
+        {
+          "phase": "open",
+          "response_sha256": "9f5c37b522ed140429b97137f98dc0bee2c55daad3264bee13857f8393caf2fe",
+          "wall_ms": 44.684291002340615
+        },
+        {
+          "phase": "analyze_and_list",
+          "response_sha256": "5e28b94ac0bd2ba6da6fe948196c6d5cf1395437062fb16f4116041f6468c9d3",
+          "wall_ms": 218.9411670115078
+        },
+        {
+          "phase": "close",
+          "response_sha256": "afbd1405cd953d64e641500304502f284890e664428901770ca76c12dd22fe2f",
+          "wall_ms": 0.24895799288060516
+        }
+      ],
+      "provider": "ghidra-rust",
+      "quality": {
+        "error": "AssertionError: missing pseudocode for gofmtMain",
+        "status": "failed"
+      },
+      "rea_config_present": false,
+      "ready_ms": 473.5752909909934,
+      "repeat_median_ms": 0.21202100469963625,
+      "repeats": [
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.299166000331752
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.26212500233668834
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.20554198999889195
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.18325001292396337
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.2332500007469207
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.21062500309199095
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.21341700630728155
+        },
+        {
+          "error": "RuntimeError: repeat_decompile: tool failure: {'content': [{'type': 'text', 'text': '{\"error\":{\"code\":\"execution_failure\",\"category\":\"execution_failure\",\"message\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\",\"retryable\":false,\"remediation\":{\"action\":\"Run the decompiler for saved functions: Name the import stub at 0x10011d9f2: the name _open is in use\"},\"details\":{\"provider_id\":\"ghidra-rust\",\"operation\":\"batch_decompile\",\"diagnostics\":{\"failure_kind\":\"process\",\"worker_error_code\":\"WORKER_FAILED\"}}}}'}], '_meta': {'provenance': {'untrusted_content': True, 'source': 'analysis_target'}}, 'isError': True}",
+          "name": "gofmtMain",
+          "phase": "repeat_decompile",
+          "selector": "0x1001191b0",
+          "status": "failure",
+          "wall_ms": 0.20325000514276326
+        }
+      ],
+      "root_wait4_maxrss_bytes": 175423488,
+      "rss_samples": 27,
+      "sample": 1,
+      "sampled_family_peak_rss_bytes": 226115584,
+      "selected_complete_ms": 493.43345800298266,
+      "status": "incomplete",
+      "system_cpu_ms": 57.596,
+      "target": "gofmt",
+      "termination": "stdin-eof",
+      "transcript": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/gofmt-1-native/transcript.json",
+      "user_cpu_ms": 293.456,
+      "wall_ms": 498.1332079914864
+    }
+  ],
+  "schema": "rea-ghidra-decompile-benchmark-v1",
+  "started_at_utc": "2026-10-24T10:08:52.664664Z",
+  "summary": {
+    "gofmt": {
+      "typescript": {
+        "cpu_ms": {
+          "max": 72503.03299999998,
+          "median": 72503.03299999998,
+          "min": 72503.03299999998
+        },
+        "first_decompile_ms": {
+          "max": 84.01783400040586,
+          "median": 84.01783400040586,
+          "min": 84.01783400040586
+        },
+        "first_result_ms": {
+          "max": 40303.45125000167,
+          "median": 40303.45125000167,
+          "min": 40303.45125000167
+        },
+        "ready_ms": {
+          "max": 40219.42012500949,
+          "median": 40219.42012500949,
+          "min": 40219.42012500949
+        },
+        "repeat_median_ms": {
+          "max": 50.19479200564092,
+          "median": 50.19479200564092,
+          "min": 50.19479200564092
+        },
+        "sampled_family_peak_rss_bytes": {
+          "max": 1602764800,
+          "median": 1602764800,
+          "min": 1602764800
+        },
+        "samples": 1,
+        "selected_complete_ms": {
+          "max": 40366.86362500768,
+          "median": 40366.86362500768,
+          "min": 40366.86362500768
+        },
+        "wall_ms": {
+          "max": 41537.461750005605,
+          "median": 41537.461750005605,
+          "min": 41537.461750005605
+        }
+      }
+    },
+    "small": {
+      "native": {
+        "cpu_ms": {
+          "max": 333.65799999999996,
+          "median": 280.105,
+          "min": 266.85900000000004
+        },
+        "first_decompile_ms": {
+          "max": 17.51125000009779,
+          "median": 15.373624992207624,
+          "min": 10.755499999504536
+        },
+        "first_result_ms": {
+          "max": 582.1370409976225,
+          "median": 392.2320830024546,
+          "min": 371.09212500217836
+        },
+        "ready_ms": {
+          "max": 564.7677079978166,
+          "median": 376.85020799108315,
+          "min": 355.82054099359084
+        },
+        "repeat_median_ms": {
+          "max": 1.4103129942668602,
+          "median": 1.1178330023540184,
+          "min": 1.0146869899472222
+        },
+        "sampled_family_peak_rss_bytes": {
+          "max": 231784448,
+          "median": 223887360,
+          "min": 220086272
+        },
+        "samples": 7,
+        "selected_complete_ms": {
+          "max": 616.4239999925485,
+          "median": 425.1745419896906,
+          "min": 391.1158749979222
+        },
+        "wall_ms": {
+          "max": 671.2130410014652,
+          "median": 489.01250000926666,
+          "min": 453.91545799793676
+        }
+      },
+      "typescript": {
+        "cpu_ms": {
+          "max": 15922.228000000001,
+          "median": 14975.273000000001,
+          "min": 14176.786
+        },
+        "first_decompile_ms": {
+          "max": 21.495209002750926,
+          "median": 16.329833000781946,
+          "min": 14.582083997083828
+        },
+        "first_result_ms": {
+          "max": 10388.526458002161,
+          "median": 9430.528708006022,
+          "min": 8474.911417011754
+        },
+        "ready_ms": {
+          "max": 10368.755832998431,
+          "median": 9413.25012499874,
+          "min": 8459.78262501012
+        },
+        "repeat_median_ms": {
+          "max": 14.709937007864937,
+          "median": 8.092166499409359,
+          "min": 7.322291494347155
+        },
+        "sampled_family_peak_rss_bytes": {
+          "max": 1082474496,
+          "median": 1071153152,
+          "min": 1054965760
+        },
+        "samples": 7,
+        "selected_complete_ms": {
+          "max": 10411.678249991382,
+          "median": 9465.446791000431,
+          "min": 8490.497874998255
+        },
+        "wall_ms": {
+          "max": 11014.985249988968,
+          "median": 9975.252958000056,
+          "min": 8963.228917011293
+        }
+      }
+    }
+  },
+  "token_method": {
+    "actual_model_usage": "unmeasured",
+    "estimator": "tokenx@1.3.0 estimateTokenCount default heuristic",
+    "limitations": "Not a model tokenizer. Client schema filtering, prompts, conversation replay, cache billing and model continuations are unmeasured. Catalog cost is included in output, not added twice.",
+    "serialization": "JSON.stringify of every request, notification and reply, once"
+  }
+}

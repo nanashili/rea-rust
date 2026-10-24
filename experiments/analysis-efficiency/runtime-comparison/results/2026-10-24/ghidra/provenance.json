@@ -1,0 +1,442 @@
+{
+  "binary_policy": "No binaries are copied into this archive.",
+  "failure_policy": "Observed failures are retained with available metrics and are not treated as equivalent outputs.",
+  "full_transcripts": "Retained in the measured directory; transcript-manifest.json records path, bytes, and SHA-256.",
+  "measurement": {
+    "invocations": 16,
+    "results": [
+      {
+        "bytes": 146919,
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-small/results.json",
+        "sha256": "0793397ddfa97a3fa6572d8a119a51815252b7ef5041e0665d31829021f59031"
+      },
+      {
+        "bytes": 26673,
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/measured-gofmt/results.json",
+        "sha256": "837fbcdff6462261005e645d7fed0451574121a6bfa424077c9a6a874590445a"
+      }
+    ]
+  },
+  "prepared_provenance": {
+    "build": {
+      "command": {
+        "command": [
+          "cargo",
+          "+1.93.1",
+          "build",
+          "--locked",
+          "--release",
+          "--manifest-path",
+          "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source/Cargo.toml"
+        ],
+        "log": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-build.log",
+        "log_sha256": "a42b58e4dd36b5004b5754ea7701b70fa74dd0ddaa583aabe704d53005bdfe0e",
+        "returncode": 0
+      },
+      "executable": {
+        "bytes": 9631968,
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+        "sha256": "cf63a0d0c98a814a90d5429c0e29b7c729ad1e5eda678b6c1d3f77f0a1c477c7"
+      },
+      "requested": true,
+      "target_dir": "/tmp/rea-target-shared"
+    },
+    "engine": {
+      "crate": "ghidra-decompiler",
+      "embedded_manifest_sha256": "af94eb2356ec88d071225c1c6b02c24cf2553d3d69b12006d8ec30e5c650f8c7",
+      "identity": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/engine-identity.json",
+      "upstream_git_sha": "268c3a406d8d964bc00ae2ead4d3e1e1373aaa27",
+      "version": "2.1.0"
+    },
+    "finished_at_utc": "2026-10-24T10:01:21+00:00",
+    "ghidra": {
+      "application": {
+        "java_max": "",
+        "java_min": "21",
+        "properties_sha256": "e84c26b08545eee63d24a1a8a4dd7905e4209538e2e7192093877c435c64eb67",
+        "version": "12.1.4"
+      },
+      "install_dir": "/Users/tihan-nico/Developer/Tools/ghidra_12.1.4_PUBLIC",
+      "java": {
+        "bytes": 217296,
+        "path": "/usr/bin/java",
+        "sha256": "c0f823f0cbf74ceb7fa115c146f0dfb0b4513917fb5d1d7ae62d118539b78f4a",
+        "version": {
+          "command": ["/usr/bin/java", "--version"],
+          "output": "openjdk 25.0.2 2026-01-20\nOpenJDK Runtime Environment Homebrew (build 25.0.2)\nOpenJDK 64-Bit Server VM Homebrew (build 25.0.2, mixed mode, sharing)"
+        }
+      },
+      "java_home": "/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
+      "launch_java": {
+        "bytes": 69568,
+        "path": "/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home/bin/java",
+        "sha256": "370ef109f74f859afc8cfe0300b2da782d60698160b8a48f19731d6d2e3012ea"
+      },
+      "manifest": [
+        {
+          "bytes": 659,
+          "path": "Ghidra/application.properties",
+          "sha256": "e84c26b08545eee63d24a1a8a4dd7905e4209538e2e7192093877c435c64eb67"
+        },
+        {
+          "bytes": 2388,
+          "path": "support/analyzeHeadless",
+          "sha256": "302880328a0024ee24cfe0326d4d9a61c2237116d95f2e0e0df090f747f95e30"
+        },
+        {
+          "bytes": 25488,
+          "path": "support/LaunchSupport.jar",
+          "sha256": "965a809bb87c5a4f49dd16c7a89a1dfcaec491973e8d924d44eaeb5e85368973"
+        },
+        {
+          "bytes": 155933,
+          "path": "Ghidra/Framework/Utility/lib/Utility.jar",
+          "sha256": "bb42a14285530c7d41373e1d130677bd2b90b34f32aedba5042f23663d652c7e"
+        },
+        {
+          "bytes": 3262120,
+          "path": "Ghidra/Features/Decompiler/os/mac_arm_64/decompile",
+          "sha256": "0bc01f009db2ca184011ce65f6b27f1469d0a3eda504e49e6055dc5865bb014b"
+        }
+      ],
+      "manifest_sha256": "0da9dddaad161f6f61424c9744e8534458e3338524285d63ab2320bde42a18c7",
+      "platform_key": "mac_arm_64"
+    },
+    "host": {
+      "commands": {
+        "cpu": {
+          "command": ["sysctl", "-n", "hw.ncpu"],
+          "output": "10"
+        },
+        "memory": {
+          "command": ["sysctl", "-n", "hw.memsize"],
+          "output": "34359738368"
+        },
+        "model": {
+          "command": ["sysctl", "-n", "hw.model"],
+          "output": "MacBookPro18,1"
+        },
+        "sw_vers": {
+          "command": ["sw_vers"],
+          "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f"
+        },
+        "uname": {
+          "command": ["uname", "-a"],
+          "output": "Darwin Tihan-Nicos-MacBook-Pro.local 27.2.0 Darwin Kernel Version 27.2.0: Tue Sep 29 22:00:39 PDT 2026; root:xnu-13432.40.177.0.3~56/RELEASE_ARM64_T6000 arm64"
+        }
+      },
+      "machine": "arm64",
+      "python": "3.13.7",
+      "release": "27.2.0",
+      "system": "Darwin"
+    },
+    "preparation_script": {
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/experiments/analysis-efficiency/runtime-comparison/prepare_decompile.py",
+      "sha256": "1d091cd70223971945383b9e21aee290113a5488e42f8640f451a31a41a02fdf"
+    },
+    "prepared_runtime": {
+      "binary": {
+        "bytes": 34643744,
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+        "sha256": "50afe0ca0ec39120c45da65ff1bd47bb5e1dec6199d3d09857e19ad1a12bb0bf"
+      },
+      "provenance_sha256": "67d79c34056d9b1f24281deaae85d9587d3f2accf2f326944e27b1b33be3d550",
+      "root": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2"
+    },
+    "repository": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism",
+    "schema": "rea-ghidra-decompile-preparation-v1",
+    "started_at_utc": "2026-10-24T10:01:21+00:00",
+    "status": "complete",
+    "toolchain": {
+      "cargo": {
+        "command": ["cargo", "+1.93.1", "--version"],
+        "output": "cargo 1.93.1 (083ac5135 2025-12-15)"
+      },
+      "rustc": {
+        "command": ["rustc", "+1.93.1", "--version"],
+        "output": "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+      }
+    },
+    "worker_source": {
+      "aggregate_sha256": "efb9a9fdfa2e82435eac1036ab583e97dc0dd610d08dfadb6aef4c355f52a007",
+      "cargo_local_dependencies": {
+        "local_paths": [],
+        "manifests": [
+          {
+            "path": "Cargo.toml",
+            "sha256": "2d04bda0686213883262204e2047bae91c8de2c50c78ff39090f78b2261fe3bc"
+          }
+        ]
+      },
+      "cargo_lock": {
+        "packages": [
+          {
+            "checksum": "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+            "name": "adler2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "2.0.1"
+          },
+          {
+            "checksum": "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba",
+            "name": "aho-corasick",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.1.5"
+          },
+          {
+            "checksum": "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470",
+            "name": "anyhow",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.104"
+          },
+          {
+            "checksum": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71",
+            "name": "block-buffer",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.10.4"
+          },
+          {
+            "checksum": "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b",
+            "name": "byteorder",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.5.0"
+          },
+          {
+            "checksum": "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600",
+            "name": "cfg-if",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.5"
+          },
+          {
+            "checksum": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280",
+            "name": "cpufeatures",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.2.17"
+          },
+          {
+            "checksum": "5eb8a2a1cd12ab0d987a5d5e825195d372001a4094a0376319d5a0ad71c1ba0d",
+            "name": "crc",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "3.4.0"
+          },
+          {
+            "checksum": "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853",
+            "name": "crc-catalog",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "2.5.0"
+          },
+          {
+            "checksum": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a",
+            "name": "crypto-common",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.1.7"
+          },
+          {
+            "checksum": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
+            "name": "digest",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.10.7"
+          },
+          {
+            "checksum": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a",
+            "name": "generic-array",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.14.7"
+          },
+          {
+            "checksum": "a68a5bd2d6e7f477e4e9cd41f3ebcd7d2e43e30775c2fd620c05786f60c60a92",
+            "name": "ghidra-decompiler",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "2.1.0"
+          },
+          {
+            "checksum": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682",
+            "name": "itoa",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.18"
+          },
+          {
+            "checksum": "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a",
+            "name": "libc",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.2.191"
+          },
+          {
+            "checksum": "297e814c836ae64db86b36cf2a557ba54368d03f6afcd7d947c266692f71115e",
+            "name": "lzma-rs",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.3.0"
+          },
+          {
+            "checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+            "name": "memchr",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "2.8.3"
+          },
+          {
+            "checksum": "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316",
+            "name": "miniz_oxide",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.8.9"
+          },
+          {
+            "checksum": "ff76201f031d8863c38aa7f905eca4f53abbfa15f609db4277d44cd8938f33fe",
+            "name": "object",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.37.3"
+          },
+          {
+            "checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+            "name": "proc-macro2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.107"
+          },
+          {
+            "checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+            "name": "quote",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.47"
+          },
+          {
+            "checksum": null,
+            "name": "rea-ghidra-rust-worker",
+            "source": null,
+            "version": "0.1.0"
+          },
+          {
+            "checksum": "4ba239c1c1693315d3cc0e601db3b3965543afbf48c41730fdca2f069f510f4a",
+            "name": "redb",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "3.1.3"
+          },
+          {
+            "checksum": "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d",
+            "name": "regex",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.13.1"
+          },
+          {
+            "checksum": "ad8553b9b26413251cbf30e620595c7a41b3887f03da04579c0e6b0d6a06b4b2",
+            "name": "regex-automata",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.4.18"
+          },
+          {
+            "checksum": "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4",
+            "name": "regex-syntax",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.8.11"
+          },
+          {
+            "checksum": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e",
+            "name": "serde",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.228"
+          },
+          {
+            "checksum": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad",
+            "name": "serde_core",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.228"
+          },
+          {
+            "checksum": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79",
+            "name": "serde_derive",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.228"
+          },
+          {
+            "checksum": "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14",
+            "name": "serde_json",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.151"
+          },
+          {
+            "checksum": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283",
+            "name": "sha2",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.10.9"
+          },
+          {
+            "checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+            "name": "syn",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "2.0.119"
+          },
+          {
+            "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+            "name": "typenum",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.20.1"
+          },
+          {
+            "checksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+            "name": "unicode-ident",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.27"
+          },
+          {
+            "checksum": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a",
+            "name": "version_check",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "0.9.5"
+          },
+          {
+            "checksum": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b",
+            "name": "zmij",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "version": "1.0.23"
+          }
+        ],
+        "sha256": "6ba053a23d1d1971430e02c7a1d9a4d4d4bc025022c5615f759752a33c46119f"
+      },
+      "git": {
+        "head": "1cccbf665b82bd6228c3a9272b431b259b9e9c06",
+        "repository": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native",
+        "tree": "c561345606117e269092cc4b8e47c26886450b84",
+        "worker_status": "",
+        "worker_tree_at_head": "3e82336054b93bb95a509b2e25b549c0dc62171d"
+      },
+      "manifest": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source-manifest.json",
+      "snapshot": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source"
+    }
+  },
+  "prepared_verification": {
+    "engine_identity": {
+      "bytes": 66433,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/engine-identity.json",
+      "sha256": "d4e73fbc2b798711ee4644a7fda08b3c53e29a44d002c85ba0c1fc2d4c9bd3fe"
+    },
+    "fixtures": {
+      "bytes": 6743,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/manifest.json",
+      "sha256": "33b5ca2c60e2c156fe2a552fcbfe9ac5c6332173326cba4cbd0ca5e9b24c44ec"
+    },
+    "ghidra_manifest_sha256": "0da9dddaad161f6f61424c9744e8534458e3338524285d63ab2320bde42a18c7",
+    "provenance": {
+      "bytes": 15528,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/provenance.json",
+      "sha256": "a37a7cb7bbd3e62260ab6383a27e76999cd3f1672eb9c09bf9b48e432e3074a3"
+    },
+    "runtime_binary": {
+      "bytes": 34643744,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+      "sha256": "50afe0ca0ec39120c45da65ff1bd47bb5e1dec6199d3d09857e19ad1a12bb0bf"
+    },
+    "worker_binary": {
+      "bytes": 9631968,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+      "sha256": "cf63a0d0c98a814a90d5429c0e29b7c729ad1e5eda678b6c1d3f77f0a1c477c7"
+    },
+    "worker_manifest": {
+      "bytes": 15519,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source-manifest.json",
+      "sha256": "957f7a8a4ce3cea21f96bca002bc87c1e45e9a1ee383c7641d7d798e6b501843"
+    },
+    "worker_source": {
+      "aggregate_sha256": "efb9a9fdfa2e82435eac1036ab583e97dc0dd610d08dfadb6aef4c355f52a007",
+      "files": 36,
+      "root": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source"
+    }
+  },
+  "schema": "rea-ghidra-decompile-archive-v1"
+}

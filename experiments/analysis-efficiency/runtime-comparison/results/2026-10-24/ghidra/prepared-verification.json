@@ -1,0 +1,38 @@
+{
+  "engine_identity": {
+    "bytes": 66433,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/engine-identity.json",
+    "sha256": "d4e73fbc2b798711ee4644a7fda08b3c53e29a44d002c85ba0c1fc2d4c9bd3fe"
+  },
+  "fixtures": {
+    "bytes": 6743,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/fixtures/manifest.json",
+    "sha256": "33b5ca2c60e2c156fe2a552fcbfe9ac5c6332173326cba4cbd0ca5e9b24c44ec"
+  },
+  "ghidra_manifest_sha256": "0da9dddaad161f6f61424c9744e8534458e3338524285d63ab2320bde42a18c7",
+  "provenance": {
+    "bytes": 15528,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/provenance.json",
+    "sha256": "a37a7cb7bbd3e62260ab6383a27e76999cd3f1672eb9c09bf9b48e432e3074a3"
+  },
+  "runtime_binary": {
+    "bytes": 34643744,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/bin/rea",
+    "sha256": "50afe0ca0ec39120c45da65ff1bd47bb5e1dec6199d3d09857e19ad1a12bb0bf"
+  },
+  "worker_binary": {
+    "bytes": 9631968,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/bin/rea-ghidra-rust-worker",
+    "sha256": "cf63a0d0c98a814a90d5429c0e29b7c729ad1e5eda678b6c1d3f77f0a1c477c7"
+  },
+  "worker_manifest": {
+    "bytes": 15519,
+    "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source-manifest.json",
+    "sha256": "957f7a8a4ce3cea21f96bca002bc87c1e45e9a1ee383c7641d7d798e6b501843"
+  },
+  "worker_source": {
+    "aggregate_sha256": "efb9a9fdfa2e82435eac1036ab583e97dc0dd610d08dfadb6aef4c355f52a007",
+    "files": 36,
+    "root": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/ghidra-decompile-20261024/worker-source"
+  }
+}

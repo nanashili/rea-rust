@@ -1,0 +1,29 @@
+{
+  "healthy": false,
+  "adapter": "production-stdio",
+  "server": {
+    "name": "rea",
+    "version": "6.7.0"
+  },
+  "inventory": {
+    "expected": 209,
+    "observed": 198,
+    "missing": [
+      "list_frida_devices",
+      "list_frida_processes",
+      "start_frida_session",
+      "load_frida_script",
+      "resume_frida_session",
+      "unload_frida_script",
+      "frida_session_status",
+      "close_frida_session",
+      "instrument_with_frida",
+      "analyze_web_bundle",
+      "analyze_javascript_application"
+    ]
+  },
+  "request_flow": {
+    "tool": "binary_session",
+    "ok": true
+  }
+}
