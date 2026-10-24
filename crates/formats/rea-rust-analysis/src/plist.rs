@@ -4,7 +4,7 @@
 //! layer can retain the same contract as the TypeScript native provider.
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 pub const MAX_INPUT_BYTES: usize = 64 * 1024 * 1024;
 const MAX_DATA_BYTES: usize = MAX_INPUT_BYTES;
@@ -121,10 +121,10 @@ pub fn read_keyed_archive_with_provenance(
     read_with_provenance_inner(bytes, source_path, Some(xml))
 }
 
-fn read_with_provenance_inner(
-    bytes: &[u8],
+fn read_with_provenance_inner<'a>(
+    bytes: &'a [u8],
     source_path: String,
-    decoded_xml: Option<String>,
+    decoded_xml: Option<Cow<'a, str>>,
 ) -> Result<ReadWithProvenance, Error> {
     if bytes.len() > MAX_INPUT_BYTES {
         return Err(Error::InputTooLarge);
@@ -371,7 +371,7 @@ fn preflight_xml_expansion(xml: &str) -> Result<(), Error> {
 
     let bytes = xml.as_bytes();
     let mut cursor = 0;
-    while let Some(relative_start) = bytes[cursor..].iter().position(|byte| *byte == b'<') {
+    while let Some(relative_start) = memchr::memchr(b'<', &bytes[cursor..]) {
         let start = cursor + relative_start;
         if let Some((terminator, prefix_length)) = xml_opaque_terminator(bytes, start) {
             let content_start = start + prefix_length;
@@ -417,9 +417,7 @@ fn xml_opaque_terminator(bytes: &[u8], start: usize) -> Option<(&'static [u8], u
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
+    memchr::memmem::find(haystack, needle)
 }
 
 fn xml_markup_end(bytes: &[u8], start: usize) -> Option<usize> {
@@ -608,7 +606,7 @@ fn bundle(value: &Value) -> Bundle {
     }
 }
 
-fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
+fn decode_xml_text(bytes: &[u8]) -> Result<Cow<'_, str>, Error> {
     let (encoding, payload) = if bytes.starts_with(&[0xff, 0xfe]) {
         ("utf-16le", &bytes[2..])
     } else if bytes.starts_with(&[0xfe, 0xff]) {
@@ -619,9 +617,8 @@ fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
 
     let text = if encoding == "utf-8" {
         let text = std::str::from_utf8(payload)
-            .map_err(|_| Error::Invalid("XML text bytes are invalid for UTF-8".into()))?
-            .to_owned();
-        text.strip_prefix('\u{feff}').unwrap_or(&text).to_owned()
+            .map_err(|_| Error::Invalid("XML text bytes are invalid for UTF-8".into()))?;
+        Cow::Borrowed(text.strip_prefix('\u{feff}').unwrap_or(text))
     } else {
         if payload.len() % 2 != 0 {
             return Err(Error::Invalid(
@@ -638,7 +635,7 @@ fn decode_xml_text(bytes: &[u8]) -> Result<String, Error> {
                 }
             })
             .collect::<Vec<_>>();
-        decode_utf16_text(&words)
+        Cow::Owned(decode_utf16_text(&words))
     };
 
     if let Some(declared) = xml_declared_encoding(&text) {
@@ -956,20 +953,20 @@ fn openstep_key_string(value: &Value) -> String {
     }
 }
 
-struct Xml {
-    text: String,
+struct Xml<'a> {
+    text: Cow<'a, str>,
     pos: usize,
     depth: usize,
     nodes: usize,
     path: Vec<ValuePathSegment>,
     typed_scalar_paths: Vec<Vec<ValuePathSegment>>,
 }
-impl Xml {
-    fn new(bytes: &[u8]) -> Result<Self, Error> {
+impl<'a> Xml<'a> {
+    fn new(bytes: &'a [u8]) -> Result<Self, Error> {
         Ok(Self::from_text(decode_xml_text(bytes)?))
     }
 
-    fn from_text(text: String) -> Self {
+    fn from_text(text: Cow<'a, str>) -> Self {
         Self {
             text,
             pos: 0,

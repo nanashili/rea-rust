@@ -978,12 +978,12 @@ fn entry_kind(metadata: &libc::stat) -> Option<DirectoryEntryKind> {
 
 #[cfg(unix)]
 fn fingerprint_stat(metadata: &libc::stat, kind: Kind) -> Fingerprint {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     let (modified_ns, changed_ns) = (
         i128::from(metadata.st_mtime) * 1_000_000_000 + i128::from(metadata.st_mtime_nsec),
         i128::from(metadata.st_ctime) * 1_000_000_000 + i128::from(metadata.st_ctime_nsec),
     );
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     let (modified_ns, changed_ns) = (
         i128::from(metadata.st_mtim.tv_sec) * 1_000_000_000 + i128::from(metadata.st_mtim.tv_nsec),
         i128::from(metadata.st_ctim.tv_sec) * 1_000_000_000 + i128::from(metadata.st_ctim.tv_nsec),
