@@ -7,6 +7,7 @@ use super::catalog::ToolContract;
 use rea_core::analysis_error::AnalysisError;
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation};
 use serde_json::{Map, Value, json};
+use std::io::{self, Write};
 
 /// The original SDK's stdio receive buffer.
 pub const STDIO_DEFAULT_MAX_BUFFER_SIZE: usize = 10 * 1024 * 1024;
@@ -55,10 +56,114 @@ pub enum Encoding {
     },
 }
 
+// Measure both representations directly from the serializer. In particular,
+// rejected results never need an owned JSON string or its escaped copy.
+#[derive(Default)]
+struct WireSize {
+    bytes: usize,
+    units: usize,
+    escaped_bytes: usize,
+    escaped_units: usize,
+}
+
+#[cfg(test)]
+mod size_tests {
+    use super::*;
+
+    #[test]
+    fn streaming_sizes_match_owned_encoding_at_budget_boundaries() {
+        let controls: String = (0..=255).filter_map(char::from_u32).collect();
+        for value in [
+            Value::Null,
+            json!({}),
+            json!([]),
+            json!({"control": controls, "unicode": "é中😀\u{2028}\u{2029}", "quote": "\"\\/"}),
+            json!({"items": [null, true, false, -0.0, 1e30, u64::MAX, {"a": "b"}]}),
+        ] {
+            let text = serde_json::to_string(&value).unwrap();
+            let escaped = serde_json::to_string(&text).unwrap();
+            for structured in [false, true] {
+                for target in [false, true] {
+                    let base = if structured {
+                        RESULT_ENVELOPE_BYTES
+                    } else {
+                        ERROR_RESULT_ENVELOPE_BYTES
+                    } + if target { TARGET_CONTENT_META_BYTES } else { 0 };
+                    let bytes = base + if structured { text.len() } else { 0 } + escaped.len() - 2;
+                    let units =
+                        base + if structured {
+                            text.encode_utf16().count()
+                        } else {
+                            0
+                        } + escaped.encode_utf16().count()
+                            - 2;
+                    assert!(
+                        matches!(encode(&value, bytes, structured, target), Encoding::Fits { text: actual } if actual == text)
+                    );
+                    assert!(
+                        matches!(encode(&value, bytes - 1, structured, target), Encoding::Exceeds {
+                        bytes_at_least, code_units_at_least, constraint: "receive-buffer",
+                    } if bytes_at_least == bytes && code_units_at_least == units)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn size_counter_handles_split_utf8_and_every_control_escape() {
+        let text: String = (0..=255)
+            .filter_map(char::from_u32)
+            .chain("中😀".chars())
+            .collect();
+        let mut size = WireSize::default();
+        for byte in text.bytes() {
+            size.write_all(&[byte]).unwrap();
+        }
+        let escaped = serde_json::to_string(&text).unwrap();
+        assert_eq!(size.bytes, text.len());
+        assert_eq!(size.units, text.encode_utf16().count());
+        assert_eq!(size.escaped_bytes, escaped.len() - 2);
+        assert_eq!(size.escaped_units, escaped.encode_utf16().count() - 2);
+    }
+}
+
+impl Write for WireSize {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.bytes += bytes.len();
+        self.escaped_bytes += bytes.len();
+        for &byte in bytes {
+            // Count UTF-16 units by UTF-8 leading bytes. This also works if a
+            // writer call splits a code point across chunks.
+            let units = match byte {
+                0x00..=0x7f | 0xc0..=0xef => 1,
+                0xf0..=0xf7 => 2,
+                _ => 0,
+            };
+            let escape_extra = match byte {
+                b'"' | b'\\' | b'\x08' | b'\t' | b'\n' | b'\x0c' | b'\r' => 1,
+                0x00..=0x1f => 5,
+                _ => 0,
+            };
+            self.units += units;
+            self.escaped_units += units + escape_extra;
+            self.escaped_bytes += escape_extra;
+        }
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 /// Account for both delivered representations before allocating the reply.
 pub fn encode(value: &Value, budget: usize, structured: bool, target_content: bool) -> Encoding {
-    let text = serde_json::to_string(value).unwrap_or_else(|_| "null".into());
-    let escaped = serde_json::to_string(&text).unwrap_or_default();
+    let mut size = WireSize::default();
+    if serde_json::to_writer(&mut size, value).is_err() {
+        size = WireSize::default();
+        let _ = size.write(b"null");
+    }
     let base = if structured {
         RESULT_ENVELOPE_BYTES
     } else {
@@ -68,11 +173,8 @@ pub fn encode(value: &Value, budget: usize, structured: bool, target_content: bo
     } else {
         0
     };
-    let structured_bytes = if structured { text.len() } else { 0 };
-    let bytes = base + structured_bytes + escaped.len().saturating_sub(2);
-    let units = |text: &str| text.encode_utf16().count();
-    let code_units =
-        base + if structured { units(&text) } else { 0 } + units(&escaped).saturating_sub(2);
+    let bytes = base + if structured { size.bytes } else { 0 } + size.escaped_bytes;
+    let code_units = base + if structured { size.units } else { 0 } + size.escaped_units;
     if bytes > budget || code_units > MCP_RESULT_STRING_LIMIT {
         return Encoding::Exceeds {
             bytes_at_least: bytes,
@@ -84,7 +186,9 @@ pub fn encode(value: &Value, budget: usize, structured: bool, target_content: bo
             },
         };
     }
-    Encoding::Fits { text }
+    Encoding::Fits {
+        text: serde_json::to_string(value).unwrap_or_else(|_| "null".into()),
+    }
 }
 
 /// Immutable encoding and recovery policy shared by one server.
