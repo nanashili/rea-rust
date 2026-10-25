@@ -1520,9 +1520,20 @@ pub fn top_level_effect_follows_capture<'a>(
     parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_top_level_effect_follows_capture(&mut cache, capture, effect, parents, source)
+}
+
+pub(crate) fn cached_top_level_effect_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    capture: Node<'a>,
+    effect: Option<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
     let Some(effect) = effect else { return false };
-    let before = top_level_position(capture, parents, source);
-    let after = top_level_position(effect, parents, source);
+    let before = cached_top_level_position(cache, capture, parents, source);
+    let after = cached_top_level_position(cache, effect, parents, source);
     match (before, after) {
         (Some(before), Some(after)) if before.body == after.body => {
             if precedes(before, after) {
@@ -1539,7 +1550,8 @@ pub fn top_level_effect_follows_capture<'a>(
     }
 }
 
-fn top_level_position<'a>(
+fn cached_top_level_position<'a>(
+    cache: &mut StatementPositionCache,
     node: Node<'a>,
     parents: &NodeParents<'a>,
     source: &str,
@@ -1559,7 +1571,8 @@ fn top_level_position<'a>(
             declarator = Some(node);
         }
         if is_statement(&node) {
-            selected = statement_position(&node, parents, declarator.as_ref(), source);
+            selected =
+                cached_statement_position(cache, &node, parents, declarator.as_ref(), source);
         }
         if node.babel_type() == "Program" {
             return selected;
@@ -1572,6 +1585,22 @@ fn top_level_position<'a>(
 
 /// Classify an effect relative to a read site. Unknown remains unknown.
 pub fn effect_timing<'a>(
+    site: Node<'a>,
+    effect: Option<Node<'a>>,
+    state: &SemanticState<'a>,
+    source: &str,
+) -> EffectTiming {
+    cached_effect_timing(
+        &mut state.statement_position_cache.borrow_mut(),
+        site,
+        effect,
+        state,
+        source,
+    )
+}
+
+pub(crate) fn cached_effect_timing<'a>(
+    cache: &mut StatementPositionCache,
     site: Node<'a>,
     effect: Option<Node<'a>>,
     state: &SemanticState<'a>,
@@ -1620,8 +1649,10 @@ pub fn effect_timing<'a>(
             IterationCardinality::Unknown => {}
         }
     }
-    let follows_site = semantic_effect_follows_reference(site, effect, &state.parents, source);
-    let follows_effect = semantic_effect_follows_reference(effect, site, &state.parents, source);
+    let follows_site =
+        cached_semantic_effect_follows_reference(cache, site, effect, &state.parents, source);
+    let follows_effect =
+        cached_semantic_effect_follows_reference(cache, effect, site, &state.parents, source);
     match (follows_site, follows_effect) {
         (true, false) => EffectTiming::After,
         (false, true) => EffectTiming::Before,
@@ -1644,6 +1675,17 @@ fn enclosing_iteration<'a>(node: Node<'a>, parents: &NodeParents<'a>) -> Option<
 }
 
 pub fn semantic_effect_follows_reference<'a>(
+    reference: Node<'a>,
+    effect: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_effect_follows_reference(&mut cache, reference, effect, parents, source)
+}
+
+fn cached_semantic_effect_follows_reference<'a>(
+    cache: &mut StatementPositionCache,
     reference: Node<'a>,
     effect: Node<'a>,
     parents: &NodeParents<'a>,
@@ -1705,7 +1747,7 @@ pub fn semantic_effect_follows_reference<'a>(
                 | "OptionalCallExpression"
                 | "NewExpression"
         ) || loop_input))
-        || top_level_effect_follows_capture(reference, Some(effect), parents, source)
+        || cached_top_level_effect_follows_capture(cache, reference, Some(effect), parents, source)
 }
 
 /// Keep only initializer origins proven to precede a mutation.

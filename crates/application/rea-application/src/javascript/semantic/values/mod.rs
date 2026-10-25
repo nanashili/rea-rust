@@ -622,7 +622,11 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         point: EvaluationPoint<'a>,
         whole_binding: bool,
     ) -> Option<SnapshotKey> {
-        if whole_binding || binding.initializers.len() != 1 {
+        // Object and array literals can be evaluated demand-driven for a
+        // member read. Their result then depends on the active path, which
+        // is intentionally local evaluator state rather than binding state.
+        // Do not retain such a partial value under a path-independent key.
+        if whole_binding || self.demanded_member_path.is_some() || binding.initializers.len() != 1 {
             return None;
         }
         Some(SnapshotKey {
@@ -776,4 +780,57 @@ fn can_capture_primitive(value: &SemanticValue) -> bool {
                 ..
             }
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::javascript::parser::parse_javascript_analysis_program;
+    use crate::javascript::semantic::analysis::prepare_state;
+    use crate::javascript::semantic::state::ResolutionMode;
+    use oxc_allocator::Allocator;
+
+    #[test]
+    fn demand_driven_member_values_are_not_snapshot_cached_by_path() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 };",
+            Some("demanded-member-cache.js"),
+        )
+        .expect("member cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+        let mut evaluation = Evaluation::new(state);
+
+        evaluation.demanded_member_path = Some(vec![JsString::from("first")]);
+        let first = evaluation.evaluate_binding(binding, EvaluationPoint::live(), false);
+        evaluation.demanded_member_path = Some(vec![JsString::from("second")]);
+        let second = evaluation.evaluate_binding(binding, EvaluationPoint::live(), false);
+
+        assert_eq!(object_property_number(&first, "first"), Some(1.0));
+        assert_eq!(object_property_number(&second, "second"), Some(2.0));
+    }
+
+    fn object_property_number(value: &SemanticValue, name: &str) -> Option<f64> {
+        let SemanticValue::Object { properties, .. } = value else {
+            return None;
+        };
+        properties
+            .iter()
+            .find(|property| property.name == name)
+            .and_then(|property| match property.value {
+                SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(number),
+                } => Some(number),
+                _ => None,
+            })
+    }
 }

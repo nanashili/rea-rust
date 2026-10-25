@@ -22,7 +22,7 @@ use super::property_paths::{PropertyPath, PropertyPathKey, semantic_array_index_
 use super::returned_references::{
     SemanticReturnedReferenceResult, create_semantic_returned_references,
 };
-use super::state::{ProjectionKey, SemanticState};
+use super::state::{Initializer, ProjectionKey, SemanticState};
 use super::value_types::JsString;
 
 /// One source write retained with its exact ambient identity.
@@ -244,14 +244,31 @@ fn queue_node<'source, 'stores>(
     });
 }
 
+fn queue_initializer<'source, 'stores>(
+    pending: &mut Vec<PendingWork<'source, 'stores>>,
+    initializer: &Initializer<'source>,
+    path: &PropertyPath,
+) {
+    let mut next = initializer
+        .projection
+        .iter()
+        .map(|key| match key {
+            ProjectionKey::Name(name) => PropertyPathKey::String(name.clone()),
+            ProjectionKey::Index(index) => PropertyPathKey::Number(*index),
+            ProjectionKey::Dynamic => PropertyPathKey::Wildcard,
+        })
+        .collect::<PropertyPath>();
+    next.extend(path.iter().cloned());
+    queue_node(pending, initializer.node, Some(next), true);
+}
+
 fn schedule_next_stored_edge<'source, 'stores>(
     mut cursor: StoredEdgeCursor<'source, 'stores>,
     escaped_contents: bool,
     expanded: &FxHashMap<NodeKey, Option<PropertyPath>>,
-    queued: &FxHashMap<NodeKey, Vec<PropertyPath>>,
     pending: &mut Vec<PendingWork<'source, 'stores>>,
 ) {
-    // Rejected and duplicate candidates do not change `expanded` or `queued`,
+    // Rejected and duplicate candidates do not change `expanded`,
     // so consume them locally. Requeue the cursor only after materializing the
     // first useful node; this retains the previous LIFO ordering while avoiding
     // one outer scheduler turn per skipped stored edge.
@@ -272,10 +289,9 @@ fn schedule_next_stored_edge<'source, 'stores>(
                 .map_or(&[][..], |stored_path| &cursor.path[stored_path.len()..]);
             let stored_member_path = stored.member_path.as_ref();
             let stored_root_key = stored_member_path.root.key();
-            let duplicate = queued_stored_projection_matches(
+            let duplicate = stored_projection_matches_expanded(
                 stored_member_path,
                 expanded.get(&stored_root_key),
-                queued.get(&stored_root_key),
                 &stored.projection,
                 remaining,
             );
@@ -302,47 +318,44 @@ fn schedule_next_stored_edge<'source, 'stores>(
     }
 }
 
-fn queued_stored_projection_matches(
+fn stored_projection_matches_expanded(
     member_path: &ElectronMemberPath<'_>,
     expanded: Option<&Option<PropertyPath>>,
-    queued: Option<&Vec<PropertyPath>>,
     projection: &PropertyPath,
     remaining: &[PropertyPathKey],
 ) -> bool {
-    let Some(queued) = queued else {
-        return false;
-    };
-    let candidate_len = member_path.members.len() + projection.len() + remaining.len();
     let Some(expanded) = expanded else {
         return false;
     };
     let Some(previous) = expanded else {
-        return queued.iter().any(|path| path.is_empty());
+        // `None` is the absorbing unknown state.
+        return true;
     };
+    let candidate_len = member_path.members.len() + projection.len() + remaining.len();
     if previous.len() != candidate_len {
-        // A length change widens the stored projection to unknown. Let the
-        // normal resolver update `expanded` before applying its queue guard.
+        // A known empty path remains distinct from unknown, so a conflicting
+        // length must still reach the resolver and widen the root to `None`.
         return false;
     }
 
-    let unchanged = previous.iter().enumerate().all(|(index, previous_key)| {
+    previous.iter().enumerate().all(|(index, previous_key)| {
         if *previous_key == PropertyPathKey::Wildcard {
             return true;
         }
         if let Some(member) = member_path.members.get(index) {
             return match (member, previous_key) {
                 (Some(name), PropertyPathKey::String(previous_name)) => name == previous_name,
-                (None, PropertyPathKey::Wildcard) => true,
                 _ => false,
             };
         }
+
         let projection_index = index - member_path.members.len();
         if let Some(key) = projection.get(projection_index) {
             return key == previous_key;
         }
+
         remaining[index - member_path.members.len() - projection.len()] == *previous_key
-    });
-    unchanged && queued.iter().any(|queued_path| queued_path == previous)
+    })
 }
 
 /// Collapse repeated global-object aliases while preserving dynamic segments.
@@ -580,10 +593,6 @@ where
     // hasher is safe for these local traversal maps. Path and string maps keep
     // the standard randomized hasher.
     let mut expanded = FxHashMap::<NodeKey, Option<PropertyPath>>::default();
-    // Keep the root keyed by itself and compare projections directly. Hashing
-    // every property key dominated this loop for large applications, while a
-    // root usually has only a few distinct projections.
-    let mut queued = FxHashMap::<NodeKey, Vec<PropertyPath>>::default();
     let mut result = Vec::new();
 
     while let Some(work) = pending.pop() {
@@ -594,13 +603,7 @@ where
                 reads_at_self,
             } => (current, suffix, reads_at_self),
             PendingWork::StoredEdges { cursor } => {
-                schedule_next_stored_edge(
-                    cursor,
-                    escaped_contents,
-                    &expanded,
-                    &queued,
-                    &mut pending,
-                );
+                schedule_next_stored_edge(cursor, escaped_contents, &expanded, &mut pending);
                 continue;
             }
         };
@@ -618,7 +621,8 @@ where
         if let Some(suffix) = suffix {
             path.extend(suffix);
         }
-        let joined = match expanded.get(&root.key()) {
+        let root_key = root.key();
+        let joined = match expanded.get(&root_key) {
             None => Some(path.clone()),
             Some(Some(previous)) if previous.len() == path.len() => Some(
                 previous
@@ -635,20 +639,17 @@ where
             ),
             Some(_) => None,
         };
-        if expanded.contains_key(&root.key()) && !possible_writes {
+        if expanded.contains_key(&root_key) && !possible_writes {
             return Vec::new();
         }
-        expanded.insert(root.key(), joined.clone());
+        if expanded.get(&root_key) == Some(&joined) {
+            continue;
+        }
+        expanded.insert(root_key, joined.clone());
         // `None` is the TS resolver's unknown projection. It still retains
         // the source identity at its root; dropping it would turn a
         // conflicting alias into an unsound absence claim.
         let path = joined.unwrap_or_default();
-        let queued_paths = queued.entry(root.key()).or_default();
-        if queued_paths.iter().any(|queued_path| queued_path == &path) {
-            continue;
-        }
-        queued_paths.push(path.clone());
-
         if is_import_meta(state, root) {
             retain_unique_path(
                 &mut result,
@@ -707,40 +708,23 @@ where
                 continue;
             }
             if let Some(binding) = state.resolve_binding(&root, name) {
-                let initializers = if possible_writes {
+                if possible_writes {
                     let read = if reads_at_self { Some(root) } else { capture };
                     let selected = read.map(|read| {
                         state
                             .semantic_binding_at_read(&state.bindings[binding], read)
                             .binding
                     });
-                    selected
-                        .unwrap_or_else(|| std::borrow::Cow::Borrowed(&state.bindings[binding]))
-                        .initializers
-                        .iter()
-                        .cloned()
-                        .collect()
-                } else {
-                    state
-                        .stable_initializer(binding)
-                        .into_iter()
-                        .cloned()
-                        .collect::<Vec<_>>()
-                };
-                for initializer in &initializers {
-                    let mut next = initializer
-                        .projection
-                        .iter()
-                        .map(|key| match key {
-                            ProjectionKey::Name(name) => PropertyPathKey::String(name.clone()),
-                            ProjectionKey::Index(index) => PropertyPathKey::Number(*index),
-                            ProjectionKey::Dynamic => PropertyPathKey::Wildcard,
-                        })
-                        .collect::<PropertyPath>();
-                    next.extend(path.clone());
-                    queue_node(&mut pending, initializer.node, Some(next), true);
-                }
-                if !initializers.is_empty() {
+                    let selected_binding = selected
+                        .unwrap_or_else(|| std::borrow::Cow::Borrowed(&state.bindings[binding]));
+                    if !selected_binding.initializers.is_empty() {
+                        for initializer in &selected_binding.initializers {
+                            queue_initializer(&mut pending, initializer, &path);
+                        }
+                        continue;
+                    }
+                } else if let Some(initializer) = state.stable_initializer(binding) {
+                    queue_initializer(&mut pending, initializer, &path);
                     continue;
                 }
             }
@@ -1966,44 +1950,38 @@ mod tests {
         candidate.extend(projection.iter().cloned());
         candidate.extend(remainder.iter().cloned());
 
-        let assert_case = |previous: Option<PropertyPath>, queued: Vec<PropertyPath>| {
-            let joined = join_ambient_projection(previous.as_ref(), Some(&candidate));
-            let expected = joined == previous
-                && queued.iter().any(|queued_path| {
-                    queued_path.as_slice() == joined.as_deref().unwrap_or_default()
-                });
-            let actual = queued_stored_projection_matches(
+        let assert_matches = |previous: Option<PropertyPath>| {
+            stored_projection_matches_expanded(
                 &member_path,
                 Some(&previous),
-                Some(&queued),
                 &projection,
                 &remainder,
-            );
-            assert_eq!(actual, expected);
+            )
         };
 
-        assert!(!queued_stored_projection_matches(
+        assert!(!stored_projection_matches_expanded(
             &member_path,
             None,
-            Some(&vec![candidate.clone()]),
             &projection,
             &remainder,
         ));
-        assert_case(Some(candidate.clone()), vec![candidate.clone()]);
-        assert_case(Some(candidate.clone()), vec![]);
-        assert_case(Some(vec![]), vec![vec![]]);
+        assert!(assert_matches(Some(candidate.clone())));
+        assert!(!assert_matches(Some(vec![])));
         let widened = vec![PropertyPathKey::Wildcard; candidate.len()];
-        assert_case(Some(widened.clone()), vec![widened]);
-        assert_case(
-            Some(vec![PropertyPathKey::Wildcard; candidate.len()]),
-            vec![candidate.clone()],
-        );
-        assert_case(Some(vec![PropertyPathKey::Wildcard; 2]), vec![vec![]]);
-        assert_case(
-            Some(vec![PropertyPathKey::String(JsString::from("other"))]),
-            vec![],
-        );
-        assert_case(None, vec![vec![]]);
-        assert_case(None, vec![]);
+        assert!(assert_matches(Some(widened)));
+
+        // A known empty projection and the absorbing unknown projection are
+        // different states. The former must process a conflicting length;
+        // the latter has already covered every candidate.
+        let unknown = None;
+        assert!(stored_projection_matches_expanded(
+            &member_path,
+            Some(&unknown),
+            &projection,
+            &remainder,
+        ));
+
+        let other = vec![PropertyPathKey::String(JsString::from("other")); candidate.len()];
+        assert!(!assert_matches(Some(other)));
     }
 }

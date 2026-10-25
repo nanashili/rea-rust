@@ -8,9 +8,7 @@ use crate::javascript::ast::{AstVisitor, Field, Node, traverse};
 
 use super::ast_values::{is_class, is_function, unwrap_expression};
 use super::module_interop::{ModuleInterop, create_module_interop_for_global_eval};
-use super::mutation_initializers::{
-    EffectTiming, effect_timing, semantic_binding_effect_follows_capture,
-};
+use super::mutation_initializers::{EffectTiming, effect_timing};
 use super::state::{BindingState, SemanticState};
 
 #[derive(Clone, Debug, Default)]
@@ -163,13 +161,7 @@ pub fn binding_may_have_opaque_effect<'a>(
         .any(|effect| {
             read.is_none_or(|read| {
                 effect_timing(read, Some(effect), state, state.source) != EffectTiming::After
-                    && !semantic_binding_effect_follows_capture(
-                        binding,
-                        read,
-                        effect,
-                        &state.parents,
-                        state.source,
-                    )
+                    && !state.semantic_binding_effect_follows_capture(binding, read, effect)
             })
         })
 }

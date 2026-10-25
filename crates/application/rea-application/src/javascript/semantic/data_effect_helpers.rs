@@ -8,7 +8,7 @@
 use crate::javascript::ast::{AstVisitor, Field, Node, traverse};
 
 use super::ast_values::{ExactLiteral, read_exact_literal, static_property_key, unwrapped};
-use super::mutation_initializers::{effect_timing, top_level_effect_follows_capture};
+use super::mutation_initializers::effect_timing;
 use super::projection::callable_id_for_node;
 use super::provenance::BindingProvenance;
 use super::require_origin::{require_exports_identity, require_origin};
@@ -490,7 +490,7 @@ fn has_prior_member_effect<'a>(
         .chain(binding.escaped_paths.iter())
         .any(|effect| {
             effect.node.is_some_and(|node| {
-                !top_level_effect_follows_capture(capture, Some(node), &state.parents, state.source)
+                !state.top_level_effect_follows_capture(capture, Some(node))
                     && effect.path.first().is_some_and(|key| {
                         matches!(key, super::property_paths::PropertyPathKey::String(value) if value == property)
                     })

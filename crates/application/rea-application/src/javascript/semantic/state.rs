@@ -489,6 +489,36 @@ impl<'a> SemanticState<'a> {
         )
     }
 
+    pub(crate) fn semantic_binding_effect_follows_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+        effect: Node<'a>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_binding_effect_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            effect,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn top_level_effect_follows_capture(
+        &self,
+        capture: Node<'a>,
+        effect: Option<Node<'a>>,
+    ) -> bool {
+        super::mutation_initializers::cached_top_level_effect_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            capture,
+            effect,
+            &self.parents,
+            self.source,
+        )
+    }
+
     /// Record a value resource limit once, preserving observation order.
     pub fn record_value_resource_limit(&self, limit: super::value_types::ResourceLimit) {
         let mut limits = self.value_resource_limits.borrow_mut();

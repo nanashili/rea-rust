@@ -270,6 +270,7 @@ mod tests {
     use crate::javascript::parser::parse_javascript_analysis_program;
     use crate::javascript::semantic::analysis::prepare_state;
     use crate::javascript::semantic::state::ResolutionMode;
+    use crate::javascript::semantic::value_types::{Primitive, SemanticValue};
     use crate::javascript::semantic::values::{
         evaluate_semantic_binding, evaluate_semantic_provenance,
     };
@@ -293,6 +294,47 @@ mod tests {
         let independent = projected_binding_facts(VALUE_PROJECTION_SOURCE, false);
 
         assert_eq!(shared, independent);
+    }
+
+    #[test]
+    fn demand_driven_temporal_member_reads_do_not_share_partial_values() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            r#"
+                let value = { first: 0 };
+                value = { first: 1, second: 2 };
+                const result = [value.first, value.second];
+            "#,
+            Some("temporal-members.js"),
+        )
+        .expect("temporal member source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let result_binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "result")
+            .expect("result binding exists");
+
+        let mut evaluator = ImmutableBindingEvaluator::new(state);
+        let value = evaluator.evaluate(result_binding);
+
+        let SemanticValue::Array { items, .. } = value else {
+            panic!("expected result array");
+        };
+        let values: Vec<_> = items
+            .into_iter()
+            .map(|item| match item.value {
+                SemanticValue::Literal {
+                    value: Primitive::Number(value),
+                } => value,
+                other => panic!("expected numeric member value, got {other:?}"),
+            })
+            .collect();
+        assert_eq!(values, [1.0, 2.0]);
     }
 
     fn projected_binding_facts(
