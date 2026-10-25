@@ -33,7 +33,11 @@ pub fn search(input: &Value) -> Result<Value, Failure> {
             continue;
         };
 
-        if !block.loaded && request.start.is_none() && request.end.is_none() {
+        // A provider can retain an initialized block while the corresponding
+        // bytes are not loaded in the current image.  Bounds do not make that
+        // data searchable: reporting matches from it would turn incomplete
+        // coverage into a false positive.
+        if !block.loaded {
             skipped_not_loaded.push(block.coverage(window));
             continue;
         }
@@ -231,7 +235,11 @@ fn parse_blocks(value: &Value) -> Result<Vec<Block>, Failure> {
                     .ok_or_else(|| invalid("block bytes are required"))?;
                 parse_byte_array(value)?
             };
-            let expected = end.offset - start.offset + 1;
+            let expected = end
+                .offset
+                .checked_sub(start.offset)
+                .and_then(|span| span.checked_add(1))
+                .ok_or_else(|| invalid("memory block address range overflows"))?;
             if expected != bytes.len() as u64 {
                 return Err(invalid(
                     "memory block bytes must equal its inclusive address range",
@@ -383,7 +391,10 @@ fn match_value(block: &Block, index: usize, procedures: &[Procedure]) -> Value {
         })
         .map(|value| serde_json::json!({"address": value.address, "name": value.name}))
         .unwrap_or(Value::Null);
-    serde_json::json!({"address": address, "segment": block.segment, "file_offset": block.file_offset.map(|offset| offset + index as u64), "procedure": procedure})
+    let file_offset = block
+        .file_offset
+        .and_then(|offset| offset.checked_add(index as u64));
+    serde_json::json!({"address": address, "segment": block.segment, "file_offset": file_offset, "procedure": procedure})
 }
 
 fn result_value(
@@ -417,6 +428,13 @@ impl Block {
         }
         let actual_start = lower.offset.max(self.start.offset);
         let actual_end = upper.offset.min(self.end.offset);
+        let window_length = actual_end
+            .checked_sub(actual_start)
+            .and_then(|span| span.checked_add(1))
+            .ok_or_else(|| invalid("memory block window overflows"))?;
+        if window_length > usize::MAX as u64 {
+            return Err(invalid("memory block window exceeds addressable memory"));
+        }
         Ok(Some(Window {
             start_index: (actual_start - self.start.offset) as usize,
             end_index: (actual_end - self.start.offset + 1) as usize,
