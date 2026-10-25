@@ -1,6 +1,8 @@
 //! Strings, derived references, instruction listings and byte reads for the
 //! admitted target.
+pub(crate) mod byte_search;
 pub(crate) mod image;
+pub(crate) mod instruction;
 pub(crate) mod references;
 
 use std::ops::Range;
@@ -50,7 +52,10 @@ pub(crate) struct ByteRead {
     pub length: usize,
 }
 
-fn numeric(text: &str) -> Result<u64> {
+pub(crate) const MAX_SEARCH_RESULTS: usize = 1000;
+pub(crate) const MAX_SEARCH_PATTERN: usize = 4096;
+
+pub(crate) fn numeric(text: &str) -> Result<u64> {
     let value = parse_address(text).context("Expected a canonical address")?;
     ensure!(address(value) == text, "Expected a canonical address");
     Ok(value)
@@ -78,14 +83,43 @@ fn strings_digest(strings: &[ImageString]) -> String {
 }
 
 impl Session {
+    pub fn search_bytes(&mut self, input: Value) -> Result<Value> {
+        byte_search::search(self, input)
+    }
+
+    pub fn image_map(&mut self) -> Result<Value> {
+        let (bytes, _, file_offset) = self.decompiler.verified_image()?;
+        let ranges = image::coverage_ranges(&bytes, file_offset)?;
+        let items = ranges
+            .iter()
+            .map(|range| {
+                json!({
+                    "start": address(range.address.start),
+                    "end": address(range.address.end.saturating_sub(1)),
+                    "file_offset": range.file_offset,
+                    "length": range.address.end.saturating_sub(range.address.start),
+                    "section": range.name,
+                    "initialized": range.initialized,
+                    "loaded": range.loaded,
+                })
+            })
+            .collect::<Vec<_>>();
+        Ok(json!({"items": items, "coverage": "file-backed object sections"}))
+    }
+
     fn image_strings(&mut self) -> Result<Arc<Vec<ImageString>>> {
         if self.analysis.strings.is_none() {
-            let (bytes, _) = self.decompiler.verified_image()?;
+            let (bytes, _, _) = self.decompiler.verified_image()?;
             let strings = image::strings(&bytes)?;
             self.analysis.strings_sha256 = Some(strings_digest(&strings));
             self.analysis.strings = Some(Arc::new(strings));
         }
-        Ok(Arc::clone(self.analysis.strings.as_ref().expect("strings were just read")))
+        Ok(Arc::clone(
+            self.analysis
+                .strings
+                .as_ref()
+                .expect("strings were just read"),
+        ))
     }
 
     /// One page of the string inventory.
@@ -95,7 +129,10 @@ impl Session {
             "Invalid string page size"
         );
         let strings = self.image_strings()?;
-        ensure!(page.offset <= strings.len(), "Offset exceeds the string inventory");
+        ensure!(
+            page.offset <= strings.len(),
+            "Offset exceeds the string inventory"
+        );
         let items: Vec<Value> = strings[page.offset..]
             .iter()
             .take(page.limit)
@@ -127,12 +164,14 @@ impl Session {
             return Ok(());
         }
         let starts = self.entry_addresses()?;
-        let (bytes, facts) = self.decompiler.verified_image()?;
+        let (bytes, facts, _) = self.decompiler.verified_image()?;
         let mapped = Arc::new(Mapped::new(
             self.snapshot
                 .segments
                 .iter()
-                .filter_map(|segment| Some(parse_address(&segment.address)?..parse_address(&segment.end)?))
+                .filter_map(|segment| {
+                    Some(parse_address(&segment.address)?..parse_address(&segment.end)?)
+                })
                 .collect(),
         ));
         let threads = self.decompiler.threads().min(starts.len().max(1));
@@ -145,8 +184,13 @@ impl Session {
         std::thread::scope(|scope| -> Result<()> {
             let handles = (0..threads)
                 .map(|_| {
-                    let (bytes, facts, mapped, starts, path) =
-                        (Arc::clone(&bytes), Arc::clone(&facts), Arc::clone(&mapped), Arc::clone(&starts), &path);
+                    let (bytes, facts, mapped, starts, path) = (
+                        Arc::clone(&bytes),
+                        Arc::clone(&facts),
+                        Arc::clone(&mapped),
+                        Arc::clone(&starts),
+                        &path,
+                    );
                     let (cursor, completed) = (&cursor, &completed);
                     std::thread::Builder::new()
                         .name("rea-ghidra-references".to_owned())
@@ -158,7 +202,9 @@ impl Session {
                                 let Some(&entry) = starts.get(index) else {
                                     break;
                                 };
-                                found.extend(references::sweep(&program, &facts, &mapped, &starts, entry));
+                                found.extend(references::sweep(
+                                    &program, &facts, &mapped, &starts, entry,
+                                ));
                                 completed.fetch_add(1, Ordering::AcqRel);
                             }
                             Ok(found)
@@ -192,19 +238,29 @@ impl Session {
     }
 
     /// References to `address` (code and data).
-    pub fn references_to(&mut self, input: AddressPage, progress: &mut impl Progress) -> Result<Value> {
+    pub fn references_to(
+        &mut self,
+        input: AddressPage,
+        progress: &mut impl Progress,
+    ) -> Result<Value> {
         ensure!(
             (1..=MAX_REFERENCE_PAGE).contains(&input.limit),
             "Invalid reference page size"
         );
         let target = numeric(&input.address)?;
         self.ensure_references(progress)?;
-        let (items, total) = self.cache.references_to(target, input.offset, input.limit)?;
+        let (items, total) = self
+            .cache
+            .references_to(target, input.offset, input.limit)?;
         Ok(self.reference_page(&input, &items, total))
     }
 
     /// References from instructions of the inventory function at `address`.
-    pub fn references_from(&mut self, input: AddressPage, progress: &mut impl Progress) -> Result<Value> {
+    pub fn references_from(
+        &mut self,
+        input: AddressPage,
+        progress: &mut impl Progress,
+    ) -> Result<Value> {
         ensure!(
             (1..=MAX_REFERENCE_PAGE).contains(&input.limit),
             "Invalid reference page size"
@@ -216,7 +272,9 @@ impl Session {
             "Address is absent from the saved inventory"
         );
         self.ensure_references(progress)?;
-        let (items, total) = self.cache.references_from(function, input.offset, input.limit)?;
+        let (items, total) = self
+            .cache
+            .references_from(function, input.offset, input.limit)?;
         Ok(self.reference_page(&input, &items, total))
     }
 
@@ -249,49 +307,58 @@ impl Session {
         );
         let next = starts.partition_point(|start| *start <= entry);
         let end = starts.get(next).copied().unwrap_or(u64::MAX);
-        let (items, exhausted, stop) = self.decompiler.with_program(&starts, |program, facts| {
-            let mut items = Vec::new();
-            let mut current = entry;
-            let mut index = 0_usize;
-            let mut stop = "next_entry";
-            loop {
-                if current >= end {
-                    break;
-                }
-                if !facts.is_code(current, 1) {
-                    stop = "end_of_code";
-                    break;
-                }
-                if index >= references::MAX_EXTENT_INSTRUCTIONS {
-                    stop = "instruction_limit";
-                    break;
-                }
-                let Some(instruction) = program.disassemble(current, 1).ok().and_then(|mut list| list.pop()) else {
-                    stop = "decode_failure";
-                    break;
-                };
-                if instruction.length == 0 {
-                    stop = "decode_failure";
-                    break;
-                }
-                if index >= input.offset {
-                    if items.len() == input.limit {
-                        return (items, false, "page");
+        let (items, exhausted, stop) =
+            self.decompiler.with_program(&starts, |program, facts| {
+                let mut items = Vec::new();
+                let mut current = entry;
+                let mut index = 0_usize;
+                let mut stop = "next_entry";
+                loop {
+                    if current >= end {
+                        break;
                     }
-                    let bytes: String = instruction.bytes.iter().map(|byte| format!("{byte:02x}")).collect();
-                    items.push(json!({
-                        "address": address(instruction.address),
-                        "length": instruction.length,
-                        "bytes": bytes,
-                        "mnemonic": instruction.mnemonic,
-                        "operands": instruction.operands,
-                    }));
+                    if !facts.is_code(current, 1) {
+                        stop = "end_of_code";
+                        break;
+                    }
+                    if index >= references::MAX_EXTENT_INSTRUCTIONS {
+                        stop = "instruction_limit";
+                        break;
+                    }
+                    let Some(instruction) = program
+                        .disassemble(current, 1)
+                        .ok()
+                        .and_then(|mut list| list.pop())
+                    else {
+                        stop = "decode_failure";
+                        break;
+                    };
+                    if instruction.length == 0 {
+                        stop = "decode_failure";
+                        break;
+                    }
+                    if index >= input.offset {
+                        if items.len() == input.limit {
+                            return (items, false, "page");
+                        }
+                        let bytes: String = instruction
+                            .bytes
+                            .iter()
+                            .map(|byte| format!("{byte:02x}"))
+                            .collect();
+                        items.push(json!({
+                            "address": address(instruction.address),
+                            "length": instruction.length,
+                            "bytes": bytes,
+                            "mnemonic": instruction.mnemonic,
+                            "operands": instruction.operands,
+                        }));
+                    }
+                    index += 1;
+                    current += instruction.length as u64;
                 }
-                index += 1;
-                current += instruction.length as u64;
-            }
-            (items, true, stop)
-        })?;
+                (items, true, stop)
+            })?;
         let next_offset = (!exhausted).then_some(input.offset + items.len());
         Ok(json!({
             "items": items,
@@ -302,6 +369,27 @@ impl Session {
         }))
     }
 
+    /// One structured, read-only instruction observation from the decoder and
+    /// the instruction's first p-code translation.
+    pub fn inspect_instruction(
+        &mut self,
+        input: crate::protocol::InspectInstructionParams,
+    ) -> Result<Value> {
+        let (bytes, _, _) = self.decompiler.verified_image()?;
+        let mapped_ranges = image::mapped_ranges(&bytes)?;
+        let starts = self.entry_addresses()?;
+        let language = self.snapshot.language.clone();
+        self.decompiler.with_program(&starts, |program, facts| {
+            instruction::inspect(
+                program,
+                facts,
+                &serde_json::json!({"address": input.address}),
+                &language,
+                &mapped_ranges,
+            )
+        })?
+    }
+
     /// Bytes from file-backed sections, without loader fixups.
     pub fn read_bytes(&mut self, input: ByteRead) -> Result<Value> {
         ensure!(
@@ -309,12 +397,17 @@ impl Session {
             "Invalid byte read length"
         );
         let start = numeric(&input.address)?;
-        let (bytes, _) = self.decompiler.verified_image()?;
+        let (bytes, _, file_offset) = self.decompiler.verified_image()?;
         if self.analysis.file_ranges.is_none() {
-            self.analysis.file_ranges = Some(Arc::new(image::file_ranges(&bytes)?));
+            self.analysis.file_ranges = Some(Arc::new(image::file_ranges(&bytes, file_offset)?));
         }
-        let ranges = Arc::clone(self.analysis.file_ranges.as_ref().expect("ranges were just read"));
-        let read = image::read(&bytes, &ranges, start, input.length);
+        let ranges = Arc::clone(
+            self.analysis
+                .file_ranges
+                .as_ref()
+                .expect("ranges were just read"),
+        );
+        let read = image::read(&bytes, &ranges, file_offset, start, input.length);
         let hex: String = read.iter().map(|byte| format!("{byte:02x}")).collect();
         Ok(json!({
             "address": input.address,

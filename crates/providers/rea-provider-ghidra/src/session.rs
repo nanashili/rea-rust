@@ -12,10 +12,12 @@ use rea_core::analysis_error::AnalysisError;
 use serde_json::{Map, Value, json};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-const REQUIRED_COMMANDS: [&str; 15] = [
+const REQUIRED_COMMANDS: [&str; 18] = [
     "info",
     "open",
     "segments",
+    "image_map",
+    "search_bytes",
     "functions",
     "function_aliases",
     "resolve_functions",
@@ -25,6 +27,7 @@ const REQUIRED_COMMANDS: [&str; 15] = [
     "references_to",
     "references_from",
     "instructions",
+    "inspect_instruction",
     "read_bytes",
     "checkpoint",
     "close",

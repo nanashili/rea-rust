@@ -9,9 +9,10 @@ use crate::configuration::Configuration;
 use crate::identity::{Operation, PROVIDER_ID, identity, limitations};
 use crate::inventory::Inventory;
 use crate::profile::profile_matches;
-use crate::protocol::parse_segments;
+use crate::protocol::{Procedure, parse_segments};
 use crate::selectors;
 use crate::session::Session;
+use crate::static_routes;
 use crate::worker::{Control, Interruption, Worker, cache_integrity_failed};
 use rea_analysis::{AnalysisClient, AnalysisExecution, BinaryTarget, ExecutionOptions};
 use rea_core::analysis_error::cleanup::{cleanup_root, with_cleanup_failure};
@@ -24,6 +25,7 @@ use std::sync::{Arc, Condvar, Mutex};
 const MAX_BATCH_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_BATCH_SELECTORS: usize = 1_000_000;
 const MAX_SELECTOR_BYTES: usize = 4096;
+const UNAVAILABLE_BODY_REASON: &str = "The Ghidra worker does not recover function bodies; its listing extent ends at the next inventory entry.";
 
 /// One completed provider read.
 struct Observation {
@@ -80,6 +82,162 @@ fn failure_kind(kind: &str) -> Map<String, Value> {
 
 fn is_cancellation(failure: &AnalysisError) -> bool {
     matches!(cleanup_root(failure).kind, ErrorKind::Cancelled { .. })
+}
+
+fn procedure_identity(procedure: &Procedure) -> Value {
+    json!({
+        "address": procedure.address,
+        "name": procedure.name,
+        "classification": null,
+        "body": {
+            "available": false,
+            "reason": UNAVAILABLE_BODY_REASON,
+        }
+    })
+}
+
+fn function_identity(procedure: &Procedure) -> Value {
+    let mut identity = procedure_identity(procedure);
+    if let Value::Object(fields) = &mut identity {
+        fields.insert("signature".into(), Value::Null);
+        fields.insert("locals".into(), Value::Array(Vec::new()));
+    }
+    identity
+}
+
+fn related_procedure_identities(
+    procedures: &[Procedure],
+    result: &Value,
+) -> (Vec<Value>, Vec<String>) {
+    let mut identities = Vec::new();
+    let mut unresolved = Vec::new();
+    for address in result
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        match procedures.iter().find(|item| item.address == address) {
+            Some(procedure) => identities.push(procedure_identity(procedure)),
+            None => unresolved.push(address.to_owned()),
+        }
+    }
+    (identities, unresolved)
+}
+
+fn relationship_coverage(
+    callers: &crate::analysis::Read,
+    callees: &crate::analysis::Read,
+    unresolved: &[String],
+) -> Value {
+    let mut limitations = Vec::new();
+    let mut diagnostics = Vec::new();
+    for read in [callers, callees] {
+        if let Some(coverage) = &read.relationship_coverage {
+            limitations.extend(
+                coverage["limitations"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+            diagnostics.extend(
+                coverage["diagnostics"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned),
+            );
+        }
+    }
+    if !unresolved.is_empty() {
+        limitations.push(format!(
+            "{} relationship target(s) were outside the frozen procedure inventory and remain unresolved.",
+            unresolved.len()
+        ));
+        diagnostics.push(format!(
+            "Unresolved relationship addresses: {}.",
+            unresolved.join(", ")
+        ));
+    }
+    limitations.sort();
+    limitations.dedup();
+    diagnostics.sort();
+    diagnostics.dedup();
+    json!({
+        "status": "partial",
+        "limitations": limitations,
+        "limited_directions": ["callers", "callees"],
+        "diagnostics": diagnostics,
+    })
+}
+
+enum PseudocodeFacet {
+    Available(String),
+    Unavailable { reason: String },
+}
+
+fn normalize_assembly(result: &Value) -> Result<Vec<String>, AnalysisError> {
+    result
+        .as_str()
+        .ok_or_else(|| {
+            AnalysisError::output(
+                "analyze_function",
+                "The provider returned a non-string assembly result.",
+            )
+        })
+        .map(|assembly| assembly.lines().map(str::to_owned).collect())
+}
+
+fn project_pseudocode_facet(facet: &PseudocodeFacet) -> Value {
+    match facet {
+        PseudocodeFacet::Available(_) => json!({"available": true}),
+        PseudocodeFacet::Unavailable { reason } => {
+            json!({"available": false, "reason": reason})
+        }
+    }
+}
+
+fn compose_function_dossier(
+    procedure: &Procedure,
+    pseudocode: &PseudocodeFacet,
+    assembly: Vec<String>,
+    callers: Vec<Value>,
+    callees: Vec<Value>,
+    limitations: Vec<String>,
+) -> Value {
+    let pseudocode_text = match pseudocode {
+        PseudocodeFacet::Available(text) => text.clone(),
+        PseudocodeFacet::Unavailable { .. } => String::new(),
+    };
+    json!({
+        "procedure": function_identity(procedure),
+        "pseudocode": pseudocode_text,
+        "assembly": assembly,
+        "comments": [],
+        "callers": callers,
+        "callees": callees,
+        "incoming_references": [],
+        "outgoing_references": [],
+        "referenced_strings": [],
+        "referenced_names": [],
+        "basic_blocks": [],
+        "native_api": null,
+        "native_value_flow": null,
+        "facet_availability": {
+            "pseudocode": project_pseudocode_facet(pseudocode),
+            "assembly": {"available": true},
+            "comments": {"available": false, "reason": "The worker does not retain comments."},
+            "callers": {"available": true},
+            "callees": {"available": true},
+            "references": {"available": false, "reason": "Function reference projection is not composed into this dossier."},
+            "strings_names": {"available": false, "reason": "Function string and name projections are not retained by this worker."},
+            "cfg": {"available": false, "reason": "The worker does not recover a control-flow graph."}
+        },
+        "limitations": limitations
+    })
 }
 
 impl Client {
@@ -256,6 +414,11 @@ impl Client {
             Operation::ListDocuments => Ok(read(json!([self.target.path]))),
             Operation::CurrentDocument => Ok(read(json!(self.target.path))),
             Operation::ListProcedures => self.inventory.list(&self.session, control).map(read),
+            Operation::ListNames => self.inventory.list_names(&self.session, control).map(read),
+            Operation::AnalyzeFunction => self.analyze_function(input, control),
+            Operation::AddressToFileOffset => {
+                static_routes::address_to_file_offset(&self.session, input, control).map(read)
+            }
             Operation::BatchDecompile => self.batch(input, control).map(read),
             Operation::SearchProcedures => self
                 .inventory
@@ -303,8 +466,34 @@ impl Client {
                 crate::analysis::instructions(session, inventory, input, control)
                     .map(Observation::from)
             }
+            Operation::InspectNativeInstruction => {
+                crate::native_instruction::inspect(session, input, control).map(Observation::from)
+            }
             Operation::ReadBytes => {
                 crate::analysis::read_bytes(session, input, control).map(Observation::from)
+            }
+            Operation::SearchBytes => {
+                self.session.prepare(control)?;
+                let mut worker_input = input.clone();
+                worker_input.remove("document");
+                for key in ["start", "end"] {
+                    if let Some(value) = worker_input.get_mut(key) {
+                        let Some(text) = value.as_str() else {
+                            return Err(self
+                                .session
+                                .failure("The byte-search address bound must be hexadecimal."));
+                        };
+                        let normalized = normalize_hex_address(text).ok_or_else(|| {
+                            self.session
+                                .failure("The byte-search address bound must be hexadecimal.")
+                        })?;
+                        *value = Value::String(normalized);
+                    }
+                }
+                self.session
+                    .worker
+                    .request("search_bytes", Value::Object(worker_input), Some(control))
+                    .map(read)
             }
         }
     }
@@ -407,6 +596,96 @@ impl Client {
         }
     }
 
+    fn pseudocode_for_dossier(
+        &self,
+        address: &str,
+        control: &Control,
+    ) -> Result<PseudocodeFacet, AnalysisError> {
+        match self.pseudocode(address, control) {
+            Ok(value) => {
+                let pseudocode = value.as_str().map(str::to_owned).ok_or_else(|| {
+                    self.session
+                        .failure("The provider returned a non-string pseudocode result.")
+                })?;
+                Ok(PseudocodeFacet::Available(pseudocode))
+            }
+            Err(error) if error.tag() == "AnalysisOutputError" => {
+                Ok(PseudocodeFacet::Unavailable {
+                    reason: error.message().to_owned(),
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Compose the provider-neutral function dossier from the worker's
+    /// validated inventory, pseudocode, assembly and relationship reads.
+    /// The worker deliberately does not recover function bodies, so the
+    /// dossier preserves that fact as an explicit unavailable body facet.
+    fn analyze_function(
+        &self,
+        input: &Map<String, Value>,
+        control: &Control,
+    ) -> Result<Observation, AnalysisError> {
+        let selector = input
+            .get("procedure")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let address = selectors::resolve(&self.session, selector, control)?;
+        let procedures = self.inventory.read(&self.session, control)?;
+        let procedure = procedures
+            .iter()
+            .find(|item| item.address == address)
+            .ok_or_else(|| {
+                self.session
+                    .failure("The resolved procedure is absent from the frozen inventory.")
+            })?;
+        let procedure_input =
+            Map::from_iter([(String::from("procedure"), json!(procedure.address))]);
+
+        let assembly =
+            crate::analysis::assembly(&self.session, &self.inventory, &procedure_input, control)?;
+        let caller_read =
+            crate::analysis::callers(&self.session, &self.inventory, &procedure_input, control)?;
+        let callee_read =
+            crate::analysis::callees(&self.session, &self.inventory, &procedure_input, control)?;
+        let pseudocode = self.pseudocode_for_dossier(&procedure.address, control)?;
+        let mut dossier_limitations = vec![
+            "Function bodies, CFG blocks, comments, referenced strings and names are unavailable from the Rust worker.".to_owned(),
+            "Callers and callees are derived from the worker's linear p-code reference pass; indirect calls and calls through memory remain unresolved.".to_owned(),
+        ];
+        if let PseudocodeFacet::Unavailable { reason } = &pseudocode {
+            dossier_limitations.push(format!(
+                "Pseudocode is unavailable for this inventory entry: {reason}"
+            ));
+        }
+        let assembly_lines = normalize_assembly(&assembly.result)?;
+        let (callers, unresolved_callers) =
+            related_procedure_identities(&procedures, &caller_read.result);
+        let (callees, unresolved_callees) =
+            related_procedure_identities(&procedures, &callee_read.result);
+        let mut unresolved = unresolved_callers;
+        unresolved.extend(unresolved_callees);
+        let result = compose_function_dossier(
+            procedure,
+            &pseudocode,
+            assembly_lines,
+            callers,
+            callees,
+            dossier_limitations,
+        );
+        Ok(Observation {
+            result,
+            raw_result: None,
+            relationship_coverage: Some(relationship_coverage(
+                &caller_read,
+                &callee_read,
+                &unresolved,
+            )),
+            references_truncated: None,
+        })
+    }
+
     /// `#admissionFailure`.
     fn admission_failure(
         &self,
@@ -426,6 +705,22 @@ impl Client {
         }
         None
     }
+}
+
+fn normalize_hex_address(value: &str) -> Option<String> {
+    let digits = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+        .unwrap_or(value);
+    if digits.is_empty()
+        || digits.len() > 16
+        || !digits.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return None;
+    }
+    u64::from_str_radix(digits, 16)
+        .ok()
+        .map(|value| format!("0x{value:x}"))
 }
 
 fn issue(path: &str, reason: &'static str, message: impl Into<String>) -> InputIssue {
@@ -491,7 +786,57 @@ fn operation_fields(operation: Operation) -> &'static [(&'static str, Field)] {
     );
     match operation {
         Operation::Health | Operation::ListDocuments | Operation::CurrentDocument => &[],
-        Operation::ListSegments | Operation::ListProcedures => &[DOCUMENT],
+        Operation::ListSegments | Operation::ListProcedures | Operation::ListNames => &[DOCUMENT],
+        Operation::AnalyzeFunction => &[PROCEDURE, DOCUMENT],
+        Operation::AddressToFileOffset => &[
+            DOCUMENT,
+            (
+                "address",
+                Field::String {
+                    required: true,
+                    min: 1,
+                },
+            ),
+        ],
+        Operation::SearchBytes => &[
+            (
+                "pattern",
+                Field::String {
+                    required: true,
+                    min: 1,
+                },
+            ),
+            (
+                "mask",
+                Field::String {
+                    required: false,
+                    min: 1,
+                },
+            ),
+            (
+                "start",
+                Field::String {
+                    required: false,
+                    min: 1,
+                },
+            ),
+            (
+                "end",
+                Field::String {
+                    required: false,
+                    min: 1,
+                },
+            ),
+            ("limit", Field::Positive { default: 100 }),
+            (
+                "cursor",
+                Field::String {
+                    required: false,
+                    min: 1,
+                },
+            ),
+            DOCUMENT,
+        ],
         Operation::SearchProcedures => &[
             (
                 "pattern",
@@ -543,6 +888,16 @@ fn operation_fields(operation: Operation) -> &'static [(&'static str, Field)] {
         | Operation::ProcedureCallees
         | Operation::ProcedureAssembly
         | Operation::ReadFunctionInstructions => &[PROCEDURE, DOCUMENT],
+        Operation::InspectNativeInstruction => &[
+            (
+                "address",
+                Field::String {
+                    required: true,
+                    min: 1,
+                },
+            ),
+            DOCUMENT,
+        ],
         Operation::ProcedureReferences => &[PROCEDURE, ("direction", Field::Direction), DOCUMENT],
         Operation::ReadBytes => &[
             (

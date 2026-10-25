@@ -13,11 +13,13 @@ mod client;
 mod configuration;
 mod identity;
 mod inventory;
+mod native_instruction;
 mod profile;
 mod protocol;
 mod provider;
 mod selectors;
 mod session;
+mod static_routes;
 mod worker;
 
 pub use provider::GhidraRustProvider;

@@ -23,12 +23,13 @@ pub(crate) fn identity() -> ProviderIdentity {
 ///
 /// This is REA's only Ghidra provider and is enabled by default, so the batch
 /// limitation states only the budgets that still apply.
-pub(crate) const LIMITATIONS: [&str; 10] = [
+pub(crate) const LIMITATIONS: [&str; 11] = [
     "Functions come from the saved inventory or initial loader symbols and entry/function-start metadata; no function discovery is performed.",
     "This provider has no Java analyzers, Objective-C or Swift analysis, or type editor.",
     "Procedure search matches literal saved-inventory names only, including aliases: additional loader symbols at an entry address, such as identical-code-folded functions. list_procedures has one row per entry address with its primary name; an alias selector resolves to that entry.",
+    "list_names exposes the same frozen procedure inventory plus validated loader aliases; imported, exported, and other symbol-table names outside that inventory are not included.",
     "Segment entries describe object-file sections; memory permissions are unavailable.",
-    "Worker commands are attested by info: open, segments, functions, function_aliases, resolve_functions, batch_decompile, batch_decompile_inventory, strings, references_to, references_from, instructions, read_bytes, checkpoint and close. REA resolves selectors against the frozen inventory and routes pseudocode through batch_decompile.",
+    "Worker commands are attested by info: open, segments, image_map, search_bytes, functions, function_aliases, resolve_functions, batch_decompile, batch_decompile_inventory, strings, references_to, references_from, instructions, inspect_instruction, read_bytes, checkpoint and close. REA resolves selectors against the frozen inventory and routes pseudocode through batch_decompile.",
     "Strings, references, callers and callees are derived by the worker (see its limitations): references come from a linear p-code pass with register constant propagation, not Ghidra's reference manager, so indirect targets and references through memory are absent. Reference types and operand indexes are not recorded, function bodies are not recovered, and annotations are not supported.",
     "The worker has an operation deadline and bounded output. Optional REA_GHIDRA_RUST_MEMORY_MIB supervision samples the exact worker process RSS on macOS/Linux and stops the owned process group when its threshold is reached or monitoring fails. This is not a kernel memory ceiling or a process-family memory limit; memory may overshoot between samples or during termination, and shared pages may be counted in RSS.",
     "RSS supervision samples at one-second intervals after each completed observation, with a one-second observation deadline. Scheduling and cleanup can delay termination. Termination preserves completed durable checkpoints; the current native call cannot safely checkpoint before it is stopped.",
@@ -41,7 +42,7 @@ pub(crate) fn limitations() -> Vec<String> {
 }
 
 /// `GHIDRA_RUST_OPERATIONS`, in the declared order.
-pub(crate) const OPERATIONS: [&str; 18] = [
+pub(crate) const OPERATIONS: [&str; 23] = [
     "list_segments",
     "list_procedures",
     "search_procedures",
@@ -60,6 +61,11 @@ pub(crate) const OPERATIONS: [&str; 18] = [
     "procedure_assembly",
     "read_function_instructions",
     "read_bytes",
+    "list_names",
+    "analyze_function",
+    "address_to_file_offset",
+    "search_bytes",
+    "inspect_native_instruction",
 ];
 
 /// One declared operation (or the internal health probe).
@@ -84,6 +90,11 @@ pub(crate) enum Operation {
     ProcedureAssembly,
     ReadFunctionInstructions,
     ReadBytes,
+    ListNames,
+    AnalyzeFunction,
+    AddressToFileOffset,
+    SearchBytes,
+    InspectNativeInstruction,
 }
 
 impl Operation {
@@ -108,6 +119,11 @@ impl Operation {
             "procedure_assembly" => Self::ProcedureAssembly,
             "read_function_instructions" => Self::ReadFunctionInstructions,
             "read_bytes" => Self::ReadBytes,
+            "list_names" => Self::ListNames,
+            "analyze_function" => Self::AnalyzeFunction,
+            "address_to_file_offset" => Self::AddressToFileOffset,
+            "search_bytes" => Self::SearchBytes,
+            "inspect_native_instruction" => Self::InspectNativeInstruction,
             _ => return None,
         })
     }
@@ -133,6 +149,11 @@ impl Operation {
             Self::ProcedureAssembly => "procedure_assembly",
             Self::ReadFunctionInstructions => "read_function_instructions",
             Self::ReadBytes => "read_bytes",
+            Self::ListNames => "list_names",
+            Self::AnalyzeFunction => "analyze_function",
+            Self::AddressToFileOffset => "address_to_file_offset",
+            Self::SearchBytes => "search_bytes",
+            Self::InspectNativeInstruction => "inspect_native_instruction",
         }
     }
 }
@@ -180,10 +201,13 @@ pub(crate) fn target_support(target: &BinaryTarget) -> TargetSupport {
             "Rust Ghidra opens native executable images.".into(),
         );
     }
-    if !matches!(target.format.as_str(), "elf" | "pe" | "mach-o") {
+    if !matches!(
+        target.format.as_str(),
+        "elf" | "pe" | "mach-o" | "mach-o-universal"
+    ) {
         return unsupported(
             "target_format_unsupported",
-            "Rust Ghidra admits thin ELF, PE and Mach-O images. Extract a thin slice before opening a universal Mach-O.".into(),
+            "Rust Ghidra admits ELF, PE, thin Mach-O, and universal Mach-O images.".into(),
         );
     }
     if target.format == "pe" && target.metadata.get("managed") == Some(&Value::Bool(true)) {

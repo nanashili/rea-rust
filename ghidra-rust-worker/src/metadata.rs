@@ -8,7 +8,10 @@ use crate::protocol::*;
 // pseudocode.
 // v8: v7 could decode non-executable bytes, which corrupted later pseudocode.
 // v9: strings, derived references, instruction listings and byte reads.
-pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v9";
+// v10: authenticate universal artifacts, then analyze a selected architecture slice.
+// v11: expose bounded source-backed image mapping and masked byte search.
+// v12: expose one structured decoder observation.
+pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v12";
 
 pub fn engine() -> Value {
     json!({
@@ -19,16 +22,20 @@ pub fn engine() -> Value {
         "snapshot_schema": 1,
         "worker_protocol_version": WORKER_PROTOCOL_VERSION,
         "worker_protocol_name": WORKER_PROTOCOL_NAME,
+        "host_architecture": std::env::consts::ARCH,
         "inventory_policy": "saved-or-loader-v1",
         "analysis_policy": {
             "strings": "file-backed-data-sections-nul-terminated-utf8-v1",
-            "references": "linear-pcode-constant-propagation-v1"
+            "references": "linear-pcode-constant-propagation-v1",
+            "image_map": "verified-file-backed-ranges-v1",
+            "search_bytes": "masked-file-backed-ranges-v1",
+            "inspect_instruction": "decoder-pcode-observation-v1"
         },
         "program_lifecycle": {
             "max_decompile_attempts": crate::program_retention::MAX_DECOMPILE_ATTEMPTS,
             "idle_release_seconds": crate::program_retention::IDLE_RELEASE_AFTER.as_secs()
         },
-        "universal_policy": "reject",
+        "universal_policy": "select-host-architecture",
         "formats": ["Elf", "Pe", "MachO"],
         "architectures": ["I386", "X86_64", "Arm", "Aarch64"],
         "limits": {
@@ -53,7 +60,10 @@ pub fn engine() -> Value {
             "string_bytes": crate::analysis::image::MAX_STRING_BYTES,
             "reference_page": crate::analysis::MAX_REFERENCE_PAGE,
             "instruction_page": crate::analysis::MAX_INSTRUCTION_PAGE,
-            "read_bytes": crate::analysis::image::MAX_READ_BYTES
+            "read_bytes": crate::analysis::image::MAX_READ_BYTES,
+            "search_pattern": crate::analysis::MAX_SEARCH_PATTERN,
+            "search_results": crate::analysis::MAX_SEARCH_RESULTS,
+            "image_map_ranges": 4096
         }
     })
 }
@@ -72,6 +82,7 @@ pub fn limitations() -> Vec<String> {
         "Strings are NUL-terminated printable UTF-8 runs of at least 4 characters in file-backed data and string sections, starting at a section start or after a NUL; runs over 64 KiB, UTF-16 and other encodings, and strings in executable or zero-fill sections are not reported. An empty search does not establish that text is absent from the artifact.",
         "References are derived once per inventory, in parallel, by a linear p-code pass over each function's extent (from its entry to the next inventory entry, inside executable sections) and saved with the inventory. Direct calls, unconditional and conditional branches to other inventory entries, and mapped addresses consumed by loads, stores and other uses after constant propagation through registers are recorded; branches within a function, indirect targets, values passed through memory, and code outside inventory extents are not.",
         "Instruction listings and byte reads are linear: instructions run from the entry to the next inventory entry or the end of the executable section, and bytes come from file-backed section contents without loader fixups.",
+        "Universal Mach-O inputs are authenticated as whole files, then the host architecture slice is selected (with a deterministic supported-slice fallback) before analysis; slice selection is read-only.",
         "This is REA's line-delimited JSON-RPC worker protocol over a third-party Rust decompiler; it is not an upstream Ghidra protocol or the Java Ghidra application.",
     ]
     .map(str::to_owned)

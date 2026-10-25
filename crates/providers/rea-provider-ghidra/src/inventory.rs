@@ -101,6 +101,28 @@ impl Inventory {
         ))
     }
 
+    /// `list_names`: primary and additional loader names for every frozen
+    /// procedure entry, preserving the worker's address/name ordering.
+    pub(crate) fn list_names(
+        &self,
+        session: &Session,
+        control: &Control,
+    ) -> Result<Value, AnalysisError> {
+        let procedures = self.read(session, control)?;
+        let aliases = self.read_aliases(session, &procedures, control)?;
+        let mut names = Vec::with_capacity(procedures.len() + aliases.len());
+        let mut alias = aliases.iter().peekable();
+
+        for procedure in procedures.iter() {
+            names.push(json!({ "address": procedure.address, "value": procedure.name }));
+            while let Some(entry) = alias.next_if(|entry| entry.address == procedure.address) {
+                names.push(json!({ "address": entry.address, "value": entry.name }));
+            }
+        }
+
+        Ok(Value::Array(names))
+    }
+
     /// `read`: the complete frozen inventory.
     pub(crate) fn read(
         &self,

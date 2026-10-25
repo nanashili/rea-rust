@@ -26,6 +26,7 @@ pub(crate) const MAX_DECOMPILE_THREADS: usize = 64;
 struct Image {
     bytes: Arc<Vec<u8>>,
     facts: Arc<DecompilerFacts>,
+    file_offset: u64,
 }
 
 pub(crate) struct DecompilerPool {
@@ -44,7 +45,12 @@ pub(crate) enum Outcome {
 }
 
 impl DecompilerPool {
-    pub(crate) fn new(path: PathBuf, target_sha256: String, language: String, threads: usize) -> Self {
+    pub(crate) fn new(
+        path: PathBuf,
+        target_sha256: String,
+        language: String,
+        threads: usize,
+    ) -> Self {
         let threads = threads.clamp(1, MAX_DECOMPILE_THREADS);
         Self {
             path,
@@ -60,13 +66,14 @@ impl DecompilerPool {
     /// every Program is bound to the admitted digest.
     fn image(&mut self) -> Result<&Image> {
         if self.image.is_none() {
-            let bytes = crate::target_file::read(&self.path, &self.target_sha256)?;
-            let file = object::File::parse(bytes.as_slice())
+            let selected = crate::target::read_selected_image(&self.path, &self.target_sha256)?;
+            let file = object::File::parse(selected.bytes.as_slice())
                 .context("Parse the admitted target for decompiler facts")?;
             let facts = DecompilerFacts::read(&file)?;
             self.image = Some(Image {
-                bytes: Arc::new(bytes),
+                bytes: Arc::new(selected.bytes),
                 facts: Arc::new(facts),
+                file_offset: selected.file_offset,
             });
         }
         Ok(self.image.as_ref().expect("image was just admitted"))
@@ -74,9 +81,13 @@ impl DecompilerPool {
 
     /// The verified target bytes and their decompiler facts, for analyses
     /// that build their own Programs from the same admitted copy.
-    pub(crate) fn verified_image(&mut self) -> Result<(Arc<Vec<u8>>, Arc<DecompilerFacts>)> {
+    pub(crate) fn verified_image(&mut self) -> Result<(Arc<Vec<u8>>, Arc<DecompilerFacts>, u64)> {
         let image = self.image()?;
-        Ok((Arc::clone(&image.bytes), Arc::clone(&image.facts)))
+        Ok((
+            Arc::clone(&image.bytes),
+            Arc::clone(&image.facts),
+            image.file_offset,
+        ))
     }
 
     pub(crate) fn threads(&self) -> usize {
@@ -98,7 +109,13 @@ impl DecompilerPool {
         let image = self.image()?;
         let (bytes, facts) = (Arc::clone(&image.bytes), Arc::clone(&image.facts));
         if self.slots[0].is_none() {
-            self.slots[0] = Some(build_program(&self.path, &bytes, &facts, &self.language, starts)?);
+            self.slots[0] = Some(build_program(
+                &self.path,
+                &bytes,
+                &facts,
+                &self.language,
+                starts,
+            )?);
         }
         let retained = self.slots[0].as_mut().expect("program was just built");
         Ok(read(retained.program(), &facts))
@@ -123,8 +140,12 @@ impl DecompilerPool {
         let facts = Arc::clone(&image.facts);
         let path = self.path.clone();
         let language = self.language.clone();
-        let mut programs: Vec<Option<ProgramRetention>> =
-            self.slots.iter_mut().take(threads).map(Option::take).collect();
+        let mut programs: Vec<Option<ProgramRetention>> = self
+            .slots
+            .iter_mut()
+            .take(threads)
+            .map(Option::take)
+            .collect();
         let cursor = AtomicUsize::new(0);
         let stop = AtomicBool::new(false);
         let (sender, receiver) = mpsc::channel::<Result<(usize, Outcome)>>();
@@ -152,7 +173,10 @@ impl DecompilerPool {
                                     }
                                     continue;
                                 }
-                                if retained.as_ref().is_some_and(ProgramRetention::decompile_attempts_exhausted) {
+                                if retained
+                                    .as_ref()
+                                    .is_some_and(ProgramRetention::decompile_attempts_exhausted)
+                                {
                                     retained = None;
                                 }
                                 if retained.is_none() {
@@ -167,7 +191,10 @@ impl DecompilerPool {
                                 }
                                 let program = retained.as_mut().expect("program was just built");
                                 let result = program.decompile(entry, starts, facts);
-                                if sender.send(Ok((caller, Outcome::Decompiled(result)))).is_err() {
+                                if sender
+                                    .send(Ok((caller, Outcome::Decompiled(result))))
+                                    .is_err()
+                                {
                                     break;
                                 }
                             }
@@ -226,7 +253,10 @@ impl DecompilerPool {
 
     pub(crate) fn release_at_safe_point(&mut self, now: Instant) {
         for slot in &mut self.slots {
-            if slot.as_ref().is_some_and(|program| program.should_release(now)) {
+            if slot
+                .as_ref()
+                .is_some_and(|program| program.should_release(now))
+            {
                 slot.take();
             }
         }

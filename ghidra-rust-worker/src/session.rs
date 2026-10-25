@@ -8,7 +8,9 @@ use crate::cache::{Cache, Snapshot};
 use crate::configuration::{Configuration, validate_digest};
 use crate::decompiler_pool::DecompilerPool;
 use crate::inventory;
-use crate::protocol::{MAX_NAME_BYTES, MAX_RESOLUTION_SELECTORS, OpenParams, PageParams, ResolveParams};
+use crate::protocol::{
+    MAX_NAME_BYTES, MAX_RESOLUTION_SELECTORS, OpenParams, PageParams, ResolveParams,
+};
 use crate::target::{TargetImage, load_program};
 use crate::transport::Progress;
 
@@ -40,7 +42,13 @@ impl Session {
             snapshot
                 .validate(&configuration.identity, &input.target_sha256)
                 .map_err(crate::failure::cache_integrity)?;
-            return Self::restore(cache, snapshot, input, configuration.decompile_threads, progress);
+            return Self::restore(
+                cache,
+                snapshot,
+                input,
+                configuration.decompile_threads,
+                progress,
+            );
         }
 
         Self::prepare_loader(cache, configuration, input, progress)
@@ -76,7 +84,13 @@ impl Session {
         let image = TargetImage::read(&input.path, &input.target_sha256)?;
         let code_ranges = image.code_ranges.clone();
         let program = load_program(&input.path, image.bytes)?;
-        let frozen = inventory::freeze(&program, image.metadata_functions, image.arm, &code_ranges)?;
+        let frozen = inventory::freeze(
+            &program,
+            image.metadata_functions,
+            &image.go_build_id_markers,
+            image.arm,
+            &code_ranges,
+        )?;
         let functions = frozen.functions;
         let aliases = frozen.aliases;
         let snapshot = Snapshot {
@@ -179,7 +193,9 @@ impl Session {
             self.entry_addresses = Some(std::sync::Arc::new(entries));
         }
         Ok(std::sync::Arc::clone(
-            self.entry_addresses.as_ref().expect("entry addresses were just read"),
+            self.entry_addresses
+                .as_ref()
+                .expect("entry addresses were just read"),
         ))
     }
 

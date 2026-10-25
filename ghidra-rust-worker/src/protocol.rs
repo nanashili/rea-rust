@@ -100,6 +100,12 @@ pub struct OpenParams {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct InspectInstructionParams {
+    pub address: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PageParams {
     pub offset: usize,
     pub limit: usize,

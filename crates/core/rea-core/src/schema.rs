@@ -603,10 +603,18 @@ impl<'r> Parser<'r> {
         }
 
         if let Some(options) = object.get("oneOf").and_then(Value::as_array) {
-            return self.discriminated(options, value, path, issues);
+            // Object discriminators select a single branch before parsing it.
+            // Array unions have no discriminator and must still enforce
+            // oneOf's exactly-one rule; requiring an object here rejects
+            // valid tuple branches such as relationship coverage directions.
+            return if self.discriminator(options).is_some() {
+                self.discriminated(options, value, path, issues)
+            } else {
+                self.union(options, value, path, issues, true)
+            };
         }
         if let Some(options) = object.get("anyOf").and_then(Value::as_array) {
-            return self.union(options, value, path, issues);
+            return self.union(options, value, path, issues, false);
         }
         // Literal and enum schemas report invalid_value before any type check.
         if let Some(constant) = object.get("const") {
@@ -1083,8 +1091,9 @@ impl<'r> Parser<'r> {
         value: Option<&Value>,
         path: &mut Vec<Value>,
         issues: &mut Vec<Issue>,
+        exclusive: bool,
     ) -> Option<Value> {
-        if options.len() == 2 {
+        if !exclusive && options.len() == 2 {
             let null_branch = options.iter().position(|option| {
                 let (option, _) = self.resolve(option);
                 option.get("type").and_then(Value::as_str) == Some("null")
@@ -1102,10 +1111,31 @@ impl<'r> Parser<'r> {
             let mut branch = Vec::new();
             let parsed = self.check(option, value, &mut path.clone(), &mut branch);
             let state = parse_state(&branch);
-            if state == ParseState::Succeeded {
+            if !exclusive && state == ParseState::Succeeded {
                 return parsed;
             }
             results.push((parsed, branch, state));
+        }
+        let successful: Vec<usize> = results
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, _, state))| *state == ParseState::Succeeded)
+            .map(|(index, _)| index)
+            .collect();
+        if successful.len() == 1 {
+            return results.swap_remove(successful[0]).0;
+        }
+        if exclusive && successful.len() > 1 {
+            Self::push(
+                issues,
+                path,
+                IssueKind::InvalidUnion {
+                    errors: results.into_iter().map(|(_, branch, _)| branch).collect(),
+                    options: self.union_options(options),
+                },
+                true,
+            );
+            return value.cloned();
         }
         let nonaborted: Vec<usize> = results
             .iter()
@@ -1167,7 +1197,7 @@ impl<'r> Parser<'r> {
             return value.cloned();
         };
         let Some(key) = self.discriminator(options) else {
-            return self.union(options, value, path, issues);
+            return self.union(options, value, path, issues, false);
         };
         let candidate = object.get(&key);
         let mut all = Vec::new();

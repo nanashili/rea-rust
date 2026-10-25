@@ -29,10 +29,11 @@ pub struct FrozenInventory {
 pub fn freeze(
     program: &Program,
     metadata_functions: Vec<u64>,
+    go_build_id_markers: &[u64],
     arm: bool,
     code_ranges: &[Range<u64>],
 ) -> Result<FrozenInventory> {
-    let mut entries = loader_entries(program, arm, code_ranges)?;
+    let mut entries = loader_entries(program, go_build_id_markers, arm, code_ranges)?;
     extend_metadata(&mut entries, metadata_functions, arm)?;
     entries.sort_unstable_by(|left, right| {
         left.address
@@ -85,6 +86,7 @@ pub fn freeze(
 
 fn loader_entries(
     program: &Program,
+    go_build_id_markers: &[u64],
     arm: bool,
     code_ranges: &[Range<u64>],
 ) -> Result<Vec<InventoryEntry>> {
@@ -97,6 +99,9 @@ fn loader_entries(
     let mut name_bytes = 0_usize;
     for function in functions {
         let entry = normalize(function.address, arm);
+        if go_build_id_markers.contains(&entry) {
+            continue;
+        }
         if !code_ranges.iter().any(|range| range.contains(&entry)) {
             continue;
         }

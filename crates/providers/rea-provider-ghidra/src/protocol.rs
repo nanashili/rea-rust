@@ -15,7 +15,9 @@ pub(crate) const MAX_PSEUDOCODE_BYTES: usize = 512 * 1024;
 pub(crate) const WORKER_ARGUMENT: &str = "--rea-rust-ghidra-worker";
 pub(crate) const WORKER_PROTOCOL_NAME: &str = "rea-ghidra-rust-jsonrpc-lines";
 pub(crate) const WORKER_PROTOCOL_VERSION: u64 = 2;
-const CACHE_ID: &str = "ghidra-rust-268c3a4-v9";
+const CACHE_ID: &str = "ghidra-rust-268c3a4-v12";
+const MAX_SEARCH_PATTERN: usize = 4096;
+const MAX_SEARCH_RESULTS: usize = 1000;
 /// Worker inventory limits pinned by `engine().limits`; the worker enforces
 /// them while freezing and the host validates them while paging.
 pub(crate) const MAX_FUNCTION_PAGE: u64 = 256;
@@ -37,16 +39,20 @@ pub(crate) fn engine() -> Value {
         "snapshot_schema": 1,
         "worker_protocol_version": WORKER_PROTOCOL_VERSION,
         "worker_protocol_name": WORKER_PROTOCOL_NAME,
+        "host_architecture": std::env::consts::ARCH,
         "inventory_policy": "saved-or-loader-v1",
         "analysis_policy": {
             "strings": "file-backed-data-sections-nul-terminated-utf8-v1",
             "references": "linear-pcode-constant-propagation-v1",
+            "image_map": "verified-file-backed-ranges-v1",
+            "search_bytes": "masked-file-backed-ranges-v1",
+            "inspect_instruction": "decoder-pcode-observation-v1",
         },
         "program_lifecycle": {
             "max_decompile_attempts": 512,
             "idle_release_seconds": 30,
         },
-        "universal_policy": "reject",
+        "universal_policy": "select-host-architecture",
         "formats": ["Elf", "Pe", "MachO"],
         "architectures": ["I386", "X86_64", "Arm", "Aarch64"],
         "limits": {
@@ -72,6 +78,9 @@ pub(crate) fn engine() -> Value {
             "reference_page": crate::analysis::MAX_REFERENCE_PAGE,
             "instruction_page": crate::analysis::MAX_INSTRUCTION_PAGE,
             "read_bytes": crate::analysis::MAX_READ_BYTES,
+            "search_pattern": MAX_SEARCH_PATTERN,
+            "search_results": MAX_SEARCH_RESULTS,
+            "image_map_ranges": 4096,
         },
     })
 }

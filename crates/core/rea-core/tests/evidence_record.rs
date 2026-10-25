@@ -3,7 +3,7 @@ use rea_core::evidence::record::{EvidenceRecord, EvidenceRecordError};
 use rea_core::evidence::{
     Architecture, ArtifactEvidence, Location, NativeFormat, Observation, Provider, Subject,
 };
-use rea_core::schema::IssueKind;
+use rea_core::schema::{IssueKind, Parser, UnknownKeys};
 use serde_json::{Value, value::RawValue};
 
 fn artifact_evidence() -> ArtifactEvidence {
@@ -220,6 +220,70 @@ fn shape_validation_accepts_source_optional_diagnostics_and_empty_local_path() {
     input["relationship_coverage"] = serde_json::json!({"status": "complete"});
 
     assert!(EvidenceRecord::validate_input_shape(&input).is_ok());
+}
+
+#[test]
+fn shape_validation_accepts_partial_relationship_coverage() {
+    let evidence = artifact_evidence();
+    let mut input: Value = serde_json::from_str(raw(&evidence).get()).unwrap();
+    input["relationship_coverage"] = serde_json::json!({
+        "status": "partial",
+        "limitations": ["Indirect targets are unresolved."],
+        "limited_directions": ["callers"],
+        "diagnostics": ["Derived from the saved reference inventory."]
+    });
+
+    assert!(EvidenceRecord::validate_input_shape(&input).is_ok());
+}
+
+#[test]
+fn schema_one_of_rejects_multiple_matching_array_branches() {
+    let schema = serde_json::json!({
+        "oneOf": [
+            {"type": "array"},
+            {"type": "array"}
+        ]
+    });
+    let parser = Parser::new(&schema, UnknownKeys::Reject);
+
+    assert!(parser.parse(&serde_json::json!([])).is_err());
+}
+
+#[test]
+fn schema_one_of_rejects_null_when_a_second_branch_also_matches() {
+    let schema = serde_json::json!({
+        "oneOf": [
+            {"type": "null"},
+            {}
+        ]
+    });
+    let parser = Parser::new(&schema, UnknownKeys::Reject);
+
+    assert!(parser.parse(&serde_json::Value::Null).is_err());
+}
+
+#[test]
+fn schema_one_of_accepts_the_single_matching_direction_branch() {
+    let schema = serde_json::json!({
+        "oneOf": [
+            {
+                "type": "array",
+                "prefixItems": [{"const": "callers"}],
+                "minItems": 1,
+                "maxItems": 1
+            },
+            {
+                "type": "array",
+                "prefixItems": [{"const": "callees"}],
+                "minItems": 1,
+                "maxItems": 1
+            }
+        ]
+    });
+    let parser = Parser::new(&schema, UnknownKeys::Reject);
+
+    assert!(parser.parse(&serde_json::json!(["callers"])).is_ok());
+    assert!(parser.parse(&serde_json::json!(["other"])).is_err());
 }
 
 #[test]

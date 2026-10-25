@@ -756,3 +756,48 @@ pub fn inspect(analysis: &Analysis<'_>, max_records: u64) -> Result<Value, Analy
             )
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::inspect_native_dispatch_metadata;
+
+    #[test]
+    fn symbol_projection_reports_partial_objc_dispatch_facts() {
+        let names = vec![
+            ("0x1000".to_owned(), "__OBJC_CLASS_$_Widget".to_owned()),
+            ("0x1001".to_owned(), "-[Widget renderInContext:]".to_owned()),
+            ("0x1002".to_owned(), "_$s4Demo8ProtocolMp".to_owned()),
+        ];
+
+        let result = inspect_native_dispatch_metadata(&names, 100).expect("valid metadata");
+
+        assert_eq!(result["objc_classes"][0]["name"], "Widget");
+        assert_eq!(
+            result["objc_dispatch_implementations"][0]["class_name"],
+            "Widget"
+        );
+        assert_eq!(
+            result["objc_dispatch_implementations"][0]["selector"],
+            "renderInContext:"
+        );
+        assert_eq!(result["coverage"][0]["status"], "partial");
+        assert_eq!(
+            result["swift_symbols"][0]["mangled_name"],
+            "_$s4Demo8ProtocolMp"
+        );
+    }
+
+    #[test]
+    fn symbol_projection_exposes_record_limit_as_partial_coverage() {
+        let names = vec![
+            ("0x1000".to_owned(), "__OBJC_CLASS_$_Widget".to_owned()),
+            ("0x1001".to_owned(), "__OBJC_CLASS_$_Other".to_owned()),
+        ];
+
+        let result = inspect_native_dispatch_metadata(&names, 1).expect("valid metadata");
+
+        assert_eq!(result["objc_classes"].as_array().map(Vec::len), Some(1));
+        assert_eq!(result["coverage"][0]["status"], "partial");
+        assert_eq!(result["coverage"][0]["examined"], 1);
+    }
+}

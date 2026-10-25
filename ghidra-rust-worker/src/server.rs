@@ -173,6 +173,11 @@ impl Worker {
                 empty_params(&params)?;
                 Ok(self.prepared()?.segments())
             }
+            "image_map" => {
+                empty_params(&params)?;
+                self.prepared()?.image_map()
+            }
+            "search_bytes" => self.prepared()?.search_bytes(params),
             "batch_decompile" => {
                 let timeout = self.configuration.timeout_ms;
                 self.prepared()?
@@ -190,7 +195,12 @@ impl Worker {
             "references_from" => self
                 .prepared()?
                 .references_from(serde_json::from_value(params)?, progress),
-            "instructions" => self.prepared()?.instructions(serde_json::from_value(params)?),
+            "instructions" => self
+                .prepared()?
+                .instructions(serde_json::from_value(params)?),
+            "inspect_instruction" => self
+                .prepared()?
+                .inspect_instruction(serde_json::from_value(params)?),
             "read_bytes" => self.prepared()?.read_bytes(serde_json::from_value(params)?),
             "checkpoint" => {
                 empty_params(&params)?;
@@ -230,9 +240,9 @@ impl Worker {
             "memory_limit_mib": null,
             "timeout_ms": self.configuration.timeout_ms,
             "capabilities": [
-                "info", "open", "functions", "function_aliases", "segments", "batch_decompile",
+                "info", "open", "functions", "function_aliases", "segments", "image_map", "search_bytes", "batch_decompile",
                 "resolve_functions", "batch_decompile_inventory", "strings", "references_to",
-                "references_from", "instructions", "read_bytes", "checkpoint", "close"
+                "references_from", "instructions", "inspect_instruction", "read_bytes", "checkpoint", "close"
             ]
         });
         if let Some(session) = &self.session {

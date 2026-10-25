@@ -50,7 +50,25 @@ impl fmt::Display for EvidenceRecordError {
         match self {
             Self::Canonical(error) => error.fmt(formatter),
             Self::Invalid(message) => formatter.write_str(message),
-            Self::Shape(_) => formatter.write_str("Evidence shape validation failed"),
+            Self::Shape(issues) => {
+                formatter.write_str("Evidence shape validation failed")?;
+                if let Some(issue) = issues.first() {
+                    formatter.write_str(": ")?;
+                    write!(formatter, "{:?}", issue.kind)?;
+                    if !issue.path.is_empty() {
+                        formatter.write_str(" at ")?;
+                        formatter.write_str(
+                            &issue
+                                .path
+                                .iter()
+                                .map(Value::to_string)
+                                .collect::<Vec<_>>()
+                                .join("."),
+                        )?;
+                    }
+                }
+                Ok(())
+            }
             Self::SemanticIdMismatch => {
                 formatter.write_str("Evidence semantic identifier does not match its record")
             }

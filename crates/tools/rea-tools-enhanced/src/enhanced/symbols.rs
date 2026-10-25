@@ -23,20 +23,30 @@ pub fn all_addressed(
     tool: &str,
 ) -> Result<Vec<AddressedName>, AnalysisError> {
     let value = analysis.call(tool, &Map::new(), false)?;
+    parse_addressed_names(&value, tool)
+}
+
+fn parse_addressed_names(value: &Value, tool: &str) -> Result<Vec<AddressedName>, AnalysisError> {
     let invalid = || AnalysisError::output(tool, "provider returned an invalid inventory");
     let Value::Array(entries) = value else {
         return Err(invalid());
     };
     entries
         .iter()
-        .map(|entry| match (entry.get("address"), entry.get("value")) {
-            (Some(Value::String(address)), Some(Value::String(name))) if entry.is_object() => {
-                Ok(AddressedName {
-                    address: address.clone(),
-                    name: name.clone(),
-                })
-            }
-            _ => Err(invalid()),
+        .map(|entry| {
+            let Some(object) = entry.as_object() else {
+                return Err(invalid());
+            };
+            let Some(Value::String(address)) = object.get("address") else {
+                return Err(invalid());
+            };
+            let Some(Value::String(name)) = object.get("value") else {
+                return Err(invalid());
+            };
+            Ok(AddressedName {
+                address: address.clone(),
+                name: name.clone(),
+            })
         })
         .collect()
 }
@@ -283,4 +293,76 @@ pub fn find_xrefs(analysis: &Analysis<'_>, name: &str) -> Result<Value, Analysis
         "address": resolved.address,
         "xrefs": xrefs,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        AddressedName, discover_objc_classes, discover_objc_protocols, parse_addressed_names,
+    };
+    use serde_json::json;
+
+    fn name(address: &str, value: &str) -> AddressedName {
+        AddressedName {
+            address: address.to_owned(),
+            name: value.to_owned(),
+        }
+    }
+
+    #[test]
+    fn class_projection_keeps_real_class_symbols_and_applies_pattern() {
+        let entries = vec![
+            name("0x1000", "__OBJC_CLASS_$_Widget"),
+            name("0x1001", "__OBJC_CLASS_$_Widget"),
+            name("0x1002", "l_OBJC_CLASS_NAME_.12"),
+            name("0x1003", "__OBJC_METACLASS_$_Widget"),
+            name("0x1004", "__OBJC_CLASS_$_Other"),
+        ];
+
+        let result = discover_objc_classes(&entries, "Widget");
+
+        assert_eq!(result["count"], 1);
+        assert_eq!(result["classes"][0]["address"], "0x1000");
+        assert_eq!(result["classes"][0]["name"], "__OBJC_CLASS_$_Widget");
+    }
+
+    #[test]
+    fn protocol_projection_keeps_objc_and_swift_protocol_symbols() {
+        let entries = vec![
+            name("0x2000", "__OBJC_PROTOCOL_$_Renderable"),
+            name("0x2001", "_$s4Demo10RenderableMp"),
+            name("0x2002", "ordinary_symbol"),
+        ];
+
+        let result = discover_objc_protocols(&entries);
+
+        assert_eq!(result["count"], 2);
+        assert_eq!(
+            result["protocols"][0]["name"],
+            "__OBJC_PROTOCOL_$_Renderable"
+        );
+        assert_eq!(result["protocols"][1]["name"], "_$s4Demo10RenderableMp");
+    }
+
+    #[test]
+    fn canonical_list_names_rows_feed_the_symbol_projection() {
+        let inventory = json!([
+            {"address": "0x1000", "value": "__OBJC_CLASS_$_Widget"},
+            {"address": "0x1001", "value": "__OBJC_PROTOCOL_$_Renderable"}
+        ]);
+
+        let names = parse_addressed_names(&inventory, "list_names").expect("canonical inventory");
+        let classes = discover_objc_classes(&names, "");
+        let protocols = discover_objc_protocols(&names);
+
+        assert_eq!(classes["count"], 1);
+        assert_eq!(protocols["count"], 1);
+        assert!(
+            parse_addressed_names(
+                &json!([{"address": "0x1000", "name": "__OBJC_CLASS_$_Widget"}]),
+                "list_names"
+            )
+            .is_err()
+        );
+    }
 }
