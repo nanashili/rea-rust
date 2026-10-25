@@ -1,0 +1,137 @@
+{
+  "benchmark": {
+    "machine": "arm64",
+    "plan_sha256": "3d7b8f6caac9fb0e422c031eb4ae093e7ebe32458a2b6ba72e2fc67a39552423",
+    "platform": "darwin",
+    "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+    "rounds": 5,
+    "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc"
+  },
+  "bounded_result_facts": [
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected.",
+        "RT_VERSION payload is malformed: alignment exceeds block extent; version metadata remains unknown."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 1,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected.",
+        "RT_VERSION payload is malformed: alignment exceeds block extent; version metadata remains unknown."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 2,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected.",
+        "RT_VERSION payload is malformed: alignment exceeds block extent; version metadata remains unknown."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 3,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected.",
+        "RT_VERSION payload is malformed: alignment exceeds block extent; version metadata remains unknown."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 4,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected.",
+        "RT_VERSION payload is malformed: alignment exceeds block extent; version metadata remains unknown."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 5,
+      "workflow": "unity-pe-resources"
+    }
+  ],
+  "schema_version": 1,
+  "source": "docs/benchmarks/local-applications-2026-10-25-pe-resources-raw.json",
+  "workflow_summary": [
+    {
+      "calls": 15,
+      "operations": {
+        "inspect_pe_resources": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "unity-pe-resources"
+    }
+  ]
+}

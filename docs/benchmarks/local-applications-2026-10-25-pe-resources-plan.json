@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "plan_id": "local-applications-2026-10-25-pe-resources",
+  "status": "frozen_for_measurement",
+  "purpose": "Additional read-only PE resource inspection on the already selected Unity managed assembly.",
+  "authority": "shipped-artifact",
+  "target_policy": "Read target files and REA-owned cache only. Do not launch, attach to or mutate a target application.",
+  "measurement_contract": {
+    "rounds": 5,
+    "per_case_timeout_seconds": 30,
+    "family_memory_limit_mib": 4096,
+    "sample_interval_seconds": 0.005,
+    "cache_state": "fresh_process_and_isolated_REA_cache; uncontrolled_OS_filesystem_cache"
+  },
+  "workflows": [
+    {
+      "name": "unity-pe-resources",
+      "target": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "input_files": [
+        "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll"
+      ],
+      "cases": [
+        {
+          "name": "inspect_pe_resources",
+          "arguments": {
+            "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll"
+          }
+        }
+      ]
+    }
+  ]
+}

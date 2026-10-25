@@ -1,0 +1,717 @@
+{
+  "schema_version": 1,
+  "plan_id": "local-applications-2026-10-25-native-functions",
+  "purpose": "Bounded qualification facts from local native preflight receipts.",
+  "source_policy": "Counts, statuses, limits, hashes, addresses, and errors only; no assembly, pseudocode, strings, or target source.",
+  "extent_policy": "Adjacent known-start distances and function-start metadata are retained as planning intervals only; they do not qualify a function boundary without an independent end-boundary oracle.",
+  "workflows": [
+    {
+      "workflow": "zed-native-functions-supplement",
+      "rounds_observed": [
+        "001"
+      ],
+      "receipt_load_errors": [],
+      "qualified_count": 0,
+      "degraded_count": 5,
+      "candidates": [
+        {
+          "address": "0x105bcc628",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": null,
+          "extent_basis": "unknown",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 290,
+            "sha256": "b90235e82b96d1745727062271e4feefc085cdd1ef10f087a558f498ac5e0b3b",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 10,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              119,
+              119,
+              119
+            ],
+            "sha256": [
+              "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557",
+              "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557",
+              "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x1067a1e48",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": null,
+          "extent_basis": "unknown",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 749,
+            "sha256": "d3abb963f7ad251cfa6b9a6868955d9f7b1695682989e1a8a8cd0f8029d3664e",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 24,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              173,
+              173,
+              173
+            ],
+            "sha256": [
+              "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18",
+              "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18",
+              "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x105cb62f0",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 5404,
+          "extent_basis": "function_start_only",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 42798,
+            "sha256": "a5323a4e878d59718d960869c769b092fbfb61023514a910db04700f64da551c",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 1351,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              43961,
+              43961,
+              43961
+            ],
+            "sha256": [
+              "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384",
+              "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384",
+              "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x105cb780c",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 3108,
+          "extent_basis": "function_start_only",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 23355,
+            "sha256": "404a16a3cb57a6327665f842bffe9d1885d601b141ee46e3a97072e43267d03e",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 777,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              21462,
+              21462,
+              21462
+            ],
+            "sha256": [
+              "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37",
+              "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37",
+              "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x105cb8770",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 1556,
+          "extent_basis": "function_start_only",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 12132,
+            "sha256": "7e73aab5a40e8e2122a86531cfac7177ff90b9d01eab986745bddcba1828b9fe",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 389,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              11223,
+              11223,
+              11223
+            ],
+            "sha256": [
+              "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27",
+              "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27",
+              "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        }
+      ]
+    },
+    {
+      "workflow": "openunity-native-functions-supplement",
+      "rounds_observed": [
+        "001"
+      ],
+      "receipt_load_errors": [],
+      "qualified_count": 0,
+      "degraded_count": 5,
+      "candidates": [
+        {
+          "address": "0x100000d58",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 424,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 3098,
+            "sha256": "33485dc8745be6d2549b84c6d9a5bff66369060c59b6f9289bbdffe1413385f6",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 106,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              1963,
+              1963,
+              1963
+            ],
+            "sha256": [
+              "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738",
+              "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738",
+              "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x100000f00",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 448,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 3315,
+            "sha256": "c86c51ca691c5e27a94586c293d5ac17323dafb2ae616fb2aae4b3bc7243ab1c",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 112,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              2183,
+              2183,
+              2183
+            ],
+            "sha256": [
+              "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb",
+              "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb",
+              "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x1000010c0",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 2740,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 20912,
+            "sha256": "ce9418af28707a9f60637124f15b092afee0aa6762ec5e73ae23a18d7568bbea",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 685,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              19873,
+              19873,
+              19873
+            ],
+            "sha256": [
+              "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c",
+              "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c",
+              "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x100001b74",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 160,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 1240,
+            "sha256": "32cd5b435e1b4a6ffd0560b09cf8de07db18764611cfddb624d845db69c7bd0c",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 40,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              768,
+              768,
+              768
+            ],
+            "sha256": [
+              "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890",
+              "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890",
+              "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x100001c14",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 4204,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 32419,
+            "sha256": "378813eedc3911f73bd514d93457312002998f947aa952fe3210ee21e8864514",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 1051,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              35833,
+              35833,
+              35833
+            ],
+            "sha256": [
+              "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e",
+              "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e",
+              "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        }
+      ]
+    },
+    {
+      "workflow": "figma-framework-native-functions-supplement",
+      "rounds_observed": [
+        "001"
+      ],
+      "receipt_load_errors": [],
+      "qualified_count": 0,
+      "degraded_count": 5,
+      "candidates": [
+        {
+          "address": "0x1e928",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 38352,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 276290,
+            "sha256": "dcb669010a1fcef09cb28d1e273e0d516bc6c2a0beada987d9af9f08d5a86bab",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 10612,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              1450,
+              1450,
+              1450
+            ],
+            "sha256": [
+              "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d",
+              "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d",
+              "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x28ef8",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 43964,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 275410,
+            "sha256": "1587288c1ee228ba9e88de515ac1582b397aa0fab3512cb2f1fa71ec375c268d",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 10608,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              10757,
+              10757,
+              10757
+            ],
+            "sha256": [
+              "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0",
+              "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0",
+              "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x334b8",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 97948,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 668041,
+            "sha256": "b7384a9128748c1082a018acda411650aeab7a8722ae32ea3e330e36ffa502d5",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 25511,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              271,
+              271,
+              271
+            ],
+            "sha256": [
+              "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775",
+              "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775",
+              "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x4c354",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 108980,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 713391,
+            "sha256": "dcb311fa01df151f58d56e1f11419a182dc55dff9a10c3987b1666e9a6dcaf53",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 27245,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              79640,
+              79640,
+              79640
+            ],
+            "sha256": [
+              "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed",
+              "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed",
+              "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        },
+        {
+          "address": "0x66d08",
+          "independent_extent_bytes": null,
+          "observed_interval_bytes": 88,
+          "extent_basis": "adjacent_known_start_interval",
+          "assembly": {
+            "status": "success",
+            "nonempty": true,
+            "bytes": 632,
+            "sha256": "de6ea0445a9cf05b28dc8ba240ec31185c52f40cf8745de172d9108500cf5d6d",
+            "error": null
+          },
+          "instructions": {
+            "status": "success",
+            "count": 22,
+            "error": null
+          },
+          "pseudocode": {
+            "repeats": 3,
+            "lengths": [
+              609,
+              609,
+              609
+            ],
+            "sha256": [
+              "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e",
+              "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e",
+              "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+            ],
+            "repeats_match": true,
+            "bad_instruction_or_halt": false,
+            "trivial_return": false,
+            "useful": true
+          },
+          "batch_decompile": {
+            "status": "success",
+            "item_status": "ok",
+            "nonempty": true,
+            "error": null
+          },
+          "qualified_for_measurement": false,
+          "qualification_reasons": [
+            "independent_function_extent_not_established"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,9 @@ that address is not necessarily a representative function.
 and `$address` resolve from the first procedure row returned by a preceding
 `list_procedures` call. A case may include `"repeat": N`; use the command-line
 `--rounds` for independent process repetitions. The default is five rounds.
+A case may set `"label": "analysis-pass"` to make repeated operations
+identifiable in receipts and summaries; labels do not combine their per-call
+measurements.
 A case can capture a value for later calls with
 `"capture": {"alias": "result.structuredContent.normalized_result.parent_evidence_id"}`.
 Subsequent arguments can use `$alias`. `$export_path` is a unique evidence file
@@ -86,3 +89,16 @@ and instrumentation CPU separately. CPU samples are lower bounds, RSS sums
 can count shared pages more than once, and harness overhead is not subtracted
 from timings. No model token, energy, physical disk-byte, or OS-cold-cache
 measurement is inferred from these metrics.
+
+For multiple independent result series, pass `--raw` once per series to
+`finalize_coverage.py`; its coverage output keeps each series' source path and
+workflow-round completeness separately before combining call rows. Run
+`summarize.py` once per aggregate because it produces one report directory per
+input. `--coverage` points to an existing coverage map containing the selected
+scope and input rationale; the finalizer updates it from the receipts.
+Coverage status can therefore be partial when a series is missing receipts or
+contains failures. Native candidate qualification is deliberately stricter
+than operation coverage: adjacent inventory starts and unwind function-start
+records are retained as observed intervals, but do not establish an
+independent function extent. Such candidates are reported as degraded rather
+than treated as qualified measurements.

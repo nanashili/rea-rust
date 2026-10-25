@@ -200,17 +200,22 @@ def bundle_metadata(bundle: Path) -> dict[str, Any]:
 
 def selected_paths(plan: dict[str, Any]) -> tuple[list[Path], list[dict[str, Any]]]:
     candidates: set[Path] = set()
-    bundle_records: list[dict[str, Any]] = []
+    bundle_paths: set[Path] = set()
 
+    def add_target(value: Any) -> None:
+        if not isinstance(value, str) or not value.startswith("/"):
+            return
+
+        target_path = Path(value)
+        if target_path.is_dir():
+            bundle_paths.add(target_path)
+            candidates.update(canonical_bundle_files(target_path))
+        elif target_path.is_file():
+            candidates.add(target_path)
+
+    add_target(plan.get("target"))
     for workflow in plan.get("workflows", []):
-        target = workflow.get("target")
-        if isinstance(target, str) and target.startswith("/"):
-            target_path = Path(target)
-            if target_path.is_dir():
-                bundle_records.append({"path": str(target_path), "exists": True, "is_directory": True})
-                candidates.update(canonical_bundle_files(target_path))
-            elif target_path.is_file():
-                candidates.add(target_path)
+        add_target(workflow.get("target"))
 
         for value in workflow.get("input_files", []):
             path = Path(value)
@@ -226,6 +231,10 @@ def selected_paths(plan: dict[str, Any]) -> tuple[list[Path], list[dict[str, Any
                 if path.is_file():
                     candidates.add(path)
 
+    bundle_records = [
+        {"path": str(path), "exists": True, "is_directory": True}
+        for path in sorted(bundle_paths)
+    ]
     return sorted(candidates), bundle_records
 
 

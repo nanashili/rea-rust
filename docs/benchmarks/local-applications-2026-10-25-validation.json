@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded validation facts from the first official benchmark round. No target source, strings, or decompiled text is retained.",
+  "source": {
+    "aggregate": "local-applications-2026-10-25-raw.json",
+    "work_directory": "/tmp/rea-local-applications-20261025",
+    "round": 1
+  },
+  "read_bytes_oracle": [
+    {
+      "workflow": "xcode-deep-read-only",
+      "target_path": "/Applications/Xcode.app/Contents/MacOS/Xcode",
+      "address": "0x1000009d8",
+      "file_offset": "0x9d8",
+      "length": 256,
+      "provider_sha256": "20339beb57a1ffe2da68f997908a266848b5b3ce890b981a0416e8c35806de40",
+      "independent_file_sha256": "20339beb57a1ffe2da68f997908a266848b5b3ce890b981a0416e8c35806de40",
+      "matches": true,
+      "mapping_basis": "Mach-O __TEXT vmaddr 0x100000000, fileoff 0"
+    },
+    {
+      "workflow": "figma-framework-deep",
+      "target_path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "address": "0x8d7c",
+      "file_offset": "0x8d7c",
+      "length": 256,
+      "provider_sha256": "c25afaab8debcbc13b8fdc5521b51c877085568594c774bbeff0a30ac33966b3",
+      "independent_file_sha256": "c25afaab8debcbc13b8fdc5521b51c877085568594c774bbeff0a30ac33966b3",
+      "matches": true,
+      "mapping_basis": "Mach-O __TEXT vmaddr 0, fileoff 0"
+    }
+  ],
+  "deep_results": [
+    {
+      "workflow": "xcode-deep-read-only",
+      "address": "0x1000009d8",
+      "assembly_characters": 42,
+      "instruction_count": 2,
+      "instruction_text_sha256": "e4236af035aff3b63ce1130fb3790de52df153512456def8ee1407d83c2a6980",
+      "pseudocode_repeat_count": 3,
+      "pseudocode_lengths": [70, 70, 70],
+      "pseudocode_sha256": "ce96690b5a9f95975f872b2bdf606c7863ed8d1e2567cb81b500cd9111c8c6c5",
+      "pseudocode_repeats_match": true,
+      "procedure_references": 0,
+      "batch_decompile_items": 1,
+      "batch_decompile_status": "ok"
+    },
+    {
+      "workflow": "figma-framework-deep",
+      "address": "0x8d7c",
+      "assembly_characters": 9802,
+      "instruction_count": 403,
+      "instruction_text_sha256": "d9b70856fc591c1eaaf2b519a1d5bec362bf751c0e5cae95387f5f8eafbf4552",
+      "pseudocode_repeat_count": 3,
+      "pseudocode_lengths": [71, 71, 71],
+      "pseudocode_sha256": "69b967f0efeabf8657137fefce5832791e882798e8d3eaaf0d4c4a332c13d616",
+      "pseudocode_repeats_match": true,
+      "procedure_references": 31,
+      "batch_decompile_items": 1,
+      "batch_decompile_status": "ok"
+    },
+    {
+      "workflow": "gofmt-deep",
+      "address_selection": "first_inventory_address",
+      "assembly_nonempty": true,
+      "pseudocode_nonempty": true,
+      "degraded_decode": true,
+      "degraded_decode_reason": "provider pseudocode reported bad instruction data and halted control-flow recovery"
+    }
+  ],
+  "evidence_roundtrip": [
+    {
+      "workflow": "xcode-deep-read-only",
+      "export_records": 20,
+      "export_unknowns": 1,
+      "export_bytes": 195334,
+      "imported": 0,
+      "unknowns_added": 0,
+      "total_after_import": 20,
+      "interpretation": "same-session duplicate import was idempotently skipped; fresh-process reconstruction was not tested"
+    },
+    {
+      "workflow": "figma-framework-deep",
+      "export_records": 15,
+      "export_unknowns": 0,
+      "export_bytes": 3518755,
+      "imported": 0,
+      "unknowns_added": 0,
+      "total_after_import": 15,
+      "interpretation": "same-session duplicate import was idempotently skipped; fresh-process reconstruction was not tested"
+    },
+    {
+      "workflow": "session-evidence-roundtrip",
+      "export_records": 2,
+      "export_unknowns": 0,
+      "export_bytes": 21379,
+      "imported": 0,
+      "unknowns_added": 0,
+      "total_after_import": 2,
+      "interpretation": "same-session duplicate import was idempotently skipped; fresh-process reconstruction was not tested"
+    }
+  ],
+  "observed_errors": [
+    {
+      "workflows": ["xcode-deep-read-only", "figma-framework-deep", "gofmt-deep"],
+      "operation": "procedure_callers/procedure_callees",
+      "code": "evidence_integrity_mismatch",
+      "classification": "provider_or_evidence_lifecycle_failure"
+    },
+    {
+      "workflow": "xcode-deep-read-only",
+      "operation": "trace_native_values",
+      "code": "unreadable_output",
+      "classification": "provider_output_failure"
+    },
+    {
+      "workflow": "gofmt-deep",
+      "operation": "procedure_pseudo_code",
+      "code": "bad_instruction_data",
+      "classification": "degraded_target_decode"
+    }
+  ]
+}

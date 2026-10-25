@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "plan_id": "local-applications-2026-10-25-inventory",
+  "status": "frozen_for_measurement",
+  "executed": false,
+  "purpose": "Small supplemental read-only benchmark for native symbol inventory and GNU objdump headers using already selected local artifacts.",
+  "authority": "shipped-artifact",
+  "source_plan": "local-applications-2026-10-25-plan.json",
+  "target_policy": "Read target files and REA-owned cache only. Do not launch, attach to, mutate, sign, save, or close a target application.",
+  "qualification": {
+    "preflight_required": false,
+    "time_budget_seconds_per_workflow": 30,
+    "input_files_are_exact": true,
+    "notes": [
+      "The OpenUnity symbol is copied from an existing successful list_procedures candidate in local-applications-2026-10-25-native-functions-plan.json.",
+      "Run the GNU objdump workflow only when the existing objdump executable is available on PATH; do not install one.",
+      "Record missing artifacts or unavailable providers as skipped prerequisites rather than treating them as benchmark successes."
+    ],
+    "preflight_observation": {
+      "objdump_path": "/usr/bin/objdump",
+      "implementation": "Apple LLVM 21.0.0; GNU compatibility is not assumed",
+      "symbol_source": "existing retained OpenUnity list_procedures response"
+    }
+  },
+  "workflows": [
+    {
+      "name": "openunity-native-inventory",
+      "target": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "input_files": [
+        "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor"
+      ],
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "binary_overview",
+          "arguments": {}
+        },
+        {
+          "name": "list_names",
+          "arguments": {}
+        },
+        {
+          "name": "find_xrefs_to_name",
+          "arguments": {
+            "name": "__ZN3png7encoder11write_chunk17he78324273ff4ede1E"
+          },
+          "input_provenance": {
+            "source_file": "/tmp/rea-local-applications-20261025/openunity-native-analysis-round-001/call-0010.json",
+            "source_file_sha256": "c9f72de8b5897309f3c1a9dea3dbf59258385f4c99603216dc9bc471218240ce",
+            "response_evidence_id": "ev_9371915f6631e53c8204399c596f975b58e9cac4b48453357e045465c29a141e",
+            "normalized_result_path": "result.structuredContent.normalized_result[0]",
+            "address": "0x100000d58",
+            "value": "__ZN3png7encoder11write_chunk17he78324273ff4ede1E"
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "gofmt-objdump-headers",
+      "target": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "input_files": [
+        "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt"
+      ],
+      "preflight": {
+        "required_commands": [
+          "objdump"
+        ],
+        "skip_if_unavailable": true,
+        "reason": "inspect_with_objdump delegates to GNU objdump and no unrelated tool installation is allowed."
+      },
+      "cases": [
+        {
+          "name": "inspect_with_objdump",
+          "arguments": {
+            "operation": "file_headers",
+            "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt"
+          }
+        }
+      ]
+    }
+  ],
+  "excluded_gaps": [
+    {
+      "tool": "build_call_path",
+      "reason": "Requires complete analyze_function Evidence objects; the frozen native analyze_function calls were failure-only."
+    },
+    {
+      "tool": "inspect_binary_layout",
+      "reason": "The catalog's initial profile is ELF64 x86-64 Linux, incompatible with the selected macOS arm64 artifacts."
+    },
+    {
+      "tool": "project_managed_application_graph",
+      "reason": "Requires complete managed Evidence objects that the existing summary workflows do not retain as composition inputs."
+    }
+  ],
+  "execution": {
+    "rounds": 5,
+    "call_timeout_seconds": 30,
+    "sample_interval_ms": 5,
+    "rss_limit_mib": 4096,
+    "stdout_limit_bytes": 134217728
+  }
+}

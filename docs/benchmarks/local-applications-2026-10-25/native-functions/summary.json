@@ -1,0 +1,4990 @@
+{
+  "call_timing": [
+    {
+      "kind": "discovery",
+      "output_bytes": {
+        "count": 30,
+        "maximum": 3245006.0,
+        "median": 1623091.5,
+        "minimum": 1177.0
+      },
+      "wall_ms": {
+        "count": 30,
+        "maximum": 116.00466698291712,
+        "median": 81.66593800706323,
+        "minimum": 48.58437500661239
+      }
+    },
+    {
+      "kind": "analysis",
+      "output_bytes": {
+        "count": 600,
+        "maximum": 4075282.0,
+        "median": 23512.0,
+        "minimum": 205.0
+      },
+      "wall_ms": {
+        "count": 600,
+        "maximum": 79139.01579100639,
+        "median": 8.74829149688594,
+        "minimum": 0.826291972771287
+      }
+    }
+  ],
+  "calls": [
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 603109.0,
+        "median": 603109.0,
+        "minimum": 603109.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 908.421875,
+        "median": 903.65625,
+        "minimum": 898.953125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 880.6198480000002,
+        "median": 875.3392399999999,
+        "minimum": 869.2911679999999
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 886.0690410074312,
+        "median": 874.5787079969887,
+        "minimum": 869.9613329954445
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21779.0,
+        "median": 21779.0,
+        "minimum": 21779.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 944.546875,
+        "median": 941.0,
+        "minimum": 923.015625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 812.5103039999885,
+        "median": 803.989328000005,
+        "minimum": 35.47721600000137
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 824.2019579920452,
+        "median": 812.3999169911258,
+        "minimum": 40.8927499956917
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21780.0,
+        "median": 21780.0,
+        "minimum": 21780.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.280291989445686,
+        "median": 1.356666994979605,
+        "minimum": 1.2977909937035292
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21780.0,
+        "median": 21780.0,
+        "minimum": 21780.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3824169873259962,
+        "median": 1.2002910079900175,
+        "minimum": 1.1261249892413616
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 784328.0,
+        "median": 784328.0,
+        "minimum": 784328.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 2447.390625,
+        "median": 2445.859375,
+        "minimum": 2439.96875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 119734.32031999985,
+        "median": 110863.25489599955,
+        "minimum": 104842.09017600025
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 32947.810416982975,
+        "median": 30254.085541993845,
+        "minimum": 28631.909958989127
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19927.0,
+        "median": 19927.0,
+        "minimum": 19927.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 944.5625,
+        "median": 944.5625,
+        "minimum": 944.5625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 4.205088000004631,
+        "median": 4.205088000004631,
+        "minimum": 4.205088000004631
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.162082998547703,
+        "median": 0.9084159974008799,
+        "minimum": 0.8690839749760926
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x1e928-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 635832.0,
+        "median": 635832.0,
+        "minimum": 635832.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 908.453125,
+        "median": 903.671875,
+        "minimum": 898.96875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 99.1773760000001,
+        "median": 92.47056000000012,
+        "minimum": 90.68342400000007
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 97.3002910031937,
+        "median": 94.85495800618082,
+        "minimum": 94.23875002539717
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 601338.0,
+        "median": 601338.0,
+        "minimum": 601338.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 944.609375,
+        "median": 941.15625,
+        "minimum": 923.078125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 103.90974399999251,
+        "median": 98.14227200001268,
+        "minimum": 93.1885279999997
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 103.05762500502169,
+        "median": 97.40066700032912,
+        "minimum": 96.2509160162881
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 41100.0,
+        "median": 41100.0,
+        "minimum": 41100.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 952.171875,
+        "median": 948.09375,
+        "minimum": 930.015625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 91.8571680000046,
+        "median": 84.69035199999497,
+        "minimum": 83.09585599999744
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 99.39566702814773,
+        "median": 96.43299999879673,
+        "minimum": 89.66695799608715
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 41100.0,
+        "median": 41100.0,
+        "minimum": 41100.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 2.489083999535069,
+        "median": 2.1579999884124845,
+        "minimum": 2.0470419840421528
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 41100.0,
+        "median": 41100.0,
+        "minimum": 41100.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 2.2535000171046704,
+        "median": 2.024332992732525,
+        "minimum": 1.965707982890308
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 863733.0,
+        "median": 863733.0,
+        "minimum": 863733.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 944.796875,
+        "median": 941.28125,
+        "minimum": 923.21875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 29.67952000000007,
+        "median": 26.00233599999957,
+        "minimum": 22.327391999995644
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 37.1606660191901,
+        "median": 31.510666012763977,
+        "minimum": 31.062291003763676
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19927.0,
+        "median": 19927.0,
+        "minimum": 19927.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 947.703125,
+        "median": 947.703125,
+        "minimum": 947.703125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 5.770111999987587,
+        "median": 5.770111999987587,
+        "minimum": 5.770111999987587
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.022333990084007,
+        "median": 1.0714159870985895,
+        "minimum": 0.9025830077007413
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x28ef8-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 634029.0,
+        "median": 634029.0,
+        "minimum": 634029.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 944.671875,
+        "median": 941.171875,
+        "minimum": 923.09375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 97.55038399999283,
+        "median": 97.38963200000165,
+        "minimum": 92.63535999999937
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 98.42808300163597,
+        "median": 96.25566701288335,
+        "minimum": 95.83999999449588
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1431309.0,
+        "median": 1431309.0,
+        "minimum": 1431309.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 953.875,
+        "median": 947.3125,
+        "minimum": 928.015625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 356.85948800001074,
+        "median": 353.0437119999968,
+        "minimum": 348.17799999999613
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 354.13887500180863,
+        "median": 350.253916985821,
+        "minimum": 345.9765419829637
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19281.0,
+        "median": 19281.0,
+        "minimum": 19281.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 959.875,
+        "median": 956.359375,
+        "minimum": 935.15625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 95.72667200000325,
+        "median": 75.0735040000074,
+        "minimum": 74.52848000000087
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 108.8567920087371,
+        "median": 81.53729100013152,
+        "minimum": 80.36108300439082
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19281.0,
+        "median": 19281.0,
+        "minimum": 19281.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.4310420083347708,
+        "median": 1.334166998276487,
+        "minimum": 1.1240830062888563
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19281.0,
+        "median": 19281.0,
+        "minimum": 19281.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3156250061001629,
+        "median": 1.1074159992858768,
+        "minimum": 1.003292010864243
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1848839.0,
+        "median": 1848839.0,
+        "minimum": 1848839.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 959.84375,
+        "median": 956.328125,
+        "minimum": 935.125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 64.42361600000191,
+        "median": 64.25049600000033,
+        "minimum": 63.32632000000915
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 92.8436660033185,
+        "median": 73.5325000132434,
+        "minimum": 71.23720800154842
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19927.0,
+        "median": 19927.0,
+        "minimum": 19927.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.021166011923924,
+        "median": 0.8853329927660525,
+        "minimum": 0.8342090004589409
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x334b8-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1508647.0,
+        "median": 1508647.0,
+        "minimum": 1508647.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 957.203125,
+        "median": 953.390625,
+        "minimum": 932.5625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 349.4387840000106,
+        "median": 346.91310399999827,
+        "minimum": 339.8407520000011
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 352.477957989322,
+        "median": 345.236458000727,
+        "minimum": 341.0422079905402
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1527211.0,
+        "median": 1527211.0,
+        "minimum": 1527211.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 960.140625,
+        "median": 956.46875,
+        "minimum": 935.328125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 368.22228799999505,
+        "median": 367.03912000000696,
+        "minimum": 358.9956479999992
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 361.2448750063777,
+        "median": 359.97591700288467,
+        "minimum": 356.1597920197528
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 184000.0,
+        "median": 184000.0,
+        "minimum": 184000.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1046.671875,
+        "median": 1036.5,
+        "minimum": 1024.90625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 1151.152656000005,
+        "median": 1077.6028799999942,
+        "minimum": 1055.0152000000041
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1204.2253339895979,
+        "median": 1086.8696660036221,
+        "minimum": 1062.3509169963654
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 184000.0,
+        "median": 184000.0,
+        "minimum": 184000.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1001.828125,
+        "median": 997.609375,
+        "minimum": 975.734375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 9.93406400000707,
+        "median": 7.935936000003113,
+        "minimum": 7.589711999992116
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 13.26908401097171,
+        "median": 11.873459006892517,
+        "minimum": 10.47949999338016
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 184000.0,
+        "median": 184000.0,
+        "minimum": 184000.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1001.828125,
+        "median": 997.609375,
+        "minimum": 975.734375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 10.112528000012777,
+        "median": 7.645391999999779,
+        "minimum": 7.357343999991634
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 13.826499984133989,
+        "median": 11.519749998115003,
+        "minimum": 10.935708996839821
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 2154607.0,
+        "median": 2154607.0,
+        "minimum": 2154607.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 964.28125,
+        "median": 960.953125,
+        "minimum": 939.25
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 68.71511999999694,
+        "median": 66.00841599999826,
+        "minimum": 65.45478400000323
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 77.29820802342147,
+        "median": 76.70012500602752,
+        "minimum": 76.23050000984222
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19927.0,
+        "median": 19927.0,
+        "minimum": 19927.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.2244589743204415,
+        "median": 1.1425419943407178,
+        "minimum": 1.0753330134321004
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x4c354-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1609867.0,
+        "median": 1609867.0,
+        "minimum": 1609867.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 963.78125,
+        "median": 960.71875,
+        "minimum": 938.8125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 364.0042880000034,
+        "median": 357.83155199999413,
+        "minimum": 353.92774400000167
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 367.13320799754,
+        "median": 357.2708749852609,
+        "minimum": 352.67254200880416
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20024.0,
+        "median": 20024.0,
+        "minimum": 20024.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.386374985799193,
+        "median": 1.1912909976672381,
+        "minimum": 1.1009160079993308
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19975.0,
+        "median": 19975.0,
+        "minimum": 19975.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1001.78125,
+        "median": 997.5625,
+        "minimum": 975.703125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 4.998415999996148,
+        "median": 3.597279999999037,
+        "minimum": 2.899231999999502
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.277709000045434,
+        "median": 11.718249996192753,
+        "minimum": 9.8790840129368
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19975.0,
+        "median": 19975.0,
+        "minimum": 19975.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.2022920127492398,
+        "median": 1.191958988783881,
+        "minimum": 1.1230410018470138
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19975.0,
+        "median": 19975.0,
+        "minimum": 19975.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.2372909986879677,
+        "median": 1.061957998899743,
+        "minimum": 1.0285000025760382
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22903.0,
+        "median": 22903.0,
+        "minimum": 22903.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 992.0,
+        "median": 992.0,
+        "minimum": 992.0
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 4.338480000011247,
+        "median": 4.338480000011247,
+        "minimum": 4.338480000011247
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.624082994880155,
+        "median": 1.1163750023115426,
+        "minimum": 1.0762500169221312
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19927.0,
+        "median": 19927.0,
+        "minimum": 19927.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 0.9072920074686408,
+        "median": 0.9006670152302831,
+        "minimum": 0.8590419893153012
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:0x66d08-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21173.0,
+        "median": 21173.0,
+        "minimum": 21173.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 6.968958972720429,
+        "median": 6.71583297662437,
+        "minimum": 1.2525409983936697
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:batch-decompile-all-five#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 217848.0,
+        "median": 217848.0,
+        "minimum": 217848.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1002.25,
+        "median": 998.03125,
+        "minimum": 976.171875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 16.663839999999958,
+        "median": 12.61732800000831,
+        "minimum": 10.285951999999792
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 22.333875007461756,
+        "median": 14.304291980806738,
+        "minimum": 14.033707993803546
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:close_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 205.0,
+        "median": 205.0,
+        "minimum": 205.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1002.28125,
+        "median": 998.03125,
+        "minimum": 976.1875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 6.227327999998561,
+        "median": 4.45195199999543,
+        "minimum": 0.7977120000028926
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 40.130959008820355,
+        "median": 35.56504097650759,
+        "minimum": 29.30604200810194
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.46875,
+        "median": 100.359375,
+        "minimum": 98.5625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 50.137709,
+        "median": 49.089459999999995,
+        "minimum": 41.789417
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 54.63787500048056,
+        "median": 53.447875019628555,
+        "minimum": 48.58437500661239
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:inspect_macho#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 7048.0,
+        "median": 7048.0,
+        "minimum": 7048.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 364.4375,
+        "median": 312.640625,
+        "minimum": 299.0
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 829.4049639999997,
+        "median": 816.050317,
+        "minimum": 810.5526319999998
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1059.5913750003092,
+        "median": 1040.4762919934,
+        "minimum": 1003.0213329882827
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:list_procedures#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1646796.0,
+        "median": 1646796.0,
+        "minimum": 1646796.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 699.796875,
+        "median": 696.328125,
+        "minimum": 696.046875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 1019.20248,
+        "median": 1011.1975600000006,
+        "minimum": 1004.5125280000002
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1068.12125002034,
+        "median": 1060.6497089902405,
+        "minimum": 1053.84441599017
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:open_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 716.0,
+        "median": 716.0,
+        "minimum": 716.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 174.734375,
+        "median": 173.421875,
+        "minimum": 171.59375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 720.413644,
+        "median": 714.6634860000001,
+        "minimum": 709.9474820000003
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 748.7285409879405,
+        "median": 720.5537080008071,
+        "minimum": 716.049207985634
+      }
+    },
+    {
+      "call_group": "figma-framework-native-functions-supplement:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 179.1875,
+        "median": 177.953125,
+        "minimum": 176.28125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 68.85449799999999,
+        "median": 62.415375999999995,
+        "minimum": 61.28674699999999
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 114.2122499877587,
+        "median": 109.0211660193745,
+        "minimum": 105.7132090209052
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 25113.0,
+        "median": 25113.0,
+        "minimum": 25113.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 333.5625,
+        "median": 331.84375,
+        "minimum": 328.765625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 129.629752,
+        "median": 122.13205599999995,
+        "minimum": 119.02667200000003
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 135.9591249783989,
+        "median": 130.59200000134297,
+        "minimum": 128.03875000099652
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22705.0,
+        "median": 22705.0,
+        "minimum": 22705.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 393.453125,
+        "median": 390.40625,
+        "minimum": 386.671875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 7.927488000000704,
+        "median": 7.281431999999144,
+        "minimum": 7.121647999999828
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 14.409625000553206,
+        "median": 14.076166989980265,
+        "minimum": 10.552332998486236
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22706.0,
+        "median": 22706.0,
+        "minimum": 22706.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3597919896710664,
+        "median": 1.355459011392668,
+        "minimum": 1.2308750010561198
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22706.0,
+        "median": 22706.0,
+        "minimum": 22706.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3264589942991734,
+        "median": 1.2549580133054405,
+        "minimum": 1.2213750160299242
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 31198.0,
+        "median": 31198.0,
+        "minimum": 31198.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 498.75,
+        "median": 494.4375,
+        "minimum": 491.984375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 13701.72916,
+        "median": 12690.588655999994,
+        "minimum": 12374.99166400001
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 3922.683207987575,
+        "median": 3659.837334009353,
+        "minimum": 3425.508166983491
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19841.0,
+        "median": 19841.0,
+        "minimum": 19841.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.0799590090755373,
+        "median": 0.8833750034682453,
+        "minimum": 0.8464170095976442
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000d58-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 26274.0,
+        "median": 26274.0,
+        "minimum": 26274.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 329.078125,
+        "median": 329.078125,
+        "minimum": 329.078125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 7.542152000000052,
+        "median": 7.542152000000052,
+        "minimum": 7.542152000000052
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.14449999597855,
+        "median": 2.177332993596792,
+        "minimum": 1.9949999987147748
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 25566.0,
+        "median": 25566.0,
+        "minimum": 25566.0
+      },
+      "peak_rss_mib": {
+        "count": 4,
+        "maximum": 390.5,
+        "median": 389.90625,
+        "minimum": 386.71875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 4,
+        "maximum": 5.787440000000283,
+        "median": 5.171884000001098,
+        "minimum": 4.949712000001688
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.897667023120448,
+        "median": 7.485917012672871,
+        "minimum": 7.0002920110709965
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 23161.0,
+        "median": 23161.0,
+        "minimum": 23161.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 394.9375,
+        "median": 391.875,
+        "minimum": 388.203125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 9.841551999999101,
+        "median": 9.78242399999904,
+        "minimum": 9.431719999999784
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.888707977253944,
+        "median": 12.571583007229492,
+        "minimum": 11.456959007773548
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 23161.0,
+        "median": 23161.0,
+        "minimum": 23161.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.435457990737632,
+        "median": 1.3339169963728637,
+        "minimum": 1.2345830036792904
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 23161.0,
+        "median": 23161.0,
+        "minimum": 23161.0
+      },
+      "peak_rss_mib": {
+        "count": 2,
+        "maximum": 391.921875,
+        "median": 390.0625,
+        "minimum": 388.203125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 2,
+        "maximum": 3.4167520000002587,
+        "median": 3.4150799999995636,
+        "minimum": 3.413407999998869
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.506667014444247,
+        "median": 6.817165995016694,
+        "minimum": 1.1868749861605465
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 31505.0,
+        "median": 31505.0,
+        "minimum": 31505.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.6126659756992012,
+        "median": 1.4360000204760581,
+        "minimum": 1.3802500034216791
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19841.0,
+        "median": 19841.0,
+        "minimum": 19841.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.0968749993480742,
+        "median": 0.9307920117862523,
+        "minimum": 0.8756250026635826
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100000f00-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 26779.0,
+        "median": 26779.0,
+        "minimum": 26779.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.9477920141071081,
+        "median": 1.8938749853987247,
+        "minimum": 1.7262089822907
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 62479.0,
+        "median": 62479.0,
+        "minimum": 62479.0
+      },
+      "peak_rss_mib": {
+        "count": 3,
+        "maximum": 395.6875,
+        "median": 392.5625,
+        "minimum": 391.65625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 3,
+        "maximum": 7.8950240000001255,
+        "median": 7.251239999999035,
+        "minimum": 6.787040000000161
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 13.398375012911856,
+        "median": 11.662290984531865,
+        "minimum": 10.668915987480432
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 60063.0,
+        "median": 60063.0,
+        "minimum": 60063.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 410.140625,
+        "median": 407.578125,
+        "minimum": 403.203125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 137.9027840000014,
+        "median": 135.6070880000006,
+        "minimum": 132.298471999999
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 146.18825001525693,
+        "median": 140.60991600854322,
+        "minimum": 139.54770800773986
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 60063.0,
+        "median": 60063.0,
+        "minimum": 60063.0
+      },
+      "peak_rss_mib": {
+        "count": 2,
+        "maximum": 401.734375,
+        "median": 398.2890625,
+        "minimum": 394.84375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 2,
+        "maximum": 4.93838399999981,
+        "median": 4.823603999999378,
+        "minimum": 4.708823999998946
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 9.118791989749297,
+        "median": 2.9337079904507846,
+        "minimum": 2.914540993515402
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 60063.0,
+        "median": 60063.0,
+        "minimum": 60063.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 397.65625,
+        "median": 397.65625,
+        "minimum": 397.65625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 6.045952000000451,
+        "median": 6.045952000000451,
+        "minimum": 6.045952000000451
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.329584001330659,
+        "median": 2.9433750023599714,
+        "minimum": 2.7702919906005263
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 131741.0,
+        "median": 131741.0,
+        "minimum": 131741.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 392.859375,
+        "median": 392.859375,
+        "minimum": 392.859375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 10.411752000000345,
+        "median": 10.411752000000345,
+        "minimum": 10.411752000000345
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 9.016750002047047,
+        "median": 5.3584169945679605,
+        "minimum": 5.167041003005579
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19841.0,
+        "median": 19841.0,
+        "minimum": 19841.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.1062920093536377,
+        "median": 1.0108749847859144,
+        "minimum": 0.9094999986700714
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x1000010c0-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 65421.0,
+        "median": 65421.0,
+        "minimum": 65421.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 391.6875,
+        "median": 391.6875,
+        "minimum": 391.6875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 5.93081599999945,
+        "median": 5.93081599999945,
+        "minimum": 5.93081599999945
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 11.711208004271612,
+        "median": 5.662624986143783,
+        "minimum": 5.498207989148796
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21200.0,
+        "median": 21200.0,
+        "minimum": 21200.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 401.75,
+        "median": 401.75,
+        "minimum": 401.75
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 4.913944000000114,
+        "median": 4.913944000000114,
+        "minimum": 4.913944000000114
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.061875017825514,
+        "median": 1.3545420079026371,
+        "minimum": 1.267958985408768
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20238.0,
+        "median": 20238.0,
+        "minimum": 20238.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 401.78125,
+        "median": 398.4375,
+        "minimum": 394.921875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 8.06599200000041,
+        "median": 6.710719999999185,
+        "minimum": 4.072103999999715
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.584167008753866,
+        "median": 9.041709010489285,
+        "minimum": 8.621624991064891
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20238.0,
+        "median": 20238.0,
+        "minimum": 20238.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.306292018853128,
+        "median": 1.126707997173071,
+        "minimum": 1.0967919952236116
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20238.0,
+        "median": 20238.0,
+        "minimum": 20238.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.1160830035805702,
+        "median": 1.0384999914094806,
+        "minimum": 1.0325830080546439
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 21099.0,
+        "median": 21099.0,
+        "minimum": 21099.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 397.671875,
+        "median": 397.671875,
+        "minimum": 397.671875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 4.517583999999964,
+        "median": 4.517583999999964,
+        "minimum": 4.517583999999964
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.089416991220787,
+        "median": 0.9530829847790301,
+        "minimum": 0.9407080069649965
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19841.0,
+        "median": 19841.0,
+        "minimum": 19841.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 0.9912499808706343,
+        "median": 0.8906669972930104,
+        "minimum": 0.826291972771287
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001b74-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22221.0,
+        "median": 22221.0,
+        "minimum": 22221.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3050410198047757,
+        "median": 1.2741669779643416,
+        "minimum": 1.1845410044770688
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 86591.0,
+        "median": 86591.0,
+        "minimum": 86591.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 402.46875,
+        "median": 399.125,
+        "minimum": 395.765625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 12.245568000000679,
+        "median": 11.388159999998884,
+        "minimum": 11.098343999999969
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 9.898791002342477,
+        "median": 9.246000001439825,
+        "minimum": 8.248958009062335
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 92925.0,
+        "median": 92925.0,
+        "minimum": 92925.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 440.59375,
+        "median": 432.265625,
+        "minimum": 428.609375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 268.7766799999995,
+        "median": 261.8015120000002,
+        "minimum": 260.02392799999853
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 279.6134169911966,
+        "median": 273.74429200426675,
+        "minimum": 266.7664579930715
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 92925.0,
+        "median": 92925.0,
+        "minimum": 92925.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 407.71875,
+        "median": 407.71875,
+        "minimum": 407.71875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 3.9272400000012335,
+        "median": 3.9272400000012335,
+        "minimum": 3.9272400000012335
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 10.91795801767148,
+        "median": 4.377208999358118,
+        "minimum": 4.169291001744568
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 92925.0,
+        "median": 92925.0,
+        "minimum": 92925.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 411.40625,
+        "median": 411.40625,
+        "minimum": 411.40625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 8.16453599999914,
+        "median": 8.16453599999914,
+        "minimum": 8.16453599999914
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 10.103374981554225,
+        "median": 4.341207997640595,
+        "minimum": 4.14570898283273
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 147141.0,
+        "median": 147141.0,
+        "minimum": 147141.0
+      },
+      "peak_rss_mib": {
+        "count": 4,
+        "maximum": 402.46875,
+        "median": 398.9296875,
+        "minimum": 395.765625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 4,
+        "maximum": 5.157920000000579,
+        "median": 5.104988000000511,
+        "minimum": 5.081575999999699
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.431042006937787,
+        "median": 12.163167004473507,
+        "minimum": 5.605416023172438
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19841.0,
+        "median": 19841.0,
+        "minimum": 19841.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 8.195833011996001,
+        "median": 1.0599170054774731,
+        "minimum": 0.8705419895704836
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:0x100001c14-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 90625.0,
+        "median": 90625.0,
+        "minimum": 90625.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 402.5,
+        "median": 399.125,
+        "minimum": 395.765625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 8.339376000000481,
+        "median": 8.042071999999804,
+        "minimum": 7.90351999999897
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 13.33749998593703,
+        "median": 13.036083022598177,
+        "minimum": 11.471957986941561
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:batch-decompile-all-five#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 151159.0,
+        "median": 151159.0,
+        "minimum": 151159.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 414.890625,
+        "median": 411.390625,
+        "minimum": 408.21875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 11.984751999998975,
+        "median": 10.477127999999821,
+        "minimum": 9.824975999999888
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 15.537792001850903,
+        "median": 13.675875001354143,
+        "minimum": 10.153582989005372
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:close_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 205.0,
+        "median": 205.0,
+        "minimum": 205.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 414.90625,
+        "median": 410.71875,
+        "minimum": 400.015625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 3.5217840000016376,
+        "median": 0.8995199999990294,
+        "minimum": 0.7809920000013404
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 27.942500018980354,
+        "median": 27.64804198523052,
+        "minimum": 25.62079200288281
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.5,
+        "median": 100.46875,
+        "minimum": 100.4375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 50.423747999999996,
+        "median": 49.4015,
+        "minimum": 49.049709
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 57.61866699322127,
+        "median": 55.45191600685939,
+        "minimum": 52.92879100306891
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:inspect_macho#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 6778.0,
+        "median": 6778.0,
+        "minimum": 6778.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 208.3125,
+        "median": 208.046875,
+        "minimum": 204.953125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 464.7763720000002,
+        "median": 433.056453,
+        "minimum": 404.1479799999999
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 686.0035420104396,
+        "median": 641.9514580047689,
+        "minimum": 623.038791003637
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:list_procedures#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 4075282.0,
+        "median": 4075282.0,
+        "minimum": 4075282.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 294.890625,
+        "median": 288.5,
+        "minimum": 284.46875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 537.609072,
+        "median": 528.828136,
+        "minimum": 520.779024
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 613.0448750045616,
+        "median": 599.0948750113603,
+        "minimum": 592.7677500003483
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:open_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 630.0,
+        "median": 630.0,
+        "minimum": 630.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 174.671875,
+        "median": 174.609375,
+        "minimum": 171.140625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 79.58770799999999,
+        "median": 78.35359,
+        "minimum": 74.200998
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 89.59487499669194,
+        "median": 80.30525001231581,
+        "minimum": 78.85612500831485
+      }
+    },
+    {
+      "call_group": "openunity-native-functions-supplement:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.859375,
+        "median": 178.21875,
+        "minimum": 174.921875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 64.70504100000001,
+        "median": 62.082668000000005,
+        "minimum": 60.972798
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 116.00466698291712,
+        "median": 110.81566699431278,
+        "minimum": 106.21383300167508
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19149.0,
+        "median": 19149.0,
+        "minimum": 19149.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1891.359375,
+        "median": 1839.90625,
+        "minimum": 1828.765625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 1891.1188160000027,
+        "median": 1866.1684160000013,
+        "minimum": 1857.0619519999984
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1895.8557919831946,
+        "median": 1869.762250018539,
+        "minimum": 1863.4214159974363
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18807.0,
+        "median": 18807.0,
+        "minimum": 18807.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1917.640625,
+        "median": 1861.21875,
+        "minimum": 1786.921875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 1959.9357760000019,
+        "median": 1850.3906879999945,
+        "minimum": 1846.214464000017
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1972.976666991599,
+        "median": 1859.3199579918291,
+        "minimum": 1852.9784589773044
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18808.0,
+        "median": 18808.0,
+        "minimum": 18808.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.4451669994741678,
+        "median": 1.2634580198209733,
+        "minimum": 1.1887080036103725
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18808.0,
+        "median": 18808.0,
+        "minimum": 18808.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.2761249963659793,
+        "median": 1.1480000102892518,
+        "minimum": 1.0210830077994615
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 22084.0,
+        "median": 22084.0,
+        "minimum": 22084.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 3300.71875,
+        "median": 3259.078125,
+        "minimum": 3217.828125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 273322.33263999125,
+        "median": 245546.98617599334,
+        "minimum": 226362.04662399687
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 79139.01579100639,
+        "median": 71857.36895800801,
+        "minimum": 66522.4776249961
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19781.0,
+        "median": 19781.0,
+        "minimum": 19781.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.1466669966466725,
+        "median": 1.0153750190511346,
+        "minimum": 0.868667004397139
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105bcc628-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19934.0,
+        "median": 19934.0,
+        "minimum": 19934.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 1838.234375,
+        "median": 1838.234375,
+        "minimum": 1838.234375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 6.3192319999998965,
+        "median": 6.3192319999998965,
+        "minimum": 6.3192319999998965
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.422500004991889,
+        "median": 1.3129999861121178,
+        "minimum": 1.2427910114638507
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 108189.0,
+        "median": 108189.0,
+        "minimum": 108189.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1919.140625,
+        "median": 1863.1875,
+        "minimum": 1789.015625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 11.579712000006737,
+        "median": 10.865536000003784,
+        "minimum": 10.447456000005351
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.254959001438692,
+        "median": 11.339791002683342,
+        "minimum": 11.101750016678125
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 110366.0,
+        "median": 110366.0,
+        "minimum": 110366.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1990.984375,
+        "median": 1934.75,
+        "minimum": 1860.921875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 522.8576320000057,
+        "median": 509.0055680000002,
+        "minimum": 501.68822399996725
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 538.6237920029089,
+        "median": 515.6778339878656,
+        "minimum": 507.63229199219495
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 110366.0,
+        "median": 110366.0,
+        "minimum": 110366.0
+      },
+      "peak_rss_mib": {
+        "count": 3,
+        "maximum": 1901.765625,
+        "median": 1866.5,
+        "minimum": 1822.671875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 3,
+        "maximum": 5.70963199997454,
+        "median": 4.743359999994645,
+        "minimum": 4.677119999976497
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 12.079916981747374,
+        "median": 11.449042009189725,
+        "minimum": 5.094749998534098
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 110366.0,
+        "median": 110366.0,
+        "minimum": 110366.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 5.186250025872141,
+        "median": 5.053583008702844,
+        "minimum": 4.884791997028515
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 92977.0,
+        "median": 92977.0,
+        "minimum": 92977.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 4.271999991033226,
+        "median": 4.1653749940451235,
+        "minimum": 3.887790982844308
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19781.0,
+        "median": 19781.0,
+        "minimum": 19781.0
+      },
+      "peak_rss_mib": {
+        "count": 1,
+        "maximum": 1896.40625,
+        "median": 1896.40625,
+        "minimum": 1896.40625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 1,
+        "maximum": 5.54908799998527,
+        "median": 5.54908799998527,
+        "minimum": 5.54908799998527
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.006583007751033,
+        "median": 1.224832987645641,
+        "minimum": 1.0182500118389726
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb62f0-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 113013.0,
+        "median": 113013.0,
+        "minimum": 113013.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1919.15625,
+        "median": 1863.203125,
+        "minimum": 1789.078125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 13.971744000029707,
+        "median": 12.786240000004057,
+        "minimum": 11.989696000020366
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 11.060749995522201,
+        "median": 10.42695899377577,
+        "minimum": 10.29758300865069
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 67581.0,
+        "median": 67581.0,
+        "minimum": 67581.0
+      },
+      "peak_rss_mib": {
+        "count": 4,
+        "maximum": 1901.828125,
+        "median": 1881.5390625,
+        "minimum": 1822.75
+      },
+      "sampled_family_cpu_ms": {
+        "count": 4,
+        "maximum": 7.667967999999359,
+        "median": 7.5512640000078015,
+        "minimum": 6.557248000010785
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 14.352165977470577,
+        "median": 12.521333002950996,
+        "minimum": 11.580040998524055
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 63714.0,
+        "median": 63714.0,
+        "minimum": 63714.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1959.09375,
+        "median": 1902.625,
+        "minimum": 1828.828125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 100.25244799994874,
+        "median": 84.9685760000255,
+        "minimum": 84.30163199998358
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 131.17070798762143,
+        "median": 97.18187499674968,
+        "minimum": 90.45458299806342
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 63714.0,
+        "median": 63714.0,
+        "minimum": 63714.0
+      },
+      "peak_rss_mib": {
+        "count": 2,
+        "maximum": 1953.3125,
+        "median": 1888.171875,
+        "minimum": 1823.03125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 2,
+        "maximum": 5.089856000000226,
+        "median": 4.858624000021072,
+        "minimum": 4.627392000041919
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 20.332249987404794,
+        "median": 3.204832988558337,
+        "minimum": 3.1022090115584433
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 63714.0,
+        "median": 63714.0,
+        "minimum": 63714.0
+      },
+      "peak_rss_mib": {
+        "count": 4,
+        "maximum": 1953.3125,
+        "median": 1899.4765625,
+        "minimum": 1866.84375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 4,
+        "maximum": 6.055168000009492,
+        "median": 5.747344000005816,
+        "minimum": 5.121215999983053
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 17.609041999094188,
+        "median": 8.7557079968974,
+        "minimum": 3.00679198699072
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 69707.0,
+        "median": 69707.0,
+        "minimum": 69707.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 3.4064579813275486,
+        "median": 3.279417025623843,
+        "minimum": 3.224582993425429
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19781.0,
+        "median": 19781.0,
+        "minimum": 19781.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 2.270791999762878,
+        "median": 1.017874979879707,
+        "minimum": 0.9732500184327364
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb780c-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 70683.0,
+        "median": 70683.0,
+        "minimum": 70683.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1952.953125,
+        "median": 1896.5,
+        "minimum": 1822.75
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 7.021952000023257,
+        "median": 6.735103999987113,
+        "minimum": 6.288703999987211
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 13.853207987267524,
+        "median": 12.881292001111433,
+        "minimum": 11.586791020818055
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 43971.0,
+        "median": 43971.0,
+        "minimum": 43971.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1953.359375,
+        "median": 1896.953125,
+        "minimum": 1823.125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 7.689407999997178,
+        "median": 4.845536000002593,
+        "minimum": 4.686975999987131
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 11.902250000275671,
+        "median": 10.907917021540925,
+        "minimum": 9.199082996929064
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 42171.0,
+        "median": 42171.0,
+        "minimum": 42171.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1961.15625,
+        "median": 1904.765625,
+        "minimum": 1830.953125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 80.7465279999995,
+        "median": 79.0505279999787,
+        "minimum": 76.8033279999985
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 90.24150000186637,
+        "median": 84.75233300123364,
+        "minimum": 83.55395798571408
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 42171.0,
+        "median": 42171.0,
+        "minimum": 42171.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 7.966124976519495,
+        "median": 2.331333002075553,
+        "minimum": 2.1855420200154185
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 42171.0,
+        "median": 42171.0,
+        "minimum": 42171.0
+      },
+      "peak_rss_mib": {
+        "count": 2,
+        "maximum": 1903.78125,
+        "median": 1901.15625,
+        "minimum": 1898.53125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 2,
+        "maximum": 4.41286399999713,
+        "median": 4.390895999990402,
+        "minimum": 4.368927999983674
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 9.244332992238924,
+        "median": 7.722624985035509,
+        "minimum": 2.2131669975351542
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 54909.0,
+        "median": 54909.0,
+        "minimum": 54909.0
+      },
+      "peak_rss_mib": {
+        "count": 2,
+        "maximum": 1902.328125,
+        "median": 1899.7109375,
+        "minimum": 1897.09375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 2,
+        "maximum": 6.274367999993147,
+        "median": 6.080672000003812,
+        "minimum": 5.886976000014476
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 17.075875017326325,
+        "median": 7.939125003758818,
+        "minimum": 2.405667008133605
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19781.0,
+        "median": 19781.0,
+        "minimum": 19781.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.0986670095007867,
+        "median": 1.067458011675626,
+        "minimum": 0.883166998391971
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x105cb8770-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 45909.0,
+        "median": 45909.0,
+        "minimum": 45909.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 5.518208985449746,
+        "median": 3.633541986346245,
+        "minimum": 3.5408340045250952
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-procedure_assembly#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20110.0,
+        "median": 20110.0,
+        "minimum": 20110.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 2.1033329830970615,
+        "median": 1.2992499978281558,
+        "minimum": 1.1884999985340983
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-procedure_pseudo_code#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18925.0,
+        "median": 18925.0,
+        "minimum": 18925.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1917.65625,
+        "median": 1861.296875,
+        "minimum": 1786.96875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 4.9382399999842725,
+        "median": 4.560448000012096,
+        "minimum": 2.4166720000129427
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 14.747915993211791,
+        "median": 10.639084008289501,
+        "minimum": 8.694542018929496
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-procedure_pseudo_code#2",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18925.0,
+        "median": 18925.0,
+        "minimum": 18925.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3455840235110372,
+        "median": 1.1275830038357526,
+        "minimum": 1.0766249906737357
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-procedure_pseudo_code#3",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 18925.0,
+        "median": 18925.0,
+        "minimum": 18925.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.1616249976214021,
+        "median": 1.0925420210696757,
+        "minimum": 1.0382499895058572
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-procedure_references#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 23863.0,
+        "median": 23863.0,
+        "minimum": 23863.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3765420007985085,
+        "median": 1.1678329901769757,
+        "minimum": 1.1247910151723772
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-read_bytes#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 19781.0,
+        "median": 19781.0,
+        "minimum": 19781.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.0853330022655427,
+        "median": 0.9260830120183527,
+        "minimum": 0.8451250032521784
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:0x1067a1e48-read_function_instructions#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20977.0,
+        "median": 20977.0,
+        "minimum": 20977.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1.3937089825049043,
+        "median": 1.3567919959314167,
+        "minimum": 1.2645410024560988
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:batch-decompile-all-five#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 185764.0,
+        "median": 185764.0,
+        "minimum": 185764.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1955.421875,
+        "median": 1899.0,
+        "minimum": 1825.203125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 13.176896000004156,
+        "median": 12.223456000014677,
+        "minimum": 9.931552000008836
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 14.048750017536804,
+        "median": 12.568292004289106,
+        "minimum": 12.300417001824826
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:close_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 205.0,
+        "median": 205.0,
+        "minimum": 205.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1955.546875,
+        "median": 1899.0,
+        "minimum": 1825.203125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 18.049600000002776,
+        "median": 11.767583999988728,
+        "minimum": 10.06828799999171
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 48.90504200011492,
+        "median": 46.705709013622254,
+        "minimum": 43.81649999413639
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.4375,
+        "median": 100.40625,
+        "minimum": 98.546875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 50.675705,
+        "median": 50.224209,
+        "minimum": 42.02745900000001
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 56.1359999992419,
+        "median": 52.957375010009855,
+        "minimum": 49.06091699376702
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:inspect_macho#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 6688.0,
+        "median": 6688.0,
+        "minimum": 6688.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 339.921875,
+        "median": 316.390625,
+        "minimum": 259.671875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 495.56394900000004,
+        "median": 461.579256,
+        "minimum": 438.09322900000006
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 817.4747080192901,
+        "median": 682.1613750071265,
+        "minimum": 644.4304590113461
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:list_procedures#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1716.0,
+        "median": 1716.0,
+        "minimum": 1716.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 1376.046875,
+        "median": 1326.65625,
+        "minimum": 1315.46875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 9346.09375999999,
+        "median": 9273.189111999998,
+        "minimum": 9254.781503999995
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 10081.072041997686,
+        "median": 9698.276374983834,
+        "minimum": 9633.42308398569
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:open_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 608.0,
+        "median": 608.0,
+        "minimum": 608.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 174.65625,
+        "median": 173.296875,
+        "minimum": 169.484375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 652.0873939999998,
+        "median": 648.07189,
+        "minimum": 642.448688
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 659.6619999909308,
+        "median": 652.3017500003334,
+        "minimum": 648.7689170171507
+      }
+    },
+    {
+      "call_group": "zed-native-functions-supplement:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.390625,
+        "median": 173.25,
+        "minimum": 167.671875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 76.13820999999999,
+        "median": 61.904123,
+        "minimum": 58.150382
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 112.19320801319554,
+        "median": 109.94741698959842,
+        "minimum": 107.21862499485724
+      }
+    }
+  ],
+  "catalog_output_bytes": {
+    "count": 15,
+    "maximum": 3245006.0,
+    "median": 3245006.0,
+    "minimum": 3245006.0
+  },
+  "coverage": {
+    "actual_samples": 15,
+    "duplicates": [],
+    "expected_samples": 15,
+    "missing": [],
+    "planned_workflows": [
+      "zed-native-functions-supplement",
+      "openunity-native-functions-supplement",
+      "figma-framework-native-functions-supplement"
+    ],
+    "rounds": 5,
+    "unique_workflow_rounds": 15,
+    "unknown_workflows": [],
+    "warnings": []
+  },
+  "ended_at_utc": "2026-10-25T15:00:46.648156+00:00",
+  "plan_sha256": "a49919171cff154971e28fbbc839fa6c072546539b4f1584b8dad6d148e2390d",
+  "provenance": {
+    "changed_file_details": [],
+    "changed_selected_paths": [],
+    "host": {
+      "commands": {
+        "power": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "batt"
+          ],
+          "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t84%; discharging; 4:49 remaining present: true",
+          "returncode": 0
+        },
+        "sw_vers": {
+          "available": true,
+          "command": [
+            "sw_vers"
+          ],
+          "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+          "returncode": 0
+        },
+        "sysctl_cpu": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.ncpu"
+          ],
+          "output": "10",
+          "returncode": 0
+        },
+        "sysctl_cpu_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "machdep.cpu.brand_string"
+          ],
+          "output": "Apple M1 Pro",
+          "returncode": 0
+        },
+        "sysctl_hardware_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.model"
+          ],
+          "output": "MacBookPro18,1",
+          "returncode": 0
+        },
+        "thermal": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "therm"
+          ],
+          "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+          "returncode": 0
+        }
+      },
+      "cpu_count": 10,
+      "disk_free_bytes_at_capture": 6747574272,
+      "disk_total_bytes_at_capture": 494384795648,
+      "load_average": [
+        3.7373046875,
+        4.3720703125,
+        5.68896484375
+      ],
+      "machine": "arm64",
+      "memory_bytes": 34359738368,
+      "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+      "psutil_version": "7.2.2",
+      "python": "3.13.7",
+      "release": "27.2.0",
+      "system": "Darwin"
+    },
+    "plan_sha256": "a49919171cff154971e28fbbc839fa6c072546539b4f1584b8dad6d148e2390d",
+    "plan_sha256_kind": "canonical JSON plan digest from the benchmark runner",
+    "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+    "tooling": {
+      "plan": {
+        "after": {
+          "device": 16777234,
+          "inode": 149547815,
+          "sha256": "8abec473905d6c4250654897dd129165b30595f7c945ee2af73e9d0cbbd22454",
+          "size_bytes": 28732
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149547815,
+          "sha256": "8abec473905d6c4250654897dd129165b30595f7c945ee2af73e9d0cbbd22454",
+          "size_bytes": 28732
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-native-functions-plan.json"
+      },
+      "rea": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea"
+      },
+      "runner": {
+        "after": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py"
+      },
+      "worker": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker"
+      }
+    },
+    "warnings": [],
+    "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc"
+  },
+  "rounds": 5,
+  "schema_version": 1,
+  "scope": "native-only installed-application MCP benchmark",
+  "source_raw": "docs/benchmarks/local-applications-2026-10-25-native-functions-raw.json",
+  "started_at_utc": "2026-10-25T14:49:41.222844+00:00",
+  "status": {
+    "calls": 630,
+    "failed_calls": 0,
+    "failures": 0,
+    "label": "complete",
+    "samples": 15,
+    "successes": 15,
+    "successful_calls": 630
+  },
+  "workflows": [
+    {
+      "error_codes": [],
+      "failures": 0,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 22241.128000000004,
+        "median": 21122.658000000003,
+        "minimum": 19564.91299999999
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 20343787.0,
+        "median": 20343787.0,
+        "minimum": 20343787.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:51:55.525017+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 22167.326,
+          "output_bytes": 20343787,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 122426.00747199924,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 2447.390625,
+          "sampled_family_system_cpu_ms": 18739.33613999995,
+          "sampled_family_user_cpu_ms": 103686.67133199929,
+          "sampled_max_gap_ms": 80.21324998117052,
+          "started_at_utc": "2026-10-25T14:51:15.909667+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 122545.658,
+          "wait4_involuntary_context_switches": 41567,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2164.140625,
+          "wait4_minor_faults": 274970,
+          "wait4_system_cpu_ms": 18800.25,
+          "wait4_user_cpu_ms": 103745.408,
+          "wait4_voluntary_context_switches": 15560,
+          "wall_ms": 39614.5453749923,
+          "workflow": "figma-framework-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:52:34.159099+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 20867.148,
+          "output_bytes": 20343787,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 118383.51953099939,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 2443.875,
+          "sampled_family_system_cpu_ms": 22876.681916999933,
+          "sampled_family_user_cpu_ms": 95506.83761399945,
+          "sampled_max_gap_ms": 79.65704199159518,
+          "started_at_utc": "2026-10-25T14:51:55.605853+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 118506.632,
+          "wait4_involuntary_context_switches": 45090,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2166.71875,
+          "wait4_minor_faults": 274868,
+          "wait4_system_cpu_ms": 22931.018,
+          "wait4_user_cpu_ms": 95575.614,
+          "wait4_voluntary_context_switches": 15963,
+          "wall_ms": 38552.41445801221,
+          "workflow": "figma-framework-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:56:22.663146+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 22241.128000000004,
+          "output_bytes": 20343787,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 127357.39305299999,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 2439.96875,
+          "sampled_family_system_cpu_ms": 15438.937793999992,
+          "sampled_family_user_cpu_ms": 111918.455259,
+          "sampled_max_gap_ms": 80.6624999968335,
+          "started_at_utc": "2026-10-25T14:55:41.295390+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 127467.976,
+          "wait4_involuntary_context_switches": 45865,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2166.0625,
+          "wait4_minor_faults": 274444,
+          "wait4_system_cpu_ms": 15497.007,
+          "wait4_user_cpu_ms": 111970.969,
+          "wait4_voluntary_context_switches": 15171,
+          "wall_ms": 41366.88062499161,
+          "workflow": "figma-framework-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:56:58.941472+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 19564.91299999999,
+          "output_bytes": 20343787,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 111621.99167100042,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 2445.859375,
+          "sampled_family_system_cpu_ms": 1909.475823000001,
+          "sampled_family_user_cpu_ms": 109712.51584800042,
+          "sampled_max_gap_ms": 80.9831660008058,
+          "started_at_utc": "2026-10-25T14:56:22.748622+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 111752.795,
+          "wait4_involuntary_context_switches": 33304,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2165.953125,
+          "wait4_minor_faults": 239409,
+          "wait4_system_cpu_ms": 1978.4009999999998,
+          "wait4_user_cpu_ms": 109774.394,
+          "wait4_voluntary_context_switches": 15365,
+          "wall_ms": 36192.049125005724,
+          "workflow": "figma-framework-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T15:00:46.648156+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 21122.658000000003,
+          "output_bytes": 20343787,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 114679.76262399959,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 2446.109375,
+          "sampled_family_system_cpu_ms": 1968.5571189999987,
+          "sampled_family_user_cpu_ms": 112711.20550499958,
+          "sampled_max_gap_ms": 80.94516699202359,
+          "started_at_utc": "2026-10-25T15:00:09.494812+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 114806.898,
+          "wait4_involuntary_context_switches": 30627,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2168.171875,
+          "wait4_minor_faults": 239082,
+          "wait4_system_cpu_ms": 2034.103,
+          "wait4_user_cpu_ms": 112772.795,
+          "wait4_voluntary_context_switches": 15999,
+          "wall_ms": 37152.4809160037,
+          "workflow": "figma-framework-native-functions-supplement"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 127357.39305299999,
+        "median": 118383.51953099939,
+        "minimum": 111621.99167100042
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 3.0,
+        "median": 3.0,
+        "minimum": 3.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 2447.390625,
+        "median": 2445.859375,
+        "minimum": 2439.96875
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 80.9831660008058,
+        "median": 80.6624999968335,
+        "minimum": 79.65704199159518
+      },
+      "samples": 5,
+      "successes": 5,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 5,
+          "maximum": 22241.128000000004,
+          "median": 21122.658000000003,
+          "minimum": 19564.91299999999
+        },
+        "sampled_family_cpu_ms": {
+          "count": 5,
+          "maximum": 127357.39305299999,
+          "median": 118383.51953099939,
+          "minimum": 111621.99167100042
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 5,
+          "maximum": 2447.390625,
+          "median": 2445.859375,
+          "minimum": 2439.96875
+        },
+        "samples": 5,
+        "wait4_cpu_ms": {
+          "count": 5,
+          "maximum": 127467.976,
+          "median": 118506.632,
+          "minimum": 111752.795
+        },
+        "wall_ms": {
+          "count": 5,
+          "maximum": 41366.88062499161,
+          "median": 38552.41445801221,
+          "minimum": 36192.049125005724
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 127467.976,
+        "median": 118506.632,
+        "minimum": 111752.795
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 45865.0,
+        "median": 41567.0,
+        "minimum": 30627.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 351.0,
+        "median": 351.0,
+        "minimum": 351.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 274970.0,
+        "median": 274444.0,
+        "minimum": 239082.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 15999.0,
+        "median": 15560.0,
+        "minimum": 15171.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 41366.88062499161,
+        "median": 38552.41445801221,
+        "minimum": 36192.049125005724
+      },
+      "workflow": "figma-framework-native-functions-supplement"
+    },
+    {
+      "error_codes": [],
+      "failures": 0,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 3586.0750000000507,
+        "median": 3482.721999999995,
+        "minimum": 3247.491999999994
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 9051673.0,
+        "median": 9051673.0,
+        "minimum": 9051673.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:51:15.831720+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 3482.721999999995,
+          "output_bytes": 9051673,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 14792.180912999975,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 498.75,
+          "sampled_family_system_cpu_ms": 749.1243019999998,
+          "sampled_family_user_cpu_ms": 14043.056610999975,
+          "sampled_max_gap_ms": 76.4038749912288,
+          "started_at_utc": "2026-10-25T14:51:09.765496+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 14896.461000000001,
+          "wait4_involuntary_context_switches": 4795,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 271.796875,
+          "wait4_minor_faults": 60526,
+          "wait4_system_cpu_ms": 790.697,
+          "wait4_user_cpu_ms": 14105.764000000001,
+          "wait4_voluntary_context_switches": 3821,
+          "wall_ms": 6065.512125001987,
+          "workflow": "openunity-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:52:40.639835+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 3539.725000000004,
+          "output_bytes": 9051673,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 15531.308844000001,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 491.984375,
+          "sampled_family_system_cpu_ms": 1484.6857800000014,
+          "sampled_family_user_cpu_ms": 14046.623064,
+          "sampled_max_gap_ms": 80.32845798879862,
+          "started_at_utc": "2026-10-25T14:52:34.239374+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 15648.832999999999,
+          "wait4_involuntary_context_switches": 5729,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 267.8125,
+          "wait4_minor_faults": 60092,
+          "wait4_system_cpu_ms": 1536.433,
+          "wait4_user_cpu_ms": 14112.4,
+          "wait4_voluntary_context_switches": 3826,
+          "wall_ms": 6399.705541989533,
+          "workflow": "openunity-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:55:41.213441+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 3247.491999999994,
+          "output_bytes": 9051673,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 14187.453441000012,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 494.546875,
+          "sampled_family_system_cpu_ms": 512.300965,
+          "sampled_family_user_cpu_ms": 13675.152476000012,
+          "sampled_max_gap_ms": 80.4582079872489,
+          "started_at_utc": "2026-10-25T14:55:35.344767+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 14291.169000000002,
+          "wait4_involuntary_context_switches": 6529,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 269.34375,
+          "wait4_minor_faults": 60540,
+          "wait4_system_cpu_ms": 559.859,
+          "wait4_user_cpu_ms": 13731.310000000001,
+          "wait4_voluntary_context_switches": 3683,
+          "wall_ms": 5867.840624996461,
+          "workflow": "openunity-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:57:05.121022+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 3376.1030000000005,
+          "output_bytes": 9051673,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 14335.369723999975,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 493.03125,
+          "sampled_family_system_cpu_ms": 594.8475649999999,
+          "sampled_family_user_cpu_ms": 13740.522158999975,
+          "sampled_max_gap_ms": 83.45233299769461,
+          "started_at_utc": "2026-10-25T14:56:59.026536+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 14457.76,
+          "wait4_involuntary_context_switches": 5549,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 266.0625,
+          "wait4_minor_faults": 60270,
+          "wait4_system_cpu_ms": 650.478,
+          "wait4_user_cpu_ms": 13807.282000000001,
+          "wait4_voluntary_context_switches": 3663,
+          "wall_ms": 6093.694792012684,
+          "workflow": "openunity-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T15:00:09.409171+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 3586.0750000000507,
+          "output_bytes": 9051673,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 14523.385902999991,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 494.4375,
+          "sampled_family_system_cpu_ms": 761.2253780000008,
+          "sampled_family_user_cpu_ms": 13762.16052499999,
+          "sampled_max_gap_ms": 86.30191700649448,
+          "started_at_utc": "2026-10-25T15:00:03.226361+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 14617.22,
+          "wait4_involuntary_context_switches": 4943,
+          "wait4_major_faults": 565,
+          "wait4_maxrss_mib": 268.734375,
+          "wait4_minor_faults": 60396,
+          "wait4_system_cpu_ms": 805.232,
+          "wait4_user_cpu_ms": 13811.988,
+          "wait4_voluntary_context_switches": 3612,
+          "wall_ms": 6181.985041999724,
+          "workflow": "openunity-native-functions-supplement"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 15531.308844000001,
+        "median": 14523.385902999991,
+        "minimum": 14187.453441000012
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 3.0,
+        "median": 3.0,
+        "minimum": 3.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 498.75,
+        "median": 494.4375,
+        "minimum": 491.984375
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 86.30191700649448,
+        "median": 80.4582079872489,
+        "minimum": 76.4038749912288
+      },
+      "samples": 5,
+      "successes": 5,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 5,
+          "maximum": 3586.0750000000507,
+          "median": 3482.721999999995,
+          "minimum": 3247.491999999994
+        },
+        "sampled_family_cpu_ms": {
+          "count": 5,
+          "maximum": 15531.308844000001,
+          "median": 14523.385902999991,
+          "minimum": 14187.453441000012
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 5,
+          "maximum": 498.75,
+          "median": 494.4375,
+          "minimum": 491.984375
+        },
+        "samples": 5,
+        "wait4_cpu_ms": {
+          "count": 5,
+          "maximum": 15648.832999999999,
+          "median": 14617.22,
+          "minimum": 14291.169000000002
+        },
+        "wall_ms": {
+          "count": 5,
+          "maximum": 6399.705541989533,
+          "median": 6093.694792012684,
+          "minimum": 5867.840624996461
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 15648.832999999999,
+        "median": 14617.22,
+        "minimum": 14291.169000000002
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 6529.0,
+        "median": 5549.0,
+        "minimum": 4795.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 565.0,
+        "median": 351.0,
+        "minimum": 351.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 60540.0,
+        "median": 60396.0,
+        "minimum": 60092.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 3826.0,
+        "median": 3683.0,
+        "minimum": 3612.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 6399.705541989533,
+        "median": 6093.694792012684,
+        "minimum": 5867.840624996461
+      },
+      "workflow": "openunity-native-functions-supplement"
+    },
+    {
+      "error_codes": [],
+      "failures": 0,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 51239.810000000005,
+        "median": 48170.560999999994,
+        "minimum": 44476.67100000001
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 5095076.0,
+        "median": 5095076.0,
+        "minimum": 5095076.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:51:09.688115+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 48615.357,
+          "output_bytes": 5095076,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 260689.26340999219,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 3253.046875,
+          "sampled_family_system_cpu_ms": 10912.281124999992,
+          "sampled_family_user_cpu_ms": 249776.9822849922,
+          "sampled_max_gap_ms": 85.17312500043772,
+          "started_at_utc": "2026-10-25T14:49:41.222844+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 260809.954,
+          "wait4_involuntary_context_switches": 107627,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2007.625,
+          "wait4_minor_faults": 354810,
+          "wait4_system_cpu_ms": 10975.874,
+          "wait4_user_cpu_ms": 249834.08,
+          "wait4_voluntary_context_switches": 81025,
+          "wall_ms": 88464.21758300858,
+          "workflow": "zed-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:54:10.528152+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 48170.560999999994,
+          "output_bytes": 5095076,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 272019.68995199574,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 3300.71875,
+          "sampled_family_system_cpu_ms": 7648.979023999978,
+          "sampled_family_user_cpu_ms": 264370.71092799574,
+          "sampled_max_gap_ms": 122.15720801032148,
+          "started_at_utc": "2026-10-25T14:52:40.720729+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 272124.614,
+          "wait4_involuntary_context_switches": 116616,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2000.421875,
+          "wait4_minor_faults": 356053,
+          "wait4_system_cpu_ms": 7703.822,
+          "wait4_user_cpu_ms": 264420.792,
+          "wait4_voluntary_context_switches": 80036,
+          "wall_ms": 89805.34604200511,
+          "workflow": "zed-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:55:35.263518+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 44956.522000000004,
+          "output_bytes": 5095076,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 251825.27426199487,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 3276.96875,
+          "sampled_family_system_cpu_ms": 23200.87732100002,
+          "sampled_family_user_cpu_ms": 228624.39694099486,
+          "sampled_max_gap_ms": 82.08912500413135,
+          "started_at_utc": "2026-10-25T14:54:10.607832+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 251953.14200000002,
+          "wait4_involuntary_context_switches": 94648,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 2029.984375,
+          "wait4_minor_faults": 351899,
+          "wait4_system_cpu_ms": 23267.603000000003,
+          "wait4_user_cpu_ms": 228685.53900000002,
+          "wait4_voluntary_context_switches": 78538,
+          "wall_ms": 84654.76445900276,
+          "workflow": "zed-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T14:58:40.296001+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 51239.810000000005,
+          "output_bytes": 5095076,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 288286.5354729905,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 3259.078125,
+          "sampled_family_system_cpu_ms": 38575.66007900014,
+          "sampled_family_user_cpu_ms": 249710.87539399034,
+          "sampled_max_gap_ms": 46.67787501239218,
+          "started_at_utc": "2026-10-25T14:57:05.205090+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 288428.255,
+          "wait4_involuntary_context_switches": 431021,
+          "wait4_major_faults": 351,
+          "wait4_maxrss_mib": 1969.796875,
+          "wait4_minor_faults": 374196,
+          "wait4_system_cpu_ms": 38654.537,
+          "wait4_user_cpu_ms": 249773.718,
+          "wait4_voluntary_context_switches": 76754,
+          "wall_ms": 95089.9542089901,
+          "workflow": "zed-native-functions-supplement"
+        },
+        {
+          "call_count": 42,
+          "ended_at_utc": "2026-10-25T15:00:03.140256+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 44476.67100000001,
+          "output_bytes": 5095076,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 241544.13828499638,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 3217.828125,
+          "sampled_family_system_cpu_ms": 9924.352214000017,
+          "sampled_family_user_cpu_ms": 231619.78607099637,
+          "sampled_max_gap_ms": 86.38616700773127,
+          "started_at_utc": "2026-10-25T14:58:40.383862+00:00",
+          "status": "success",
+          "successful_call_count": 42,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 241692.638,
+          "wait4_involuntary_context_switches": 104734,
+          "wait4_major_faults": 596,
+          "wait4_maxrss_mib": 2005.890625,
+          "wait4_minor_faults": 351175,
+          "wait4_system_cpu_ms": 10009.745,
+          "wait4_user_cpu_ms": 231682.893,
+          "wait4_voluntary_context_switches": 82838,
+          "wall_ms": 82755.54762498359,
+          "workflow": "zed-native-functions-supplement"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 288286.5354729905,
+        "median": 260689.26340999219,
+        "minimum": 241544.13828499638
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 3.0,
+        "median": 3.0,
+        "minimum": 3.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 3300.71875,
+        "median": 3259.078125,
+        "minimum": 3217.828125
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 122.15720801032148,
+        "median": 85.17312500043772,
+        "minimum": 46.67787501239218
+      },
+      "samples": 5,
+      "successes": 5,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 5,
+          "maximum": 51239.810000000005,
+          "median": 48170.560999999994,
+          "minimum": 44476.67100000001
+        },
+        "sampled_family_cpu_ms": {
+          "count": 5,
+          "maximum": 288286.5354729905,
+          "median": 260689.26340999219,
+          "minimum": 241544.13828499638
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 5,
+          "maximum": 3300.71875,
+          "median": 3259.078125,
+          "minimum": 3217.828125
+        },
+        "samples": 5,
+        "wait4_cpu_ms": {
+          "count": 5,
+          "maximum": 288428.255,
+          "median": 260809.954,
+          "minimum": 241692.638
+        },
+        "wall_ms": {
+          "count": 5,
+          "maximum": 95089.9542089901,
+          "median": 88464.21758300858,
+          "minimum": 82755.54762498359
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 288428.255,
+        "median": 260809.954,
+        "minimum": 241692.638
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 431021.0,
+        "median": 107627.0,
+        "minimum": 94648.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 596.0,
+        "median": 351.0,
+        "minimum": 351.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 374196.0,
+        "median": 354810.0,
+        "minimum": 351175.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 82838.0,
+        "median": 80036.0,
+        "minimum": 76754.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 95089.9542089901,
+        "median": 88464.21758300858,
+        "minimum": 82755.54762498359
+      },
+      "workflow": "zed-native-functions-supplement"
+    }
+  ]
+}

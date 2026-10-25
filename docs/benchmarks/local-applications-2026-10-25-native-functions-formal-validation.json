@@ -1,0 +1,3182 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded validation facts from completed native formal receipts.",
+  "source_policy": "Statuses, counts, repeat hashes, byte counts/digests, file mapping and bounded errors only; no assembly, pseudocode, strings, or target source.",
+  "extent_policy": "No independent function extent or semantic correctness claim; adjacent-start intervals remain planning evidence only.",
+  "expected_contract": {
+    "workflows": [
+      "figma-framework-native-functions-supplement",
+      "openunity-native-functions-supplement",
+      "zed-native-functions-supplement"
+    ],
+    "rounds_per_workflow": [
+      "001",
+      "002",
+      "003",
+      "004",
+      "005"
+    ],
+    "candidates_per_workflow": 5,
+    "pseudocode_repeats_per_candidate_round": 3,
+    "read_bytes_per_candidate_round": 256
+  },
+  "validation_errors": [],
+  "workflows": [
+    {
+      "workflow": "figma-framework-native-functions-supplement",
+      "round_count": 5,
+      "target_path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "target_sha256": "43be72404837e8504977372847c5ceeee55c511153d7a292bc433c1a751d91fe",
+      "evidence_subject_sha256": "43be72404837e8504977372847c5ceeee55c511153d7a292bc433c1a751d91fe",
+      "subject_digest_matches_file": true,
+      "mach_o_file_backed_ranges_observed": 5,
+      "validation_errors": [],
+      "candidates": [
+        {
+          "address": "0x1e928",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10612,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0",
+                "matched": true,
+                "file_offset": 125224,
+                "error": null,
+                "file_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10612,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0",
+                "matched": true,
+                "file_offset": 125224,
+                "error": null,
+                "file_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10612,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0",
+                "matched": true,
+                "file_offset": 125224,
+                "error": null,
+                "file_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10612,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0",
+                "matched": true,
+                "file_offset": 125224,
+                "error": null,
+                "file_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10612,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1450,
+                  "sha256": "0d640783f1b6f500824bffbe29ef1cf3a84b60aa2f492d559d45e4a1f3631e4d"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0",
+                "matched": true,
+                "file_offset": 125224,
+                "error": null,
+                "file_sha256": "171488130ea7def5f180b166640a148ae6a3914264476e42cb1d737d405f34d0"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x28ef8",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10608,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60",
+                "matched": true,
+                "file_offset": 167672,
+                "error": null,
+                "file_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10608,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60",
+                "matched": true,
+                "file_offset": 167672,
+                "error": null,
+                "file_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10608,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60",
+                "matched": true,
+                "file_offset": 167672,
+                "error": null,
+                "file_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10608,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60",
+                "matched": true,
+                "file_offset": 167672,
+                "error": null,
+                "file_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10608,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 10757,
+                  "sha256": "b32197b016dea62668def29eae65181b95782fb49d3e6ba4295e2ee4c307e1a0"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60",
+                "matched": true,
+                "file_offset": 167672,
+                "error": null,
+                "file_sha256": "1d26d69a076541e0c94d5936a50951631f661e08103822b721935aa6fb9bbf60"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x334b8",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 25511,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a",
+                "matched": true,
+                "file_offset": 210104,
+                "error": null,
+                "file_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 25511,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a",
+                "matched": true,
+                "file_offset": 210104,
+                "error": null,
+                "file_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 25511,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a",
+                "matched": true,
+                "file_offset": 210104,
+                "error": null,
+                "file_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 25511,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a",
+                "matched": true,
+                "file_offset": 210104,
+                "error": null,
+                "file_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 25511,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 271,
+                  "sha256": "a540f8f9a122ee1abfe9ef42759ff93870c9c8488c9af947d6cd5060055a3775"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a",
+                "matched": true,
+                "file_offset": 210104,
+                "error": null,
+                "file_sha256": "13a100348cc56029a119cfbae7c5a98bc6eca51e6ca5a64228366b8b2ee1e70a"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x4c354",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 27245,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348",
+                "matched": true,
+                "file_offset": 312148,
+                "error": null,
+                "file_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 27245,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348",
+                "matched": true,
+                "file_offset": 312148,
+                "error": null,
+                "file_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 27245,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348",
+                "matched": true,
+                "file_offset": 312148,
+                "error": null,
+                "file_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 27245,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348",
+                "matched": true,
+                "file_offset": 312148,
+                "error": null,
+                "file_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 27245,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 79640,
+                  "sha256": "01f350f74be0309f0c27be99b34ae6f0bbd18508fe3f3d82dfce4fae69d493ed"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348",
+                "matched": true,
+                "file_offset": 312148,
+                "error": null,
+                "file_sha256": "46296a8001581c5f58aefe14f6ed90f4a327c3118a204b962dd481205f7f7348"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x66d08",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 22,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a",
+                "matched": true,
+                "file_offset": 421128,
+                "error": null,
+                "file_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 22,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a",
+                "matched": true,
+                "file_offset": 421128,
+                "error": null,
+                "file_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 22,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a",
+                "matched": true,
+                "file_offset": 421128,
+                "error": null,
+                "file_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 22,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a",
+                "matched": true,
+                "file_offset": 421128,
+                "error": null,
+                "file_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 22,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 609,
+                  "sha256": "933d822328c96ed695eaa226d4b224b2e65b57a967306e8f2571fb480845f41e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a",
+                "matched": true,
+                "file_offset": 421128,
+                "error": null,
+                "file_sha256": "9d23517189683eeba170ecb6fb8b91ef3883fac113fff7bfcef37ba8f3ac6b4a"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        }
+      ]
+    },
+    {
+      "workflow": "openunity-native-functions-supplement",
+      "round_count": 5,
+      "target_path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "target_sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "evidence_subject_sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "subject_digest_matches_file": true,
+      "mach_o_file_backed_ranges_observed": 4,
+      "validation_errors": [],
+      "candidates": [
+        {
+          "address": "0x100000d58",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 106,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702",
+                "matched": true,
+                "file_offset": 3416,
+                "error": null,
+                "file_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 106,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702",
+                "matched": true,
+                "file_offset": 3416,
+                "error": null,
+                "file_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 106,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702",
+                "matched": true,
+                "file_offset": 3416,
+                "error": null,
+                "file_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 106,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702",
+                "matched": true,
+                "file_offset": 3416,
+                "error": null,
+                "file_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 106,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 1963,
+                  "sha256": "a2f2d175ef33f2a859219d1e3e8a070ac78913410f9e784095a0e7bab763a738"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702",
+                "matched": true,
+                "file_offset": 3416,
+                "error": null,
+                "file_sha256": "63d11dd73723973062ee67466d30e36154922871ce6eaad040b90d92d0f4f702"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x100000f00",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 112,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace",
+                "matched": true,
+                "file_offset": 3840,
+                "error": null,
+                "file_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 112,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace",
+                "matched": true,
+                "file_offset": 3840,
+                "error": null,
+                "file_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 112,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace",
+                "matched": true,
+                "file_offset": 3840,
+                "error": null,
+                "file_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 112,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace",
+                "matched": true,
+                "file_offset": 3840,
+                "error": null,
+                "file_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 112,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 2183,
+                  "sha256": "559b3d2814edc1b05ca0cd4b12a37d8dbec1f47b028248b25cc07fac5c204cbb"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace",
+                "matched": true,
+                "file_offset": 3840,
+                "error": null,
+                "file_sha256": "3d5eef1d621289bfc2dc78b62b3b340fa1c147e30418a215fdb2288155398ace"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x1000010c0",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 685,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9",
+                "matched": true,
+                "file_offset": 4288,
+                "error": null,
+                "file_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 685,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9",
+                "matched": true,
+                "file_offset": 4288,
+                "error": null,
+                "file_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 685,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9",
+                "matched": true,
+                "file_offset": 4288,
+                "error": null,
+                "file_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 685,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9",
+                "matched": true,
+                "file_offset": 4288,
+                "error": null,
+                "file_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 685,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 19873,
+                  "sha256": "6440490a6c1095086b7a28067e33637f1c8060392569e5c8580f6f1cf672966c"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9",
+                "matched": true,
+                "file_offset": 4288,
+                "error": null,
+                "file_sha256": "ea9d15d40de633d168d6bc447a2e92e095a8828dd4396cfd44126b1849629dc9"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x100001b74",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 40,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca",
+                "matched": true,
+                "file_offset": 7028,
+                "error": null,
+                "file_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 40,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca",
+                "matched": true,
+                "file_offset": 7028,
+                "error": null,
+                "file_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 40,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca",
+                "matched": true,
+                "file_offset": 7028,
+                "error": null,
+                "file_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 40,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca",
+                "matched": true,
+                "file_offset": 7028,
+                "error": null,
+                "file_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 40,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 768,
+                  "sha256": "5b8c6cfdad2e7cafb1da483a0804be0666c20f9d0acedb3ddc4f1caccc2ab890"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca",
+                "matched": true,
+                "file_offset": 7028,
+                "error": null,
+                "file_sha256": "707fa12476425506598cfa00cdc8f920ad056e1b71cfbf1613008fb787d7e6ca"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x100001c14",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1051,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02",
+                "matched": true,
+                "file_offset": 7188,
+                "error": null,
+                "file_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1051,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02",
+                "matched": true,
+                "file_offset": 7188,
+                "error": null,
+                "file_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1051,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02",
+                "matched": true,
+                "file_offset": 7188,
+                "error": null,
+                "file_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1051,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02",
+                "matched": true,
+                "file_offset": 7188,
+                "error": null,
+                "file_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1051,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 35833,
+                  "sha256": "5cc1b343695698ced6dd333a31f73236893c473dbc1a690ff5a928e39c2b4d3e"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02",
+                "matched": true,
+                "file_offset": 7188,
+                "error": null,
+                "file_sha256": "5ba5575435126643d620b1005c6c7b8fdef39987e6ca35010e4d9e72ef9d8e02"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        }
+      ]
+    },
+    {
+      "workflow": "zed-native-functions-supplement",
+      "round_count": 5,
+      "target_path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "target_sha256": "17afc6f635fb95c5a60e3a1802bef25202e0e34455c5f3cd45efb59efbe4e7da",
+      "evidence_subject_sha256": "17afc6f635fb95c5a60e3a1802bef25202e0e34455c5f3cd45efb59efbe4e7da",
+      "subject_digest_matches_file": true,
+      "mach_o_file_backed_ranges_observed": 4,
+      "validation_errors": [],
+      "candidates": [
+        {
+          "address": "0x105bcc628",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef",
+                "matched": true,
+                "file_offset": 96257576,
+                "error": null,
+                "file_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef",
+                "matched": true,
+                "file_offset": 96257576,
+                "error": null,
+                "file_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef",
+                "matched": true,
+                "file_offset": 96257576,
+                "error": null,
+                "file_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef",
+                "matched": true,
+                "file_offset": 96257576,
+                "error": null,
+                "file_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 10,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 119,
+                  "sha256": "bdaff5193d63d0a41af7c8a2490dcbcc7a0f8a73336bdd28be8b6f4c3a54e557"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef",
+                "matched": true,
+                "file_offset": 96257576,
+                "error": null,
+                "file_sha256": "d9e98f4de9ee904b64daf051a4df7250bb57e31c11a594a15e45392f05236fef"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x105cb62f0",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1351,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af",
+                "matched": true,
+                "file_offset": 97215216,
+                "error": null,
+                "file_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1351,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af",
+                "matched": true,
+                "file_offset": 97215216,
+                "error": null,
+                "file_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1351,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af",
+                "matched": true,
+                "file_offset": 97215216,
+                "error": null,
+                "file_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1351,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af",
+                "matched": true,
+                "file_offset": 97215216,
+                "error": null,
+                "file_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 1351,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 43961,
+                  "sha256": "58b0ac065d54fb4afdc772e40eec29993bc19fd399539da20bbefc46b7855384"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af",
+                "matched": true,
+                "file_offset": 97215216,
+                "error": null,
+                "file_sha256": "d77d836e2cd78ba952fb5fcef78c4e9922f2c83fd690dee1668e150dcde6c7af"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x105cb780c",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 777,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957",
+                "matched": true,
+                "file_offset": 97220620,
+                "error": null,
+                "file_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 777,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957",
+                "matched": true,
+                "file_offset": 97220620,
+                "error": null,
+                "file_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 777,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957",
+                "matched": true,
+                "file_offset": 97220620,
+                "error": null,
+                "file_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 777,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957",
+                "matched": true,
+                "file_offset": 97220620,
+                "error": null,
+                "file_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 777,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 21462,
+                  "sha256": "dd3dd86a641453ca67dbd82ecfe51f3300630f11d80e252c51dcfc9e9e484a37"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957",
+                "matched": true,
+                "file_offset": 97220620,
+                "error": null,
+                "file_sha256": "3b41f65e62596122f5bd8dc37c9ee7a8579b88644dacba31fdccc8b87d1bc957"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x105cb8770",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 389,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180",
+                "matched": true,
+                "file_offset": 97224560,
+                "error": null,
+                "file_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 389,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180",
+                "matched": true,
+                "file_offset": 97224560,
+                "error": null,
+                "file_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 389,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180",
+                "matched": true,
+                "file_offset": 97224560,
+                "error": null,
+                "file_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 389,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180",
+                "matched": true,
+                "file_offset": 97224560,
+                "error": null,
+                "file_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 389,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 11223,
+                  "sha256": "c853767dd58d302956edf877357ba8dc4e88adbce254feee0a77345624103b27"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180",
+                "matched": true,
+                "file_offset": 97224560,
+                "error": null,
+                "file_sha256": "d7b7baffdab4a5cbec4d9afb58bcec353d12806341755966e62f268ff318a180"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        },
+        {
+          "address": "0x1067a1e48",
+          "rounds": {
+            "001": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 24,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476",
+                "matched": true,
+                "file_offset": 108666440,
+                "error": null,
+                "file_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476"
+              },
+              "validation_errors": []
+            },
+            "002": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 24,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476",
+                "matched": true,
+                "file_offset": 108666440,
+                "error": null,
+                "file_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476"
+              },
+              "validation_errors": []
+            },
+            "003": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 24,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476",
+                "matched": true,
+                "file_offset": 108666440,
+                "error": null,
+                "file_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476"
+              },
+              "validation_errors": []
+            },
+            "004": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 24,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476",
+                "matched": true,
+                "file_offset": 108666440,
+                "error": null,
+                "file_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476"
+              },
+              "validation_errors": []
+            },
+            "005": {
+              "assembly_status": "success",
+              "instructions_status": "success",
+              "instruction_count": 24,
+              "pseudocode": [
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                },
+                {
+                  "status": "success",
+                  "nonempty": true,
+                  "length": 173,
+                  "sha256": "0ef98222ccb3815f1e3506d9a5a182d96101478659bd38771550bb50bbee1d18"
+                }
+              ],
+              "pseudocode_repeats_match": true,
+              "batch_status": "success",
+              "batch_item_status": "ok",
+              "read_bytes": {
+                "status": "success",
+                "requested_bytes": 256,
+                "returned_bytes": 256,
+                "complete": true,
+                "provider_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476",
+                "matched": true,
+                "file_offset": 108666440,
+                "error": null,
+                "file_sha256": "dbae09189b3e2e3629a4ac09698f9666dfe3646f75db72c5757a64ff196fd476"
+              },
+              "validation_errors": []
+            }
+          },
+          "cross_round_pseudocode_hashes_match": true,
+          "cross_round_instruction_counts_match": true,
+          "cross_round_read_bytes_match": true
+        }
+      ]
+    }
+  ]
+}

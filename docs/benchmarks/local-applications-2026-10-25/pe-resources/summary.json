@@ -1,0 +1,601 @@
+{
+  "call_timing": [
+    {
+      "kind": "discovery",
+      "output_bytes": {
+        "count": 10,
+        "maximum": 3245006.0,
+        "median": 1623091.5,
+        "minimum": 1177.0
+      },
+      "wall_ms": {
+        "count": 10,
+        "maximum": 114.0433750115335,
+        "median": 91.68968751328066,
+        "minimum": 48.31758397631347
+      }
+    },
+    {
+      "kind": "analysis",
+      "output_bytes": {
+        "count": 5,
+        "maximum": 9296.0,
+        "median": 9296.0,
+        "minimum": 9296.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 20.324999990407377,
+        "median": 17.306124995229766,
+        "minimum": 13.375917013036087
+      }
+    }
+  ],
+  "calls": [
+    {
+      "call_group": "unity-pe-resources:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.453125,
+        "median": 98.5,
+        "minimum": 98.359375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 66.057917,
+        "median": 43.769625,
+        "minimum": 41.730708
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 73.33862502127886,
+        "median": 48.808833002112806,
+        "minimum": 48.31758397631347
+      }
+    },
+    {
+      "call_group": "unity-pe-resources:inspect_pe_resources#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 9296.0,
+        "median": 9296.0,
+        "minimum": 9296.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.1875,
+        "median": 174.625,
+        "minimum": 173.5
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 11.293208000000003,
+        "median": 10.860538,
+        "minimum": 2.5525860000000096
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 20.324999990407377,
+        "median": 17.306124995229766,
+        "minimum": 13.375917013036087
+      }
+    },
+    {
+      "call_group": "unity-pe-resources:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.875,
+        "median": 178.171875,
+        "minimum": 170.25
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 75.10491400000001,
+        "median": 69.36787000000001,
+        "minimum": 68.747752
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 114.0433750115335,
+        "median": 111.16287502227351,
+        "minimum": 110.04075000528246
+      }
+    }
+  ],
+  "catalog_output_bytes": {
+    "count": 5,
+    "maximum": 3245006.0,
+    "median": 3245006.0,
+    "minimum": 3245006.0
+  },
+  "coverage": {
+    "actual_samples": 5,
+    "duplicates": [],
+    "expected_samples": 5,
+    "missing": [],
+    "planned_workflows": [
+      "unity-pe-resources"
+    ],
+    "rounds": 5,
+    "unique_workflow_rounds": 5,
+    "unknown_workflows": [],
+    "warnings": []
+  },
+  "ended_at_utc": "2026-10-25T15:12:37.651893+00:00",
+  "plan_sha256": "3d7b8f6caac9fb0e422c031eb4ae093e7ebe32458a2b6ba72e2fc67a39552423",
+  "provenance": {
+    "changed_file_details": [],
+    "changed_selected_paths": [],
+    "host": {
+      "commands": {
+        "power": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "batt"
+          ],
+          "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t76%; discharging; 4:04 remaining present: true",
+          "returncode": 0
+        },
+        "sw_vers": {
+          "available": true,
+          "command": [
+            "sw_vers"
+          ],
+          "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+          "returncode": 0
+        },
+        "sysctl_cpu": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.ncpu"
+          ],
+          "output": "10",
+          "returncode": 0
+        },
+        "sysctl_cpu_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "machdep.cpu.brand_string"
+          ],
+          "output": "Apple M1 Pro",
+          "returncode": 0
+        },
+        "sysctl_hardware_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.model"
+          ],
+          "output": "MacBookPro18,1",
+          "returncode": 0
+        },
+        "thermal": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "therm"
+          ],
+          "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+          "returncode": 0
+        }
+      },
+      "cpu_count": 10,
+      "disk_free_bytes_at_capture": 798478336,
+      "disk_total_bytes_at_capture": 494384795648,
+      "load_average": [
+        3.853515625,
+        5.08447265625,
+        5.29296875
+      ],
+      "machine": "arm64",
+      "memory_bytes": 34359738368,
+      "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+      "psutil_version": "7.2.2",
+      "python": "3.13.7",
+      "release": "27.2.0",
+      "system": "Darwin"
+    },
+    "plan_sha256": "3d7b8f6caac9fb0e422c031eb4ae093e7ebe32458a2b6ba72e2fc67a39552423",
+    "plan_sha256_kind": "canonical JSON plan digest from the benchmark runner",
+    "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+    "tooling": {
+      "plan": {
+        "after": {
+          "device": 16777234,
+          "inode": 149565185,
+          "sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+          "size_bytes": 1336
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149565185,
+          "sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+          "size_bytes": 1336
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json"
+      },
+      "rea": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea"
+      },
+      "runner": {
+        "after": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py"
+      },
+      "worker": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker"
+      }
+    },
+    "warnings": [],
+    "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc"
+  },
+  "rounds": 5,
+  "schema_version": 1,
+  "scope": "native-only installed-application MCP benchmark",
+  "source_raw": "docs/benchmarks/local-applications-2026-10-25-pe-resources-raw.json",
+  "started_at_utc": "2026-10-25T15:12:35.825010+00:00",
+  "status": {
+    "calls": 15,
+    "failed_calls": 0,
+    "failures": 0,
+    "label": "complete",
+    "samples": 5,
+    "successes": 5,
+    "successful_calls": 15
+  },
+  "workflows": [
+    {
+      "error_codes": [],
+      "failures": 0,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 291.19500000000005,
+        "median": 228.958,
+        "minimum": 223.88499999999988
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3255479.0,
+        "median": 3255479.0,
+        "minimum": 3255479.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:12:36.205152+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 291.19500000000005,
+          "output_bytes": 3255479,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 154.92771199999999,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_mib": 174.625,
+          "sampled_family_system_cpu_ms": 38.170207999999995,
+          "sampled_family_user_cpu_ms": 116.757504,
+          "sampled_max_gap_ms": 77.7012909820769,
+          "started_at_utc": "2026-10-25T15:12:35.825010+00:00",
+          "status": "success",
+          "successful_call_count": 3,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 159.649,
+          "wait4_involuntary_context_switches": 72,
+          "wait4_major_faults": 17,
+          "wait4_maxrss_mib": 176.453125,
+          "wait4_minor_faults": 11908,
+          "wait4_system_cpu_ms": 41.92999999999999,
+          "wait4_user_cpu_ms": 117.719,
+          "wait4_voluntary_context_switches": 106,
+          "wall_ms": 379.268333024811,
+          "workflow": "unity-pe-resources"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:12:36.580305+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 243.75800000000004,
+          "output_bytes": 3255479,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 144.80349999999999,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_mib": 178.171875,
+          "sampled_family_system_cpu_ms": 27.172084,
+          "sampled_family_user_cpu_ms": 117.63141599999999,
+          "sampled_max_gap_ms": 98.01333301584236,
+          "started_at_utc": "2026-10-25T15:12:36.281711+00:00",
+          "status": "success",
+          "successful_call_count": 3,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 145.322,
+          "wait4_involuntary_context_switches": 45,
+          "wait4_major_faults": 17,
+          "wait4_maxrss_mib": 178.171875,
+          "wait4_minor_faults": 12000,
+          "wait4_system_cpu_ms": 27.635999999999996,
+          "wait4_user_cpu_ms": 117.68599999999999,
+          "wait4_voluntary_context_switches": 132,
+          "wall_ms": 297.92800001450814,
+          "workflow": "unity-pe-resources"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:12:36.937270+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 226.23400000000004,
+          "output_bytes": 3255479,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 144.318372,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_mib": 178.875,
+          "sampled_family_system_cpu_ms": 26.292124,
+          "sampled_family_user_cpu_ms": 118.026248,
+          "sampled_max_gap_ms": 83.71304199681617,
+          "started_at_utc": "2026-10-25T15:12:36.653992+00:00",
+          "status": "success",
+          "successful_call_count": 3,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 144.476,
+          "wait4_involuntary_context_switches": 40,
+          "wait4_major_faults": 17,
+          "wait4_maxrss_mib": 178.875,
+          "wait4_minor_faults": 12048,
+          "wait4_system_cpu_ms": 26.387999999999998,
+          "wait4_user_cpu_ms": 118.088,
+          "wait4_voluntary_context_switches": 115,
+          "wall_ms": 282.6655419776216,
+          "workflow": "unity-pe-resources"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:12:37.292702+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 223.88499999999988,
+          "output_bytes": 3255479,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 143.587794,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_mib": 178.71875,
+          "sampled_family_system_cpu_ms": 26.726250000000004,
+          "sampled_family_user_cpu_ms": 116.86154400000001,
+          "sampled_max_gap_ms": 81.33041701512411,
+          "started_at_utc": "2026-10-25T15:12:37.013720+00:00",
+          "status": "success",
+          "successful_call_count": 3,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 143.753,
+          "wait4_involuntary_context_switches": 32,
+          "wait4_major_faults": 17,
+          "wait4_maxrss_mib": 178.71875,
+          "wait4_minor_faults": 12038,
+          "wait4_system_cpu_ms": 26.826,
+          "wait4_user_cpu_ms": 116.92699999999999,
+          "wait4_voluntary_context_switches": 106,
+          "wall_ms": 278.38299999712035,
+          "workflow": "unity-pe-resources"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:12:37.651893+00:00",
+          "error": null,
+          "failed_call_count": 0,
+          "harness_cpu_ms": 228.958,
+          "output_bytes": 3255479,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 143.387708,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_mib": 177.375,
+          "sampled_family_system_cpu_ms": 26.40454,
+          "sampled_family_user_cpu_ms": 116.983168,
+          "sampled_max_gap_ms": 83.21858299314044,
+          "started_at_utc": "2026-10-25T15:12:37.368151+00:00",
+          "status": "success",
+          "successful_call_count": 3,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 144.708,
+          "wait4_involuntary_context_switches": 24,
+          "wait4_major_faults": 17,
+          "wait4_maxrss_mib": 177.375,
+          "wait4_minor_faults": 11952,
+          "wait4_system_cpu_ms": 27.665,
+          "wait4_user_cpu_ms": 117.04299999999999,
+          "wait4_voluntary_context_switches": 123,
+          "wall_ms": 283.1631250155624,
+          "workflow": "unity-pe-resources"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 154.92771199999999,
+        "median": 144.318372,
+        "minimum": 143.387708
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 1.0,
+        "median": 1.0,
+        "minimum": 1.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.875,
+        "median": 178.171875,
+        "minimum": 174.625
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 98.01333301584236,
+        "median": 83.21858299314044,
+        "minimum": 77.7012909820769
+      },
+      "samples": 5,
+      "successes": 5,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 5,
+          "maximum": 291.19500000000005,
+          "median": 228.958,
+          "minimum": 223.88499999999988
+        },
+        "sampled_family_cpu_ms": {
+          "count": 5,
+          "maximum": 154.92771199999999,
+          "median": 144.318372,
+          "minimum": 143.387708
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 5,
+          "maximum": 178.875,
+          "median": 178.171875,
+          "minimum": 174.625
+        },
+        "samples": 5,
+        "wait4_cpu_ms": {
+          "count": 5,
+          "maximum": 159.649,
+          "median": 144.708,
+          "minimum": 143.753
+        },
+        "wall_ms": {
+          "count": 5,
+          "maximum": 379.268333024811,
+          "median": 283.1631250155624,
+          "minimum": 278.38299999712035
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 159.649,
+        "median": 144.708,
+        "minimum": 143.753
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 72.0,
+        "median": 40.0,
+        "minimum": 24.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 17.0,
+        "median": 17.0,
+        "minimum": 17.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 12048.0,
+        "median": 12000.0,
+        "minimum": 11908.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 132.0,
+        "median": 115.0,
+        "minimum": 106.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 379.268333024811,
+        "median": 283.1631250155624,
+        "minimum": 278.38299999712035
+      },
+      "workflow": "unity-pe-resources"
+    }
+  ]
+}

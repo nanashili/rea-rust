@@ -1,0 +1,213 @@
+{
+  "bundle_targets": [],
+  "captured_at_utc": "2026-10-25T15:02:30.227993+00:00",
+  "host": {
+    "commands": {
+      "power": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "batt"
+        ],
+        "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t79%; discharging; 3:34 remaining present: true",
+        "returncode": 0
+      },
+      "sw_vers": {
+        "available": true,
+        "command": [
+          "sw_vers"
+        ],
+        "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+        "returncode": 0
+      },
+      "sysctl_cpu": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.ncpu"
+        ],
+        "output": "10",
+        "returncode": 0
+      },
+      "sysctl_cpu_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "machdep.cpu.brand_string"
+        ],
+        "output": "Apple M1 Pro",
+        "returncode": 0
+      },
+      "sysctl_hardware_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.model"
+        ],
+        "output": "MacBookPro18,1",
+        "returncode": 0
+      },
+      "thermal": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "therm"
+        ],
+        "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+        "returncode": 0
+      }
+    },
+    "cpu_count": 10,
+    "disk_free_bytes_at_capture": 2515296256,
+    "disk_total_bytes_at_capture": 494384795648,
+    "load_average": [
+      2.7705078125,
+      4.7587890625,
+      5.37646484375
+    ],
+    "machine": "arm64",
+    "memory_bytes": 34359738368,
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "psutil_version": "7.2.2",
+    "python": "3.13.7",
+    "release": "27.2.0",
+    "system": "Darwin"
+  },
+  "manifest_sha256": "8227bac64d7096a77f9121965c5c99c9858c4f3be3971714cd3dc9ab70b14207",
+  "plan_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+  "plan_sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+  "rea_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+  "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+  "schema_version": 1,
+  "selected_file_count": 2,
+  "selected_files_after": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149553783,
+      "mtime_ns": 1792940550031108679,
+      "path": "docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+      "size_bytes": 4327
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536504,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+      "size_bytes": 53495920
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536505,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+      "size_bytes": 9629040
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149538056,
+      "mtime_ns": 1792939544226258761,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "size_bytes": 33601
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323015,
+      "mtime_ns": 1791887498543831192,
+      "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "size_bytes": 12434032
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134091824,
+      "mtime_ns": 1782941067000000000,
+      "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "resolved_path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "sha256": "fb5bc1241a2e1a218afb069d7ee5e4269c3fe918a38fc03190fbc9cbb2bb69b1",
+      "size_bytes": 2952114
+    }
+  ],
+  "selected_files_before": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149553783,
+      "mtime_ns": 1792940550031108679,
+      "path": "docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+      "size_bytes": 4327
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536504,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+      "size_bytes": 53495920
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536505,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+      "size_bytes": 9629040
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149538056,
+      "mtime_ns": 1792939544226258761,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "size_bytes": 33601
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323015,
+      "mtime_ns": 1791887498543831192,
+      "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "size_bytes": 12434032
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134091824,
+      "mtime_ns": 1782941067000000000,
+      "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "resolved_path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "sha256": "fb5bc1241a2e1a218afb069d7ee5e4269c3fe918a38fc03190fbc9cbb2bb69b1",
+      "size_bytes": 2952114
+    }
+  ],
+  "worker_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker"
+}

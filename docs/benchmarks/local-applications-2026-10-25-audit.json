@@ -1,0 +1,2071 @@
+{
+  "benchmark": {
+    "machine": "arm64",
+    "plan_sha256": "104f62e1c08fbdf408f0b8e29b762fbf8a358fae2cc1abb1a2cb9a2cf455f169",
+    "platform": "darwin",
+    "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+    "rounds": 5,
+    "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc"
+  },
+  "bounded_result_facts": [
+    {
+      "coverage": {
+        "examined": 5112,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5112
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5112,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5112
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5112,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5112
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5112,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5112
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5112,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5112
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 1338,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 1338
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 1338,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 1338
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 1338,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 1338
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 1338,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 1338
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 1338,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 1338
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 563,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 563
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "discord-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 563,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 563
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "discord-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 563,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 563
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "discord-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 563,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 563
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "discord-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 563,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 563
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "discord-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 655,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 655
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 27,
+      "round": 1,
+      "total_records": 27,
+      "truncated": false,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 655,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 655
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 27,
+      "round": 2,
+      "total_records": 27,
+      "truncated": false,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 655,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 655
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 27,
+      "round": 3,
+      "total_records": 27,
+      "truncated": false,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 655,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 655
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 27,
+      "round": 4,
+      "total_records": 27,
+      "truncated": false,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 655,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 655
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 27,
+      "round": 5,
+      "total_records": 27,
+      "truncated": false,
+      "workflow": "figma-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7926,
+      "round": 1,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7926,
+      "round": 2,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7926,
+      "round": 3,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7926,
+      "round": 4,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7926,
+      "round": 5,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 16550,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 16550
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "coverage": {
+        "examined": 2,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 2
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "coverage": {
+        "examined": 2,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 2
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "coverage": {
+        "examined": 2,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 2
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "coverage": {
+        "examined": 2,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 2
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "coverage": {
+        "examined": 2,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 2
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 3234,
+      "round": 1,
+      "workflow": "gofmt-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 3234,
+      "round": 2,
+      "workflow": "gofmt-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 3234,
+      "round": 3,
+      "workflow": "gofmt-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 3234,
+      "round": 4,
+      "workflow": "gofmt-deep"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 3234,
+      "round": 5,
+      "workflow": "gofmt-deep"
+    },
+    {
+      "coverage": {
+        "examined": 553,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 553
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 46,
+      "round": 1,
+      "total_records": 46,
+      "truncated": false,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "coverage": {
+        "examined": 553,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 553
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 46,
+      "round": 2,
+      "total_records": 46,
+      "truncated": false,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "coverage": {
+        "examined": 553,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 553
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 46,
+      "round": 3,
+      "total_records": 46,
+      "truncated": false,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "coverage": {
+        "examined": 553,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 553
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 46,
+      "round": 4,
+      "total_records": 46,
+      "truncated": false,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "coverage": {
+        "examined": 553,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 553
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "operation": "inspect_asset_catalog",
+      "record_count": 46,
+      "round": 5,
+      "total_records": 46,
+      "truncated": false,
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "coverage": {
+        "examined": 5716,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5716
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5716,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5716
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5716,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5716
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5716,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5716
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 5716,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5716
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 11,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 14
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "coverage": {
+        "examined": 8,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 8
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3823,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3823
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 1,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 1,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 1,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 8,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 8
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3823,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3823
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 2,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 2,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 2,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 8,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 8
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3823,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3823
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 3,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 3,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 3,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 8,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 8
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3823,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3823
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 4,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 4,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 4,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 8,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 8
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3823,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3823
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 5,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 5,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "operation": "list_strings",
+      "round": 5,
+      "string_count": 2324,
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 3765,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3765
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "postman-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 3765,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3765
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "postman-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 3765,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3765
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "postman-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 3765,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3765
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "postman-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 3765,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 3765
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "postman-electron-static"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "coverage": {
+        "examined": 180,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 180
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "coverage": {
+        "examined": 180,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 180
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "coverage": {
+        "examined": 180,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 180
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "coverage": {
+        "examined": 180,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 180
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "coverage": {
+        "examined": 180,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 180
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "coverage": {
+        "examined": 10348,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 10348
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 10348,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 10348
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 10348,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 10348
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 10348,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 10348
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 10348,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 10348
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "unity-managed-library"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 1,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 2,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 3,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 4,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 5,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 1,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "index_count": 9,
+      "operation": "inspect_sqlite_database",
+      "round": 1,
+      "table_count": 10,
+      "trigger_count": 0,
+      "view_count": 0,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 2,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "index_count": 9,
+      "operation": "inspect_sqlite_database",
+      "round": 2,
+      "table_count": 10,
+      "trigger_count": 0,
+      "view_count": 0,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 3,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "index_count": 9,
+      "operation": "inspect_sqlite_database",
+      "round": 3,
+      "table_count": 10,
+      "trigger_count": 0,
+      "view_count": 0,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 4,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "index_count": 9,
+      "operation": "inspect_sqlite_database",
+      "round": 4,
+      "table_count": 10,
+      "trigger_count": 0,
+      "view_count": 0,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 0,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 0
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 74,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 74
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 7,
+      "round": 5,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "index_count": 9,
+      "operation": "inspect_sqlite_database",
+      "round": 5,
+      "table_count": 10,
+      "trigger_count": 0,
+      "view_count": 0,
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "coverage": {
+        "examined": 13,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 13
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 5551,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5551
+      },
+      "operation": "inspect_analysis_view",
+      "round": 1,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "delivery": "retained-inventory",
+      "has_continuation": true,
+      "inventory_total_items": 682770,
+      "operation": "list_procedures",
+      "procedure_count": 682770,
+      "round": 1,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 13,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 13
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 5551,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5551
+      },
+      "operation": "inspect_analysis_view",
+      "round": 2,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "delivery": "retained-inventory",
+      "has_continuation": true,
+      "inventory_total_items": 682770,
+      "operation": "list_procedures",
+      "procedure_count": 682770,
+      "round": 2,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 13,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 13
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 5551,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5551
+      },
+      "operation": "inspect_analysis_view",
+      "round": 3,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "delivery": "retained-inventory",
+      "has_continuation": true,
+      "inventory_total_items": 682770,
+      "operation": "list_procedures",
+      "procedure_count": 682770,
+      "round": 3,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 13,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 13
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 5551,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5551
+      },
+      "operation": "inspect_analysis_view",
+      "round": 4,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "delivery": "retained-inventory",
+      "has_continuation": true,
+      "inventory_total_items": 682770,
+      "operation": "list_procedures",
+      "procedure_count": 682770,
+      "round": 4,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 13,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 13
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "coverage": {
+        "examined": 5551,
+        "exhausted": true,
+        "status": "complete-within-view",
+        "total": 5551
+      },
+      "operation": "inspect_analysis_view",
+      "round": 5,
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "delivery": "retained-inventory",
+      "has_continuation": true,
+      "inventory_total_items": 682770,
+      "operation": "list_procedures",
+      "procedure_count": 682770,
+      "round": 5,
+      "workflow": "zed-native-analysis"
+    }
+  ],
+  "schema_version": 1,
+  "source": "docs/benchmarks/local-applications-2026-10-25-raw.json",
+  "workflow_summary": [
+    {
+      "calls": 35,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_desktop_application": 5,
+        "inspect_electron_fuses": 5,
+        "inspect_plist": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "chatgpt-electron-static"
+    },
+    {
+      "calls": 25,
+      "operations": {
+        "close_binary": 5,
+        "inspect_desktop_application": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "chrome-native-analysis"
+    },
+    {
+      "calls": 30,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_desktop_application": 5,
+        "inspect_electron_fuses": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "discord-electron-static"
+    },
+    {
+      "calls": 40,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_asset_catalog": 5,
+        "inspect_desktop_application": 5,
+        "inspect_electron_fuses": 5,
+        "inspect_plist": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "figma-electron-static"
+    },
+    {
+      "calls": 155,
+      "operations": {
+        "address_to_file_offset": 5,
+        "analyze_function": 5,
+        "batch_decompile": 5,
+        "binary_session": 5,
+        "close_binary": 5,
+        "current_document": 5,
+        "export_evidence_bundle": 5,
+        "get_call_graph": 5,
+        "get_evidence_bundle": 5,
+        "import_evidence_bundle": 5,
+        "inspect_analysis_view": 5,
+        "inspect_macho": 5,
+        "inspect_native_load_image": 5,
+        "list_documents": 5,
+        "list_procedures": 5,
+        "list_segments": 5,
+        "open_binary": 5,
+        "procedure_assembly": 5,
+        "procedure_callees": 5,
+        "procedure_callers": 5,
+        "procedure_info": 5,
+        "procedure_pseudo_code": 15,
+        "procedure_references": 5,
+        "read_bytes": 5,
+        "read_function_instructions": 5,
+        "search_bytes": 5,
+        "xrefs": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "figma-framework-deep"
+    },
+    {
+      "calls": 25,
+      "operations": {
+        "inspect_artifact": 5,
+        "inspect_go_binary": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "go-toolchain-binary"
+    },
+    {
+      "calls": 60,
+      "operations": {
+        "close_binary": 5,
+        "list_procedures": 5,
+        "open_binary": 5,
+        "procedure_assembly": 5,
+        "procedure_callees": 5,
+        "procedure_callers": 5,
+        "procedure_info": 5,
+        "procedure_pseudo_code": 15
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "gofmt-deep"
+    },
+    {
+      "calls": 35,
+      "operations": {
+        "close_binary": 5,
+        "decode_interface_builder": 5,
+        "inspect_asset_catalog": 5,
+        "inspect_keyed_archive": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "interface-builder-artifact"
+    },
+    {
+      "calls": 35,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_desktop_application": 5,
+        "inspect_electron_fuses": 5,
+        "inspect_plist": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "kiro-electron-static"
+    },
+    {
+      "calls": 30,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_analysis_view": 5,
+        "trace_application_feature": 5,
+        "trace_javascript_semantics": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "kiro-node-pty-javascript"
+    },
+    {
+      "calls": 65,
+      "operations": {
+        "close_binary": 5,
+        "inspect_desktop_application": 5,
+        "inspect_macho": 5,
+        "inspect_plist": 5,
+        "inspect_signature": 5,
+        "list_architectures": 5,
+        "list_procedures": 5,
+        "list_segments": 5,
+        "list_strings": 10,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "openunity-native-analysis"
+    },
+    {
+      "calls": 35,
+      "operations": {
+        "analyze_javascript_application": 5,
+        "inspect_desktop_application": 5,
+        "inspect_electron_fuses": 5,
+        "inspect_plist": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "postman-electron-static"
+    },
+    {
+      "calls": 45,
+      "operations": {
+        "binary_session": 5,
+        "close_binary": 5,
+        "export_evidence_bundle": 5,
+        "get_evidence_bundle": 5,
+        "import_evidence_bundle": 5,
+        "inspect_macho": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "session-evidence-roundtrip"
+    },
+    {
+      "calls": 25,
+      "operations": {
+        "close_binary": 5,
+        "inspect_desktop_application": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "terminal-static-fast"
+    },
+    {
+      "calls": 25,
+      "operations": {
+        "inspect_managed_artifact": 5,
+        "inspect_managed_members": 5,
+        "inspect_managed_native_boundaries": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "unity-managed-library"
+    },
+    {
+      "calls": 235,
+      "operations": {
+        "address_name": 5,
+        "address_to_file_offset": 5,
+        "analyze_function": 5,
+        "analyze_swift_types": 5,
+        "batch_decompile": 5,
+        "binary_session": 5,
+        "close_binary": 5,
+        "current_document": 5,
+        "export_evidence_bundle": 5,
+        "get_call_graph": 5,
+        "get_evidence_bundle": 5,
+        "get_navigation_context": 5,
+        "get_objc_classes": 5,
+        "get_objc_protocols": 5,
+        "import_evidence_bundle": 5,
+        "inspect_address_context": 5,
+        "inspect_analysis_view": 5,
+        "inspect_macho": 5,
+        "inspect_native_api": 5,
+        "inspect_native_dispatch_metadata": 5,
+        "inspect_native_instruction": 5,
+        "inspect_native_load_image": 5,
+        "list_documents": 5,
+        "list_procedures": 5,
+        "list_segments": 5,
+        "list_unknowns": 5,
+        "open_binary": 5,
+        "procedure_address": 5,
+        "procedure_assembly": 5,
+        "procedure_callees": 5,
+        "procedure_callers": 5,
+        "procedure_info": 5,
+        "procedure_pseudo_code": 15,
+        "procedure_references": 5,
+        "read_bytes": 5,
+        "read_function_instructions": 5,
+        "resolve_containing_procedure": 5,
+        "resolve_native_call_targets": 5,
+        "search_bytes": 5,
+        "trace_call_path": 5,
+        "trace_feature": 5,
+        "trace_native_values": 5,
+        "xrefs": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "xcode-deep-read-only"
+    },
+    {
+      "calls": 70,
+      "operations": {
+        "close_binary": 5,
+        "decode_interface_builder": 5,
+        "inspect_asset_catalog": 5,
+        "inspect_desktop_application": 5,
+        "inspect_macho": 5,
+        "inspect_plist": 5,
+        "inspect_signature": 5,
+        "inspect_sqlite_database": 5,
+        "list_architectures": 5,
+        "list_procedures": 5,
+        "list_segments": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "failure": 5
+      },
+      "workflow": "xcode-static-artifacts"
+    },
+    {
+      "calls": 65,
+      "operations": {
+        "close_binary": 5,
+        "inspect_desktop_application": 5,
+        "inspect_macho": 5,
+        "inspect_plist": 5,
+        "inspect_signature": 5,
+        "list_architectures": 5,
+        "list_procedures": 5,
+        "list_segments": 5,
+        "open_binary": 5,
+        "search_procedures": 5,
+        "search_strings": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "zed-native-analysis"
+    },
+    {
+      "calls": 15,
+      "operations": {
+        "inspect_rust_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "zed-rust-metadata"
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "bundle_targets": [],
+  "captured_at_utc": "2026-10-25T15:13:01.558550+00:00",
+  "host": {
+    "commands": {
+      "power": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "batt"
+        ],
+        "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t76%; discharging; 4:04 remaining present: true",
+        "returncode": 0
+      },
+      "sw_vers": {
+        "available": true,
+        "command": [
+          "sw_vers"
+        ],
+        "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+        "returncode": 0
+      },
+      "sysctl_cpu": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.ncpu"
+        ],
+        "output": "10",
+        "returncode": 0
+      },
+      "sysctl_cpu_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "machdep.cpu.brand_string"
+        ],
+        "output": "Apple M1 Pro",
+        "returncode": 0
+      },
+      "sysctl_hardware_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.model"
+        ],
+        "output": "MacBookPro18,1",
+        "returncode": 0
+      },
+      "thermal": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "therm"
+        ],
+        "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+        "returncode": 0
+      }
+    },
+    "cpu_count": 10,
+    "disk_free_bytes_at_capture": 775856128,
+    "disk_total_bytes_at_capture": 494384795648,
+    "load_average": [
+      3.31298828125,
+      4.86572265625,
+      5.2080078125
+    ],
+    "machine": "arm64",
+    "memory_bytes": 34359738368,
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "psutil_version": "7.2.2",
+    "python": "3.13.7",
+    "release": "27.2.0",
+    "system": "Darwin"
+  },
+  "manifest_sha256": "937a9fb826e623fa71bb51a6ce085758c95b5ec1214b8747db910a36abaff986",
+  "plan_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+  "plan_sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+  "rea_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+  "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+  "schema_version": 1,
+  "selected_file_count": 1,
+  "selected_files_after": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149565185,
+      "mtime_ns": 1792941155314671019,
+      "path": "docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+      "size_bytes": 1336
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536504,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+      "size_bytes": 53495920
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536505,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+      "size_bytes": 9629040
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149538056,
+      "mtime_ns": 1792939544226258761,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "size_bytes": 33601
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134084114,
+      "mtime_ns": 1791728409716862163,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446",
+      "size_bytes": 2587136
+    }
+  ],
+  "selected_files_before": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149565185,
+      "mtime_ns": 1792941155314671019,
+      "path": "docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+      "size_bytes": 1336
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536504,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+      "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+      "size_bytes": 53495920
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149536505,
+      "mtime_ns": 0,
+      "path": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker",
+      "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+      "size_bytes": 9629040
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149538056,
+      "mtime_ns": 1792939544226258761,
+      "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "size_bytes": 33601
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134084114,
+      "mtime_ns": 1791728409716862163,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446",
+      "size_bytes": 2587136
+    }
+  ],
+  "worker_path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker"
+}

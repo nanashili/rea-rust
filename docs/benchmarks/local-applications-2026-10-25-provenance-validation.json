@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded provenance validation for the frozen local application benchmark artifacts.",
+  "validated_at_utc": "2026-10-25T15:19:36Z",
+  "scope": {
+    "checked": [
+      "plan file digests",
+      "runner path and digest",
+      "selected file SHA-256",
+      "device/inode identity",
+      "before/after read errors",
+      "published report raw-data scope"
+    ],
+    "not_checked": [
+      "application source contents",
+      "decompiler semantic correctness",
+      "unpublished process transcripts"
+    ]
+  },
+  "series": [
+    {
+      "name": "local-applications-2026-10-25",
+      "before_manifest": "local-applications-2026-10-25-before.json",
+      "after_manifest": "local-applications-2026-10-25-after.json",
+      "plan_sha256_recorded": "5057d0638185fd7f43339ba1b5ce7c0454c743a6f466acf11e637bf1fd3ccaa2",
+      "plan_file_sha256": "5057d0638185fd7f43339ba1b5ce7c0454c743a6f466acf11e637bf1fd3ccaa2",
+      "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "runner_sha256": "28271cc8675b8b281cfc130fb43c749c8bae65cbc38b6d21c178f5c013da7e26",
+      "selected_file_count_field": 34,
+      "observed_manifest_file_records": 38,
+      "selected_identity_and_hashes_unchanged": true,
+      "read_errors": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "name": "local-applications-2026-10-25-inventory",
+      "before_manifest": "local-applications-2026-10-25-inventory-before.json",
+      "after_manifest": "local-applications-2026-10-25-inventory-after.json",
+      "plan_sha256_recorded": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+      "plan_file_sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+      "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "runner_sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "selected_file_count_field": 2,
+      "observed_manifest_file_records": 6,
+      "selected_identity_and_hashes_unchanged": true,
+      "read_errors": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "name": "local-applications-2026-10-25-native-functions",
+      "before_manifest": "local-applications-2026-10-25-native-functions-before.json",
+      "after_manifest": "local-applications-2026-10-25-native-functions-after.json",
+      "plan_sha256_recorded": "8abec473905d6c4250654897dd129165b30595f7c945ee2af73e9d0cbbd22454",
+      "plan_file_sha256": "8abec473905d6c4250654897dd129165b30595f7c945ee2af73e9d0cbbd22454",
+      "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "runner_sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "selected_file_count_field": 3,
+      "observed_manifest_file_records": 7,
+      "selected_identity_and_hashes_unchanged": true,
+      "read_errors": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "name": "local-applications-2026-10-25-pe-resources",
+      "before_manifest": "local-applications-2026-10-25-pe-resources-before.json",
+      "after_manifest": "local-applications-2026-10-25-pe-resources-after.json",
+      "plan_sha256_recorded": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+      "plan_file_sha256": "0ce7105da92921a00178a6c039484fc7ecaa943829eb22d96383a121994dab44",
+      "runner_path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py",
+      "runner_sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+      "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+      "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+      "selected_file_count_field": 1,
+      "observed_manifest_file_records": 5,
+      "selected_identity_and_hashes_unchanged": true,
+      "read_errors": {
+        "before": 0,
+        "after": 0
+      }
+    }
+  ],
+  "findings": [
+    {
+      "severity": "warning",
+      "finding": "selected_file_count differs from the number of manifest records because the collector includes plan, REA, worker, runner, and selected input files in the arrays while the field counts selected inputs only."
+    },
+    {
+      "severity": "warning",
+      "finding": "The main series and supplemental series used different runner hashes. The report must keep their provenance separate."
+    },
+    {
+      "severity": "pass",
+      "finding": "Each series plan digest equals the digest of its referenced plan file."
+    },
+    {
+      "severity": "pass",
+      "finding": "Selected file hashes and device/inode identities were unchanged between before and after manifests."
+    },
+    {
+      "severity": "pass",
+      "finding": "No selected-file read errors were recorded in the four before/after pairs."
+    },
+    {
+      "severity": "pass",
+      "finding": "Published report scope states that full response bodies and application code remain local; compact raw metrics receipts are published."
+    }
+  ],
+  "publication_rule": "Do not publish full MCP response bodies, application source, or decompiler output; publish bounded metrics, digests, paths, versions, and stated limitations only."
+}

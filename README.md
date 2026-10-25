@@ -108,9 +108,13 @@ Known behavior differences and test coverage are recorded in the
 
 ## Benchmarks
 
-Frozen TypeScript and Rust builds, measured on an Apple M1 Pro on 24 October
-2026, with warm filesystem caches. Seven sessions per version; the repeated
-request row uses 56 calls per version:
+The [local application benchmark](docs/benchmarks/local-applications-2026-10-25/README.md)
+covers 11 installed macOS applications and Go: 125 samples across 25 workflows,
+with elapsed time, CPU, memory, per-call results and documented failures.
+
+The separate TypeScript/native comparison used frozen builds, measured on an
+Apple M1 Pro on 24 October 2026, with warm filesystem caches. Seven sessions per
+version; the repeated request row uses 56 calls per version:
 
 | Task | TypeScript | Rust |
 | --- | ---: | ---: |

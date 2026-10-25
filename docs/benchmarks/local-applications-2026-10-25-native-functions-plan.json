@@ -1,0 +1,937 @@
+{
+  "schema_version": 1,
+  "plan_id": "local-applications-2026-10-25-native-functions",
+  "status": "qualified_with_degraded_candidates",
+  "executed": true,
+  "purpose": "Supplemental read-only MCP benchmark for five nontrivial native procedures per representative Zed, OpenUnity, and Figma Electron Framework binaries.",
+  "authority": "shipped-artifact",
+  "source_plan": "local-applications-2026-10-25-plan.json",
+  "target_policy": "Read target files and REA-owned cache only. Do not launch, attach to, mutate, sign, save, or close a target application.",
+  "measurement_contract": {
+    "rounds": 5,
+    "samples_per_case": 5,
+    "order": "Sequential workflows; reverse workflow order in even rounds.",
+    "per_case_timeout_seconds": 120,
+    "family_memory_limit_mib": 4096,
+    "metrics": [
+      "wall_time_ms",
+      "wait4_user_cpu_ms",
+      "wait4_system_cpu_ms",
+      "wait4_maxrss_bytes",
+      "sampled_family_peak_rss_bytes",
+      "sampled_family_cpu_ms",
+      "output_bytes",
+      "result_status",
+      "response_sha256"
+    ],
+    "unmeasured": [
+      "actual_agent_tokens",
+      "energy",
+      "physical_disk_bytes",
+      "CPU_hardware_counters",
+      "full application correctness"
+    ]
+  },
+  "qualification": {
+    "preflight_required": true,
+    "candidate_rule": "After the current official run, perform a read-only preflight for each exact candidate using procedure_assembly, read_function_instructions, and procedure_pseudo_code. Retain exactly five per target only when instruction decoding yields at least 8 instructions and at least 32 bytes of independently established extent, assembly is nonempty, and pseudocode is useful and does not report a bad-instruction halt. No unsupported procedure_info or address_to_file_offset call is required.",
+    "independent_extent_oracle": "llvm-objdump arm64 disassembly plus Mach-O __unwind_info metadata or adjacent retained inventory starts are planning evidence only; the preflight result controls qualification.",
+    "selection_bias": "The candidate set is address/name based and is not a random sample of the complete inventory.",
+    "no_correctness_claim": "Nonempty assembly or pseudocode does not establish semantic correctness; compare repeated hashes and retain provider errors.",
+    "unsupported_operations_omitted": [
+      "procedure_info",
+      "address_to_file_offset",
+      "procedure_callers",
+      "procedure_callees"
+    ]
+  },
+  "workflows": [
+    {
+      "name": "zed-native-functions-supplement",
+      "target": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "candidate_notes": "Candidates are provisional until post-run preflight confirms exact address resolution, at least 8 decoded instructions, at least 32 bytes of independent extent, and useful nonempty pseudocode without a bad-instruction halt. Retain only qualified candidates for benchmark comparison.",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+            "provider_id": "ghidra-rust"
+          },
+          "label": "open_binary"
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          },
+          "label": "inspect_macho"
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {},
+          "label": "list_procedures"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x105bcc628"
+          },
+          "label": "0x105bcc628-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x105bcc628"
+          },
+          "label": "0x105bcc628-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x105bcc628",
+            "direction": "outgoing"
+          },
+          "label": "0x105bcc628-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x105bcc628"
+          },
+          "repeat": 3,
+          "label": "0x105bcc628-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x105bcc628",
+            "length": 256
+          },
+          "label": "0x105bcc628-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x1067a1e48"
+          },
+          "label": "0x1067a1e48-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x1067a1e48"
+          },
+          "label": "0x1067a1e48-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x1067a1e48",
+            "direction": "outgoing"
+          },
+          "label": "0x1067a1e48-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x1067a1e48"
+          },
+          "repeat": 3,
+          "label": "0x1067a1e48-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x1067a1e48",
+            "length": 256
+          },
+          "label": "0x1067a1e48-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x105cb62f0"
+          },
+          "label": "0x105cb62f0-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x105cb62f0"
+          },
+          "label": "0x105cb62f0-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x105cb62f0",
+            "direction": "outgoing"
+          },
+          "label": "0x105cb62f0-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x105cb62f0"
+          },
+          "repeat": 3,
+          "label": "0x105cb62f0-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x105cb62f0",
+            "length": 256
+          },
+          "label": "0x105cb62f0-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x105cb780c"
+          },
+          "label": "0x105cb780c-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x105cb780c"
+          },
+          "label": "0x105cb780c-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x105cb780c",
+            "direction": "outgoing"
+          },
+          "label": "0x105cb780c-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x105cb780c"
+          },
+          "repeat": 3,
+          "label": "0x105cb780c-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x105cb780c",
+            "length": 256
+          },
+          "label": "0x105cb780c-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x105cb8770"
+          },
+          "label": "0x105cb8770-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x105cb8770"
+          },
+          "label": "0x105cb8770-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x105cb8770",
+            "direction": "outgoing"
+          },
+          "label": "0x105cb8770-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x105cb8770"
+          },
+          "repeat": 3,
+          "label": "0x105cb8770-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x105cb8770",
+            "length": 256
+          },
+          "label": "0x105cb8770-read_bytes"
+        },
+        {
+          "name": "batch_decompile",
+          "arguments": {
+            "addresses": [
+              "0x105bcc628",
+              "0x1067a1e48",
+              "0x105cb62f0",
+              "0x105cb780c",
+              "0x105cb8770"
+            ]
+          },
+          "label": "batch-decompile-all-five"
+        },
+        {
+          "name": "close_binary",
+          "arguments": {},
+          "label": "close_binary"
+        }
+      ],
+      "candidate_addresses": [
+        {
+          "address": "0x105bcc628",
+          "label": "_main",
+          "source": "existing search_procedures result",
+          "independent_extent_bytes": null,
+          "qualification_status": "degraded",
+          "qualification_reasons": [
+            "independent_extent_unknown_or_below_32_bytes"
+          ]
+        },
+        {
+          "address": "0x1067a1e48",
+          "label": "_sqlite3_backup_remaining",
+          "source": "existing search_procedures result",
+          "independent_extent_bytes": null,
+          "qualification_status": "degraded",
+          "qualification_reasons": [
+            "independent_extent_unknown_or_below_32_bytes"
+          ]
+        },
+        {
+          "address": "0x105cb62f0",
+          "label": "unwind-derived candidate A",
+          "source": "independent __unwind_info function start",
+          "independent_extent_bytes": 5404,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x105cb780c",
+          "label": "unwind-derived candidate B",
+          "source": "independent __unwind_info function start",
+          "independent_extent_bytes": 3108,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x105cb8770",
+          "label": "unwind-derived candidate C",
+          "source": "independent __unwind_info function start",
+          "independent_extent_bytes": 1556,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        }
+      ]
+    },
+    {
+      "name": "openunity-native-functions-supplement",
+      "target": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "candidate_notes": "Candidates are provisional until post-run preflight confirms exact address resolution, at least 8 decoded instructions, at least 32 bytes of independent extent, and useful nonempty pseudocode without a bad-instruction halt. Retain only qualified candidates for benchmark comparison.",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+            "provider_id": "ghidra-rust"
+          },
+          "label": "open_binary"
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          },
+          "label": "inspect_macho"
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {},
+          "label": "list_procedures"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x100000d58"
+          },
+          "label": "0x100000d58-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x100000d58"
+          },
+          "label": "0x100000d58-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x100000d58",
+            "direction": "outgoing"
+          },
+          "label": "0x100000d58-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x100000d58"
+          },
+          "repeat": 3,
+          "label": "0x100000d58-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x100000d58",
+            "length": 256
+          },
+          "label": "0x100000d58-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x100000f00"
+          },
+          "label": "0x100000f00-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x100000f00"
+          },
+          "label": "0x100000f00-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x100000f00",
+            "direction": "outgoing"
+          },
+          "label": "0x100000f00-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x100000f00"
+          },
+          "repeat": 3,
+          "label": "0x100000f00-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x100000f00",
+            "length": 256
+          },
+          "label": "0x100000f00-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x1000010c0"
+          },
+          "label": "0x1000010c0-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x1000010c0"
+          },
+          "label": "0x1000010c0-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x1000010c0",
+            "direction": "outgoing"
+          },
+          "label": "0x1000010c0-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x1000010c0"
+          },
+          "repeat": 3,
+          "label": "0x1000010c0-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x1000010c0",
+            "length": 256
+          },
+          "label": "0x1000010c0-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x100001b74"
+          },
+          "label": "0x100001b74-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x100001b74"
+          },
+          "label": "0x100001b74-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x100001b74",
+            "direction": "outgoing"
+          },
+          "label": "0x100001b74-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x100001b74"
+          },
+          "repeat": 3,
+          "label": "0x100001b74-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x100001b74",
+            "length": 256
+          },
+          "label": "0x100001b74-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x100001c14"
+          },
+          "label": "0x100001c14-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x100001c14"
+          },
+          "label": "0x100001c14-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x100001c14",
+            "direction": "outgoing"
+          },
+          "label": "0x100001c14-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x100001c14"
+          },
+          "repeat": 3,
+          "label": "0x100001c14-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x100001c14",
+            "length": 256
+          },
+          "label": "0x100001c14-read_bytes"
+        },
+        {
+          "name": "batch_decompile",
+          "arguments": {
+            "addresses": [
+              "0x100000d58",
+              "0x100000f00",
+              "0x1000010c0",
+              "0x100001b74",
+              "0x100001c14"
+            ]
+          },
+          "label": "batch-decompile-all-five"
+        },
+        {
+          "name": "close_binary",
+          "arguments": {},
+          "label": "close_binary"
+        }
+      ],
+      "candidate_addresses": [
+        {
+          "address": "0x100000d58",
+          "label": "png::encoder::write_chunk",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 424,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x100000f00",
+          "label": "png::Writer::write_chunk",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 448,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x1000010c0",
+          "label": "png::Writer::write_image_data",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 2740,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x100001b74",
+          "label": "png::Writer::write_zlib_encoded_idat",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 160,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x100001c14",
+          "label": "png::Encoder::write_header",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 4204,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        }
+      ]
+    },
+    {
+      "name": "figma-framework-native-functions-supplement",
+      "target": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "candidate_notes": "Candidates are provisional until post-run preflight confirms exact address resolution, at least 8 decoded instructions, at least 32 bytes of independent extent, and useful nonempty pseudocode without a bad-instruction halt. Retain only qualified candidates for benchmark comparison.",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+            "provider_id": "ghidra-rust"
+          },
+          "label": "open_binary"
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          },
+          "label": "inspect_macho"
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {},
+          "label": "list_procedures"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x1e928"
+          },
+          "label": "0x1e928-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x1e928"
+          },
+          "label": "0x1e928-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x1e928",
+            "direction": "outgoing"
+          },
+          "label": "0x1e928-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x1e928"
+          },
+          "repeat": 3,
+          "label": "0x1e928-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x1e928",
+            "length": 256
+          },
+          "label": "0x1e928-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x28ef8"
+          },
+          "label": "0x28ef8-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x28ef8"
+          },
+          "label": "0x28ef8-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x28ef8",
+            "direction": "outgoing"
+          },
+          "label": "0x28ef8-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x28ef8"
+          },
+          "repeat": 3,
+          "label": "0x28ef8-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x28ef8",
+            "length": 256
+          },
+          "label": "0x28ef8-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x334b8"
+          },
+          "label": "0x334b8-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x334b8"
+          },
+          "label": "0x334b8-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x334b8",
+            "direction": "outgoing"
+          },
+          "label": "0x334b8-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x334b8"
+          },
+          "repeat": 3,
+          "label": "0x334b8-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x334b8",
+            "length": 256
+          },
+          "label": "0x334b8-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x4c354"
+          },
+          "label": "0x4c354-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x4c354"
+          },
+          "label": "0x4c354-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x4c354",
+            "direction": "outgoing"
+          },
+          "label": "0x4c354-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x4c354"
+          },
+          "repeat": 3,
+          "label": "0x4c354-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x4c354",
+            "length": 256
+          },
+          "label": "0x4c354-read_bytes"
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "0x66d08"
+          },
+          "label": "0x66d08-procedure_assembly"
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "0x66d08"
+          },
+          "label": "0x66d08-read_function_instructions"
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "0x66d08",
+            "direction": "outgoing"
+          },
+          "label": "0x66d08-procedure_references"
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "0x66d08"
+          },
+          "repeat": 3,
+          "label": "0x66d08-procedure_pseudo_code"
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "0x66d08",
+            "length": 256
+          },
+          "label": "0x66d08-read_bytes"
+        },
+        {
+          "name": "batch_decompile",
+          "arguments": {
+            "addresses": [
+              "0x1e928",
+              "0x28ef8",
+              "0x334b8",
+              "0x4c354",
+              "0x66d08"
+            ]
+          },
+          "label": "batch-decompile-all-five"
+        },
+        {
+          "name": "close_binary",
+          "arguments": {},
+          "label": "close_binary"
+        }
+      ],
+      "candidate_addresses": [
+        {
+          "address": "0x1e928",
+          "label": "v8::ThreadIsolation::AllocationContaining",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 38352,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x28ef8",
+          "label": "cppgc::WriteBarrier::DijkstraMarkingBarrierSlow",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 43964,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x334b8",
+          "label": "v8::Object::Clone",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 97948,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x4c354",
+          "label": "v8::Object::CreateDataProperty",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 108980,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        },
+        {
+          "address": "0x66d08",
+          "label": "cppgc::EnsureGCInfoIndexTrait::EnsureGCInfoIndex",
+          "source": "existing list_procedures row",
+          "independent_extent_bytes": 88,
+          "qualification_status": "qualified",
+          "qualification_reasons": []
+        }
+      ]
+    }
+  ],
+  "qualification_result": {
+    "status": "partial",
+    "scope": "one_round_read_only_preflight",
+    "aggregate": "docs/benchmarks/local-applications-2026-10-25-native-functions-qualification.json",
+    "workflows": [
+      {
+        "workflow": "zed-native-functions-supplement",
+        "rounds_observed": [
+          "001"
+        ],
+        "candidate_count": 5,
+        "qualified_count": 3,
+        "degraded_count": 2,
+        "degraded_addresses": [
+          "0x105bcc628",
+          "0x1067a1e48"
+        ],
+        "receipt_load_errors": []
+      },
+      {
+        "workflow": "openunity-native-functions-supplement",
+        "rounds_observed": [
+          "001"
+        ],
+        "candidate_count": 5,
+        "qualified_count": 5,
+        "degraded_count": 0,
+        "degraded_addresses": [],
+        "receipt_load_errors": []
+      },
+      {
+        "workflow": "figma-framework-native-functions-supplement",
+        "rounds_observed": [
+          "001"
+        ],
+        "candidate_count": 5,
+        "qualified_count": 5,
+        "degraded_count": 0,
+        "degraded_addresses": [],
+        "receipt_load_errors": []
+      }
+    ],
+    "candidate_count": 15,
+    "qualified_count": 13,
+    "degraded_count": 2,
+    "limitations": [
+      "Qualification verifies provider output shape, coverage, repeat stability, and independent extent evidence; it does not establish semantic correctness.",
+      "The two degraded Zed candidates have nonempty output and decoded instructions but no independently established extent of at least 32 bytes in this plan.",
+      "The preflight did not test fresh-process import reconstruction.",
+      "Candidate selection is address/name based and is not a random sample of each binary."
+    ]
+  }
+}

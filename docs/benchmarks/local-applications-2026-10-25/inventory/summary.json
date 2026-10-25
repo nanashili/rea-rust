@@ -1,0 +1,1147 @@
+{
+  "call_timing": [
+    {
+      "kind": "discovery",
+      "output_bytes": {
+        "count": 20,
+        "maximum": 3245006.0,
+        "median": 1623091.5,
+        "minimum": 1177.0
+      },
+      "wall_ms": {
+        "count": 20,
+        "maximum": 154.89474998321384,
+        "median": 81.97029148868751,
+        "minimum": 49.14225000538863
+      }
+    },
+    {
+      "kind": "analysis",
+      "output_bytes": {
+        "count": 35,
+        "maximum": 4075246.0,
+        "median": 631.0,
+        "minimum": 204.0
+      },
+      "wall_ms": {
+        "count": 35,
+        "maximum": 610.1494579925202,
+        "median": 71.80704100755975,
+        "minimum": 0.11862500105053186
+      }
+    }
+  ],
+  "calls": [
+    {
+      "call_group": "gofmt-objdump-headers:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.4375,
+        "median": 98.53125,
+        "minimum": 96.5625
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 50.167209,
+        "median": 44.105833000000004,
+        "minimum": 41.067248
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 57.32804199215025,
+        "median": 54.680208006175235,
+        "minimum": 49.14225000538863
+      }
+    },
+    {
+      "call_group": "gofmt-objdump-headers:inspect_with_objdump#1",
+      "error_codes": [
+        "cleanup_incomplete"
+      ],
+      "failures": 5,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1559.0,
+        "median": 1559.0,
+        "minimum": 1559.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 185.28125,
+        "median": 185.0,
+        "minimum": 181.59375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 105.63433,
+        "median": 78.47262300000001,
+        "minimum": 76.19070499999998
+      },
+      "samples": 5,
+      "successes": 0,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 168.2997079915367,
+        "median": 104.97283301083371,
+        "minimum": 104.60529199917801
+      }
+    },
+    {
+      "call_group": "gofmt-objdump-headers:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 178.46875,
+        "median": 178.359375,
+        "minimum": 174.828125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 68.23862299999999,
+        "median": 62.80316499999999,
+        "minimum": 61.517832
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 118.30979201477021,
+        "median": 109.50650001177564,
+        "minimum": 106.61254098522477
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:binary_overview#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 27384.0,
+        "median": 27384.0,
+        "minimum": 27384.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 284.96875,
+        "median": 281.15625,
+        "minimum": 278.21875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 67.43051999999996,
+        "median": 67.10723600000001,
+        "minimum": 61.35107200000002
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 73.34200001787394,
+        "median": 71.80704100755975,
+        "minimum": 69.85854200320318
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:close_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 204.0,
+        "median": 204.0,
+        "minimum": 204.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 276.609375,
+        "median": 270.421875,
+        "minimum": 204.125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 2.227411999999977,
+        "median": 1.6308999999999978,
+        "minimum": 0.9695799999999699
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 27.351832977728918,
+        "median": 26.065707992529497,
+        "minimum": 25.576084008207545
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:find_xrefs_to_name#1",
+      "error_codes": [
+        "capability_unavailable"
+      ],
+      "failures": 5,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 631.0,
+        "median": 631.0,
+        "minimum": 631.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 0,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 0.20495898206718266,
+        "median": 0.1642499992158264,
+        "minimum": 0.11862500105053186
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:initialize",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 1177.0,
+        "median": 1177.0,
+        "minimum": 1177.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 100.421875,
+        "median": 98.484375,
+        "minimum": 97.3125
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 50.30062500000001,
+        "median": 42.638917,
+        "minimum": 41.660833999999994
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 56.707915995502844,
+        "median": 55.67683401750401,
+        "minimum": 54.8864160082303
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:list_names#1",
+      "error_codes": [
+        "capability_unavailable"
+      ],
+      "failures": 5,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 631.0,
+        "median": 631.0,
+        "minimum": 631.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sampled_family_cpu_ms": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "samples": 5,
+      "successes": 0,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 0.31154099269770086,
+        "median": 0.23924998822622,
+        "minimum": 0.1889999839477241
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:list_procedures#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 4075246.0,
+        "median": 4075246.0,
+        "minimum": 4075246.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 273.890625,
+        "median": 267.953125,
+        "minimum": 260.1875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 532.698484,
+        "median": 529.624752,
+        "minimum": 525.181206
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 610.1494579925202,
+        "median": 597.9153749940451,
+        "minimum": 586.9837919890415
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:open_binary#1",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 630.0,
+        "median": 630.0,
+        "minimum": 630.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 175.875,
+        "median": 174.1875,
+        "minimum": 171.71875
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 79.00699,
+        "median": 77.667082,
+        "minimum": 71.13683600000002
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 84.42425000248477,
+        "median": 79.32612500735559,
+        "minimum": 78.77854199614376
+      }
+    },
+    {
+      "call_group": "openunity-native-inventory:tools-list",
+      "error_codes": [],
+      "failures": 0,
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3245006.0,
+        "median": 3245006.0,
+        "minimum": 3245006.0
+      },
+      "peak_rss_mib": {
+        "count": 5,
+        "maximum": 179.234375,
+        "median": 178.375,
+        "minimum": 174.59375
+      },
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 66.21858599999999,
+        "median": 62.34329500000001,
+        "minimum": 59.795789
+      },
+      "samples": 5,
+      "successes": 5,
+      "wall_ms": {
+        "count": 5,
+        "maximum": 154.89474998321384,
+        "median": 115.1120419963263,
+        "minimum": 107.7979159890674
+      }
+    }
+  ],
+  "catalog_output_bytes": {
+    "count": 10,
+    "maximum": 3245006.0,
+    "median": 3245006.0,
+    "minimum": 3245006.0
+  },
+  "coverage": {
+    "actual_samples": 10,
+    "duplicates": [],
+    "expected_samples": 10,
+    "missing": [],
+    "planned_workflows": [
+      "openunity-native-inventory",
+      "gofmt-objdump-headers"
+    ],
+    "rounds": 5,
+    "unique_workflow_rounds": 10,
+    "unknown_workflows": [],
+    "warnings": []
+  },
+  "ended_at_utc": "2026-10-25T15:02:38.642739+00:00",
+  "plan_sha256": "48241cdc472f64380eb6559ea40a94febef506220e942611b84973638f9f83b5",
+  "provenance": {
+    "changed_file_details": [],
+    "changed_selected_paths": [],
+    "host": {
+      "commands": {
+        "power": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "batt"
+          ],
+          "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t79%; discharging; 3:34 remaining present: true",
+          "returncode": 0
+        },
+        "sw_vers": {
+          "available": true,
+          "command": [
+            "sw_vers"
+          ],
+          "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+          "returncode": 0
+        },
+        "sysctl_cpu": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.ncpu"
+          ],
+          "output": "10",
+          "returncode": 0
+        },
+        "sysctl_cpu_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "machdep.cpu.brand_string"
+          ],
+          "output": "Apple M1 Pro",
+          "returncode": 0
+        },
+        "sysctl_hardware_model": {
+          "available": true,
+          "command": [
+            "sysctl",
+            "-n",
+            "hw.model"
+          ],
+          "output": "MacBookPro18,1",
+          "returncode": 0
+        },
+        "thermal": {
+          "available": true,
+          "command": [
+            "pmset",
+            "-g",
+            "therm"
+          ],
+          "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+          "returncode": 0
+        }
+      },
+      "cpu_count": 10,
+      "disk_free_bytes_at_capture": 2515296256,
+      "disk_total_bytes_at_capture": 494384795648,
+      "load_average": [
+        2.7705078125,
+        4.7587890625,
+        5.37646484375
+      ],
+      "machine": "arm64",
+      "memory_bytes": 34359738368,
+      "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+      "psutil_version": "7.2.2",
+      "python": "3.13.7",
+      "release": "27.2.0",
+      "system": "Darwin"
+    },
+    "plan_sha256": "48241cdc472f64380eb6559ea40a94febef506220e942611b84973638f9f83b5",
+    "plan_sha256_kind": "canonical JSON plan digest from the benchmark runner",
+    "rea_sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+    "tooling": {
+      "plan": {
+        "after": {
+          "device": 16777234,
+          "inode": 149553783,
+          "sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+          "size_bytes": 4327
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149553783,
+          "sha256": "5a8a60968f8da34f24ebc6574ff9bb56b5023cb6425c8653bf2feb4168d51db4",
+          "size_bytes": 4327
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json"
+      },
+      "rea": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536504,
+          "sha256": "1a5ce65a55351df5e12bb25ab0f1a858cef8d3c6e1f8ceb29fa0735a847a08ce",
+          "size_bytes": 53495920
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea"
+      },
+      "runner": {
+        "after": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149538056,
+          "sha256": "caee23a48a88a141ac7176ca8c8e994513b816710b1ba40d1017b5dc101fc812",
+          "size_bytes": 33601
+        },
+        "path": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/native/scripts/benchmarks/run_mcp.py"
+      },
+      "worker": {
+        "after": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "before": {
+          "device": 16777234,
+          "inode": 149536505,
+          "sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc",
+          "size_bytes": 9629040
+        },
+        "path": "/private/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea-ghidra-rust-worker"
+      }
+    },
+    "warnings": [],
+    "worker_sha256": "7246d779dba93b413686c1545473b393a94a37f925819aed9e82c4157cb50cfc"
+  },
+  "rounds": 5,
+  "schema_version": 1,
+  "scope": "native-only installed-application MCP benchmark",
+  "source_raw": "docs/benchmarks/local-applications-2026-10-25-inventory-raw.json",
+  "started_at_utc": "2026-10-25T15:02:30.381264+00:00",
+  "status": {
+    "calls": 55,
+    "failed_calls": 15,
+    "failures": 10,
+    "label": "failed",
+    "samples": 10,
+    "successes": 0,
+    "successful_calls": 40
+  },
+  "workflows": [
+    {
+      "error_codes": [
+        "cleanup_incomplete"
+      ],
+      "failures": 5,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 315.09,
+        "median": 272.43299999999994,
+        "minimum": 268.0150000000001
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 3247742.0,
+        "median": 3247742.0,
+        "minimum": 3247742.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:02:32.098309+00:00",
+          "error": "inspect_with_objdump#1: tool failure",
+          "failed_call_count": 1,
+          "harness_cpu_ms": 315.09,
+          "output_bytes": 3247742,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 237.69311800000003,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 185.28125,
+          "sampled_family_system_cpu_ms": 88.77616300000001,
+          "sampled_family_user_cpu_ms": 148.91695500000003,
+          "sampled_max_gap_ms": 80.68133401684463,
+          "started_at_utc": "2026-10-25T15:02:31.655969+00:00",
+          "status": "failure",
+          "successful_call_count": 2,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 167.49,
+          "wait4_involuntary_context_switches": 82,
+          "wait4_major_faults": 32,
+          "wait4_maxrss_mib": 178.46875,
+          "wait4_minor_faults": 12879,
+          "wait4_system_cpu_ms": 41.098,
+          "wait4_user_cpu_ms": 126.39200000000001,
+          "wait4_voluntary_context_switches": 128,
+          "wall_ms": 441.644875012571,
+          "workflow": "gofmt-objdump-headers"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:02:32.548588+00:00",
+          "error": "inspect_with_objdump#1: tool failure",
+          "failed_call_count": 1,
+          "harness_cpu_ms": 272.43299999999994,
+          "output_bytes": 3247742,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 210.94061700000003,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 185.0,
+          "sampled_family_system_cpu_ms": 64.700997,
+          "sampled_family_user_cpu_ms": 146.23962000000003,
+          "sampled_max_gap_ms": 83.37558401399292,
+          "started_at_utc": "2026-10-25T15:02:32.174226+00:00",
+          "status": "failure",
+          "successful_call_count": 2,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 165.21999999999997,
+          "wait4_involuntary_context_switches": 70,
+          "wait4_major_faults": 24,
+          "wait4_maxrss_mib": 178.359375,
+          "wait4_minor_faults": 12907,
+          "wait4_system_cpu_ms": 38.656,
+          "wait4_user_cpu_ms": 126.56399999999998,
+          "wait4_voluntary_context_switches": 126,
+          "wall_ms": 373.71087502106093,
+          "workflow": "gofmt-objdump-headers"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:02:35.349499+00:00",
+          "error": "inspect_with_objdump#1: tool failure",
+          "failed_call_count": 1,
+          "harness_cpu_ms": 268.90300000000036,
+          "output_bytes": 3247742,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 208.456413,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 185.0,
+          "sampled_family_system_cpu_ms": 64.072332,
+          "sampled_family_user_cpu_ms": 144.384081,
+          "sampled_max_gap_ms": 81.0568340239115,
+          "started_at_utc": "2026-10-25T15:02:34.976450+00:00",
+          "status": "failure",
+          "successful_call_count": 2,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 166.731,
+          "wait4_involuntary_context_switches": 105,
+          "wait4_major_faults": 24,
+          "wait4_maxrss_mib": 178.296875,
+          "wait4_minor_faults": 12886,
+          "wait4_system_cpu_ms": 40.417,
+          "wait4_user_cpu_ms": 126.31399999999998,
+          "wait4_voluntary_context_switches": 98,
+          "wall_ms": 372.38112499471754,
+          "workflow": "gofmt-objdump-headers"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:02:35.807330+00:00",
+          "error": "inspect_with_objdump#1: tool failure",
+          "failed_call_count": 1,
+          "harness_cpu_ms": 280.67900000000014,
+          "output_bytes": 3247742,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 211.25595499999997,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 185.109375,
+          "sampled_family_system_cpu_ms": 65.068165,
+          "sampled_family_user_cpu_ms": 146.18778999999998,
+          "sampled_max_gap_ms": 82.60416699340567,
+          "started_at_utc": "2026-10-25T15:02:35.426675+00:00",
+          "status": "failure",
+          "successful_call_count": 2,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 166.065,
+          "wait4_involuntary_context_switches": 84,
+          "wait4_major_faults": 24,
+          "wait4_maxrss_mib": 178.375,
+          "wait4_minor_faults": 12891,
+          "wait4_system_cpu_ms": 39.73799999999999,
+          "wait4_user_cpu_ms": 126.327,
+          "wait4_voluntary_context_switches": 125,
+          "wall_ms": 379.9813750083558,
+          "workflow": "gofmt-objdump-headers"
+        },
+        {
+          "call_count": 3,
+          "ended_at_utc": "2026-10-25T15:02:38.642739+00:00",
+          "error": "inspect_with_objdump#1: tool failure",
+          "failed_call_count": 1,
+          "harness_cpu_ms": 268.0150000000001,
+          "output_bytes": 3247742,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 210.46353800000003,
+          "sampled_family_max_processes": 3,
+          "sampled_family_peak_rss_mib": 181.59375,
+          "sampled_family_system_cpu_ms": 64.41295600000001,
+          "sampled_family_user_cpu_ms": 146.05058200000002,
+          "sampled_max_gap_ms": 81.78716598195024,
+          "started_at_utc": "2026-10-25T15:02:38.275183+00:00",
+          "status": "failure",
+          "successful_call_count": 2,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 163.95099999999996,
+          "wait4_involuntary_context_switches": 88,
+          "wait4_major_faults": 24,
+          "wait4_maxrss_mib": 174.90625,
+          "wait4_minor_faults": 12678,
+          "wait4_system_cpu_ms": 38.248,
+          "wait4_user_cpu_ms": 125.70299999999997,
+          "wait4_voluntary_context_switches": 109,
+          "wall_ms": 366.66466601309367,
+          "workflow": "gofmt-objdump-headers"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 237.69311800000003,
+        "median": 210.94061700000003,
+        "minimum": 208.456413
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 3.0,
+        "median": 3.0,
+        "minimum": 3.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 185.28125,
+        "median": 185.0,
+        "minimum": 181.59375
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 83.37558401399292,
+        "median": 81.78716598195024,
+        "minimum": 80.68133401684463
+      },
+      "samples": 5,
+      "successes": 0,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "sampled_family_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "samples": 0,
+        "wait4_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "wall_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 167.49,
+        "median": 166.065,
+        "minimum": 163.95099999999996
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 105.0,
+        "median": 84.0,
+        "minimum": 70.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 32.0,
+        "median": 24.0,
+        "minimum": 24.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 12907.0,
+        "median": 12886.0,
+        "minimum": 12678.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 128.0,
+        "median": 125.0,
+        "minimum": 98.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 441.644875012571,
+        "median": 373.71087502106093,
+        "minimum": 366.66466601309367
+      },
+      "workflow": "gofmt-objdump-headers"
+    },
+    {
+      "error_codes": [
+        "capability_unavailable"
+      ],
+      "failures": 5,
+      "harness_cpu_ms": {
+        "count": 5,
+        "maximum": 794.066,
+        "median": 719.4550000000004,
+        "minimum": 703.6170000000002
+      },
+      "output_bytes": {
+        "count": 5,
+        "maximum": 7350909.0,
+        "median": 7350909.0,
+        "minimum": 7350909.0
+      },
+      "peak_rss_mib": {
+        "count": 0,
+        "maximum": null,
+        "median": null,
+        "minimum": null
+      },
+      "sample_details": [
+        {
+          "call_count": 8,
+          "ended_at_utc": "2026-10-25T15:02:31.579032+00:00",
+          "error": "list_names#1: tool failure",
+          "failed_call_count": 2,
+          "harness_cpu_ms": 794.066,
+          "output_bytes": 7350909,
+          "round": 1,
+          "round_class": "first-round",
+          "sampled_family_cpu_ms": 827.4252760000003,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_mib": 281.109375,
+          "sampled_family_system_cpu_ms": 134.684252,
+          "sampled_family_user_cpu_ms": 692.7410240000003,
+          "sampled_max_gap_ms": 85.10816699708812,
+          "started_at_utc": "2026-10-25T15:02:30.381264+00:00",
+          "status": "failure",
+          "successful_call_count": 6,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 829.0519999999999,
+          "wait4_involuntary_context_switches": 551,
+          "wait4_major_faults": 29,
+          "wait4_maxrss_mib": 202.296875,
+          "wait4_minor_faults": 23359,
+          "wait4_system_cpu_ms": 136.046,
+          "wait4_user_cpu_ms": 693.006,
+          "wait4_voluntary_context_switches": 1315,
+          "wall_ms": 1196.8276670086198,
+          "workflow": "openunity-native-inventory"
+        },
+        {
+          "call_count": 8,
+          "ended_at_utc": "2026-10-25T15:02:33.714799+00:00",
+          "error": "list_names#1: tool failure",
+          "failed_call_count": 2,
+          "harness_cpu_ms": 703.6170000000002,
+          "output_bytes": 7350909,
+          "round": 2,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 804.189704,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_mib": 281.15625,
+          "sampled_family_system_cpu_ms": 125.69120799999996,
+          "sampled_family_user_cpu_ms": 678.498496,
+          "sampled_max_gap_ms": 80.47716598957777,
+          "started_at_utc": "2026-10-25T15:02:32.624552+00:00",
+          "status": "failure",
+          "successful_call_count": 6,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 805.4759999999999,
+          "wait4_involuntary_context_switches": 434,
+          "wait4_major_faults": 29,
+          "wait4_maxrss_mib": 202.484375,
+          "wait4_minor_faults": 23453,
+          "wait4_system_cpu_ms": 126.19800000000001,
+          "wait4_user_cpu_ms": 679.2779999999999,
+          "wait4_voluntary_context_switches": 1310,
+          "wall_ms": 1089.6164170117117,
+          "workflow": "openunity-native-inventory"
+        },
+        {
+          "call_count": 8,
+          "ended_at_utc": "2026-10-25T15:02:34.898433+00:00",
+          "error": "list_names#1: tool failure",
+          "failed_call_count": 2,
+          "harness_cpu_ms": 719.4550000000004,
+          "output_bytes": 7350909,
+          "round": 3,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 808.132836,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_mib": 284.96875,
+          "sampled_family_system_cpu_ms": 131.11395599999997,
+          "sampled_family_user_cpu_ms": 677.0188800000001,
+          "sampled_max_gap_ms": 81.52187502128072,
+          "started_at_utc": "2026-10-25T15:02:33.792439+00:00",
+          "status": "failure",
+          "successful_call_count": 6,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 809.5919999999999,
+          "wait4_involuntary_context_switches": 435,
+          "wait4_major_faults": 29,
+          "wait4_maxrss_mib": 208.578125,
+          "wait4_minor_faults": 23675,
+          "wait4_system_cpu_ms": 132.472,
+          "wait4_user_cpu_ms": 677.1199999999999,
+          "wait4_voluntary_context_switches": 1296,
+          "wall_ms": 1105.3255420119967,
+          "workflow": "openunity-native-inventory"
+        },
+        {
+          "call_count": 8,
+          "ended_at_utc": "2026-10-25T15:02:37.014700+00:00",
+          "error": "list_names#1: tool failure",
+          "failed_call_count": 2,
+          "harness_cpu_ms": 735.5179999999999,
+          "output_bytes": 7350909,
+          "round": 4,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 816.0846960000001,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_mib": 281.78125,
+          "sampled_family_system_cpu_ms": 132.93596,
+          "sampled_family_user_cpu_ms": 683.1487360000001,
+          "sampled_max_gap_ms": 83.46500000334345,
+          "started_at_utc": "2026-10-25T15:02:35.884399+00:00",
+          "status": "failure",
+          "successful_call_count": 6,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 817.471,
+          "wait4_involuntary_context_switches": 600,
+          "wait4_major_faults": 29,
+          "wait4_maxrss_mib": 204.1875,
+          "wait4_minor_faults": 23603,
+          "wait4_system_cpu_ms": 133.83,
+          "wait4_user_cpu_ms": 683.641,
+          "wait4_voluntary_context_switches": 1284,
+          "wall_ms": 1129.657290992327,
+          "workflow": "openunity-native-inventory"
+        },
+        {
+          "call_count": 8,
+          "ended_at_utc": "2026-10-25T15:02:38.196930+00:00",
+          "error": "list_names#1: tool failure",
+          "failed_call_count": 2,
+          "harness_cpu_ms": 719.2590000000001,
+          "output_bytes": 7350909,
+          "round": 5,
+          "round_class": "later-round",
+          "sampled_family_cpu_ms": 805.018792,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_mib": 278.21875,
+          "sampled_family_system_cpu_ms": 128.52650399999996,
+          "sampled_family_user_cpu_ms": 676.492288,
+          "sampled_max_gap_ms": 83.62320900778286,
+          "started_at_utc": "2026-10-25T15:02:37.093779+00:00",
+          "status": "failure",
+          "successful_call_count": 6,
+          "wait4_block_input": 0,
+          "wait4_block_output": 0,
+          "wait4_cpu_ms": 805.8050000000001,
+          "wait4_involuntary_context_switches": 433,
+          "wait4_major_faults": 29,
+          "wait4_maxrss_mib": 202.390625,
+          "wait4_minor_faults": 23287,
+          "wait4_system_cpu_ms": 129.023,
+          "wait4_user_cpu_ms": 676.782,
+          "wait4_voluntary_context_switches": 1283,
+          "wall_ms": 1102.5294169958215,
+          "workflow": "openunity-native-inventory"
+        }
+      ],
+      "sampled_family_cpu_ms": {
+        "count": 5,
+        "maximum": 827.4252760000003,
+        "median": 808.132836,
+        "minimum": 804.189704
+      },
+      "sampled_family_max_processes": {
+        "count": 5,
+        "maximum": 2.0,
+        "median": 2.0,
+        "minimum": 2.0
+      },
+      "sampled_family_peak_rss_mib": {
+        "count": 5,
+        "maximum": 284.96875,
+        "median": 281.15625,
+        "minimum": 278.21875
+      },
+      "sampled_max_gap_ms": {
+        "count": 5,
+        "maximum": 85.10816699708812,
+        "median": 83.46500000334345,
+        "minimum": 80.47716598957777
+      },
+      "samples": 5,
+      "successes": 0,
+      "successful": {
+        "harness_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "sampled_family_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "sampled_family_peak_rss_mib": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "samples": 0,
+        "wait4_cpu_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        },
+        "wall_ms": {
+          "count": 0,
+          "maximum": null,
+          "median": null,
+          "minimum": null
+        }
+      },
+      "wait4_block_input": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_block_output": {
+        "count": 5,
+        "maximum": 0.0,
+        "median": 0.0,
+        "minimum": 0.0
+      },
+      "wait4_cpu_ms": {
+        "count": 5,
+        "maximum": 829.0519999999999,
+        "median": 809.5919999999999,
+        "minimum": 805.4759999999999
+      },
+      "wait4_involuntary_context_switches": {
+        "count": 5,
+        "maximum": 600.0,
+        "median": 435.0,
+        "minimum": 433.0
+      },
+      "wait4_major_faults": {
+        "count": 5,
+        "maximum": 29.0,
+        "median": 29.0,
+        "minimum": 29.0
+      },
+      "wait4_minor_faults": {
+        "count": 5,
+        "maximum": 23675.0,
+        "median": 23453.0,
+        "minimum": 23287.0
+      },
+      "wait4_voluntary_context_switches": {
+        "count": 5,
+        "maximum": 1315.0,
+        "median": 1296.0,
+        "minimum": 1283.0
+      },
+      "wall_ms": {
+        "count": 5,
+        "maximum": 1196.8276670086198,
+        "median": 1105.3255420119967,
+        "minimum": 1089.6164170117117
+      },
+      "workflow": "openunity-native-inventory"
+    }
+  ]
+}

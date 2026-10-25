@@ -388,12 +388,14 @@ class OwnedProcess:
         for reader in self.readers:
             reader.join(timeout=PROCESS_CLEANUP_TIMEOUT)
 
-    def finish(self, reason: str = "stdin-eof") -> dict[str, Any]:
+    def _close_stdin(self) -> None:
         if self.process.stdin is not None:
             try:
                 self.process.stdin.close()
             except BrokenPipeError:
                 pass
+
+    def _wait_for_root(self, reason: str) -> tuple[str, Any]:
         deadline = time.monotonic() + PROCESS_CLEANUP_TIMEOUT
         termination = reason
         waited = None
@@ -413,30 +415,38 @@ class OwnedProcess:
                 termination = self.terminate("family-rss-limit")
                 break
             time.sleep(0.001)
-        wait4_user = None
-        wait4_system = None
-        wait4_maxrss = None
-        wait4_counters: dict[str, int] = {}
-        if os.name != "nt" and waited is None:
+        return termination, waited
+
+    def _reap_root(self, waited: Any) -> tuple[int, dict[str, Any]]:
+        """Reap the owned root and normalize its OS resource accounting."""
+        if os.name == "nt":
+            return self.process.wait(timeout=PROCESS_CLEANUP_TIMEOUT), {}
+
+        if waited is None:
             waited_pid, status, usage = os.wait4(self.process.pid, 0)
             if waited_pid != self.process.pid:
                 raise RuntimeError("wait4 returned an unexpected child")
-            returncode = os.waitstatus_to_exitcode(status)
-            self.process.returncode = returncode
-            wait4_user = usage.ru_utime * 1000
-            wait4_system = usage.ru_stime * 1000
-            wait4_maxrss = normalize_wait4_maxrss(usage.ru_maxrss)
-            wait4_counters = resource_counters(usage)
-        elif os.name != "nt":
-            status, usage = waited
-            returncode = os.waitstatus_to_exitcode(status)
-            self.process.returncode = returncode
-            wait4_user = usage.ru_utime * 1000
-            wait4_system = usage.ru_stime * 1000
-            wait4_maxrss = normalize_wait4_maxrss(usage.ru_maxrss)
-            wait4_counters = resource_counters(usage)
         else:
-            returncode = self.process.wait(timeout=PROCESS_CLEANUP_TIMEOUT)
+            status, usage = waited
+
+        returncode = os.waitstatus_to_exitcode(status)
+        self.process.returncode = returncode
+        metrics = {
+            "root_user_cpu_ms": usage.ru_utime * 1000,
+            "root_system_cpu_ms": usage.ru_stime * 1000,
+            "wait4_user_cpu_ms": usage.ru_utime * 1000,
+            "wait4_system_cpu_ms": usage.ru_stime * 1000,
+            "wait4_maxrss": normalize_wait4_maxrss(usage.ru_maxrss),
+            "wait4_maxrss_unit": "bytes",
+            "wait4_cpu_scope": "OS wait4 resource usage; may include waited descendants",
+            **resource_counters(usage),
+        }
+        return returncode, metrics
+
+    def finish(self, reason: str = "stdin-eof") -> dict[str, Any]:
+        self._close_stdin()
+        termination, waited = self._wait_for_root(reason)
+        returncode, root_metrics = self._reap_root(waited)
         self._terminate_observed_descendants()
         self._wait_for_observed_descendants()
         for reader in self.readers:
@@ -450,14 +460,7 @@ class OwnedProcess:
             "termination_error": self.termination_error,
             "reader_threads_alive": [reader.name for reader in self.readers if reader.is_alive()],
             "remaining_observed_descendants": self._remaining_observed_descendants(),
-            "root_user_cpu_ms": wait4_user,
-            "root_system_cpu_ms": wait4_system,
-            "wait4_user_cpu_ms": wait4_user,
-            "wait4_system_cpu_ms": wait4_system,
-            "wait4_maxrss": wait4_maxrss,
-            "wait4_maxrss_unit": "bytes",
-            "wait4_cpu_scope": "OS wait4 resource usage; may include waited descendants",
-            **wait4_counters,
+            **root_metrics,
             "sampled_cpu_accounting": "recursive psutil deltas; lower bound and may miss exited-child tail",
             "stderr": self.stderr.decode(errors="replace")[-16_384:],
             **usage,
@@ -567,6 +570,41 @@ class McpClient:
         return self.request("tools/call", {"name": name, "arguments": resolved}, label)
 
 
+def discover_catalog(client: McpClient, work_dir: Path) -> tuple[dict[str, Any] | None, str | None]:
+    catalog_path = work_dir / "catalog.json"
+    catalog = client.request("tools/list", {}, "tools-list", retain_response=not catalog_path.exists())
+    if not catalog_path.exists() and not response_failed(catalog):
+        catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
+    elif catalog_path.exists():
+        if response_failed(catalog):
+            return json.loads(catalog_path.read_text()), "tools/list failed; cached catalog was not validated"
+        catalog = json.loads(catalog_path.read_text())
+    elif response_failed(catalog):
+        return catalog, "tools/list failed; catalog was not written"
+    return catalog, None
+
+
+def execute_workflow_cases(client: McpClient, child: OwnedProcess,
+                           workflow: dict[str, Any]) -> str | None:
+    failure: str | None = None
+    for case in workflow.get("cases", []):
+        repeat = int(case.get("repeat", 1))
+        for iteration in range(repeat):
+            case_label = case.get("label", case["name"])
+            label = f"{case_label}#{iteration + 1}"
+            response = client.tool(case["name"], case.get("arguments", {}), label)
+            if response_failed(response):
+                failure = failure or f"{label}: tool failure"
+            for alias, path in case.get("capture", {}).items():
+                try:
+                    client.references[alias] = value_at_path(response, path)
+                except (KeyError, IndexError, TypeError) as exc:
+                    failure = failure or f"{label}: capture {alias} failed: {exc}"
+            if child.abort_reason:
+                return failure or child.abort_reason
+    return failure
+
+
 def run_workflow(plan: dict[str, Any], workflow: dict[str, Any], round_number: int,
                  executable: Path, worker: Path | None, work_dir: Path,
                  timeout: float, rss_limit: int) -> dict[str, Any]:
@@ -601,33 +639,9 @@ def run_workflow(plan: dict[str, Any], workflow: dict[str, Any], round_number: i
             failure = "initialize failed"
             raise RuntimeError("initialize failed; MCP session is not usable")
         client._write({"jsonrpc": "2.0", "method": "notifications/initialized"})
-        catalog_path = work_dir / "catalog.json"
-        catalog = client.request("tools/list", {}, "tools-list", retain_response=not catalog_path.exists())
-        if not catalog_path.exists() and not response_failed(catalog):
-            catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
-        elif catalog_path.exists():
-            if response_failed(catalog):
-                failure = "tools/list failed; cached catalog was not validated"
-            catalog = json.loads(catalog_path.read_text())
-        elif response_failed(catalog):
-            failure = "tools/list failed; catalog was not written"
-        for case in workflow.get("cases", []):
-            repeat = int(case.get("repeat", 1))
-            for iteration in range(repeat):
-                label = f"{case['name']}#{iteration + 1}"
-                response = client.tool(case["name"], case.get("arguments", {}), label)
-                if response_failed(response):
-                    failure = failure or f"{label}: tool failure"
-                for alias, path in case.get("capture", {}).items():
-                    try:
-                        client.references[alias] = value_at_path(response, path)
-                    except (KeyError, IndexError, TypeError) as exc:
-                        failure = failure or f"{label}: capture {alias} failed: {exc}"
-                if child.abort_reason:
-                    failure = failure or child.abort_reason
-                    break
-            if child.abort_reason:
-                break
+        catalog, catalog_failure = discover_catalog(client, work_dir)
+        execution_failure = execute_workflow_cases(client, child, workflow)
+        failure = catalog_failure or execution_failure
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
     finally:
