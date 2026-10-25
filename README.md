@@ -11,8 +11,8 @@ require Node.js.
 ## Install
 
 Prebuilt releases include `rea`, the MCP server, and the Ghidra worker for
-macOS, Linux, and Windows x64. No Node.js, Rust toolchain, or administrator
-account is needed.
+macOS, Linux, and Windows on ARM64 and x86-64. No Node.js, Rust toolchain, or
+administrator account is needed.
 
 ```sh
 curl -fsSL https://github.com/nanashili/rea-rust/releases/latest/download/install.sh -o install-rea.sh
@@ -99,8 +99,8 @@ Release installs already include the Ghidra worker.
 ## Status
 
 GitHub Actions builds and smoke-tests macOS and Linux archives on both
-architectures, plus a Windows x64 archive, before publishing a tagged release.
-Windows ARM64, musl Linux, and Frida-enabled binaries are not provided.
+architectures, plus Windows ARM64 and x64 archives, before publishing a tagged
+release. Musl Linux and Frida-enabled binaries are not provided.
 Other analysis providers and external tools require their own installations.
 
 Known behavior differences and test coverage are recorded in the

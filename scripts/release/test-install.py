@@ -21,6 +21,7 @@ from pathlib import Path
 REPOSITORY = Path(__file__).resolve().parents[2]
 INSTALLER = REPOSITORY / "install.sh"
 TARGET = "x86_64-unknown-linux-gnu"
+ARCHIVE_NAME = "rea-rust-x86_64-linux-gnu.tar.gz"
 VERSION = "6.7.0"
 
 
@@ -59,13 +60,13 @@ class InstallerTests(unittest.TestCase):
         )
         script.chmod(0o755)
 
-    def _write_fake_uname(self) -> None:
+    def _write_fake_uname(self, architecture: str = "x86_64") -> None:
         script = self.fake_bin / "uname"
         script.write_text(
             "#!/bin/sh\n"
             "case ${1:-} in\n"
             "  -s) printf '%s\\n' Linux ;;\n"
-            "  -m) printf '%s\\n' x86_64 ;;\n"
+            f"  -m) printf '%s\\n' {architecture} ;;\n"
             "  *) exit 1 ;;\n"
             "esac\n"
         )
@@ -107,22 +108,22 @@ class InstallerTests(unittest.TestCase):
             path.write_text(body)
             path.chmod(0o755)
 
-        archive = self.release / f"rea-rust-{TARGET}.tar.gz"
+        archive = self.release / ARCHIVE_NAME
         with tarfile.open(archive, "w:gz") as handle:
             handle.add(payload, arcname="rea-rust")
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         (self.release / "SHA256SUMS").write_text(
-            f"{digest}  rea-rust-{TARGET}.tar.gz\n"
+            f"{digest}  {ARCHIVE_NAME}\n"
         )
 
     def _refresh_release(self) -> None:
         payload = self.root / "payload" / "rea-rust"
-        archive = self.release / f"rea-rust-{TARGET}.tar.gz"
+        archive = self.release / ARCHIVE_NAME
         with tarfile.open(archive, "w:gz") as handle:
             handle.add(payload, arcname="rea-rust")
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         (self.release / "SHA256SUMS").write_text(
-            f"{digest}  rea-rust-{TARGET}.tar.gz\n"
+            f"{digest}  {ARCHIVE_NAME}\n"
         )
 
     def _run(self, *, version: str = VERSION, mutate_release=None, paths_with_spaces: bool = False, fail_activation: bool = False) -> subprocess.CompletedProcess[str]:
@@ -165,13 +166,30 @@ class InstallerTests(unittest.TestCase):
         manifest = self.root / "data" / "versions" / VERSION / TARGET / ".rea-rust-install"
         self.assertIn("version=6.7.0", manifest.read_text())
 
+    def test_installs_linux_arm64_archive_with_canonical_target(self) -> None:
+        self._write_fake_uname("aarch64")
+        target = "aarch64-unknown-linux-gnu"
+        archive_name = "rea-rust-aarch64-linux-gnu.tar.gz"
+        manifest = self.root / "payload" / "rea-rust" / "release.json"
+        manifest.write_text(f'{{"version":"{VERSION}","target":"{target}"}}\n')
+        self._refresh_release()
+        (self.release / ARCHIVE_NAME).rename(self.release / archive_name)
+        checksums = self.release / "SHA256SUMS"
+        checksums.write_text(checksums.read_text().replace(ARCHIVE_NAME, archive_name))
+
+        result = self._run()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        installation = self.root / "data" / "versions" / VERSION / target
+        self.assertTrue((installation / "bin" / "rea").is_file())
+        self.assertIn(f"target={target}\n", (installation / ".rea-rust-install").read_text())
+
     def test_bad_checksum_does_not_touch_existing_install(self) -> None:
         first = self._run()
         self.assertEqual(first.returncode, 0, first.stderr)
         rea_link = self.root / "user-bin" / "rea"
         old_target = os.readlink(rea_link)
         checksum = self.release / "SHA256SUMS"
-        checksum.write_text("0" * 64 + f"  rea-rust-{TARGET}.tar.gz\n")
+        checksum.write_text("0" * 64 + f"  {ARCHIVE_NAME}\n")
         result = self._run()
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(os.readlink(rea_link), old_target)
@@ -261,7 +279,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(os.readlink(link), str(old_root / "bin" / "rea"))
 
     def test_rejects_archive_symlink_before_extraction(self) -> None:
-        archive = self.release / f"rea-rust-{TARGET}.tar.gz"
+        archive = self.release / ARCHIVE_NAME
         payload = self.root / "payload" / "rea-rust"
         with tarfile.open(archive, "w:gz") as handle:
             handle.add(payload, arcname="rea-rust")
@@ -271,7 +289,7 @@ class InstallerTests(unittest.TestCase):
             handle.addfile(link)
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         (self.release / "SHA256SUMS").write_text(
-            f"{digest}  rea-rust-{TARGET}.tar.gz\n"
+            f"{digest}  {ARCHIVE_NAME}\n"
         )
         result = self._run()
         self.assertNotEqual(result.returncode, 0)

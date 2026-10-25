@@ -4,7 +4,6 @@ $ErrorActionPreference = 'Stop'
 # The script never edits PATH, PowerShell profiles, or machine-wide state.
 
 $Repository = 'nanashili/rea-rust'
-$Target = 'x86_64-pc-windows-msvc'
 $RequestedVersion = if ($env:REA_VERSION) { $env:REA_VERSION } else { '' }
 $InstallRoot = if ($env:REA_INSTALL_ROOT) { $env:REA_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA 'rea-rust' }
 $BinDirectory = if ($env:REA_BIN_DIR) { $env:REA_BIN_DIR } else { Join-Path $InstallRoot 'bin' }
@@ -15,6 +14,20 @@ $CleanupError = $null
 
 function Fail([string] $Message) {
     throw "rea-rust installer: $Message"
+}
+
+function Get-ReleaseTarget {
+    # WOW64 reports the native OS architecture here when the shell is emulated.
+    $architecture = if ($env:PROCESSOR_ARCHITEW6432) {
+        $env:PROCESSOR_ARCHITEW6432
+    } else {
+        $env:PROCESSOR_ARCHITECTURE
+    }
+    switch ($architecture) {
+        'AMD64' { return 'x86_64-pc-windows-msvc' }
+        'ARM64' { return 'aarch64-pc-windows-msvc' }
+        default { Fail "unsupported Windows architecture: $architecture" }
+    }
 }
 
 function Resolve-AbsoluteDirectory([string] $Path, [string] $Name) {
@@ -246,6 +259,8 @@ function Activate-Release([string] $VersionedExecutable) {
 }
 
 try {
+    $Target = Get-ReleaseTarget
+
     $InstallRoot = Resolve-AbsoluteDirectory $InstallRoot 'REA_INSTALL_ROOT'
     $BinDirectory = Resolve-AbsoluteDirectory $BinDirectory 'REA_BIN_DIR'
     Assert-NoReparseAncestors $InstallRoot 'the installation root'

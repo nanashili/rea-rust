@@ -7,7 +7,9 @@ executable and a local Invoke-WebRequest shim, so no GitHub release is needed.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
@@ -19,7 +21,6 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 INSTALLER = ROOT / "install.ps1"
-TARGET = "x86_64-pc-windows-msvc"
 VERSION = "6.7.0"
 
 
@@ -80,7 +81,7 @@ Add-Type -TypeDefinition $source -OutputType ConsoleApplication -OutputAssembly 
         raise AssertionError(result.stdout + result.stderr)
 
 
-def make_archive(fixture: Path) -> Path:
+def make_archive(fixture: Path, target: str) -> Path:
     root = fixture / "rea-rust"
     (root / "bin").mkdir(parents=True)
     shutil.copy2(fixture / "fake.exe", root / "bin/rea.exe")
@@ -89,13 +90,17 @@ def make_archive(fixture: Path) -> Path:
     (root / "LICENSE").write_text("fixture\n", encoding="utf-8")
     (root / "README.md").write_text("fixture\n", encoding="utf-8")
     (root / "release.json").write_text(
-        '{"name":"rea-rust","schema_version":1,"version":"6.7.0",'
-        '"target":"x86_64-pc-windows-msvc","source_commit":"'
-        + "0" * 40
-        + '","files":{}}\n',
+        json.dumps({
+            "name": "rea-rust",
+            "schema_version": 1,
+            "version": VERSION,
+            "target": target,
+            "source_commit": "0" * 40,
+            "files": {},
+        }) + "\n",
         encoding="utf-8",
     )
-    archive = fixture / f"rea-rust-{TARGET}.zip"
+    archive = fixture / f"rea-rust-{target}.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
         for path in sorted(root.rglob("*")):
             if path.is_file():
@@ -115,7 +120,44 @@ function Invoke-WebRequest {{
 '''
 
 
+def check_architecture_selection(environment: dict[str, str], target: str) -> None:
+    native_architecture = {
+        "x86_64-pc-windows-msvc": "AMD64",
+        "aarch64-pc-windows-msvc": "ARM64",
+    }[target]
+    emulated_environment = {
+        **environment,
+        "PROCESSOR_ARCHITECTURE": "x86",
+        "PROCESSOR_ARCHITEW6432": native_architecture,
+    }
+    emulated = run_powershell(installer_script(), emulated_environment)
+    if emulated.returncode:
+        raise AssertionError("emulated shell selected the wrong archive: " + emulated.stderr)
+
+    unsupported_root = Path(environment["REA_INSTALL_ROOT"]).parent / "unsupported install"
+    unsupported_environment = {
+        **environment,
+        "REA_INSTALL_ROOT": str(unsupported_root),
+        "REA_BIN_DIR": str(unsupported_root / "bin"),
+        "PROCESSOR_ARCHITECTURE": "x86",
+        "PROCESSOR_ARCHITEW6432": "",
+    }
+    unsupported = run_powershell(installer_script(), unsupported_environment)
+    if unsupported.returncode == 0 or "unsupported Windows architecture" not in unsupported.stderr:
+        raise AssertionError("unsupported architecture was not rejected")
+    if unsupported_root.exists():
+        raise AssertionError("unsupported architecture created installation directories")
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--target",
+        required=True,
+        choices=("x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"),
+        help="expected native target of this Windows runner",
+    )
+    target = parser.parse_args().target
     if os.name != "nt":
         print("Windows installer tests require Windows; skipped")
         return 0
@@ -123,7 +165,7 @@ def main() -> int:
         fixture = Path(temporary) / "fixture"
         fixture.mkdir()
         make_fake_executable(fixture)
-        make_archive(fixture)
+        make_archive(fixture, target)
         install_root = Path(temporary) / "install root"
         bin_dir = Path(temporary) / "bin directory"
         environment = {
@@ -135,6 +177,7 @@ def main() -> int:
         success = run_powershell(installer_script(), environment)
         if success.returncode:
             raise AssertionError(success.stdout + success.stderr)
+        check_architecture_selection(environment, target)
         launcher = bin_dir / "rea.cmd"
         if not launcher.is_file() or VERSION not in launcher.read_text(encoding="utf-8"):
             raise AssertionError("installer did not create the stable launcher")
@@ -185,7 +228,7 @@ def main() -> int:
             if rejected.returncode == 0 or "reparse" not in rejected.stderr.lower():
                 raise AssertionError("version-directory junction was not rejected")
 
-        (fixture / "SHA256SUMS").write_text("0" * 64 + f" *rea-rust-{TARGET}.zip\n", encoding="ascii")
+        (fixture / "SHA256SUMS").write_text("0" * 64 + f" *rea-rust-{target}.zip\n", encoding="ascii")
         failed = run_powershell(installer_script(), environment)
         if failed.returncode == 0 or not launcher.is_file():
             raise AssertionError("checksum failure did not preserve the active launcher")

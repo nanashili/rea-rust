@@ -2,9 +2,8 @@
 
 The native releases bundle the CLI, MCP server, Ghidra worker, and investigation
 skill. They support macOS 13+, Linux with glibc 2.35+ (such as Ubuntu 22.04+),
-and Windows 10+ x64. macOS and Linux releases are available on ARM64 and
-x86-64; the initial Windows release is x86-64 only. Windows ARM64 and musl
-Linux do not have prebuilt packages.
+Windows 10+ x64, and Windows 11 ARM64. Each platform has ARM64 and x86-64
+archives. Musl Linux does not have prebuilt packages.
 
 ```sh
 curl -fsSL https://github.com/nanashili/rea-rust/releases/latest/download/install.sh -o install-rea.sh
@@ -23,10 +22,16 @@ powershell -ExecutionPolicy Bypass -File .\install-rea.ps1
 
 The Unix installer requires `curl` or `wget`, `tar`, and `sha256sum` or `shasum`.
 The Windows installer uses PowerShell's built-in download, ZIP, and SHA-256
-support. Both install under your account, verify the archive against the
+support and selects the native Windows architecture, including from an emulated
+shell. Both install under your account, verify the archive against the
 release's `SHA256SUMS`, and require no sudo, administrator account, or package
 manager. Other providers, browser tooling, and platform utilities are installed
 separately when needed.
+
+Linux download names omit the Rust vendor field, for example
+`rea-rust-x86_64-linux-gnu.tar.gz` and `rea-rust-aarch64-linux-gnu.tar.gz`.
+The manifest and installation directory keep the canonical Rust target, such as
+`x86_64-unknown-linux-gnu`.
 
 ## Paths and versions
 
@@ -35,7 +40,8 @@ The default executable is `~/.local/bin/rea`. Files live under
 The Ghidra worker stays beside the real executable; keep that layout intact.
 
 On Windows, files live under
-`%LOCALAPPDATA%\rea-rust\versions\<version>\x86_64-pc-windows-msvc`.
+`%LOCALAPPDATA%\rea-rust\versions\<version>\<target>`, where `<target>` is
+`x86_64-pc-windows-msvc` or `aarch64-pc-windows-msvc`.
 The stable launcher is `%LOCALAPPDATA%\rea-rust\bin\rea.cmd`; the worker stays
 beside `rea.exe` in the versioned directory.
 

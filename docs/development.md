@@ -18,8 +18,8 @@ default target directories; adjust executable paths if you set `CARGO_TARGET_DIR
 Rust is pinned in `rust-toolchain.toml`. Native dependencies require a C/C++20
 compiler. Use GCC 12+ on Linux (`CC=gcc-12 CXX=g++-12 cargo build ...`). On
 Windows, install Visual Studio 2022 Build Tools with the Desktop C++ workload,
-the MSVC x64 toolchain, and a Windows 10/11 SDK, then build from a Developer
-PowerShell. Provider tools such as LLDB, Swift, JADX, and mitmproxy are needed
+the MSVC x64 or ARM64 toolchain for your machine, and a Windows 10/11 SDK, then
+build from a Developer PowerShell. Provider tools such as LLDB, Swift, JADX, and mitmproxy are needed
 only for the workflows that use them.
 
 ## Ghidra worker
@@ -108,10 +108,9 @@ directory. See the [header](../crates/platform/rea-ffi/include/rea.h) and
 
 ## Releases
 
-The [release workflow](../.github/workflows/release.yml) builds five native
-archives on pushes and pull requests: macOS and Linux on ARM64 and x86-64, plus
-Windows x64 (`x86_64-pc-windows-msvc`). Tagging the commit with `v` followed by
-the `rea` crate version publishes a release after every platform passes. Manual
+The [release workflow](../.github/workflows/release.yml) builds six native
+archives on pushes and pull requests: macOS, Linux, and Windows on ARM64 and
+x86-64. Tagging the commit with `v` followed by the `rea` crate version publishes a release after every platform passes. Manual
 workflow runs build downloadable artifacts without publishing.
 
 Each archive contains the CLI, Ghidra worker, investigation skill, license,
@@ -121,8 +120,20 @@ through CLI, MCP, client registration, and Ghidra decompilation before upload.
 Each installer runs `rea --verify-installation` before activation, using the
 runtime's own manifest parser to confirm the release identity.
 
-Windows release builds use the MSVC x64 toolchain and package a ZIP archive.
-Windows ARM64 builds are source-only until a CI lane and smoke test are added.
+Windows release builds use native x64 and ARM64 MSVC runners and package ZIP
+archives (`x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`). Both run the
+installer checks and packaged CLI/MCP/Ghidra smoke tests. Run the Windows
+installer checks locally with:
+
+```powershell
+python scripts/release/test-install-windows.py --target aarch64-pc-windows-msvc
+# Use --target x86_64-pc-windows-msvc on x64 Windows.
+```
+
+Linux archive and Actions artifact names omit the vendor field (for example,
+`rea-rust-x86_64-linux-gnu.tar.gz` and `release-x86_64-linux-gnu`). Cargo builds,
+release manifests, and installation identities still use the canonical Rust
+targets, such as `x86_64-unknown-linux-gnu`.
 
 To package an existing target build locally, using Python 3.11+:
 

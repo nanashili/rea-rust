@@ -61,8 +61,16 @@ jobs:
         run: python3 scripts/release/test-install.py
 
   windows-installer:
-    name: Test Windows installer
-    runs-on: windows-2025
+    name: Test Windows installer (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+          - target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,7 +82,7 @@ jobs:
 
       - name: Run Windows installer black-box tests
         shell: pwsh
-        run: python scripts/release/test-install-windows.py
+        run: python scripts/release/test-install-windows.py --target "${{ matrix.target }}"
 
   build:
     name: Build (${{ matrix.target }})
@@ -94,13 +102,22 @@ jobs:
             archive: rea-rust-x86_64-apple-darwin.tar.gz
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
-            archive: rea-rust-aarch64-unknown-linux-gnu.tar.gz
+            artifact_target: aarch64-linux-gnu
+            archive: rea-rust-aarch64-linux-gnu.tar.gz
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
-            archive: rea-rust-x86_64-unknown-linux-gnu.tar.gz
+            artifact_target: x86_64-linux-gnu
+            archive: rea-rust-x86_64-linux-gnu.tar.gz
           - target: x86_64-pc-windows-msvc
             runner: windows-2025
             archive: rea-rust-x86_64-pc-windows-msvc.zip
+            msvc_arch: amd64
+            msvc_component: Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+          - target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+            archive: rea-rust-aarch64-pc-windows-msvc.zip
+            msvc_arch: arm64
+            msvc_component: Microsoft.VisualStudio.Component.VC.Tools.ARM64
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: "13.0"
@@ -127,16 +144,16 @@ jobs:
         shell: pwsh
         run: |
           $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $vsPath = & $vswhere -latest -products * -requires "${{ matrix.msvc_component }}" -property installationPath
           if (-not $vsPath) {
-            throw "Visual Studio with the x64 MSVC toolchain was not found"
+            throw "Visual Studio with the ${{ matrix.msvc_arch }} MSVC toolchain was not found"
           }
           "REA_VS_PATH=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           $devCmd = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
-          $vsEnvironment = cmd.exe /d /s /c "`"$devCmd`" -arch=amd64 -host_arch=amd64 >nul && set"
+          $vsEnvironment = cmd.exe /d /s /c "`"$devCmd`" -arch=${{ matrix.msvc_arch }} -host_arch=${{ matrix.msvc_arch }} >nul && set"
           if ($LASTEXITCODE -ne 0) {
-            throw "VsDevCmd.bat could not initialize the x64 MSVC environment"
+            throw "VsDevCmd.bat could not initialize the ${{ matrix.msvc_arch }} MSVC environment"
           }
 
           $pathValue = $null
@@ -178,9 +195,9 @@ jobs:
             target/${{ matrix.target }}/release
             ghidra-rust-worker/target/release
             ghidra-rust-worker/target/${{ matrix.target }}/release
-          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ matrix.target == 'x86_64-pc-windows-msvc' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-${{ github.sha }}
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ matrix.target == 'x86_64-pc-windows-msvc' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-
+            cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-
 
       - name: Build REA
         if: runner.os != 'Windows'
@@ -204,7 +221,7 @@ jobs:
         run: |
           $devCmd = Join-Path $env:REA_VS_PATH "Common7\Tools\VsDevCmd.bat"
           $env:RUSTFLAGS = '-C target-feature=+crt-static'
-          $command = "call `"$devCmd`" -arch=amd64 -host_arch=amd64 && cargo build --locked --release --target ${{ matrix.target }} -p rea && cargo build --locked --release --manifest-path ghidra-rust-worker/Cargo.toml --target ${{ matrix.target }}"
+          $command = "call `"$devCmd`" -arch=${{ matrix.msvc_arch }} -host_arch=${{ matrix.msvc_arch }} && cargo build --locked --release --target ${{ matrix.target }} -p rea && cargo build --locked --release --manifest-path ghidra-rust-worker/Cargo.toml --target ${{ matrix.target }}"
           cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -213,14 +230,21 @@ jobs:
         shell: pwsh
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo test --locked --release --target x86_64-pc-windows-msvc -p rea-host process::launcher
+        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-host process::launcher
 
       - name: Test Windows Evidence publication
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo test --locked --release --target x86_64-pc-windows-msvc -p rea-host fs::staged_output
+        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-host fs::staged_output
+
+      - name: Test Windows release target identity
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-application package_identity::tests::rejects_standalone_release_with_unexpected_target
 
       - name: Verify Windows runtime dependencies
         if: runner.os == 'Windows'
@@ -272,7 +296,7 @@ jobs:
       - name: Upload platform archive
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-${{ matrix.target }}
+          name: release-${{ matrix.artifact_target || matrix.target }}
           path: dist/${{ matrix.archive }}
           if-no-files-found: error
           retention-days: 14
@@ -354,7 +378,7 @@ jobs:
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
             "${release_flags[@]}" \
-            --notes "Native REA for macOS 13+ and Linux (glibc 2.35+) on ARM64 and x86-64, plus Windows x86-64. Each archive includes the CLI, stdio MCP server, Ghidra worker, and investigation skill. See [installation and MCP setup](https://github.com/nanashili/rea-rust/blob/$GITHUB_REF_NAME/docs/installation.md). Download install.sh or install.ps1 to install without Node.js, Cargo, or sudo; archives are verified against SHA256SUMS." \
+            --notes "Native REA for macOS 13+ and Linux (glibc 2.35+) on ARM64 and x86-64, plus Windows on x86-64 and ARM64. Each archive includes the CLI, stdio MCP server, Ghidra worker, and investigation skill. See [installation and MCP setup](https://github.com/nanashili/rea-rust/blob/$GITHUB_REF_NAME/docs/installation.md). Download install.sh or install.ps1 to install without Node.js, Cargo, or sudo; archives are verified against SHA256SUMS." \
             dist/rea-rust-* \
             dist/SHA256SUMS \
             install.sh \

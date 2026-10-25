@@ -24,6 +24,7 @@ TARGETS = (
     "aarch64-unknown-linux-gnu",
     "x86_64-unknown-linux-gnu",
     "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
 )
 SEMVER = re.compile(
     r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
@@ -160,7 +161,8 @@ def main():
     is_windows = options.target.endswith("-windows-msvc")
     archive_extension = ".zip" if is_windows else ".tar.gz"
     executable_suffix = ".exe" if is_windows else ""
-    output = output_directory / f"rea-rust-{options.target}{archive_extension}"
+    archive_target = options.target.replace("-unknown-linux-", "-linux-")
+    output = output_directory / f"rea-rust-{archive_target}{archive_extension}"
     rea = options.rea or ROOT / f"target/{options.target}/release/rea{executable_suffix}"
     worker = options.worker or ROOT / (
         f"ghidra-rust-worker/target/{options.target}/release/rea-ghidra-rust-worker{executable_suffix}"

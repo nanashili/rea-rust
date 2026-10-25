@@ -5,7 +5,9 @@ REPOSITORY=nanashili/rea-rust
 INSTALL_ROOT=${REA_INSTALL_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/rea-rust}
 BIN_DIR=${REA_BIN_DIR:-$HOME/.local/bin}
 REQUESTED_VERSION=${REA_VERSION:-}
-TARGET='' VERSION_TAG='' DOWNLOAD_BASE='' TEMP_DIR='' ARCHIVE='' CHECKSUMS='' ARCHIVE_NAME='' STAGE=''
+TARGET=''
+ARCHIVE_TARGET=''
+VERSION_TAG='' DOWNLOAD_BASE='' TEMP_DIR='' ARCHIVE='' CHECKSUMS='' ARCHIVE_NAME='' STAGE=''
 RELEASE_VERSION='' VERSION_DIR=''
 
 error() {
@@ -46,6 +48,10 @@ detect_target() {
         Linux:arm64|Linux:aarch64) TARGET=aarch64-unknown-linux-gnu ;;
         *) error "unsupported platform: $(uname -s) $(uname -m)" ;;
     esac
+    ARCHIVE_TARGET=$TARGET
+    case "$TARGET" in
+        *-unknown-linux-gnu) ARCHIVE_TARGET="${TARGET%%-unknown-linux-gnu}-linux-gnu" ;;
+    esac
 }
 
 configure_download() {
@@ -75,7 +81,7 @@ resolve_paths() {
 
 download_release() {
     TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rea-rust-install.XXXXXX")
-    ARCHIVE_NAME="rea-rust-$TARGET.tar.gz"
+    ARCHIVE_NAME="rea-rust-$ARCHIVE_TARGET.tar.gz"
     ARCHIVE="$TEMP_DIR/$ARCHIVE_NAME"
     CHECKSUMS="$TEMP_DIR/SHA256SUMS"
     STAGE="$TEMP_DIR/stage"
