@@ -16,10 +16,10 @@ use std::{
 };
 use tempfile::Builder;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, DELETE, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+    CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_FLAG_BACKUP_SEMANTICS, FILE_RENAME_INFO,
+    BY_HANDLE_FILE_INFORMATION, CreateFileW, DELETE, FILE_FLAG_BACKUP_SEMANTICS, FILE_RENAME_INFO,
     FILE_RENAME_INFO_0, FILE_SHARE_READ, FILE_SHARE_WRITE, FileRenameInfo,
     GetFileInformationByHandle, OPEN_EXISTING, SetFileInformationByHandle,
 };
