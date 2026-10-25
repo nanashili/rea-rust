@@ -13,7 +13,6 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 pub const OPERATION: &str = "inspect_sqlite_database";
@@ -140,12 +139,11 @@ fn build_evidence_with_input(
 ) -> Result<Arc<ArtifactEvidence>, Failure> {
     verify_inactive_journal(path)?;
 
-    let suffix = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or_default();
-    let root = std::env::temp_dir().join(format!("rea-sqlite-{suffix}"));
-    fs::create_dir(&root).map_err(|e| execution(path, e.to_string()))?;
+    let root = tempfile::Builder::new()
+        .prefix("rea-sqlite-")
+        .tempdir()
+        .map_err(|e| execution(path, e.to_string()))?
+        .keep();
     let temporary = root.join("database.sqlite");
     if let Err(error) = fs::write(&temporary, &snapshot.bytes) {
         retain_root(&retained_roots, root);
