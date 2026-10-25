@@ -10,6 +10,7 @@ mod failure;
 mod inventory;
 mod macho_starts;
 mod metadata;
+mod pe_exports;
 mod program_retention;
 mod protocol;
 mod server;

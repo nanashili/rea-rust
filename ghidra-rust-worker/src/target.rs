@@ -7,13 +7,14 @@ use object::read::macho::{FatArch, MachOFatFile32, MachOFatFile64};
 use object::{Architecture, BinaryFormat, Object, ObjectSection, SectionKind};
 
 use crate::encoding::encoded_size;
-use crate::macho_starts;
-use crate::protocol::{MAX_BATCH_BYTES, MAX_NAME_BYTES, Segment, address};
+use crate::inventory::{MetadataFunction, normalize};
+use crate::protocol::{MAX_BATCH_BYTES, MAX_INVENTORY, MAX_NAME_BYTES, Segment, address};
+use crate::{macho_starts, pe_exports};
 
 pub struct TargetImage {
     pub bytes: Vec<u8>,
     pub sections: Vec<Segment>,
-    pub metadata_functions: Vec<u64>,
+    pub metadata_functions: Vec<MetadataFunction>,
     pub go_build_id_markers: Vec<u64>,
     /// Executable section ranges that admit inventory entries.
     pub code_ranges: Vec<Range<u64>>,
@@ -58,17 +59,8 @@ impl TargetImage {
         let (sections, code_ranges) = read_sections(&file)?;
         let arm = file.architecture() == Architecture::Arm;
         let go_build_id_markers = go_build_id_markers(&file);
-        let mut metadata_functions = macho_starts::function_starts(&file)?;
-        if file.entry() != 0 {
-            metadata_functions.push(file.entry());
-        }
-        let address_mask = if arm { !1 } else { !0 };
-        metadata_functions.retain(|value| {
-            code_ranges
-                .iter()
-                .any(|range| range.contains(&(*value & address_mask)))
-                && !go_build_id_markers.contains(&(*value & address_mask))
-        });
+        let metadata_functions =
+            read_function_metadata(&file, arm, &code_ranges, &go_build_id_markers)?;
 
         Ok(Self {
             bytes,
@@ -215,6 +207,34 @@ fn host_architecture() -> Architecture {
         "x86" => Architecture::I386,
         _ => Architecture::Unknown,
     }
+}
+
+fn read_function_metadata(
+    file: &object::File<'_>,
+    arm: bool,
+    code_ranges: &[Range<u64>],
+    go_build_id_markers: &[u64],
+) -> Result<Vec<MetadataFunction>> {
+    let mut addresses = macho_starts::function_starts(file)?;
+    if file.entry() != 0 {
+        addresses.push(file.entry());
+    }
+    addresses.retain(|value| {
+        let normalized = normalize(*value, arm);
+        code_ranges.iter().any(|range| range.contains(&normalized))
+            && !go_build_id_markers.contains(&normalized)
+    });
+
+    let mut functions = pe_exports::function_symbols(file, arm, code_ranges)?;
+    ensure!(
+        functions.len() + addresses.len() <= MAX_INVENTORY,
+        "Function metadata exceeds the inventory limit"
+    );
+    functions.extend(addresses.into_iter().map(|address| MetadataFunction {
+        address,
+        name: None,
+    }));
+    Ok(functions)
 }
 
 pub fn load_program(path: &Path, bytes: Vec<u8>) -> Result<Program> {

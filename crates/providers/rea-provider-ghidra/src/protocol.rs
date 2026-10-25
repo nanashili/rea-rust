@@ -15,7 +15,7 @@ pub(crate) const MAX_PSEUDOCODE_BYTES: usize = 512 * 1024;
 pub(crate) const WORKER_ARGUMENT: &str = "--rea-rust-ghidra-worker";
 pub(crate) const WORKER_PROTOCOL_NAME: &str = "rea-ghidra-rust-jsonrpc-lines";
 pub(crate) const WORKER_PROTOCOL_VERSION: u64 = 2;
-const CACHE_ID: &str = "ghidra-rust-268c3a4-v12";
+const CACHE_ID: &str = "ghidra-rust-268c3a4-v13";
 const MAX_SEARCH_PATTERN: usize = 4096;
 const MAX_SEARCH_RESULTS: usize = 1000;
 /// Worker inventory limits pinned by `engine().limits`; the worker enforces

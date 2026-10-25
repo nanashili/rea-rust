@@ -11,7 +11,8 @@ use crate::protocol::*;
 // v10: authenticate universal artifacts, then analyze a selected architecture slice.
 // v11: expose bounded source-backed image mapping and masked byte search.
 // v12: expose one structured decoder observation.
-pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v12";
+// v13: combine these facts with named PE exports in the frozen inventory.
+pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v13";
 
 pub fn engine() -> Value {
     json!({
@@ -70,7 +71,7 @@ pub fn engine() -> Value {
 
 pub fn limitations() -> Vec<String> {
     [
-        "The inventory is frozen from loader function symbols in executable sections, the entry point, and Mach-O function-start metadata; loader symbols outside executable sections are excluded. Each entry address has one row with one primary name; other loader symbols at that entry (for example identical-code-folded functions) are saved as aliases, listed by function_aliases and accepted as selectors. Decompilation accepts only addresses selected from that saved inventory. The engine may define the one requested symbol when loader metadata omitted it; the worker does not enumerate or queue other functions during a saved selection.",
+        "The inventory is frozen from loader function symbols, named PE exports in executable sections, the entry point, and Mach-O function-start metadata; symbols outside executable sections and forwarded PE exports are excluded. Each entry address has one row with one primary name; other loader symbols or PE export names at that entry (for example identical-code-folded functions) are saved as aliases, listed by function_aliases and accepted as selectors. Decompilation accepts only addresses selected from that saved inventory. The engine may define the one requested symbol when loader metadata omitted it; the worker does not enumerate or queue other functions during a saved selection.",
         "Saved inventory and completed pseudocode persist; the engine has no Program serialization API. A loaded Program is reused for at most 512 actual decompile attempts and released after 30 seconds without decompiler activity. This bounds its lifetime, not process RAM; an in-flight operation is not interrupted for idle eviction.",
         "Mach-O symbol stubs are named from the indirect symbol table, and calls to known non-returning functions (Ghidra's Mach-O, ELF and PE lists plus the Itanium unwinder) end flow. Other non-returning functions are not discovered. An unconditional branch from a function's extent (up to the next inventory entry) to another inventory entry is decompiled as a tail call; conditional tail branches are still followed.",
         "Uncached functions in one batch are decompiled on up to REA_GHIDRA_RUST_DECOMPILE_THREADS Programs in parallel (default 1), each holding its own copy of the target; results are returned in request order. A Program's earlier decompiles can change later output for the same function, so pseudocode depends on decompile history.",

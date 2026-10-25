@@ -24,7 +24,7 @@ pub const MAX_COUNT: usize = 1_000_000;
 pub const MAX_PSEUDOCODE_BYTES: usize = 512 * 1024;
 pub const MAX_CAPABILITY_BYTES: usize = 64;
 pub const MAX_LIMITATION_BYTES: usize = 4 * 1024;
-pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v9";
+pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v13";
 const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
