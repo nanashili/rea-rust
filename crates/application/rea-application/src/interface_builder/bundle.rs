@@ -30,6 +30,9 @@ pub use super::types::{InterfaceBuilderLimits, MAX_CONNECTIONS, MAX_DOCUMENTS, M
 
 pub const OPERATION: &str = "decode_interface_builder";
 const MAX_DIRECTORY_ENTRIES: usize = 100_000;
+// Installed Xcode 27.0 contains 166,799 entries on the benchmark host. Retain only
+// `.nib` candidates while allowing bounded metadata traversal to discover them.
+const MAX_DIRECTORY_OBSERVATIONS: usize = 200_000;
 const MAX_REPORTED_OMISSIONS: usize = 64;
 const MAX_AGGREGATE_INPUT_BYTES: usize = 32 * 1024 * 1024;
 const MAX_AGGREGATE_DECODE_BYTES: usize = 256 * 1024 * 1024;
@@ -455,7 +458,16 @@ fn select_bundle_candidates(
     cancellation: &Cancellation,
 ) -> Result<CandidateSelection, Failure> {
     let entries = reader
-        .entries(MAX_DIRECTORY_ENTRIES, cancellation)
+        .entries_with_policy(
+            MAX_DIRECTORY_ENTRIES,
+            MAX_DIRECTORY_OBSERVATIONS,
+            cancellation,
+            |entry| stable_directory::DirectoryEntryPolicy {
+                retain: entry.kind == DirectoryEntryKind::Regular
+                    && entry.path.to_ascii_lowercase().ends_with(".nib"),
+                descend: entry.kind == DirectoryEntryKind::Directory,
+            },
+        )
         .map_err(|error| directory_failure(bundle_path, error))?;
     Ok(select_candidates(entries, max_documents))
 }

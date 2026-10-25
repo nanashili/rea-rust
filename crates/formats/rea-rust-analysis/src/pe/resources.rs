@@ -1883,6 +1883,9 @@ fn read_version_key(data: &[u8], cursor: &mut usize, end: usize) -> Result<Strin
 }
 
 fn align_version(offset: usize, end: usize) -> Result<usize, String> {
+    if offset == end {
+        return Ok(end);
+    }
     let aligned = (offset + 3) & !3;
     if aligned > end {
         Err("alignment exceeds block extent".into())
@@ -3640,6 +3643,29 @@ mod tests {
         let malformed_length = u16::try_from(root.len() - 2).unwrap();
         root[0..2].copy_from_slice(&malformed_length.to_le_bytes());
         assert!(super::parse_version_payload(&root, 0).is_err());
+    }
+
+    #[test]
+    fn decodes_version_child_that_ends_at_unaligned_parent_boundary() {
+        let mut fixed = vec![0u8; 52];
+        fixed[0..4].copy_from_slice(&0xfeef04bdu32.to_le_bytes());
+        fixed[8..12].copy_from_slice(&1u32.to_le_bytes());
+        fixed[12..16].copy_from_slice(&2u32.to_le_bytes());
+
+        let mut child = version_block("LeafLong", 0, &[0; 14], &[]);
+        child.truncate(38);
+        child[0..2].copy_from_slice(&38u16.to_le_bytes());
+        assert_eq!(child.len() % 4, 2);
+        let root = version_block("VS_VERSION_INFO", 0, &fixed, &[child]);
+
+        let parsed = super::parse_version_payload(&root, 0).unwrap();
+        assert_eq!(parsed.file_version.as_deref(), Some("0.1.0.2"));
+    }
+
+    #[test]
+    fn permits_alignment_at_block_end() {
+        assert_eq!(super::align_version(398, 398).unwrap(), 398);
+        assert!(super::align_version(399, 398).is_err());
     }
 
     #[test]

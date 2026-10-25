@@ -33,6 +33,12 @@ pub enum DirectoryEntryKind {
     Symlink,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DirectoryEntryPolicy {
+    pub retain: bool,
+    pub descend: bool,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DirectoryEntry {
     /// Slash-separated path relative to the admitted root.
@@ -250,6 +256,28 @@ impl DirectoryReader {
     where
         F: Fn(&DirectoryEntry) -> bool,
     {
+        self.entries_with_policy(maximum_entries, maximum_entries, cancellation, |entry| {
+            DirectoryEntryPolicy {
+                retain: true,
+                descend: entry.kind == DirectoryEntryKind::Directory && should_descend(entry),
+            }
+        })
+    }
+
+    /// Enumerate with separate budgets for examined names and retained entries.
+    /// This lets a caller inspect a large package while retaining only the
+    /// format-specific candidates it can safely decode.
+    #[cfg(unix)]
+    pub fn entries_with_policy<F>(
+        &self,
+        maximum_retained_entries: usize,
+        maximum_examined_entries: usize,
+        cancellation: &Cancellation,
+        policy: F,
+    ) -> Result<Vec<DirectoryEntry>, DirectoryError>
+    where
+        F: Fn(&DirectoryEntry) -> DirectoryEntryPolicy,
+    {
         check_cancelled(cancellation)?;
         self.verify_root_path("enumerating")?;
 
@@ -268,8 +296,10 @@ impl DirectoryReader {
             for name in children {
                 check_cancelled(cancellation)?;
                 examined = examined.saturating_add(1);
-                if examined > maximum_entries {
-                    return Err(DirectoryError::Limit { maximum_entries });
+                if examined > maximum_examined_entries {
+                    return Err(DirectoryError::Limit {
+                        maximum_entries: maximum_examined_entries,
+                    });
                 }
 
                 let child_path = directory_path.join(&name);
@@ -287,14 +317,21 @@ impl DirectoryReader {
                     identity,
                     mode: u32::from(metadata.st_mode),
                 };
-                let descend = should_descend(&entry);
+                let decision = policy(&entry);
                 // The predicate may perform policy work that observes
                 // cancellation. Do not publish an admitted entry or continue
                 // identity checks after that request has won.
                 check_cancelled(cancellation)?;
-                entries.push(entry);
+                if decision.retain {
+                    if entries.len() >= maximum_retained_entries {
+                        return Err(DirectoryError::Limit {
+                            maximum_entries: maximum_retained_entries,
+                        });
+                    }
+                    entries.push(entry);
+                }
 
-                if descend && kind == DirectoryEntryKind::Directory {
+                if decision.descend && kind == DirectoryEntryKind::Directory {
                     pending.push((child_path, identity));
                 }
             }
@@ -304,6 +341,22 @@ impl DirectoryReader {
         }
 
         Ok(entries)
+    }
+
+    #[cfg(not(unix))]
+    pub fn entries_with_policy<F>(
+        &self,
+        _maximum_retained_entries: usize,
+        _maximum_examined_entries: usize,
+        _cancellation: &Cancellation,
+        _policy: F,
+    ) -> Result<Vec<DirectoryEntry>, DirectoryError>
+    where
+        F: Fn(&DirectoryEntry) -> DirectoryEntryPolicy,
+    {
+        Err(DirectoryError::Unsupported(
+            "handle-relative traversal is not implemented on this host",
+        ))
     }
 
     #[cfg(not(unix))]
@@ -1191,7 +1244,7 @@ fn cleanup_error(
 
 #[cfg(all(test, unix))]
 mod tests {
-    use super::{DirectoryEntryKind, DirectoryError, DirectoryReader};
+    use super::{DirectoryEntryKind, DirectoryEntryPolicy, DirectoryError, DirectoryReader};
     use rea_core::cancellation::Cancellation;
     use std::{collections::BTreeSet, fs};
 
@@ -1220,6 +1273,48 @@ mod tests {
             .open_entry(entry, &cancellation)
             .expect("open archive");
         assert_eq!(archive.read_bounded(16, &cancellation).unwrap(), b"archive");
+    }
+
+    #[test]
+    fn separates_retained_candidates_from_examined_names() {
+        let temporary = tempfile::tempdir().expect("create temporary root");
+        fs::write(temporary.path().join("ignored.txt"), b"ignored").expect("write ignored");
+        fs::write(temporary.path().join("kept.nib"), b"archive").expect("write candidate");
+
+        let reader = DirectoryReader::open(temporary.path()).expect("admit root");
+        let cancellation = Cancellation::default();
+        let entries = reader
+            .entries_with_policy(1, 10, &cancellation, |entry| DirectoryEntryPolicy {
+                retain: entry.path.ends_with(".nib"),
+                descend: entry.kind == DirectoryEntryKind::Directory,
+            })
+            .expect("enumerate candidates");
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].path, "kept.nib");
+
+        let error = reader
+            .entries_with_policy(1, 1, &cancellation, |_| DirectoryEntryPolicy {
+                retain: false,
+                descend: false,
+            })
+            .expect_err("examined-name budget should remain enforced");
+        assert!(matches!(
+            error,
+            DirectoryError::Limit { maximum_entries: 1 }
+        ));
+
+        cancellation.cancel("policy test cancellation");
+        let error = reader
+            .entries_with_policy(1, 10, &cancellation, |_| DirectoryEntryPolicy {
+                retain: true,
+                descend: true,
+            })
+            .expect_err("policy traversal should honor cancellation");
+        assert!(matches!(
+            error,
+            DirectoryError::Cancelled(reason) if reason == "policy test cancellation"
+        ));
     }
 
     #[test]

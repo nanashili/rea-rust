@@ -8,7 +8,7 @@
 #![cfg(target_os = "macos")]
 
 use crate::fs::stable_directory::{
-    DirectoryEntry, DirectoryEntryKind, DirectoryError, DirectoryReader,
+    DirectoryEntry, DirectoryEntryKind, DirectoryEntryPolicy, DirectoryError, DirectoryReader,
 };
 use rea_core::cancellation::Cancellation;
 use std::{
@@ -25,6 +25,10 @@ use std::{
 pub const ASSETUTIL_PATH: &str = "/usr/bin/assetutil";
 pub const MAX_CATALOG_BYTES: usize = 64 * 1024 * 1024;
 pub const MAX_BUNDLE_ENTRIES: usize = 100_000;
+// Installed Xcode 27.0 contains 166,799 entries on the benchmark host. Keep a
+// separate bounded observation budget because only Assets.car files are
+// admissible catalog candidates.
+pub const MAX_BUNDLE_OBSERVATIONS: usize = 200_000;
 pub const COMMAND_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -64,7 +68,15 @@ impl AssetCatalogBundle {
         cancellation: &Cancellation,
     ) -> Result<Vec<AssetCatalogEntry>, AssetCatalogHostError> {
         self.reader
-            .entries(MAX_BUNDLE_ENTRIES, cancellation)
+            .entries_with_policy(
+                MAX_BUNDLE_ENTRIES,
+                MAX_BUNDLE_OBSERVATIONS,
+                cancellation,
+                |entry| DirectoryEntryPolicy {
+                    retain: is_assets_car(&entry.path),
+                    descend: entry.kind == DirectoryEntryKind::Directory,
+                },
+            )
             .map_err(AssetCatalogHostError::directory)
             .map(|entries| {
                 entries
