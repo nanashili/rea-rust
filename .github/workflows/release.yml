@@ -32,6 +32,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test worker cache invalidation
+        run: python3 scripts/release/test-build-inputs.py
+
       - name: Validate release tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -188,12 +191,7 @@ jobs:
       - name: Identify native build environment
         id: build-environment
         shell: bash
-        run: |
-          python - <<'PYTHON'
-          import os
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"image={os.environ['ImageOS']}-{os.environ['ImageVersion']}\n")
-          PYTHON
+        run: python scripts/release/build_inputs.py
 
       - name: Restore Cargo build cache
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
@@ -216,7 +214,7 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ghidra-rust-worker/target/${{ matrix.target }}/${{ env.BUILD_PROFILE }}/rea-ghidra-rust-worker${{ runner.os == 'Windows' && '.exe' || '' }}
-          key: worker-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-environment.outputs.image }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-${{ env.BUILD_PROFILE }}-${{ hashFiles('ghidra-rust-worker/src/**', 'ghidra-rust-worker/Cargo.toml', 'ghidra-rust-worker/Cargo.lock', 'ghidra-rust-worker/build.rs', 'ghidra-rust-worker/rust-toolchain.toml', 'ghidra-rust-worker/.cargo/**', '.cargo/**', 'rust-toolchain.toml', '.github/workflows/release.yml') }}
+          key: worker-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-environment.outputs.image }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-${{ env.BUILD_PROFILE }}-${{ steps.build-environment.outputs.worker-inputs }}
 
       - name: Build REA
         if: runner.os != 'Windows'
