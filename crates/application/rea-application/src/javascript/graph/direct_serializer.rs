@@ -4,7 +4,10 @@
 //! retain the existing parser boundary because their serialized representation
 //! is already raw JSON and must preserve exact UTF-16 code units.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 use serde::ser::{
     self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
@@ -17,7 +20,7 @@ use crate::javascript::contracts::semantic_ir::SemanticIr;
 const RAW_VALUE_TOKEN: &str = "$serde_json::private::RawValue";
 
 #[derive(Debug)]
-pub enum DirectJsonError {
+pub(crate) enum DirectJsonError {
     Unsupported(&'static str),
     InvalidNumber,
     InvalidKey,
@@ -42,15 +45,48 @@ impl ser::Error for DirectJsonError {
     }
 }
 
-/// The only allocation-heavy boundary left in this serializer.
+/// Fallback parser boundary for raw JSON and unpaired-surrogate strings.
 ///
 /// `parse_raw` is used for `RawValue` and for `JsString`'s unpaired-surrogate
 /// representation. It preserves existing parser semantics and is not used for
 /// ordinary strings, arrays, objects, numbers, or enums.
-pub type ParseRaw = fn(&str) -> Result<Json, DirectJsonError>;
+type ParseRaw = fn(&str) -> Result<Json, DirectJsonError>;
 
 pub(crate) fn serialize<T: ?Sized + Serialize>(value: &T) -> Result<Json, DirectJsonError> {
-    DirectJsonSerializer::new(parse_raw).serialize(value)
+    serialize_with_keys(value, &new_key_pool())
+}
+
+fn serialize_with_keys<T: ?Sized + Serialize>(
+    value: &T,
+    keys: &KeyPoolRef,
+) -> Result<Json, DirectJsonError> {
+    DirectJsonSerializer::new(parse_raw, keys.clone()).serialize(value)
+}
+
+type KeyPoolRef = Rc<RefCell<KeyPool>>;
+
+/// Static serde field and variant names are pooled for one conversion only.
+/// Dynamic object keys still use serde_json's map-key rules and are never retained.
+fn new_key_pool() -> KeyPoolRef {
+    Rc::new(RefCell::new(KeyPool::default()))
+}
+
+fn pool_key(keys: &KeyPoolRef, value: &'static str) -> JsString {
+    keys.borrow_mut().get(value)
+}
+
+#[derive(Default)]
+struct KeyPool {
+    values: HashMap<&'static str, JsString>,
+}
+
+impl KeyPool {
+    fn get(&mut self, key: &'static str) -> JsString {
+        self.values
+            .entry(key)
+            .or_insert_with(|| JsString::from(key))
+            .clone()
+    }
 }
 
 /// Consume the semantic IR while converting it to the graph-owned JSON value.
@@ -87,40 +123,69 @@ pub(crate) fn serialize_semantic_ir(ir: SemanticIr) -> Result<Json, DirectJsonEr
         limitations,
     } = ir;
 
+    let keys = new_key_pool();
     let mut object = Obj::new();
-    object.set("schema", serialize(&schema)?);
-    set_serialized_vec(&mut object, "scopes", scopes)?;
-    set_serialized_vec(&mut object, "bindings", bindings)?;
-    set_serialized_vec(&mut object, "callables", callables)?;
-    set_serialized_vec(&mut object, "references", references)?;
-    set_serialized_vec(&mut object, "moduleLinks", module_links)?;
-    set_serialized_vec(&mut object, "callSites", call_sites)?;
-    set_serialized_vec(&mut object, "argumentFlows", argument_flows)?;
-    set_serialized_vec(&mut object, "callReturnFlows", call_return_flows)?;
-    set_serialized_vec(&mut object, "callResultFlows", call_result_flows)?;
-    set_serialized_vec(&mut object, "closureCaptures", closure_captures)?;
-    set_serialized_vec(&mut object, "promiseOperations", promise_operations)?;
-    set_serialized_vec(&mut object, "eventOperations", event_operations)?;
-    set_serialized_vec(&mut object, "timerOperations", timer_operations)?;
-    set_serialized_vec(&mut object, "childProcessSpawns", child_process_spawns)?;
+    object.set(
+        pool_key(&keys, "schema"),
+        serialize_with_keys(&schema, &keys)?,
+    );
+    set_serialized_vec(&mut object, "scopes", scopes, &keys)?;
+    set_serialized_vec(&mut object, "bindings", bindings, &keys)?;
+    set_serialized_vec(&mut object, "callables", callables, &keys)?;
+    set_serialized_vec(&mut object, "references", references, &keys)?;
+    set_serialized_vec(&mut object, "moduleLinks", module_links, &keys)?;
+    set_serialized_vec(&mut object, "callSites", call_sites, &keys)?;
+    set_serialized_vec(&mut object, "argumentFlows", argument_flows, &keys)?;
+    set_serialized_vec(&mut object, "callReturnFlows", call_return_flows, &keys)?;
+    set_serialized_vec(&mut object, "callResultFlows", call_result_flows, &keys)?;
+    set_serialized_vec(&mut object, "closureCaptures", closure_captures, &keys)?;
+    set_serialized_vec(&mut object, "promiseOperations", promise_operations, &keys)?;
+    set_serialized_vec(&mut object, "eventOperations", event_operations, &keys)?;
+    set_serialized_vec(&mut object, "timerOperations", timer_operations, &keys)?;
+    set_serialized_vec(
+        &mut object,
+        "childProcessSpawns",
+        child_process_spawns,
+        &keys,
+    )?;
     set_serialized_vec(
         &mut object,
         "childProcessInteractions",
         child_process_interactions,
+        &keys,
     )?;
     set_serialized_vec(
         &mut object,
         "configurationOperations",
         configuration_operations,
+        &keys,
     )?;
-    set_serialized_vec(&mut object, "requestOperations", request_operations)?;
-    set_serialized_vec(&mut object, "boundaryOperations", boundary_operations)?;
-    set_serialized_vec(&mut object, "resourceOperations", resource_operations)?;
-    set_serialized_vec(&mut object, "objectOperations", object_operations)?;
-    set_serialized_vec(&mut object, "functionFingerprints", function_fingerprints)?;
-    set_serialized_vec(&mut object, "frontiers", frontiers)?;
-    object.set("coverage", serialize(&coverage)?);
-    set_serialized_vec(&mut object, "limitations", limitations)?;
+    set_serialized_vec(&mut object, "requestOperations", request_operations, &keys)?;
+    set_serialized_vec(
+        &mut object,
+        "boundaryOperations",
+        boundary_operations,
+        &keys,
+    )?;
+    set_serialized_vec(
+        &mut object,
+        "resourceOperations",
+        resource_operations,
+        &keys,
+    )?;
+    set_serialized_vec(&mut object, "objectOperations", object_operations, &keys)?;
+    set_serialized_vec(
+        &mut object,
+        "functionFingerprints",
+        function_fingerprints,
+        &keys,
+    )?;
+    set_serialized_vec(&mut object, "frontiers", frontiers, &keys)?;
+    object.set(
+        pool_key(&keys, "coverage"),
+        serialize_with_keys(&coverage, &keys)?,
+    );
+    set_serialized_vec(&mut object, "limitations", limitations, &keys)?;
 
     Ok(Json::Object(object))
 }
@@ -129,12 +194,13 @@ fn set_serialized_vec<T: Serialize>(
     object: &mut Obj,
     key: &'static str,
     values: Vec<T>,
+    keys: &KeyPoolRef,
 ) -> Result<(), DirectJsonError> {
     let items = values
         .into_iter()
-        .map(|value| serialize(&value))
+        .map(|value| serialize_with_keys(&value, keys))
         .collect::<Result<Vec<_>, _>>()?;
-    object.set(key, Json::Array(items));
+    object.set(pool_key(keys, key), Json::Array(items));
     Ok(())
 }
 
@@ -142,16 +208,17 @@ fn parse_raw(text: &str) -> Result<Json, DirectJsonError> {
     parse(text).map_err(|error| DirectJsonError::Raw(error.to_string()))
 }
 
-pub struct DirectJsonSerializer {
+struct DirectJsonSerializer {
     parse_raw: ParseRaw,
+    keys: KeyPoolRef,
 }
 
 impl DirectJsonSerializer {
-    pub const fn new(parse_raw: ParseRaw) -> Self {
-        Self { parse_raw }
+    fn new(parse_raw: ParseRaw, keys: KeyPoolRef) -> Self {
+        Self { parse_raw, keys }
     }
 
-    pub fn serialize<T: ?Sized + Serialize>(self, value: &T) -> Result<Json, DirectJsonError> {
+    fn serialize<T: ?Sized + Serialize>(self, value: &T) -> Result<Json, DirectJsonError> {
         value.serialize(self)
     }
 }
@@ -261,7 +328,7 @@ impl ser::Serializer for DirectJsonSerializer {
         _index: u32,
         variant: &'static str,
     ) -> Result<Json, DirectJsonError> {
-        Ok(Json::String(JsString::from(variant)))
+        Ok(Json::String(pool_key(&self.keys, variant)))
     }
     fn serialize_newtype_struct<T: ?Sized + Serialize>(
         self,
@@ -277,12 +344,14 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         value: &T,
     ) -> Result<Json, DirectJsonError> {
+        let variant_key = pool_key(&self.keys, variant);
+        let value = value.serialize(self)?;
         let mut object = Obj::new();
-        object.set(variant, value.serialize(self)?);
+        object.set(variant_key, value);
         Ok(Json::Object(object))
     }
     fn serialize_seq(self, len: Option<usize>) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::array(self.parse_raw, len))
+        Ok(Compound::array(self.parse_raw, self.keys, len))
     }
     fn serialize_tuple(self, len: usize) -> Result<Compound, DirectJsonError> {
         self.serialize_seq(Some(len))
@@ -301,16 +370,21 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::variant_array(self.parse_raw, variant, len))
+        Ok(Compound::variant_array(
+            self.parse_raw,
+            self.keys,
+            variant,
+            len,
+        ))
     }
     fn serialize_map(self, len: Option<usize>) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::object(self.parse_raw, len))
+        Ok(Compound::object(self.parse_raw, self.keys, len))
     }
     fn serialize_struct(self, name: &'static str, len: usize) -> Result<Compound, DirectJsonError> {
         if name == RAW_VALUE_TOKEN {
-            return Ok(Compound::raw(self.parse_raw));
+            return Ok(Compound::raw(self.parse_raw, self.keys));
         }
-        Ok(Compound::object(self.parse_raw, Some(len)))
+        Ok(Compound::object(self.parse_raw, self.keys, Some(len)))
     }
     fn serialize_struct_variant(
         self,
@@ -319,7 +393,12 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::variant_object(self.parse_raw, variant, len))
+        Ok(Compound::variant_object(
+            self.parse_raw,
+            self.keys,
+            variant,
+            len,
+        ))
     }
 }
 
@@ -331,58 +410,81 @@ enum Container {
     Raw(Option<String>),
 }
 
-pub struct Compound {
+struct Compound {
     parse_raw: ParseRaw,
+    keys: KeyPoolRef,
     container: Container,
     pending_key: Option<JsString>,
 }
 impl Compound {
-    fn array(parse_raw: ParseRaw, len: Option<usize>) -> Self {
+    fn array(parse_raw: ParseRaw, keys: KeyPoolRef, len: Option<usize>) -> Self {
         Self {
             parse_raw,
+            keys,
             container: Container::Array(Vec::with_capacity(len.unwrap_or(0))),
             pending_key: None,
         }
     }
-    fn object(parse_raw: ParseRaw, _len: Option<usize>) -> Self {
+    fn object(parse_raw: ParseRaw, keys: KeyPoolRef, _len: Option<usize>) -> Self {
         Self {
             parse_raw,
+            keys,
             container: Container::Object(Obj::new()),
             pending_key: None,
         }
     }
-    fn variant_array(parse_raw: ParseRaw, variant: &'static str, len: usize) -> Self {
+    fn variant_array(
+        parse_raw: ParseRaw,
+        keys: KeyPoolRef,
+        variant: &'static str,
+        len: usize,
+    ) -> Self {
         Self {
             parse_raw,
+            keys,
             container: Container::VariantArray(variant, Vec::with_capacity(len)),
             pending_key: None,
         }
     }
-    fn variant_object(parse_raw: ParseRaw, variant: &'static str, _len: usize) -> Self {
+    fn variant_object(
+        parse_raw: ParseRaw,
+        keys: KeyPoolRef,
+        variant: &'static str,
+        _len: usize,
+    ) -> Self {
         Self {
             parse_raw,
+            keys,
             container: Container::VariantObject(variant, Obj::new()),
             pending_key: None,
         }
     }
-    fn raw(parse_raw: ParseRaw) -> Self {
+    fn raw(parse_raw: ParseRaw, keys: KeyPoolRef) -> Self {
         Self {
             parse_raw,
+            keys,
             container: Container::Raw(None),
             pending_key: None,
         }
     }
     fn finish(self) -> Result<Json, DirectJsonError> {
-        match self.container {
+        let Compound {
+            parse_raw,
+            keys,
+            container,
+            ..
+        } = self;
+
+        match container {
             Container::Array(values) => Ok(Json::Array(values)),
             Container::Object(object) => Ok(Json::Object(object)),
-            Container::VariantArray(variant, values) => {
-                Ok(Json::Object(Obj::new().with(variant, Json::Array(values))))
-            }
-            Container::VariantObject(variant, object) => {
-                Ok(Json::Object(Obj::new().with(variant, Json::Object(object))))
-            }
-            Container::Raw(Some(raw)) => (self.parse_raw)(&raw),
+            Container::VariantArray(variant, values) => Ok(Json::Object(
+                Obj::new().with(pool_key(&keys, variant), Json::Array(values)),
+            )),
+            Container::VariantObject(variant, object) => Ok(Json::Object(
+                Obj::new().with(pool_key(&keys, variant), Json::Object(object)),
+            )),
+            Container::Raw(Some(raw)) => (parse_raw)(&raw),
             Container::Raw(None) => Err(DirectJsonError::Raw("RawValue had no payload".into())),
         }
     }
@@ -413,7 +515,8 @@ impl SerializeSeq for Compound {
         &mut self,
         value: &T,
     ) -> Result<(), DirectJsonError> {
-        self.push(value.serialize(DirectJsonSerializer::new(self.parse_raw))?)
+        let serialized = serialize_with_keys(value, &self.keys)?;
+        self.push(serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
         self.finish()
@@ -462,7 +565,7 @@ impl SerializeMap for Compound {
     }
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), DirectJsonError> {
         let key = self.pending_key.take().ok_or(DirectJsonError::InvalidKey)?;
-        let value = value.serialize(DirectJsonSerializer::new(self.parse_raw))?;
+        let value = serialize_with_keys(value, &self.keys)?;
         self.set(key, value)
     }
     fn serialize_entry<K: ?Sized + Serialize, V: ?Sized + Serialize>(
@@ -482,20 +585,19 @@ impl SerializeStruct for Compound {
     type Error = DirectJsonError;
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
-        key: &'static str,
+        field: &'static str,
         value: &T,
     ) -> Result<(), DirectJsonError> {
         if let Container::Raw(raw) = &mut self.container {
-            if key != RAW_VALUE_TOKEN {
+            if field != RAW_VALUE_TOKEN {
                 return Err(DirectJsonError::Raw("unexpected RawValue field".into()));
             }
             raw.replace(raw_text(value)?);
             return Ok(());
         }
-        self.set(
-            JsString::from(key),
-            value.serialize(DirectJsonSerializer::new(self.parse_raw))?,
-        )
+        let field_key = pool_key(&self.keys, field);
+        let serialized = serialize_with_keys(value, &self.keys)?;
+        self.set(field_key, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
         self.finish()
@@ -506,13 +608,12 @@ impl SerializeStructVariant for Compound {
     type Error = DirectJsonError;
     fn serialize_field<T: ?Sized + Serialize>(
         &mut self,
-        key: &'static str,
+        field: &'static str,
         value: &T,
     ) -> Result<(), DirectJsonError> {
-        self.set(
-            JsString::from(key),
-            value.serialize(DirectJsonSerializer::new(self.parse_raw))?,
-        )
+        let field_key = pool_key(&self.keys, field);
+        let serialized = serialize_with_keys(value, &self.keys)?;
+        self.set(field_key, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
         self.finish()

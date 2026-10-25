@@ -701,19 +701,24 @@ struct ProjectedSemanticResponse {
 }
 
 fn project_semantic_response(
-    ir_json: &Json,
+    ir_json: Json,
     file: &Json,
     node_budget: usize,
     unknown_budget: usize,
     paths: &[Json],
 ) -> Result<ProjectedSemanticResponse, super::worker::WorkerSemanticFailure> {
+    let metadata_module_links = ir_json.at("moduleLinks").arr().len();
+    let metadata_coverage = ir_json.at("coverage").clone();
+    let metadata_module_ir = compact_module_ir(&ir_json);
     let projection_json =
-        super::graph::project_file(file, ir_json, node_budget, unknown_budget, paths).map_err(
+        super::graph::project_file(file, &ir_json, node_budget, unknown_budget, paths).map_err(
             |error| super::worker::WorkerSemanticFailure {
                 phase: "project-file".to_owned(),
                 reason: format!("{error:?}"),
             },
         )?;
+    drop(ir_json);
+
     let projection_text = projection_json.canonical();
     drop(projection_json);
     let projection =
@@ -724,9 +729,9 @@ fn project_semantic_response(
             }
         })?;
     let metadata = Obj::new()
-        .with("moduleLinks", ir_json.at("moduleLinks").arr().len())
-        .with("coverage", ir_json.at("coverage").clone())
-        .with("moduleIr", compact_module_ir(ir_json));
+        .with("moduleLinks", metadata_module_links)
+        .with("coverage", metadata_coverage)
+        .with("moduleIr", metadata_module_ir);
     let metadata = serde_json::value::RawValue::from_string(Json::from(metadata).canonical())
         .map_err(|error| super::worker::WorkerSemanticFailure {
             phase: "serialize-semantic-metadata".to_owned(),
@@ -833,7 +838,7 @@ pub(crate) fn analyze_source_for_worker_with_checkpoint(
 
         let file = worker_semantic_file(path, metadata);
         project_semantic_response(
-            &ir_json,
+            ir_json,
             &file,
             node_budget,
             unknown_budget,

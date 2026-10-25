@@ -382,15 +382,6 @@ pub fn expression_evaluation_order<'a>(
     (earlier_index != later_index).then_some(earlier_index < later_index)
 }
 
-fn direct_mutation_position<'a>(
-    node: Node<'a>,
-    parents: &NodeParents<'a>,
-    source: &str,
-) -> Option<StatementPosition> {
-    let mut cache = StatementPositionCache::default();
-    cached_direct_mutation_position(&mut cache, node, parents, source)
-}
-
 fn cached_direct_mutation_position<'a>(
     cache: &mut StatementPositionCache,
     node: Node<'a>,
@@ -465,15 +456,6 @@ fn cached_direct_mutation_position<'a>(
     position
 }
 
-fn direct_initializer_position<'a>(
-    node: Node<'a>,
-    parents: &NodeParents<'a>,
-    source: &str,
-) -> Option<StatementPosition> {
-    let mut cache = StatementPositionCache::default();
-    cached_direct_initializer_position(&mut cache, node, parents, source)
-}
-
 fn cached_direct_initializer_position<'a>(
     cache: &mut StatementPositionCache,
     node: Node<'a>,
@@ -527,15 +509,6 @@ fn cached_direct_initializer_position<'a>(
     position
 }
 
-fn reference_initializer_position<'a>(
-    node: Node<'a>,
-    parents: &NodeParents<'a>,
-    source: &str,
-) -> Option<StatementPosition> {
-    let mut cache = StatementPositionCache::default();
-    cached_reference_initializer_position(&mut cache, node, parents, source)
-}
-
 fn cached_reference_initializer_position<'a>(
     cache: &mut StatementPositionCache,
     node: Node<'a>,
@@ -578,28 +551,6 @@ fn cached_reference_initializer_position<'a>(
     cache.admit_position();
     cache.reference_initializers.insert(node.key(), position);
     position
-}
-
-fn initializer_position<'a>(
-    initializer: &Initializer<'a>,
-    parents: &NodeParents<'a>,
-    reference: bool,
-    source: &str,
-) -> Option<StatementPosition> {
-    initializer
-        .entry_body
-        .map(|body| StatementPosition {
-            body: body.key(),
-            index: -1,
-            declarator_index: -1,
-        })
-        .or_else(|| {
-            if reference {
-                reference_initializer_position(initializer.node, parents, source)
-            } else {
-                direct_initializer_position(initializer.node, parents, source)
-            }
-        })
 }
 
 fn cached_initializer_position<'a>(

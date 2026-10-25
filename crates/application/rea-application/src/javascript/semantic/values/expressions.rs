@@ -713,23 +713,24 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
         let Some(name) = node.identifier_name() else {
             return unknown("Identifier has no name.");
         };
-        let Some(index) = self.state.resolve_binding(&node, name) else {
+        let state = self.state;
+        let Some(index) = state.resolve_binding(&node, name) else {
             return unknown(&format!("Unbound identifier {name}."));
         };
-        let binding = self.state.binding(index).clone();
+        let binding = state.binding(index);
 
         let has_assignment_definition = binding
             .definitions
             .iter()
             .any(|definition| definition.kind == DefinitionKind::Assignment);
         let read = (binding.mutable && has_assignment_definition)
-            .then(|| self.state.semantic_binding_at_read(&binding, node));
+            .then(|| state.semantic_binding_at_read(binding, node));
 
         if read
             .as_ref()
             .is_some_and(|selected| selected.status == BindingReadStatus::Unresolved)
         {
-            let value = self.evaluate_binding(&binding, point.nested(), true);
+            let value = self.evaluate_binding(binding, point.nested(), true);
             if matches!(
                 value,
                 SemanticValue::Unknown { .. }
@@ -745,13 +746,13 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
         }
 
         let capture_point = point.capture_point.unwrap_or(node);
-        if opaque_binding_read_may_have_changed(&self.opaque, self.state, &binding, capture_point) {
+        if opaque_binding_read_may_have_changed(&self.opaque, state, binding, capture_point) {
             return unknown("Direct eval may have changed this lexical binding.");
         }
 
         let at_read = read
             .as_ref()
-            .map_or(&binding, |selected| selected.binding.as_ref());
+            .map_or(binding, |selected| selected.binding.as_ref());
         self.evaluate_binding(
             at_read,
             point.nested(),
