@@ -325,7 +325,6 @@ fn analyze_file<B>(
     unknown_budget: usize,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
 ) -> ControlFlow<B, (Json, Option<AnalysisInterruption>)> {
-    let file_value = file_value(file);
     let Some(source) = (match (&file.kind, &file.text) {
         (JavaScriptArtifactFileKind::JavaScript, JavaScriptText::Included(source)) => {
             source.as_str().map(str::to_owned)
@@ -334,7 +333,7 @@ fn analyze_file<B>(
     }) else {
         return ControlFlow::Continue((
             Obj::new()
-                .with("file", file_value)
+                .with("file", file_value(file))
                 .with("javascript", Json::Null)
                 .with("semantic", Json::Null)
                 .into(),
@@ -380,7 +379,7 @@ fn analyze_file<B>(
                 {
                     return ControlFlow::Continue((
                         Obj::new()
-                            .with("file", file_value)
+                            .with("file", file_value(file))
                             .with("javascript", static_analysis)
                             .with("semantic", Json::Null)
                             .with(
@@ -398,7 +397,7 @@ fn analyze_file<B>(
                 }
                 return ControlFlow::Continue((
                     analysis_failure_file(
-                        file_value,
+                        file_value(file),
                         &file.path,
                         &failure.to_string(),
                         worker_failure_limits(&failure),
@@ -416,7 +415,12 @@ fn analyze_file<B>(
                 file.path
             ));
             return ControlFlow::Continue((
-                analysis_failure_file(file_value, &file.path, interruption.message(), Json::Null),
+                analysis_failure_file(
+                    file_value(file),
+                    &file.path,
+                    interruption.message(),
+                    Json::Null,
+                ),
                 Some(interruption),
             ));
         }
@@ -431,7 +435,7 @@ fn analyze_file<B>(
         ));
         return ControlFlow::Continue((
             Obj::new()
-                .with("file", file_value)
+                .with("file", file_value(file))
                 .with("javascript", static_json)
                 .with("semantic", Json::Null)
                 .with(
@@ -457,7 +461,7 @@ fn analyze_file<B>(
                 ));
                 return ControlFlow::Continue((
                     analysis_failure_file(
-                        file_value,
+                        file_value(file),
                         &file.path,
                         interruption.message(),
                         Json::Null,
@@ -478,7 +482,7 @@ fn analyze_file<B>(
                 ));
                 return ControlFlow::Continue((
                     analysis_failure_file(
-                        file_value,
+                        file_value(file),
                         &file.path,
                         interruption.message(),
                         Json::Null,
@@ -499,7 +503,7 @@ fn analyze_file<B>(
                 ));
                 return ControlFlow::Continue((
                     analysis_failure_file(
-                        file_value,
+                        file_value(file),
                         &file.path,
                         interruption.message(),
                         Json::Null,
@@ -511,7 +515,7 @@ fn analyze_file<B>(
         None => None,
     };
     let mut result = Obj::new()
-        .with("file", file_value)
+        .with("file", file_value(file))
         .with("javascript", static_json);
     if semantic.is_none() && projection.is_none() && metadata.is_none() {
         result.set("semantic", Json::Null);
@@ -883,9 +887,11 @@ fn analyze_worker_source(
     let call_paths = serialized(&static_result.electron.call_paths)
         .arr()
         .to_vec();
+    let parse_status = static_result.parse_status;
+    drop(static_result);
 
     // Preserve the completed static checkpoint when semantic analysis fails.
-    let semantic_ir = if static_result.parse_status == ParseStatus::Failed {
+    let semantic_ir = if parse_status == ParseStatus::Failed {
         Ok(None)
     } else {
         catch_semantic_failure(|| {

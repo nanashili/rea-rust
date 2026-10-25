@@ -28,7 +28,7 @@ use super::property_paths::{
 use super::reference_sources::{
     ReferenceSource, SemanticExpressionEvaluator, semantic_reference_sources_inactive,
 };
-use super::returned_references::create_semantic_returned_references;
+use super::returned_references::SemanticReturnedReferencesResolver;
 use super::state::{
     BindingIndex, DefinitionKind, Initializer, MemberEffect, ProjectionKey, ReferenceInitializer,
     RequiredModuleEffect, RequiredModuleEffectKind, SemanticState,
@@ -46,10 +46,27 @@ pub enum MemberMutationKind {
     Escape,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum EffectExpansion {
+    Continue,
+    ReferencesOnly,
+    Stop,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct ActiveTraversalKey {
     node: NodeKey,
     effect: MemberMutationKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct EffectCoverageKey {
+    binding: BindingIndex,
+    effect: MemberMutationKind,
+    write_depth: Option<usize>,
+    mutation: Option<NodeKey>,
+    origin_at: Option<NodeKey>,
+    widened_getter_result: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -159,7 +176,8 @@ pub fn collect_semantic_member_mutations<'a>(state: &mut SemanticState<'a>) {
 
 struct Collector<'s, 'a> {
     state: &'s mut SemanticState<'a>,
-    coverage: HashMap<String, SemanticPropertyPathCoverage>,
+    returned_references: SemanticReturnedReferencesResolver<'a>,
+    coverage: HashMap<EffectCoverageKey, SemanticPropertyPathCoverage>,
     active_traversals: HashMap<ActiveTraversalKey, PropertyPath>,
     active_bindings: HashMap<ActiveBindingKey, PropertyPath>,
     // Mutation-origin selection reads only immutable binding/source facts. The
@@ -182,6 +200,7 @@ impl<'s, 'a> Collector<'s, 'a> {
         let opaque_effects = index_opaque_effects(state);
         Self {
             state,
+            returned_references: SemanticReturnedReferencesResolver::default(),
             coverage: HashMap::new(),
             active_traversals: HashMap::new(),
             active_bindings: HashMap::new(),
@@ -642,10 +661,10 @@ impl<'s, 'a> Collector<'s, 'a> {
             return;
         };
         let callee = unwrapped(self.state.source, callee);
-        let returned_references = {
-            let mut resolver = create_semantic_returned_references(self.state);
-            resolver(callee).references
-        };
+        let returned_references = self
+            .returned_references
+            .resolve(&*self.state, callee)
+            .references;
         for result in returned_references {
             self.mark_value(
                 result.node,
@@ -736,6 +755,8 @@ impl<'s, 'a> Collector<'s, 'a> {
             repeated_prefix.to_vec(),
             MemberMutationKind::Escape,
             mutation,
+            None,
+            false,
         );
     }
 
@@ -776,35 +797,52 @@ impl<'s, 'a> Collector<'s, 'a> {
             let next_path = path.clone();
             let owns_unknown_callable =
                 effect.is_escape() && is_unknown_callable_source(self.state, node);
-            if !owns_unknown_callable {
-                self.record_effect(binding, path, effect, mutation);
+            let expansion = if owns_unknown_callable {
+                EffectExpansion::Continue
+            } else {
+                self.record_effect(
+                    binding,
+                    path,
+                    effect,
+                    mutation,
+                    origin_at,
+                    widened_getter_result,
+                )
+            };
+            if expansion == EffectExpansion::Stop {
+                self.active_bindings.remove(&binding_key);
+                return;
             }
-            let direct_origins = self.state.binding(binding).direct_origins.clone();
-            if let Some(module_path) = concrete_module_path(&next_path) {
-                for origin in &direct_origins {
-                    if let Some((specifier, origin_path)) =
-                        super::require_origin::mutable_builtin_origin(origin, &module_path)
-                    {
-                        let path = origin_path
-                            .into_iter()
-                            .map(PropertyPathKey::String)
-                            .collect();
-                        self.record_required_effect(&specifier, path, effect, mutation);
+            if expansion == EffectExpansion::Continue {
+                let direct_origins = self.state.binding(binding).direct_origins.clone();
+                if let Some(module_path) = concrete_module_path(&next_path) {
+                    for origin in &direct_origins {
+                        if let Some((specifier, origin_path)) =
+                            super::require_origin::mutable_builtin_origin(origin, &module_path)
+                        {
+                            let path = origin_path
+                                .into_iter()
+                                .map(PropertyPathKey::String)
+                                .collect();
+                            self.record_required_effect(&specifier, path, effect, mutation);
+                        }
                     }
                 }
             }
             let origins = self.origins(binding, origin_at.or(mutation));
-            for initializer in &origins.initializers {
-                let mut projected = projection_path(&initializer.projection);
-                projected.extend(next_path.clone());
-                self.mark_value_at(
-                    initializer.node,
-                    projected,
-                    effect,
-                    mutation,
-                    Some(initializer.node),
-                    widened_getter_result,
-                );
+            if expansion == EffectExpansion::Continue {
+                for initializer in &origins.initializers {
+                    let mut projected = projection_path(&initializer.projection);
+                    projected.extend(next_path.clone());
+                    self.mark_value_at(
+                        initializer.node,
+                        projected,
+                        effect,
+                        mutation,
+                        Some(initializer.node),
+                        widened_getter_result,
+                    );
+                }
             }
             for initializer in &origins.reference_initializers {
                 let Some(projected) = reference_projection(&initializer, &next_path, effect) else {
@@ -898,10 +936,10 @@ impl<'s, 'a> Collector<'s, 'a> {
                 }
             }
             _ if is_function(&node) && matches!(effect, MemberMutationKind::Escape) => {
-                let returned_references = {
-                    let mut resolver = create_semantic_returned_references(self.state);
-                    resolver(node).references
-                };
+                let returned_references = self
+                    .returned_references
+                    .resolve(&*self.state, node)
+                    .references;
                 for result in returned_references {
                     let mut result_path = result.projection;
                     if result_path.is_empty() {
@@ -1111,7 +1149,9 @@ impl<'s, 'a> Collector<'s, 'a> {
         path: PropertyPath,
         effect: MemberMutationKind,
         node: Option<Node<'a>>,
-    ) {
+        origin_at: Option<Node<'a>>,
+        widened_getter_result: bool,
+    ) -> EffectExpansion {
         let binding_state = self.state.binding(binding);
         let has_no_source = binding_state.initializers.is_empty()
             && binding_state.reference_initializers.is_empty();
@@ -1121,23 +1161,17 @@ impl<'s, 'a> Collector<'s, 'a> {
                 DefinitionKind::Parameter | DefinitionKind::Catch
             );
         if has_no_source && !can_receive_caller_value {
-            return;
+            return EffectExpansion::Continue;
         }
         if is_object_rest_source_write(self.state, node, &path, effect) {
-            return;
+            return EffectExpansion::Continue;
         }
         if is_known_object_rest_loop_escape(self.state, node, &path, effect, &self.opaque_effects) {
-            return;
+            return EffectExpansion::Continue;
         }
         if is_known_for_of_loop_escape(self.state, node, &path, effect, &self.opaque_effects) {
-            return;
+            return EffectExpansion::Continue;
         }
-        let binding_id = self.state.binding(binding).binding_id.clone();
-        let mutation_identity = node
-            .map(|mutation| format!(":{}:{}", mutation.span().start, mutation.span().end))
-            .unwrap_or_default();
-        let coverage_key = format!("{binding_id}:{effect:?}{mutation_identity}");
-
         let path = normalize_iterated_array_path(self.state, node, path, effect);
         let path = normalize_array_rest_escape_path(self.state, node, path, effect);
         let mut path = self.normalize_unknown_write_path(binding, path, effect);
@@ -1154,8 +1188,17 @@ impl<'s, 'a> Collector<'s, 'a> {
                 .chain(std::iter::once(PropertyPathKey::Wildcard))
                 .collect();
         }
+
+        let coverage_key = EffectCoverageKey {
+            binding,
+            effect,
+            write_depth: effect.is_write().then_some(path.len()),
+            mutation: node.map(|mutation| mutation.key()),
+            origin_at: origin_at.map(|origin| origin.key()),
+            widened_getter_result,
+        };
         if !self.coverage.entry(coverage_key).or_default().retain(&path) {
-            return;
+            return EffectExpansion::Stop;
         }
 
         let primitive_write = if effect.is_write() {
@@ -1170,7 +1213,7 @@ impl<'s, 'a> Collector<'s, 'a> {
             false
         };
         if primitive_write {
-            return;
+            return EffectExpansion::ReferencesOnly;
         }
 
         // Exact nested writes and escaped child paths preserve the container
@@ -1203,6 +1246,8 @@ impl<'s, 'a> Collector<'s, 'a> {
             self.unknown_binding_values.remove(&binding);
         }
         clear_semantic_value_caches(&*self.state);
+
+        EffectExpansion::Continue
     }
 
     fn normalize_unknown_write_path(

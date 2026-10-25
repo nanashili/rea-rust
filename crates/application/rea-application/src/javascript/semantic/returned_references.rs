@@ -43,18 +43,43 @@ struct ObjectTargetIndex<'a> {
     trailing_unknowns_by_property: HashMap<NodeKey, Vec<Node<'a>>>,
 }
 
-/// Create a memoized resolver for source-local references returned by a callee.
-pub fn create_semantic_returned_references<'s, 'a>(
-    state: &'s SemanticState<'a>,
-) -> impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a> + 's {
-    let mut results = HashMap::<NodeKey, SemanticReturnedReferenceResult<'a>>::new();
-    let mut object_indexes = HashMap::<NodeKey, ObjectTargetIndex<'a>>::new();
+const RETURNED_REFERENCE_CACHE_ENTRY_LIMIT: usize = 4096;
+const RETURNED_REFERENCE_CACHE_REFERENCE_LIMIT: usize = 16_384;
+const RETURNED_REFERENCE_OBJECT_INDEX_LIMIT: usize = 4096;
 
-    move |callee| {
-        if let Some(existing) = results.get(&callee.key()) {
+/// Resolves returned references using definition-time semantic facts.
+///
+/// Member effects do not change the AST, initializer ordering, or callable
+/// result expressions consumed by this resolver, so one instance is valid for
+/// the lifetime of a semantic collection pass. The result bounds only limit
+/// retention; an uncached query is still resolved completely.
+pub struct SemanticReturnedReferencesResolver<'a> {
+    results: HashMap<NodeKey, SemanticReturnedReferenceResult<'a>>,
+    object_indexes: HashMap<NodeKey, ObjectTargetIndex<'a>>,
+    retained_references: usize,
+}
+
+impl<'a> Default for SemanticReturnedReferencesResolver<'a> {
+    fn default() -> Self {
+        Self {
+            results: HashMap::new(),
+            object_indexes: HashMap::new(),
+            retained_references: 0,
+        }
+    }
+}
+
+impl<'a> SemanticReturnedReferencesResolver<'a> {
+    pub fn resolve(
+        &mut self,
+        state: &SemanticState<'a>,
+        callee: Node<'a>,
+    ) -> SemanticReturnedReferenceResult<'a> {
+        if let Some(existing) = self.results.get(&callee.key()) {
             return existing.clone();
         }
-        let result = resolve_returned_references(state, callee, &mut object_indexes);
+
+        let result = resolve_returned_references(state, callee, &mut self.object_indexes);
         if result.precision == ReturnedReferencePrecision::Widened {
             let range = state.context.range(&callee);
             let mut widenings = state.returned_reference_widenings.borrow_mut();
@@ -62,9 +87,25 @@ pub fn create_semantic_returned_references<'s, 'a>(
                 widenings.push(range);
             }
         }
-        results.insert(callee.key(), result.clone());
+
+        let within_bounds = self.results.len() < RETURNED_REFERENCE_CACHE_ENTRY_LIMIT
+            && self.retained_references + result.references.len()
+                <= RETURNED_REFERENCE_CACHE_REFERENCE_LIMIT;
+        if within_bounds {
+            self.retained_references += result.references.len();
+            self.results.insert(callee.key(), result.clone());
+        }
         result
     }
+}
+
+/// Create a memoized resolver for source-local references returned by a callee.
+pub fn create_semantic_returned_references<'s, 'a>(
+    state: &'s SemanticState<'a>,
+) -> impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a> + 's {
+    let mut resolver = SemanticReturnedReferencesResolver::default();
+
+    move |callee| resolver.resolve(state, callee)
 }
 
 fn resolve_returned_references<'a>(
@@ -507,6 +548,12 @@ fn object_target_index<'a, 'i>(
     indexes: &'i mut HashMap<NodeKey, ObjectTargetIndex<'a>>,
 ) -> &'i ObjectTargetIndex<'a> {
     if !indexes.contains_key(&node.key()) {
+        // Indexes are an optimization over immutable AST facts. Evicting the
+        // old entries preserves exact resolution while bounding retained
+        // memory when result caching has stopped retaining new callees.
+        if indexes.len() >= RETURNED_REFERENCE_OBJECT_INDEX_LIMIT {
+            indexes.clear();
+        }
         let mut index = ObjectTargetIndex::<'a>::default();
         let mut trailing = Vec::new();
         for property in node

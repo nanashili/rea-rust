@@ -33,6 +33,7 @@ unicode-normalization.workspace = true
 ada-url = { version = "=4.0.0", default-features = false, features = ["bundled", "std"] }
 # WHATWG HTML tokenizer and tree builder for inert HTML reference extraction.
 html5ever = "=0.35.0"
+indexmap.workspace = true
 tempfile.workspace = true
 ureq.workspace = true
 

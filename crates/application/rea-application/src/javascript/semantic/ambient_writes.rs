@@ -878,9 +878,7 @@ where
                     }
                 }
                 if let Some(callee) = root.field(state.source, Field::Callee) {
-                    let mut returned = returned_references(callee).references;
-                    returned.extend(direct_callable_results(state, callee));
-                    for reference in returned {
+                    for reference in returned_references(callee).references {
                         let mut projected = reference.projection;
                         projected.extend(path.clone());
                         queue_node(&mut pending, reference.node, Some(projected), reads_at_self);
@@ -889,9 +887,7 @@ where
             }
             "TaggedTemplateExpression" if possible_writes => {
                 if let Some(tag) = root.field(state.source, Field::Callee) {
-                    let mut returned = returned_references(tag).references;
-                    returned.extend(direct_callable_results(state, tag));
-                    for reference in returned {
+                    for reference in returned_references(tag).references {
                         let mut projected = reference.projection;
                         projected.extend(path.clone());
                         queue_node(&mut pending, reference.node, Some(projected), reads_at_self);
@@ -1063,55 +1059,6 @@ where
         }
     }
     result
-}
-
-fn direct_callable_results<'a>(
-    state: &SemanticState<'a>,
-    callee: Node<'a>,
-) -> Vec<super::returned_references::SemanticReturnedReference<'a>> {
-    let mut candidates = vec![unwrapped(state.source, callee)];
-    if let Some(name) = callee.identifier_name()
-        && let Some(binding) = state.resolve_binding(&callee, name)
-    {
-        candidates.extend(
-            state.bindings[binding]
-                .initializers
-                .iter()
-                .map(|initializer| initializer.node),
-        );
-    }
-
-    let mut results = Vec::new();
-    for candidate in candidates.into_iter().filter(|candidate| {
-        matches!(
-            candidate.babel_type(),
-            "FunctionDeclaration"
-                | "FunctionExpression"
-                | "ArrowFunctionExpression"
-                | "ObjectMethod"
-                | "ClassMethod"
-                | "ClassPrivateMethod"
-        )
-    }) {
-        results.extend(
-            state
-                .callable_result_expressions(&candidate)
-                .iter()
-                .filter_map(|result| {
-                    result.node.map(
-                        |node| super::returned_references::SemanticReturnedReference {
-                            node,
-                            projection: if result.delegated {
-                                vec![PropertyPathKey::Wildcard]
-                            } else {
-                                Vec::new()
-                            },
-                        },
-                    )
-                }),
-        );
-    }
-    results
 }
 
 fn resolve_pending_write_effects<'a>(

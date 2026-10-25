@@ -27,6 +27,7 @@ use rea_core::cancellation::Cancellation;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(serde::Serialize)]
@@ -187,7 +188,10 @@ fn create_reader(
     match format {
         "directory" => Some(Box::new(DirectoryArtifactReader::new(path))),
         "asar" => captured.map(|bytes| {
-            Box::new(AsarArtifactReader::new_shared(bytes)) as Box<dyn ArtifactReader>
+            Box::new(AsarArtifactReader::from_path(
+                std::path::Path::new(path),
+                bytes,
+            )) as Box<dyn ArtifactReader>
         }),
         "mach-o-universal" => Some(Box::new(MachOSliceArtifactReader::new(
             path,
@@ -599,7 +603,7 @@ fn scan_reader(
             None
         };
 
-        let mut nested_asar_bytes: Option<Vec<u8>> = None;
+        let mut nested_asar_source: Option<(Vec<u8>, PathBuf)> = None;
         match &digested {
             None => note_unread_container_suffix(&mut occurrence),
             Some(result) => {
@@ -627,7 +631,19 @@ fn scan_reader(
                     });
                 }
                 if expandable_asar && result.format == "asar" && !result.mismatched {
-                    nested_asar_bytes = result.bytes.clone();
+                    let source_path = match entry.adapter_key.as_str() {
+                        Some(path) => PathBuf::from(path),
+                        None => {
+                            return scope.finish(Some(ReaderFailure::new(
+                                "path",
+                                format!(
+                                    "Filesystem-backed nested ASAR path is not valid UTF-8: {}",
+                                    entry.path
+                                ),
+                            )));
+                        }
+                    };
+                    nested_asar_source = result.bytes.clone().map(|bytes| (bytes, source_path));
                 }
             }
         }
@@ -635,8 +651,8 @@ fn scan_reader(
         let occurrence_id = occurrence.occurrence_id.clone();
         output.occurrences.push(occurrence);
 
-        if let Some(bytes) = nested_asar_bytes {
-            let nested = AsarArtifactReader::new(bytes);
+        if let Some((bytes, source_path)) = nested_asar_source {
+            let nested = AsarArtifactReader::from_path(&source_path, bytes.into());
             let mut nested_omissions = Vec::new();
             scope.stack.push(ReaderFrame {
                 reader: Box::new(nested),
@@ -1457,37 +1473,70 @@ mod tests {
         asar_bytes_with_files(&[(path, payload)])
     }
 
+    fn asar_bytes_with_unpacked_file(
+        path: &str,
+        declared_sha256: &str,
+        declared_size: u64,
+    ) -> Vec<u8> {
+        let mut files = serde_json::Map::new();
+        insert_asar_fixture_file(
+            &mut files,
+            path,
+            json!({
+                "size": declared_size,
+                "offset": "0",
+                "unpacked": true,
+                "integrity": {
+                    "algorithm": "SHA256",
+                    "hash": declared_sha256,
+                },
+            }),
+        );
+        encode_asar_fixture(files, &[])
+    }
+
     fn asar_bytes_with_files(files: &[(&str, &[u8])]) -> Vec<u8> {
         let mut file_tree = serde_json::Map::new();
-        let mut offset = 0usize;
+        let mut packed_bytes = Vec::new();
         for (path, payload) in files {
-            let segments: Vec<&str> = path.split('/').collect();
-            let (file_name, directories) = segments
-                .split_last()
-                .expect("ASAR fixture path has a file name");
-            let mut directory = &mut file_tree;
-            for segment in directories {
-                let entry = directory
-                    .entry((*segment).to_owned())
-                    .or_insert_with(|| json!({ "files": {} }));
-                directory = entry
-                    .get_mut("files")
-                    .and_then(serde_json::Value::as_object_mut)
-                    .expect("ASAR fixture directory has files");
-            }
-            directory.insert(
-                (*file_name).to_owned(),
+            insert_asar_fixture_file(
+                &mut file_tree,
+                path,
                 json!({
                     "size": payload.len(),
-                    "offset": offset.to_string(),
+                    "offset": packed_bytes.len().to_string(),
                 }),
             );
-            offset += payload.len();
+            packed_bytes.extend_from_slice(payload);
         }
-        let header = serde_json::to_vec(&json!({
-            "files": file_tree,
-        }))
-        .expect("fixture header serializes");
+        encode_asar_fixture(file_tree, &packed_bytes)
+    }
+
+    fn insert_asar_fixture_file(
+        files: &mut serde_json::Map<String, Value>,
+        path: &str,
+        metadata: Value,
+    ) {
+        let segments: Vec<&str> = path.split('/').collect();
+        let (file_name, directories) = segments
+            .split_last()
+            .expect("ASAR fixture path has a file name");
+        let mut directory = files;
+        for segment in directories {
+            let entry = directory
+                .entry((*segment).to_owned())
+                .or_insert_with(|| json!({ "files": {} }));
+            directory = entry
+                .get_mut("files")
+                .and_then(Value::as_object_mut)
+                .expect("ASAR fixture directory has files");
+        }
+        directory.insert((*file_name).to_owned(), metadata);
+    }
+
+    fn encode_asar_fixture(files: serde_json::Map<String, Value>, payload: &[u8]) -> Vec<u8> {
+        let header =
+            serde_json::to_vec(&json!({ "files": files })).expect("fixture header serializes");
         let padded_header_bytes = (header.len() + 3) & !3;
         let header_bytes = u32::try_from(8 + padded_header_bytes).expect("small fixture header");
 
@@ -1502,9 +1551,7 @@ mod tests {
         }
         bytes.extend_from_slice(&header);
         bytes.resize(16 + padded_header_bytes, 0);
-        for (_, payload) in files {
-            bytes.extend_from_slice(payload);
-        }
+        bytes.extend_from_slice(payload);
         bytes
     }
 
@@ -1529,6 +1576,181 @@ mod tests {
             .find(|occurrence| occurrence.entry_kind == "file" && occurrence.logical_path != ".")
             .expect("inventory includes the ASAR file");
         assert_eq!(file_occurrence.logical_path, "é.js");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_hashes_unpacked_companion_and_fails_on_declared_mismatch() {
+        let temporary_directory = tempfile::tempdir().expect("temporary directory creates");
+        let archive_path = temporary_directory.path().join("sample.asar");
+        let companion_path = archive_path
+            .with_extension("asar.unpacked")
+            .join("native/addon.node");
+        fs::create_dir_all(companion_path.parent().expect("companion parent exists"))
+            .expect("companion directory creates");
+        let companion_bytes = b"companion-bytes";
+        fs::write(&companion_path, companion_bytes).expect("companion writes");
+        let observed = format!("{:x}", Sha256::digest(companion_bytes));
+        fs::write(
+            &archive_path,
+            asar_bytes_with_unpacked_file(
+                "native/addon.node",
+                &"0".repeat(64),
+                companion_bytes.len() as u64,
+            ),
+        )
+        .expect("ASAR fixture writes");
+
+        let failure = inventory_artifact(
+            archive_path.to_str().expect("temporary path is UTF-8"),
+            true,
+            &Cancellation::default(),
+        )
+        .err()
+        .expect("mismatching unpacked companion must fail closed");
+        assert_eq!(failure.reason, "integrity");
+        assert!(failure.message.contains("native/addon.node"));
+        assert_eq!(
+            failure
+                .details
+                .as_ref()
+                .and_then(|details| details.calculated_sha256.as_deref()),
+            Some(observed.as_str())
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_accepts_matching_unpacked_companion() {
+        let temporary_directory = tempfile::tempdir().expect("temporary directory creates");
+        let archive_path = temporary_directory.path().join("sample.asar");
+        let companion_path = archive_path
+            .with_extension("asar.unpacked")
+            .join("native/addon.node");
+        fs::create_dir_all(companion_path.parent().expect("companion parent exists"))
+            .expect("companion directory creates");
+        let companion_bytes = b"companion-bytes";
+        fs::write(&companion_path, companion_bytes).expect("companion writes");
+        let digest = format!("{:x}", Sha256::digest(companion_bytes));
+        fs::write(
+            &archive_path,
+            asar_bytes_with_unpacked_file(
+                "native/addon.node",
+                &digest,
+                companion_bytes.len() as u64,
+            ),
+        )
+        .expect("ASAR fixture writes");
+
+        let inventory = inventory_artifact(
+            archive_path.to_str().expect("temporary path is UTF-8"),
+            true,
+            &Cancellation::default(),
+        )
+        .expect("matching unpacked companion succeeds");
+        let occurrence = inventory
+            .occurrences
+            .iter()
+            .find(|occurrence| occurrence.logical_path == "native/addon.node")
+            .expect("unpacked occurrence is present");
+        assert_eq!(occurrence.hash_status, "verified");
+        assert!(occurrence.artifact_id.as_ref().is_some());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_rejects_unpacked_companion_escape() {
+        use std::os::unix::fs::symlink;
+
+        let temporary_directory = tempfile::tempdir().expect("temporary directory creates");
+        let archive_path = temporary_directory.path().join("sample.asar");
+        let companion_root = archive_path.with_extension("asar.unpacked");
+        let outside_path = temporary_directory.path().join("outside.node");
+        let candidate = companion_root.join("native/addon.node");
+        fs::create_dir_all(candidate.parent().expect("companion parent exists"))
+            .expect("companion directory creates");
+        fs::write(&outside_path, b"outside").expect("outside fixture writes");
+        symlink(&outside_path, &candidate).expect("escape symlink creates");
+        fs::write(
+            &archive_path,
+            asar_bytes_with_unpacked_file("native/addon.node", &"0".repeat(64), 7),
+        )
+        .expect("ASAR fixture writes");
+
+        let failure = inventory_artifact(
+            archive_path.to_str().expect("temporary path is UTF-8"),
+            true,
+            &Cancellation::default(),
+        )
+        .err()
+        .expect("unpacked companion escape must fail closed");
+        assert!(matches!(failure.reason, "io" | "path"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_rejects_unpacked_parent_directory_escape() {
+        use std::os::unix::fs::symlink;
+
+        let temporary_directory = tempfile::tempdir().expect("temporary directory creates");
+        let archive_path = temporary_directory.path().join("sample.asar");
+        let companion_root = archive_path.with_extension("asar.unpacked");
+        let outside_directory = temporary_directory.path().join("outside");
+        fs::create_dir_all(&companion_root).expect("companion root creates");
+        fs::create_dir_all(&outside_directory).expect("outside directory creates");
+        fs::write(outside_directory.join("addon.node"), b"outside")
+            .expect("outside fixture writes");
+        symlink(&outside_directory, companion_root.join("native"))
+            .expect("parent escape symlink creates");
+        fs::write(
+            &archive_path,
+            asar_bytes_with_unpacked_file("native/addon.node", &"0".repeat(64), 7),
+        )
+        .expect("ASAR fixture writes");
+
+        let failure = inventory_artifact(
+            archive_path.to_str().expect("temporary path is UTF-8"),
+            true,
+            &Cancellation::default(),
+        )
+        .err()
+        .expect("unpacked parent directory escape must fail closed");
+        assert!(matches!(failure.reason, "io" | "path"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_nested_directory_asar_rejects_unpacked_mismatch() {
+        let temporary_directory = tempfile::tempdir().expect("temporary directory creates");
+        let nested_archive = temporary_directory.path().join("nested.asar");
+        let companion_path = nested_archive
+            .with_extension("asar.unpacked")
+            .join("native/addon.node");
+        fs::create_dir_all(companion_path.parent().expect("companion parent exists"))
+            .expect("companion directory creates");
+        let companion_bytes = b"nested-companion";
+        fs::write(&companion_path, companion_bytes).expect("companion writes");
+        fs::write(
+            &nested_archive,
+            asar_bytes_with_unpacked_file(
+                "native/addon.node",
+                &"0".repeat(64),
+                companion_bytes.len() as u64,
+            ),
+        )
+        .expect("nested ASAR writes");
+
+        let failure = inventory_artifact(
+            temporary_directory
+                .path()
+                .to_str()
+                .expect("temporary path is UTF-8"),
+            true,
+            &Cancellation::default(),
+        )
+        .err()
+        .expect("nested unpacked mismatch must fail closed");
+        assert_eq!(failure.reason, "integrity");
     }
 
     #[test]

@@ -31,6 +31,7 @@ tower = { workspace = true, features = ["util"] }
 rustix = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
+rea-mcp.workspace = true
 tempfile.workspace = true
 tungstenite = { workspace = true, features = ["handshake"] }
 

@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use indexmap::IndexMap;
+
 use crate::javascript::ast::{AstContext, Field, Node, NodeKey, NodeMap, NodeParents, NodeSet};
 use crate::javascript::parser::SourceRange;
 use crate::javascript::static_analysis::semantics::BindingFacts;
@@ -23,36 +25,28 @@ use super::value_types::JsString;
 /// fixes a key's position; setting it again replaces the value in place.
 #[derive(Clone, Debug)]
 pub struct InsertionMap<V> {
-    index: HashMap<String, usize>,
-    entries: Vec<(String, V)>,
+    entries: IndexMap<String, V>,
 }
 
 impl<V> Default for InsertionMap<V> {
     fn default() -> Self {
         Self {
-            index: HashMap::new(),
-            entries: Vec::new(),
+            entries: IndexMap::new(),
         }
     }
 }
 
 impl<V> InsertionMap<V> {
     pub fn get(&self, key: &str) -> Option<&V> {
-        self.index.get(key).map(|&slot| &self.entries[slot].1)
+        self.entries.get(key)
     }
 
     pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
-        self.index.get(key).map(|&slot| &mut self.entries[slot].1)
+        self.entries.get_mut(key)
     }
 
     pub fn set(&mut self, key: String, value: V) {
-        match self.index.get(&key) {
-            Some(&slot) => self.entries[slot].1 = value,
-            None => {
-                self.index.insert(key.clone(), self.entries.len());
-                self.entries.push((key, value));
-            }
-        }
+        self.entries.insert(key, value);
     }
 
     pub fn len(&self) -> usize {
@@ -75,7 +69,7 @@ impl<V> InsertionMap<V> {
 
     /// The entry for `key`, inserted with `default` when missing.
     pub fn entry_or(&mut self, key: &str, default: impl FnOnce() -> V) -> &mut V {
-        if !self.index.contains_key(key) {
+        if !self.entries.contains_key(key) {
             self.set(key.to_owned(), default());
         }
         self.get_mut(key).expect("inserted")
