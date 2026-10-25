@@ -374,6 +374,8 @@ struct State {
     exit_code: Option<i64>,
     stderr: String,
     stderr_truncated: bool,
+    #[cfg(windows)]
+    stderr_bytes: Vec<u8>,
     memory: Option<Memory>,
     lineage: Option<Value>,
 }
@@ -387,8 +389,6 @@ fn spawn_windows_reader(
         .name("rea-ghidra-rust-reader".to_owned())
         .spawn(move || {
             let mut line = Vec::new();
-            let mut stderr_bytes = Vec::new();
-            let mut stderr_truncated = false;
             loop {
                 let process = state
                     .lock()
@@ -401,7 +401,7 @@ fn spawn_windows_reader(
                     });
                     return;
                 };
-                let output = read_windows_output(&process);
+                let output = read_windows_output(&state, &process);
                 let output = match output {
                     Ok(output) => output,
                     Err(error) => {
@@ -409,12 +409,6 @@ fn spawn_windows_reader(
                         return;
                     }
                 };
-                retain_windows_stderr(
-                    &state,
-                    &mut stderr_bytes,
-                    &mut stderr_truncated,
-                    &output.stderr,
-                );
                 if !emit_windows_stdout(&output.stdout, &mut line, &sender) {
                     return;
                 }
@@ -432,35 +426,43 @@ fn spawn_windows_reader(
 
 #[cfg(windows)]
 fn read_windows_output(
-    process: &Arc<Mutex<OwnedChildProcess>>,
+    state: &Arc<Mutex<State>>,
+    process_owner: &Arc<Mutex<OwnedChildProcess>>,
 ) -> Result<rea_host::process::launcher::ChildOutput, String> {
-    process
+    let mut process = process_owner
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let output = process
         .read_output()
-        .map_err(|error| format!("Rust worker output read failed: {error}"))
+        .map_err(|error| format!("Rust worker output read failed: {error}"))?;
+    retain_windows_stderr(state, process_owner, &output.stderr);
+    Ok(output)
 }
 
 #[cfg(windows)]
 fn retain_windows_stderr(
     state: &Arc<Mutex<State>>,
-    stderr_bytes: &mut Vec<u8>,
-    stderr_truncated: &mut bool,
+    process: &Arc<Mutex<OwnedChildProcess>>,
     bytes: &[u8],
 ) {
     if bytes.is_empty() {
         return;
     }
-    let available = MAX_DIAGNOSTIC_BYTES.saturating_sub(stderr_bytes.len());
-    let retained = bytes.len().min(available);
-    stderr_bytes.extend_from_slice(&bytes[..retained]);
-    *stderr_truncated |= retained < bytes.len();
-    let (stderr, _) = bounded_text(stderr_bytes);
     let mut guard = state
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(current_process) = guard.process.as_ref() else {
+        return;
+    };
+    if !Arc::ptr_eq(current_process, process) {
+        return;
+    }
+    let available = MAX_DIAGNOSTIC_BYTES.saturating_sub(guard.stderr_bytes.len());
+    let retained = bytes.len().min(available);
+    guard.stderr_bytes.extend_from_slice(&bytes[..retained]);
+    guard.stderr_truncated |= retained < bytes.len();
+    let (stderr, _) = bounded_text(&guard.stderr_bytes);
     guard.stderr = stderr;
-    guard.stderr_truncated = *stderr_truncated;
 }
 
 #[cfg(windows)]
@@ -1162,7 +1164,8 @@ impl Worker {
             }
             return Ok(());
         };
-        let mut process = process
+        let process_owner = process;
+        let mut process = process_owner
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let stopped = match process.try_wait() {
@@ -1194,16 +1197,27 @@ impl Worker {
             .ok()
             .flatten()
             .and_then(|exit| exit_code(&exit));
+        #[cfg(unix)]
         let drained_stderr = process.drain_output().ok().map(|output| {
             let (stderr, truncated) = bounded_text(&output.stderr);
             (stderr, truncated)
         });
+        #[cfg(windows)]
+        let drained_stderr = process.drain_output().ok().map(|output| output.stderr);
+
+        #[cfg(windows)]
+        retain_windows_stderr(
+            &self.state,
+            &process_owner,
+            drained_stderr.as_deref().unwrap_or_default(),
+        );
         drop(process);
 
         let mut state = self.lock();
         if let Some(exit_code) = exit_code_observed {
             state.exit_code = Some(exit_code);
         }
+        #[cfg(unix)]
         if let Some((stderr, truncated)) = drained_stderr {
             state.stderr = stderr;
             state.stderr_truncated = truncated;

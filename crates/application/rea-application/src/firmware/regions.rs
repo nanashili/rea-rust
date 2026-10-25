@@ -10,8 +10,12 @@ use rea_core::{
     evidence::is_sha256,
     failure::{Detail, Failure},
 };
-use rea_host::{fs::stable_file, fs::unix_file::UnixFiles};
-use serde_json::{Map, Value, json};
+use rea_host::fs::stable_file;
+#[cfg(unix)]
+use rea_host::fs::unix_file::UnixFiles;
+#[cfg(windows)]
+use rea_host::fs::windows_file::WindowsFiles;
+use serde_json::{json, Map, Value};
 use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 pub const OPERATION: &str = "inspect_firmware_regions";
@@ -45,7 +49,7 @@ pub fn snapshot_input(
 ) -> Result<(String, usize, String), Failure> {
     let path = validate_input(input)?.to_owned();
     let snapshot = stable_file::read(
-        Arc::new(UnixFiles),
+        Arc::new(platform_files()),
         Path::new(&path),
         MAX_INPUT_BYTES,
         cancellation,
@@ -55,6 +59,16 @@ pub fn snapshot_input(
         return Err(invalid("path", "Firmware input must be nonempty"));
     }
     Ok((path, snapshot.bytes.len(), snapshot.sha256))
+}
+
+#[cfg(unix)]
+fn platform_files() -> UnixFiles {
+    UnixFiles
+}
+
+#[cfg(windows)]
+fn platform_files() -> WindowsFiles {
+    WindowsFiles
 }
 
 /// Normalize one provider report into the exact inspection result shape.

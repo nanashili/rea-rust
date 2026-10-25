@@ -5,8 +5,12 @@ use rea_core::{
     evidence::record::EvidenceRecord,
     failure::{Detail, Failure},
 };
-use rea_host::{fs::stable_file, fs::unix_file::UnixFiles};
-use serde_json::{Value, json};
+use rea_host::fs::stable_file;
+#[cfg(unix)]
+use rea_host::fs::unix_file::UnixFiles;
+#[cfg(windows)]
+use rea_host::fs::windows_file::WindowsFiles;
+use serde_json::{json, Value};
 use sha2::Digest;
 use std::{
     collections::{BTreeMap, HashSet},
@@ -22,6 +26,16 @@ pub const OPERATION: &str = "inspect_wasm_artifact";
 const MAX_INPUT: usize = 8 * 1024 * 1024;
 const MAX_OUTPUT: usize = 32 * 1024 * 1024;
 const MAX_ASSOCIATED_PATHS: usize = 16;
+
+#[cfg(unix)]
+fn platform_files() -> UnixFiles {
+    UnixFiles
+}
+
+#[cfg(windows)]
+fn platform_files() -> WindowsFiles {
+    WindowsFiles
+}
 
 pub fn inspect(
     input: &Value,
@@ -42,7 +56,7 @@ pub fn inspect(
     if !Path::new(&root).is_absolute() {
         return Err(unavailable("REA_WABT_BIN_DIRECTORY must be absolute"));
     }
-    let access = Arc::new(UnixFiles);
+    let access = Arc::new(platform_files());
     let snapshot = stable_file::read(access, Path::new(path), MAX_INPUT, cancellation)
         .map_err(|_| invalid("path", "Unable to read a stable regular WASM file"))?;
     if snapshot.bytes.len() < 8 || &snapshot.bytes[..4] != b"\0asm" {
@@ -208,7 +222,7 @@ fn verify_snapshot(
     cancellation: &Cancellation,
 ) -> Result<(), Failure> {
     let current = stable_file::read(
-        Arc::new(UnixFiles),
+        Arc::new(platform_files()),
         Path::new(path),
         MAX_INPUT,
         cancellation,
@@ -829,7 +843,7 @@ fn candidate_artifacts(
             continue;
         }
         let snapshot = stable_file::read(
-            Arc::new(UnixFiles),
+            Arc::new(platform_files()),
             Path::new(&path),
             MAX_INPUT,
             cancellation,
@@ -860,7 +874,7 @@ fn glue_artifacts(
                 return Err(cancelled());
             }
             let snapshot = stable_file::read(
-                Arc::new(UnixFiles),
+                Arc::new(platform_files()),
                 Path::new(path),
                 MAX_INPUT,
                 cancellation,

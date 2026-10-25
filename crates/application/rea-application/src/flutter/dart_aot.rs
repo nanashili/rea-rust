@@ -10,7 +10,11 @@ use rea_core::{
     evidence::{ArtifactEvidence, Location, NativeFormat, Observation, Provider, Subject},
     failure::{Detail, Failure},
 };
-use rea_host::{fs::stable_file, fs::unix_file::UnixFiles};
+use rea_host::fs::stable_file;
+#[cfg(unix)]
+use rea_host::fs::unix_file::UnixFiles;
+#[cfg(windows)]
+use rea_host::fs::windows_file::WindowsFiles;
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -119,7 +123,7 @@ pub fn inspect(
     }
     ensure_active(cancellation)?;
     let snapshot = stable_file::read(
-        Arc::new(UnixFiles),
+        Arc::new(platform_files()),
         Path::new(path),
         MAX_APK_BYTES,
         cancellation,
@@ -294,6 +298,16 @@ pub fn inspect(
         serde_json::value::RawValue::from_string(record.raw().get().to_owned())
             .map_err(|error| execution(&error.to_string()))?,
     )
+}
+
+#[cfg(unix)]
+fn platform_files() -> UnixFiles {
+    UnixFiles
+}
+
+#[cfg(windows)]
+fn platform_files() -> WindowsFiles {
+    WindowsFiles
 }
 
 struct PoolState {

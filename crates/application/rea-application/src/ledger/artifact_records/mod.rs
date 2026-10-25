@@ -100,10 +100,12 @@ impl RecordError {
         self.into_failure_for(OPERATION)
     }
 
+    #[cfg(unix)]
     pub fn into_import_failure(self) -> Failure {
         self.into_failure_for(crate::ledger::bundle_import::OPERATION)
     }
 
+    #[cfg(unix)]
     pub fn into_export_failure(self) -> Failure {
         self.into_failure_for(crate::ledger::bundle_export::OPERATION)
     }

@@ -107,7 +107,13 @@ impl ProcessLaunchError {
 
     #[cfg(windows)]
     fn with_cleanup(mut self, cleanup: String) -> Self {
-        self.cleanup = Some(cleanup);
+        match self.cleanup.as_mut() {
+            Some(previous) => {
+                previous.push_str("; ");
+                previous.push_str(&cleanup);
+            }
+            None => self.cleanup = Some(cleanup),
+        }
         self
     }
 }
