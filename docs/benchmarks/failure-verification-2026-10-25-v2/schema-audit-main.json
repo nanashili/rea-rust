@@ -1,0 +1,987 @@
+{
+  "collection": {
+    "counts": {
+      "malformed_successful": 0,
+      "receipt_count": 1050,
+      "skipped_unstructured": 190,
+      "skipped_unsuccessful": 20,
+      "successful_receipts": 1030,
+      "successful_structured_payloads": 840
+    },
+    "skipped": [
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chatgpt-electron-static-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/chrome-native-analysis-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/discord-electron-static-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-electron-static-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/figma-framework-deep-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/go-toolchain-binary-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/gofmt-deep-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/interface-builder-artifact-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-electron-static-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/kiro-node-pty-javascript-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/openunity-native-analysis-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/postman-electron-static-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/session-evidence-roundtrip-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/terminal-static-fast-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/unity-managed-library-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-deep-read-only-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/xcode-static-artifacts-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      }
+    ]
+  },
+  "runs": "/tmp/rea-failure-verification-2026-10-25-30s-main",
+  "schema_source": {
+    "path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+    "sha256": "eee615a83fc605000af0e26183af95dd57c5e139edba714755ade273e16ebd56"
+  },
+  "validation": {
+    "invalid": [],
+    "invalid_count": 0,
+    "valid_count": 840,
+    "validator_error_count": 0,
+    "validator_errors": []
+  },
+  "validator": {
+    "limitations": [
+      "Does not validate full conformance to the declared schema dialect.",
+      "Does not establish factual correctness or semantic completeness.",
+      "Failed calls and successful calls without object payloads are skipped."
+    ],
+    "mode": "compatible_shape_constraints",
+    "name": "jsonschema",
+    "schema_transform": "recursively remove $id and $schema",
+    "version": "1.5.0"
+  }
+}

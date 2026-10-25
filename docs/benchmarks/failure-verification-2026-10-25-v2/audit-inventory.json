@@ -1,0 +1,73 @@
+{
+  "benchmark": {
+    "machine": "arm64",
+    "plan_sha256": "48241cdc472f64380eb6559ea40a94febef506220e942611b84973638f9f83b5",
+    "platform": "darwin",
+    "rea_sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+    "rounds": 5,
+    "worker_sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed"
+  },
+  "bounded_result_facts": [
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 1,
+      "workflow": "openunity-native-inventory"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 2,
+      "workflow": "openunity-native-inventory"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 3,
+      "workflow": "openunity-native-inventory"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 4,
+      "workflow": "openunity-native-inventory"
+    },
+    {
+      "operation": "list_procedures",
+      "procedure_count": 14806,
+      "round": 5,
+      "workflow": "openunity-native-inventory"
+    }
+  ],
+  "schema_version": 1,
+  "source": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+  "workflow_summary": [
+    {
+      "calls": 15,
+      "operations": {
+        "inspect_with_objdump": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "gofmt-objdump-headers"
+    },
+    {
+      "calls": 40,
+      "operations": {
+        "binary_overview": 5,
+        "close_binary": 5,
+        "find_xrefs_to_name": 5,
+        "list_names": 5,
+        "list_procedures": 5,
+        "open_binary": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "openunity-native-inventory"
+    }
+  ]
+}

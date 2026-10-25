@@ -183,10 +183,6 @@ def validate_coverage(parsed: dict[str, Any]) -> tuple[dict[str, Any], list[dict
             if isinstance(limitations, list)
             else []
         )
-    malformed_version = any("RT_VERSION" in item and "malformed" in item.lower() for item in limitations)
-    if not malformed_version:
-        errors.append({"error": "missing_malformed_rt_version_limitation"})
-
     return {
         "format": format_name,
         "coverage": {
@@ -196,7 +192,6 @@ def validate_coverage(parsed: dict[str, Any]) -> tuple[dict[str, Any], list[dict
         },
         "resource_count": len(resources),
         "limitations": limitations,
-        "malformed_rt_version": malformed_version,
     }, errors
 
 
@@ -405,8 +400,8 @@ def build_report(work_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
             "and direct byte agreement only; no resource payload text or target source."
         ),
         "limitations": [
-            "RT_VERSION was reported malformed and version metadata remains unknown.",
-            "This report does not claim fully decoded version resources or semantic correctness.",
+            "Returned limitations are observations, not proof that a resource is malformed.",
+            "Version decoding is checked separately by validate_pe_version.py; this report checks resource bounds and byte agreement.",
         ],
         "workflow": EXPECTED_WORKFLOW,
         "target_path": expected_path,

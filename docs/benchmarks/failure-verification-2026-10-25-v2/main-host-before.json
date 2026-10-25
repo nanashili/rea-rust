@@ -1,0 +1,958 @@
+{
+  "bundle_targets": [
+    {
+      "available": true,
+      "build_version": "21161",
+      "bundle_identifier": "com.openai.codex",
+      "executable": "ChatGPT",
+      "info_plist": "/Applications/ChatGPT.app/Contents/Info.plist",
+      "path": "/Applications/ChatGPT.app",
+      "short_version": "26.1016.51333"
+    },
+    {
+      "available": true,
+      "build_version": "0.0.415",
+      "bundle_identifier": "com.hnc.Discord",
+      "executable": "Discord",
+      "info_plist": "/Applications/Discord.app/Contents/Info.plist",
+      "path": "/Applications/Discord.app",
+      "short_version": "0.0.415"
+    },
+    {
+      "available": true,
+      "build_version": "126.9.13",
+      "bundle_identifier": "com.figma.Desktop",
+      "executable": "Figma",
+      "info_plist": "/Applications/Figma.app/Contents/Info.plist",
+      "path": "/Applications/Figma.app",
+      "short_version": "126.9.13"
+    },
+    {
+      "available": true,
+      "build_version": "8059.86",
+      "bundle_identifier": "com.google.Chrome",
+      "executable": "Google Chrome",
+      "info_plist": "/Applications/Google Chrome.app/Contents/Info.plist",
+      "path": "/Applications/Google Chrome.app",
+      "short_version": "155.0.8059.86"
+    },
+    {
+      "available": true,
+      "build_version": "1.4.26",
+      "bundle_identifier": "dev.kiro.desktop",
+      "executable": "Kiro",
+      "info_plist": "/Applications/Kiro.app/Contents/Info.plist",
+      "path": "/Applications/Kiro.app",
+      "short_version": "1.4.26"
+    },
+    {
+      "available": false,
+      "info_plist": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/Contents/Info.plist",
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib"
+    },
+    {
+      "available": true,
+      "build_version": "0.1.0",
+      "bundle_identifier": "org.openunity.editor",
+      "executable": "openunity-editor",
+      "info_plist": "/Applications/OpenUnity.app/Contents/Info.plist",
+      "path": "/Applications/OpenUnity.app",
+      "short_version": "0.1.0"
+    },
+    {
+      "available": true,
+      "build_version": "12.32.2",
+      "bundle_identifier": "com.postmanlabs.mac",
+      "executable": "Postman",
+      "info_plist": "/Applications/Postman.app/Contents/Info.plist",
+      "path": "/Applications/Postman.app",
+      "short_version": "12.32.2"
+    },
+    {
+      "available": true,
+      "build_version": "7000.0.0a8",
+      "bundle_identifier": "com.unity3d.UnityEditor5.x",
+      "executable": "Unity",
+      "info_plist": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/Info.plist",
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app",
+      "short_version": "Unity version 7000.0.0a8"
+    },
+    {
+      "available": true,
+      "build_version": "25183.107.5",
+      "bundle_identifier": "com.apple.dt.Xcode",
+      "executable": "Xcode",
+      "info_plist": "/Applications/Xcode.app/Contents/Info.plist",
+      "path": "/Applications/Xcode.app",
+      "short_version": "27.0"
+    },
+    {
+      "available": true,
+      "build_version": "20261020.095313",
+      "bundle_identifier": "dev.zed.Zed-Preview",
+      "executable": "zed",
+      "info_plist": "/Applications/Zed Preview.app/Contents/Info.plist",
+      "path": "/Applications/Zed Preview.app",
+      "short_version": "1.25.1"
+    },
+    {
+      "available": true,
+      "build_version": "488.7",
+      "bundle_identifier": "com.apple.Terminal",
+      "executable": "Terminal",
+      "info_plist": "/System/Applications/Utilities/Terminal.app/Contents/Info.plist",
+      "path": "/System/Applications/Utilities/Terminal.app",
+      "short_version": "2.15"
+    }
+  ],
+  "captured_at_utc": "2026-10-25T20:54:12.933927+00:00",
+  "host": {
+    "commands": {
+      "power": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "batt"
+        ],
+        "output": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=23658595)\t12%; discharging; 0:21 remaining present: true",
+        "returncode": 0
+      },
+      "sw_vers": {
+        "available": true,
+        "command": [
+          "sw_vers"
+        ],
+        "output": "ProductName:\t\tmacOS\nProductVersion:\t\t27.2\nBuildVersion:\t\t26B5101f",
+        "returncode": 0
+      },
+      "sysctl_cpu": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.ncpu"
+        ],
+        "output": "10",
+        "returncode": 0
+      },
+      "sysctl_cpu_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "machdep.cpu.brand_string"
+        ],
+        "output": "Apple M1 Pro",
+        "returncode": 0
+      },
+      "sysctl_hardware_model": {
+        "available": true,
+        "command": [
+          "sysctl",
+          "-n",
+          "hw.model"
+        ],
+        "output": "MacBookPro18,1",
+        "returncode": 0
+      },
+      "thermal": {
+        "available": true,
+        "command": [
+          "pmset",
+          "-g",
+          "therm"
+        ],
+        "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+        "returncode": 0
+      }
+    },
+    "cpu_count": 10,
+    "disk_free_bytes_at_capture": 3397013504,
+    "disk_total_bytes_at_capture": 494384795648,
+    "load_average": [
+      6.3017578125,
+      7.6826171875,
+      7.767578125
+    ],
+    "machine": "arm64",
+    "memory_bytes": 34359738368,
+    "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+    "psutil_version": "7.2.2",
+    "python": "3.13.7",
+    "release": "27.2.0",
+    "system": "Darwin"
+  },
+  "manifest_sha256": "295b99d291b5fd1be2e176472ac77d7eff21515c2d6dc46533a746d2f7a26516",
+  "plan_path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+  "plan_sha256": "0e963fa6645acaabbf8be0a0d5549ee8425c677377dd9a0f3716347595ba6010",
+  "rea_path": "/private/tmp/rea-final-benchmark-build-v2/rea",
+  "runner_path": "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+  "schema_version": 1,
+  "selected_file_count": 34,
+  "selected_files_after": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150084385,
+      "mtime_ns": 1792961607987755629,
+      "path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+      "resolved_path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+      "sha256": "0e963fa6645acaabbf8be0a0d5549ee8425c677377dd9a0f3716347595ba6010",
+      "size_bytes": 35008
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150004274,
+      "mtime_ns": 1792960694533190213,
+      "path": "/private/tmp/rea-final-benchmark-build-v2/rea",
+      "resolved_path": "/private/tmp/rea-final-benchmark-build-v2/rea",
+      "sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+      "size_bytes": 54142768
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150004273,
+      "mtime_ns": 1792960694242126986,
+      "path": "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+      "sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed",
+      "size_bytes": 9714752
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149576216,
+      "mtime_ns": 1792948272771370065,
+      "path": "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+      "sha256": "2d48ccca8f51a3ab7fbc47c8cc9554845d4ac7adf805cd9753da55ab9980f31a",
+      "size_bytes": 36634
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143784101,
+      "mtime_ns": 1792571242235788506,
+      "path": "/Applications/ChatGPT.app/Contents/Info.plist",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/Info.plist",
+      "sha256": "144ac85b06d0a9361c45e98c667ea01189289bf8875b24c0ed4ef896c4267215",
+      "size_bytes": 20738
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143778991,
+      "mtime_ns": 1792571242236650091,
+      "path": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      "sha256": "e6b318af4339dbfff272513a4da44ae1b5f76da6b26166f00f7e960a5eb2c1c4",
+      "size_bytes": 71008
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143779121,
+      "mtime_ns": 1792571246157754491,
+      "path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+      "sha256": "9d0260dd37f9c45546d5a89d9d782b8362c9957b70b992e2c3f91df60a046b07",
+      "size_bytes": 626348697
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127329552,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Discord.app/Contents/Info.plist",
+      "sha256": "6418692b85b602812ef997ce9aad6e7f997447e0b77c26d68d6dcabeb1052ab5",
+      "size_bytes": 2911
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127328964,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/MacOS/Discord",
+      "resolved_path": "/Applications/Discord.app/Contents/MacOS/Discord",
+      "sha256": "2f81a987b76275ab9be6b5f4357aeea2ec00191283cda51890e87ada37ef88b4",
+      "size_bytes": 119296
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127328972,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Discord.app/Contents/Resources/app.asar",
+      "sha256": "61a72bb967b1681d3926886c5f41489ceccd1a4237b2f11feb0da1747765a4e5",
+      "size_bytes": 3619312
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328600,
+      "mtime_ns": 1791386410000000000,
+      "path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "resolved_path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "sha256": "43be72404837e8504977372847c5ceeee55c511153d7a292bc433c1a751d91fe",
+      "size_bytes": 194960016
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132329126,
+      "mtime_ns": 1791386380000000000,
+      "path": "/Applications/Figma.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Figma.app/Contents/Info.plist",
+      "sha256": "ab674fd477cfdecffa2e2ea732cb3290cb07e3115808eeb058b20aaafd6c6f2f",
+      "size_bytes": 4216
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328478,
+      "mtime_ns": 1791386410000000000,
+      "path": "/Applications/Figma.app/Contents/MacOS/Figma",
+      "resolved_path": "/Applications/Figma.app/Contents/MacOS/Figma",
+      "sha256": "80e7042e942e558af09c238b9a838cb53d23a067556bc64ddb8f77d175655927",
+      "size_bytes": 52912
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328518,
+      "mtime_ns": 1791386380000000000,
+      "path": "/Applications/Figma.app/Contents/Resources/Assets.car",
+      "resolved_path": "/Applications/Figma.app/Contents/Resources/Assets.car",
+      "sha256": "d75bc72943ff2846e93607e04b6c923667b1ec247c0442f484c7b50447d61cd5",
+      "size_bytes": 1568184
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328496,
+      "mtime_ns": 1791386376000000000,
+      "path": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+      "size_bytes": 9724384
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143318939,
+      "mtime_ns": 1792544166532481360,
+      "path": "/Applications/Google Chrome.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Info.plist",
+      "sha256": "8d026e8fce6d4eac9187d7e184b864cb64762e25998ba098520b697a396ba727",
+      "size_bytes": 18856
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143318870,
+      "mtime_ns": 1792544166480058132,
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "011a77fd50ddc001d31c4ef042e655a0ffb8ca64646c6ab4fcd6fe0c6ba7f1be",
+      "size_bytes": 367696
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146177276,
+      "mtime_ns": 1792705066000000000,
+      "path": "/Applications/Kiro.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Kiro.app/Contents/Info.plist",
+      "sha256": "3b6e7c1db4a59f42a7a8ce602756b87e7375d619e0d3a59eceac31a76512d3d1",
+      "size_bytes": 7662
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170916,
+      "mtime_ns": 1792705028000000000,
+      "path": "/Applications/Kiro.app/Contents/MacOS/Kiro",
+      "resolved_path": "/Applications/Kiro.app/Contents/MacOS/Kiro",
+      "sha256": "33503fdcc36459916e2f22f7e87fe4fb2c49de4577b0003181419166256cb5e5",
+      "size_bytes": 52832
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146171691,
+      "mtime_ns": 1792705034000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+      "sha256": "8482a1bee3eb61eea1bd6cc9c6ad71054d0880957ee3353b795a15ad132d2e1c",
+      "size_bytes": 108958118
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170993,
+      "mtime_ns": 1792705030000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/shared/conout.js",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/shared/conout.js",
+      "sha256": "843668a40e708f19e5d89258ce483aac4c5aefa58cd12f822391af80c72350fa",
+      "size_bytes": 355
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170995,
+      "mtime_ns": 1792705030000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/worker/conoutSocketWorker.js",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/worker/conoutSocketWorker.js",
+      "sha256": "8aa106893ed948bc40e46d076ac629bd222343777fd919f29c58c649cad8e00f",
+      "size_bytes": 911
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323001,
+      "mtime_ns": 1791887498481646059,
+      "path": "/Applications/OpenUnity.app/Contents/Info.plist",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/Info.plist",
+      "sha256": "fa52f487b24b1d800613c42275fef960f989d8a9b56a8908a5857d8097816976",
+      "size_bytes": 897
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323015,
+      "mtime_ns": 1791887498543831192,
+      "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "size_bytes": 12434032
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135316614,
+      "mtime_ns": 1791945533000000000,
+      "path": "/Applications/Postman.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Postman.app/Contents/Info.plist",
+      "sha256": "c27d7802f97e43df3a25f21215978adaf5a78e4f676fc4bdfe21b1b47aaf33aa",
+      "size_bytes": 3024
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135309397,
+      "mtime_ns": 1791945923000000000,
+      "path": "/Applications/Postman.app/Contents/MacOS/Postman",
+      "resolved_path": "/Applications/Postman.app/Contents/MacOS/Postman",
+      "sha256": "1386fe7e4933c0a8586b5487cdcd3c750fad52b22ee97dcc5f75d65b864107d5",
+      "size_bytes": 69248
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135309399,
+      "mtime_ns": 1791945532000000000,
+      "path": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "sha256": "1705089ab2a15340eff8de9a85d8365189099129f22268c1cc9fd3b0dc7e4d78",
+      "size_bytes": 154182631
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134084114,
+      "mtime_ns": 1791728409716862163,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446",
+      "size_bytes": 2587136
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 129797501,
+      "mtime_ns": 1791728436650817568,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/Info.plist",
+      "sha256": "9f6051949d9e46e962da2cd3b39a0b1c67362c4ab0db89d20a8549416a2a902a",
+      "size_bytes": 4964
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134068388,
+      "mtime_ns": 1791728411518830967,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/MacOS/Unity",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/MacOS/Unity",
+      "sha256": "8c32a476241604874a2f9cf5d9f117009c0d0a027b64b0e34cdc896e1689fb43",
+      "size_bytes": 118864128
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 100997813,
+      "mtime_ns": 1786739656000000000,
+      "path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/AppIntentSchemas.framework/Versions/A/Resources/AppIntentSchemas.sqlite",
+      "resolved_path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/AppIntentSchemas.framework/Versions/A/Resources/AppIntentSchemas.sqlite",
+      "sha256": "cd72c185ac27de86fa426bd15ccb52e25bfd5049ae3e88bf6232ec8018cbc4b8",
+      "size_bytes": 4251648
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 101035044,
+      "mtime_ns": 1788426977000000000,
+      "path": "/Applications/Xcode.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Xcode.app/Contents/Info.plist",
+      "sha256": "537783b4c639af6ee31208fe2ec12a40bacbb0fc8f5dd2820f54e03063c4dbe8",
+      "size_bytes": 34501
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 101074774,
+      "mtime_ns": 1788503680000000000,
+      "path": "/Applications/Xcode.app/Contents/MacOS/Xcode",
+      "resolved_path": "/Applications/Xcode.app/Contents/MacOS/Xcode",
+      "sha256": "64c1588d262ca2dadddbbcf7603982e65343d8b8802162308f16410faeae2edd",
+      "size_bytes": 79472
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 142419531,
+      "mtime_ns": 1792489993000000000,
+      "path": "/Applications/Zed Preview.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Zed Preview.app/Contents/Info.plist",
+      "sha256": "a273eb8b164b7e403fb2c1d4489586e5d91213f57d257870b5d22ecd78d1065d",
+      "size_bytes": 8438
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 142419535,
+      "mtime_ns": 1792490131000000000,
+      "path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "resolved_path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "sha256": "17afc6f635fb95c5a60e3a1802bef25202e0e34455c5f3cd45efb59efbe4e7da",
+      "size_bytes": 175383888
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 1152921500311915999,
+      "mtime_ns": 1790997358000000000,
+      "path": "/System/Applications/Utilities/Terminal.app/Contents/Info.plist",
+      "resolved_path": "/System/Applications/Utilities/Terminal.app/Contents/Info.plist",
+      "sha256": "821f9d39b0144f53967d177e9677918b7e9d7ece14ccbb0dd4f4a61a6d7d1e29",
+      "size_bytes": 7677
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 1152921500311916002,
+      "mtime_ns": 1790997358000000000,
+      "path": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "resolved_path": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "sha256": "699fbbecf1ddbeaaf79c6ed159b2d25e62a50583d41bc607f76bbfc06149cd4a",
+      "size_bytes": 2470016
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134091824,
+      "mtime_ns": 1782941067000000000,
+      "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "resolved_path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "sha256": "fb5bc1241a2e1a218afb069d7ee5e4269c3fe918a38fc03190fbc9cbb2bb69b1",
+      "size_bytes": 2952114
+    }
+  ],
+  "selected_files_before": [
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150084385,
+      "mtime_ns": 1792961607987755629,
+      "path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+      "resolved_path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+      "sha256": "0e963fa6645acaabbf8be0a0d5549ee8425c677377dd9a0f3716347595ba6010",
+      "size_bytes": 35008
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150004274,
+      "mtime_ns": 1792960694533190213,
+      "path": "/private/tmp/rea-final-benchmark-build-v2/rea",
+      "resolved_path": "/private/tmp/rea-final-benchmark-build-v2/rea",
+      "sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+      "size_bytes": 54142768
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 150004273,
+      "mtime_ns": 1792960694242126986,
+      "path": "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+      "resolved_path": "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+      "sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed",
+      "size_bytes": 9714752
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 149576216,
+      "mtime_ns": 1792948272771370065,
+      "path": "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+      "resolved_path": "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+      "sha256": "2d48ccca8f51a3ab7fbc47c8cc9554845d4ac7adf805cd9753da55ab9980f31a",
+      "size_bytes": 36634
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143784101,
+      "mtime_ns": 1792571242235788506,
+      "path": "/Applications/ChatGPT.app/Contents/Info.plist",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/Info.plist",
+      "sha256": "144ac85b06d0a9361c45e98c667ea01189289bf8875b24c0ed4ef896c4267215",
+      "size_bytes": 20738
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143778991,
+      "mtime_ns": 1792571242236650091,
+      "path": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+      "sha256": "e6b318af4339dbfff272513a4da44ae1b5f76da6b26166f00f7e960a5eb2c1c4",
+      "size_bytes": 71008
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143779121,
+      "mtime_ns": 1792571246157754491,
+      "path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+      "sha256": "9d0260dd37f9c45546d5a89d9d782b8362c9957b70b992e2c3f91df60a046b07",
+      "size_bytes": 626348697
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127329552,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Discord.app/Contents/Info.plist",
+      "sha256": "6418692b85b602812ef997ce9aad6e7f997447e0b77c26d68d6dcabeb1052ab5",
+      "size_bytes": 2911
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127328964,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/MacOS/Discord",
+      "resolved_path": "/Applications/Discord.app/Contents/MacOS/Discord",
+      "sha256": "2f81a987b76275ab9be6b5f4357aeea2ec00191283cda51890e87ada37ef88b4",
+      "size_bytes": 119296
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 127328972,
+      "mtime_ns": 1791217759000000000,
+      "path": "/Applications/Discord.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Discord.app/Contents/Resources/app.asar",
+      "sha256": "61a72bb967b1681d3926886c5f41489ceccd1a4237b2f11feb0da1747765a4e5",
+      "size_bytes": 3619312
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328600,
+      "mtime_ns": 1791386410000000000,
+      "path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "resolved_path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+      "sha256": "43be72404837e8504977372847c5ceeee55c511153d7a292bc433c1a751d91fe",
+      "size_bytes": 194960016
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132329126,
+      "mtime_ns": 1791386380000000000,
+      "path": "/Applications/Figma.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Figma.app/Contents/Info.plist",
+      "sha256": "ab674fd477cfdecffa2e2ea732cb3290cb07e3115808eeb058b20aaafd6c6f2f",
+      "size_bytes": 4216
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328478,
+      "mtime_ns": 1791386410000000000,
+      "path": "/Applications/Figma.app/Contents/MacOS/Figma",
+      "resolved_path": "/Applications/Figma.app/Contents/MacOS/Figma",
+      "sha256": "80e7042e942e558af09c238b9a838cb53d23a067556bc64ddb8f77d175655927",
+      "size_bytes": 52912
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328518,
+      "mtime_ns": 1791386380000000000,
+      "path": "/Applications/Figma.app/Contents/Resources/Assets.car",
+      "resolved_path": "/Applications/Figma.app/Contents/Resources/Assets.car",
+      "sha256": "d75bc72943ff2846e93607e04b6c923667b1ec247c0442f484c7b50447d61cd5",
+      "size_bytes": 1568184
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 132328496,
+      "mtime_ns": 1791386376000000000,
+      "path": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+      "size_bytes": 9724384
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143318939,
+      "mtime_ns": 1792544166532481360,
+      "path": "/Applications/Google Chrome.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Info.plist",
+      "sha256": "8d026e8fce6d4eac9187d7e184b864cb64762e25998ba098520b697a396ba727",
+      "size_bytes": 18856
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 143318870,
+      "mtime_ns": 1792544166480058132,
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "011a77fd50ddc001d31c4ef042e655a0ffb8ca64646c6ab4fcd6fe0c6ba7f1be",
+      "size_bytes": 367696
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146177276,
+      "mtime_ns": 1792705066000000000,
+      "path": "/Applications/Kiro.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Kiro.app/Contents/Info.plist",
+      "sha256": "3b6e7c1db4a59f42a7a8ce602756b87e7375d619e0d3a59eceac31a76512d3d1",
+      "size_bytes": 7662
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170916,
+      "mtime_ns": 1792705028000000000,
+      "path": "/Applications/Kiro.app/Contents/MacOS/Kiro",
+      "resolved_path": "/Applications/Kiro.app/Contents/MacOS/Kiro",
+      "sha256": "33503fdcc36459916e2f22f7e87fe4fb2c49de4577b0003181419166256cb5e5",
+      "size_bytes": 52832
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146171691,
+      "mtime_ns": 1792705034000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+      "sha256": "8482a1bee3eb61eea1bd6cc9c6ad71054d0880957ee3353b795a15ad132d2e1c",
+      "size_bytes": 108958118
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170993,
+      "mtime_ns": 1792705030000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/shared/conout.js",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/shared/conout.js",
+      "sha256": "843668a40e708f19e5d89258ce483aac4c5aefa58cd12f822391af80c72350fa",
+      "size_bytes": 355
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 146170995,
+      "mtime_ns": 1792705030000000000,
+      "path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/worker/conoutSocketWorker.js",
+      "resolved_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/worker/conoutSocketWorker.js",
+      "sha256": "8aa106893ed948bc40e46d076ac629bd222343777fd919f29c58c649cad8e00f",
+      "size_bytes": 911
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323001,
+      "mtime_ns": 1791887498481646059,
+      "path": "/Applications/OpenUnity.app/Contents/Info.plist",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/Info.plist",
+      "sha256": "fa52f487b24b1d800613c42275fef960f989d8a9b56a8908a5857d8097816976",
+      "size_bytes": 897
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 133323015,
+      "mtime_ns": 1791887498543831192,
+      "path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "resolved_path": "/Applications/OpenUnity.app/Contents/MacOS/openunity-editor",
+      "sha256": "20379bf1f625ba330a84dcf0d9a5fd74aa7ccb1bfb76cd2659eba1bc29cec8e4",
+      "size_bytes": 12434032
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135316614,
+      "mtime_ns": 1791945533000000000,
+      "path": "/Applications/Postman.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Postman.app/Contents/Info.plist",
+      "sha256": "c27d7802f97e43df3a25f21215978adaf5a78e4f676fc4bdfe21b1b47aaf33aa",
+      "size_bytes": 3024
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135309397,
+      "mtime_ns": 1791945923000000000,
+      "path": "/Applications/Postman.app/Contents/MacOS/Postman",
+      "resolved_path": "/Applications/Postman.app/Contents/MacOS/Postman",
+      "sha256": "1386fe7e4933c0a8586b5487cdcd3c750fad52b22ee97dcc5f75d65b864107d5",
+      "size_bytes": 69248
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 135309399,
+      "mtime_ns": 1791945532000000000,
+      "path": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "resolved_path": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "sha256": "1705089ab2a15340eff8de9a85d8365189099129f22268c1cc9fd3b0dc7e4d78",
+      "size_bytes": 154182631
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134084114,
+      "mtime_ns": 1791728409716862163,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+      "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446",
+      "size_bytes": 2587136
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 129797501,
+      "mtime_ns": 1791728436650817568,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/Info.plist",
+      "sha256": "9f6051949d9e46e962da2cd3b39a0b1c67362c4ab0db89d20a8549416a2a902a",
+      "size_bytes": 4964
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134068388,
+      "mtime_ns": 1791728411518830967,
+      "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/MacOS/Unity",
+      "resolved_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app/Contents/MacOS/Unity",
+      "sha256": "8c32a476241604874a2f9cf5d9f117009c0d0a027b64b0e34cdc896e1689fb43",
+      "size_bytes": 118864128
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 100997813,
+      "mtime_ns": 1786739656000000000,
+      "path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/AppIntentSchemas.framework/Versions/A/Resources/AppIntentSchemas.sqlite",
+      "resolved_path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/AppIntentSchemas.framework/Versions/A/Resources/AppIntentSchemas.sqlite",
+      "sha256": "cd72c185ac27de86fa426bd15ccb52e25bfd5049ae3e88bf6232ec8018cbc4b8",
+      "size_bytes": 4251648
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 101035044,
+      "mtime_ns": 1788426977000000000,
+      "path": "/Applications/Xcode.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Xcode.app/Contents/Info.plist",
+      "sha256": "537783b4c639af6ee31208fe2ec12a40bacbb0fc8f5dd2820f54e03063c4dbe8",
+      "size_bytes": 34501
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 101074774,
+      "mtime_ns": 1788503680000000000,
+      "path": "/Applications/Xcode.app/Contents/MacOS/Xcode",
+      "resolved_path": "/Applications/Xcode.app/Contents/MacOS/Xcode",
+      "sha256": "64c1588d262ca2dadddbbcf7603982e65343d8b8802162308f16410faeae2edd",
+      "size_bytes": 79472
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 142419531,
+      "mtime_ns": 1792489993000000000,
+      "path": "/Applications/Zed Preview.app/Contents/Info.plist",
+      "resolved_path": "/Applications/Zed Preview.app/Contents/Info.plist",
+      "sha256": "a273eb8b164b7e403fb2c1d4489586e5d91213f57d257870b5d22ecd78d1065d",
+      "size_bytes": 8438
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 142419535,
+      "mtime_ns": 1792490131000000000,
+      "path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "resolved_path": "/Applications/Zed Preview.app/Contents/MacOS/zed",
+      "sha256": "17afc6f635fb95c5a60e3a1802bef25202e0e34455c5f3cd45efb59efbe4e7da",
+      "size_bytes": 175383888
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 1152921500311915999,
+      "mtime_ns": 1790997358000000000,
+      "path": "/System/Applications/Utilities/Terminal.app/Contents/Info.plist",
+      "resolved_path": "/System/Applications/Utilities/Terminal.app/Contents/Info.plist",
+      "sha256": "821f9d39b0144f53967d177e9677918b7e9d7ece14ccbb0dd4f4a61a6d7d1e29",
+      "size_bytes": 7677
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 1152921500311916002,
+      "mtime_ns": 1790997358000000000,
+      "path": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "resolved_path": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "sha256": "699fbbecf1ddbeaaf79c6ed159b2d25e62a50583d41bc607f76bbfc06149cd4a",
+      "size_bytes": 2470016
+    },
+    {
+      "changed_during_read": false,
+      "device": 16777234,
+      "inode": 134091824,
+      "mtime_ns": 1782941067000000000,
+      "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "resolved_path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "sha256": "fb5bc1241a2e1a218afb069d7ee5e4269c3fe918a38fc03190fbc9cbb2bb69b1",
+      "size_bytes": 2952114
+    }
+  ],
+  "worker_path": "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker"
+}

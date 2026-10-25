@@ -1,0 +1,165 @@
+{
+  "limitations": [
+    "Returned limitations are observations, not proof that a resource is malformed.",
+    "Version decoding is checked separately by validate_pe_version.py; this report checks resource bounds and byte agreement."
+  ],
+  "purpose": "Bounded PE-resource validation facts from completed receipts.",
+  "rounds": [
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "payloads": [
+        {
+          "bytes": 644,
+          "file_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+          "matched": true,
+          "offset": 2585688,
+          "provider_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+        }
+      ],
+      "resource_count": 1,
+      "round": "001",
+      "status": "success",
+      "validation_errors": []
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "payloads": [
+        {
+          "bytes": 644,
+          "file_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+          "matched": true,
+          "offset": 2585688,
+          "provider_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+        }
+      ],
+      "resource_count": 1,
+      "round": "002",
+      "status": "success",
+      "validation_errors": []
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "payloads": [
+        {
+          "bytes": 644,
+          "file_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+          "matched": true,
+          "offset": 2585688,
+          "provider_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+        }
+      ],
+      "resource_count": 1,
+      "round": "003",
+      "status": "success",
+      "validation_errors": []
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "payloads": [
+        {
+          "bytes": 644,
+          "file_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+          "matched": true,
+          "offset": 2585688,
+          "provider_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+        }
+      ],
+      "resource_count": 1,
+      "round": "004",
+      "status": "success",
+      "validation_errors": []
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "payloads": [
+        {
+          "bytes": 644,
+          "file_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+          "matched": true,
+          "offset": 2585688,
+          "provider_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+        }
+      ],
+      "resource_count": 1,
+      "round": "005",
+      "status": "success",
+      "validation_errors": []
+    }
+  ],
+  "schema_version": 1,
+  "source_policy": "Counts, format, artifact/resource sizes, digests, coverage, limitations, and direct byte agreement only; no resource payload text or target source.",
+  "target_path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+  "target_sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446",
+  "validation_errors": [],
+  "workflow": "unity-pe-resources"
+}

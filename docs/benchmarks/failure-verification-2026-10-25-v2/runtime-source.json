@@ -1,0 +1,23 @@
+{
+  "verified_at_utc": "2026-10-25T20:55:37.516054+00:00",
+  "runtime_source_commit": "b067b8431f317efda7c3b3573933b6d92d79ac62",
+  "frozen_source_tree": "ba4a5889d0c302eaa549e07dd287a8d2e992f588",
+  "status": "identical_outside_documentation_and_benchmark_reporting",
+  "comparison_command": [
+    "git",
+    "diff",
+    "--exit-code",
+    "ba4a5889d0c302eaa549e07dd287a8d2e992f588",
+    "b067b8431f317efda7c3b3573933b6d92d79ac62",
+    "--",
+    ".",
+    ":(exclude)README.md",
+    ":(exclude)docs/**",
+    ":(exclude)scripts/benchmarks/**"
+  ],
+  "excluded_paths": [
+    "README.md",
+    "docs/**",
+    "scripts/benchmarks/**"
+  ]
+}

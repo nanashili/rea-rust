@@ -1,0 +1,224 @@
+{
+  "status": "measured_failures",
+  "provenance": {
+    "created_at": "2026-10-25T20:38:00.709366+00:00",
+    "commit": "0173375f35d85d96be62f8aaa4f263a7a14b260e",
+    "patch_sha256": "463d725548b22f3d1df9df635d22943c838c254343b65f6c4307492aa78d89f2",
+    "binaries": {
+      "rea": {
+        "sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+        "bytes": 54142768
+      },
+      "rea-ghidra-rust-worker": {
+        "sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed",
+        "bytes": 9714752
+      }
+    },
+    "scope": "Intermediate unchanged-limit diagnostic of reviewed Rust source; no TypeScript changes."
+  },
+  "series": [
+    {
+      "series": "main",
+      "plan": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+      "output": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+      "work_dir": "/private/tmp/rea-failure-verification-2026-10-25-30s-main",
+      "expected_receipts": 95,
+      "started_at_utc": "2026-10-25T20:54:11.136924+00:00",
+      "host_before": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-host-before.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "run": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--work-dir",
+          "/private/tmp/rea-failure-verification-2026-10-25-30s-main",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+          "--rounds",
+          "5",
+          "--call-timeout",
+          "120"
+        ],
+        "returncode": 1,
+        "stdout_tail": "completed terminal-static-fast round 1\ncompleted zed-native-analysis round 1\ncompleted openunity-native-analysis round 1\ncompleted chrome-native-analysis round 1\ncompleted xcode-static-artifacts round 1\ncompleted discord-electron-static round 1\ncompleted figma-electron-static round 1\ncompleted postman-electron-static round 1\ncompleted chatgpt-electron-static round 1\ncompleted kiro-electron-static round 1\ncompleted unity-managed-library round 1\ncompleted go-toolchain-binary round 1\ncompleted interface-builder-artifact round 1\ncompleted xcode-deep-read-only round 1\ncompleted zed-rust-metadata round 1\ncompleted gofmt-deep round 1\ncompleted session-evidence-roundtrip round 1\ncompleted figma-framework-deep round 1\ncompleted kiro-node-pty-javascript round 1\ncompleted kiro-node-pty-javascript round 2\ncompleted figma-framework-deep round 2\ncompleted session-evidence-roundtrip round 2\ncompleted gofmt-deep round 2\ncompleted zed-rust-metadata round 2\ncompleted xcode-deep-read-only round 2\ncompleted interface-builder-artifact round 2\ncompleted go-toolchain-binary round 2\ncompleted unity-managed-library round 2\ncompleted kiro-electron-static round 2\ncompleted chatgpt-electron-static round 2\ncompleted postman-electron-static round 2\ncompleted figma-electron-static round 2\ncompleted discord-electron-static round 2\ncompleted xcode-static-artifacts round 2\ncompleted chrome-native-analysis round 2\ncompleted openunity-native-analysis round 2\ncompleted zed-native-analysis round 2\ncompleted terminal-static-fast round 2\ncompleted terminal-static-fast round 3\ncompleted zed-native-analysis round 3\ncompleted openunity-native-analysis round 3\ncompleted chrome-native-analysis round 3\ncompleted xcode-static-artifacts round 3\ncompleted discord-electron-static round 3\ncompleted figma-electron-static round 3\ncompleted postman-electron-static round 3\ncompleted chatgpt-electron-static round 3\ncompleted kiro-electron-static round 3\ncompleted unity-managed-library round 3\ncompleted go-toolchain-binary round 3\ncompleted interface-builder-artifact round 3\ncompleted xcode-deep-read-only round 3\ncompleted zed-rust-metadata round 3\ncompleted gofmt-deep round 3\ncompleted session-evidence-roundtrip round 3\ncompleted figma-framework-deep round 3\ncompleted kiro-node-pty-javascript round 3\ncompleted kiro-node-pty-javascript round 4\ncompleted figma-framework-deep round 4\ncompleted session-evidence-roundtrip round 4\ncompleted gofmt-deep round 4\ncompleted zed-rust-metadata round 4\ncompleted xcode-deep-read-only round 4\ncompleted interface-builder-artifact round 4\ncompleted go-toolchain-binary round 4\ncompleted unity-managed-library round 4\ncompleted kiro-electron-static round 4\ncompleted chatgpt-electron-static round 4\ncompleted postman-electron-static round 4\ncompleted figma-electron-static round 4\ncompleted discord-electron-static round 4\ncompleted xcode-static-artifacts round 4\ncompleted chrome-native-analysis round 4\ncompleted openunity-native-analysis round 4\ncompleted zed-native-analysis round 4\ncompleted terminal-static-fast round 4\ncompleted terminal-static-fast round 5\ncompleted zed-native-analysis round 5\ncompleted openunity-native-analysis round 5\ncompleted chrome-native-analysis round 5\ncompleted xcode-static-artifacts round 5\ncompleted discord-electron-static round 5\ncompleted figma-electron-static round 5\ncompleted postman-electron-static round 5\ncompleted chatgpt-electron-static round 5\ncompleted kiro-electron-static round 5\ncompleted unity-managed-library round 5\ncompleted go-toolchain-binary round 5\ncompleted interface-builder-artifact round 5\ncompleted xcode-deep-read-only round 5\ncompleted zed-rust-metadata round 5\ncompleted gofmt-deep round 5\ncompleted session-evidence-roundtrip round 5\ncompleted figma-framework-deep round 5\ncompleted kiro-node-pty-javascript round 5\n",
+        "stderr_tail": ""
+      },
+      "actual_receipts": 95,
+      "host_after": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-30s-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-host-after.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "ended_at_utc": "2026-10-25T21:34:43.442065+00:00"
+    },
+    {
+      "series": "inventory",
+      "plan": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "output": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+      "work_dir": "/private/tmp/rea-failure-verification-2026-10-25-30s-inventory",
+      "expected_receipts": 10,
+      "started_at_utc": "2026-10-25T21:34:43.442965+00:00",
+      "host_before": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-host-before.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "run": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--work-dir",
+          "/private/tmp/rea-failure-verification-2026-10-25-30s-inventory",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+          "--rounds",
+          "5",
+          "--call-timeout",
+          "120"
+        ],
+        "returncode": 0,
+        "stdout_tail": "completed openunity-native-inventory round 1\ncompleted gofmt-objdump-headers round 1\ncompleted gofmt-objdump-headers round 2\ncompleted openunity-native-inventory round 2\ncompleted openunity-native-inventory round 3\ncompleted gofmt-objdump-headers round 3\ncompleted gofmt-objdump-headers round 4\ncompleted openunity-native-inventory round 4\ncompleted openunity-native-inventory round 5\ncompleted gofmt-objdump-headers round 5\n",
+        "stderr_tail": ""
+      },
+      "actual_receipts": 10,
+      "host_after": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-host-after.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "ended_at_utc": "2026-10-25T21:35:12.646746+00:00"
+    },
+    {
+      "series": "pe-resources",
+      "plan": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "output": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+      "work_dir": "/private/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+      "expected_receipts": 5,
+      "started_at_utc": "2026-10-25T21:35:12.647573+00:00",
+      "host_before": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-host-before.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "run": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/run_mcp.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--work-dir",
+          "/private/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+          "--rounds",
+          "5",
+          "--call-timeout",
+          "120"
+        ],
+        "returncode": 0,
+        "stdout_tail": "completed unity-pe-resources round 1\ncompleted unity-pe-resources round 2\ncompleted unity-pe-resources round 3\ncompleted unity-pe-resources round 4\ncompleted unity-pe-resources round 5\n",
+        "stderr_tail": ""
+      },
+      "actual_receipts": 5,
+      "host_after": {
+        "command": [
+          "/usr/local/bin/python3",
+          "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/capture_host.py",
+          "--plan",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+          "--rea",
+          "/private/tmp/rea-final-benchmark-build-v2/rea",
+          "--worker",
+          "/private/tmp/rea-final-benchmark-build-v2/rea-ghidra-rust-worker",
+          "--output",
+          "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-host-after.json"
+        ],
+        "returncode": 0,
+        "stdout_tail": "",
+        "stderr_tail": ""
+      },
+      "ended_at_utc": "2026-10-25T21:35:15.065575+00:00"
+    }
+  ],
+  "runtime_source_tree": "ba4a5889d0c302eaa549e07dd287a8d2e992f588",
+  "limit_change": "User selected 30000ms instead of 15000ms for six JavaScript analysis calls; other caller arguments unchanged."
+}

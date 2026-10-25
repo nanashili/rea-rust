@@ -1,0 +1,132 @@
+{
+  "benchmark": {
+    "machine": "arm64",
+    "plan_sha256": "3d7b8f6caac9fb0e422c031eb4ae093e7ebe32458a2b6ba72e2fc67a39552423",
+    "platform": "darwin",
+    "rea_sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+    "rounds": 5,
+    "worker_sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed"
+  },
+  "bounded_result_facts": [
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 1,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 2,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 3,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 4,
+      "workflow": "unity-pe-resources"
+    },
+    {
+      "artifact": {
+        "bytes": 2587136,
+        "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+      },
+      "coverage": {
+        "examined_entries": 3,
+        "resources": 1,
+        "status": "complete"
+      },
+      "format": "pe32",
+      "limitations": [
+        "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+        "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+        "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+      ],
+      "operation": "inspect_pe_resources",
+      "resource_count": 1,
+      "round": 5,
+      "workflow": "unity-pe-resources"
+    }
+  ],
+  "schema_version": 1,
+  "source": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+  "workflow_summary": [
+    {
+      "calls": 15,
+      "operations": {
+        "inspect_pe_resources": 5
+      },
+      "rounds": 5,
+      "statuses": {
+        "success": 5
+      },
+      "workflow": "unity-pe-resources"
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "status": "passed",
+  "series": {
+    "main": {
+      "receipts": 95,
+      "response_digests": {
+        "checked": 954,
+        "response_not_retained": 94,
+        "no_response": 2
+      },
+      "cleanup_observations": {
+        "records_checked": 95,
+        "termination_errors": 0,
+        "live_reader_threads": 0,
+        "remaining_observed_descendants": 0,
+        "missing_fields": 0
+      },
+      "issues": [],
+      "source_identity": {
+        "selected_files": 38,
+        "snapshots_checked": 4,
+        "baseline_content_comparison": {
+          "selected_inputs": 34,
+          "snapshots_checked": 8,
+          "changed_paths": [],
+          "excluded_roles": [
+            "plan",
+            "rea",
+            "worker",
+            "runner"
+          ]
+        },
+        "issues": []
+      }
+    },
+    "inventory": {
+      "receipts": 10,
+      "response_digests": {
+        "checked": 46,
+        "response_not_retained": 9,
+        "no_response": 0
+      },
+      "cleanup_observations": {
+        "records_checked": 10,
+        "termination_errors": 0,
+        "live_reader_threads": 0,
+        "remaining_observed_descendants": 0,
+        "missing_fields": 0
+      },
+      "issues": [],
+      "source_identity": {
+        "selected_files": 6,
+        "snapshots_checked": 4,
+        "baseline_content_comparison": {
+          "selected_inputs": 2,
+          "snapshots_checked": 8,
+          "changed_paths": [],
+          "excluded_roles": [
+            "plan",
+            "rea",
+            "worker",
+            "runner"
+          ]
+        },
+        "issues": []
+      }
+    },
+    "pe-resources": {
+      "receipts": 5,
+      "response_digests": {
+        "checked": 11,
+        "response_not_retained": 4,
+        "no_response": 0
+      },
+      "cleanup_observations": {
+        "records_checked": 5,
+        "termination_errors": 0,
+        "live_reader_threads": 0,
+        "remaining_observed_descendants": 0,
+        "missing_fields": 0
+      },
+      "issues": [],
+      "source_identity": {
+        "selected_files": 5,
+        "snapshots_checked": 4,
+        "baseline_content_comparison": {
+          "selected_inputs": 1,
+          "snapshots_checked": 8,
+          "changed_paths": [],
+          "excluded_roles": [
+            "plan",
+            "rea",
+            "worker",
+            "runner"
+          ]
+        },
+        "issues": []
+      }
+    }
+  },
+  "limitations": [
+    "Sampled cleanup observations cannot rule out descendants missed between samples.",
+    "Source checks cover manifest-selected files, not every byte in each application bundle.",
+    "Matching response digests establish retained-receipt consistency, not factual correctness."
+  ]
+}

@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from finalize_coverage import catalog_tools
+
 NODE_VALIDATOR = r'''
 const fs = require("fs");
 const Validator = require("jsonschema").Validator;
@@ -81,8 +83,8 @@ def load_catalog(path: Path) -> tuple[dict, str]:
     raw = path.read_bytes()
     catalog = json.loads(raw)
     schemas = {
-        entry["advertised"]["name"]: remove_identifiers(entry["advertised"]["outputSchema"])
-        for entry in catalog["tools"]
+        name: remove_identifiers(tool["outputSchema"])
+        for name, tool in catalog_tools(catalog).items()
     }
     digest = hashlib.sha256(raw).hexdigest()
     return schemas, digest

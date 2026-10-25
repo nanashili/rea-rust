@@ -1,0 +1,243 @@
+{
+  "catalog": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+  "cleanup_evidence": "Each receipt records owned-root reaping and sampler-observed descendant checks; unobserved descendants between samples are not ruled out.",
+  "commands": [
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/summarize.py",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+        "--before",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-host-before.json",
+        "--after",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-host-after.json",
+        "--output-dir",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/summary-main"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:12.566799+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_results.py",
+        "--aggregate",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+        "--work-dir",
+        "/tmp/rea-failure-verification-2026-10-25-30s-main",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/audit-main.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:12.791452+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_schema_shapes.py",
+        "--runs",
+        "/tmp/rea-failure-verification-2026-10-25-30s-main",
+        "--catalog",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/schema-audit-main.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:14.100154+00:00",
+      "stderr_tail": "",
+      "stdout_tail": "ntent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-004/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-004/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-005/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-native-analysis-round-005/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-001/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-001/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-002/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-002/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-003/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-003/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-004/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-004/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-005/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-main/zed-rust-metadata-round-005/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      }\n    ]\n  },\n  \"runs\": \"/tmp/rea-failure-verification-2026-10-25-30s-main\",\n  \"schema_source\": {\n    \"path\": \"/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json\",\n    \"sha256\": \"eee615a83fc605000af0e26183af95dd57c5e139edba714755ade273e16ebd56\"\n  },\n  \"validation\": {\n    \"invalid\": [],\n    \"invalid_count\": 0,\n    \"valid_count\": 840,\n    \"validator_error_count\": 0,\n    \"validator_errors\": []\n  },\n  \"validator\": {\n    \"limitations\": [\n      \"Does not validate full conformance to the declared schema dialect.\",\n      \"Does not establish factual correctness or semantic completeness.\",\n      \"Failed calls and successful calls without object payloads are skipped.\"\n    ],\n    \"mode\": \"compatible_shape_constraints\",\n    \"name\": \"jsonschema\",\n    \"schema_transform\": \"recursively remove $id and $schema\",\n    \"version\": \"1.5.0\"\n  }\n}\n"
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/summarize.py",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+        "--before",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-host-before.json",
+        "--after",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-host-after.json",
+        "--output-dir",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/summary-inventory"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:27.222483+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_results.py",
+        "--aggregate",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+        "--work-dir",
+        "/tmp/rea-failure-verification-2026-10-25-30s-inventory",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/audit-inventory.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:27.327372+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_schema_shapes.py",
+        "--runs",
+        "/tmp/rea-failure-verification-2026-10-25-30s-inventory",
+        "--catalog",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/schema-audit-inventory.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:27.939764+00:00",
+      "stderr_tail": "",
+      "stdout_tail": "004/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/gofmt-objdump-headers-round-004/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/gofmt-objdump-headers-round-005/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/gofmt-objdump-headers-round-005/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-001/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-001/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-002/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-002/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-003/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-003/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-004/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-004/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-005/call-0001.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      },\n      {\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory/openunity-native-inventory-round-005/call-0002.json\",\n        \"reason\": \"no structuredContent or JSON object in content\",\n        \"tool\": null\n      }\n    ]\n  },\n  \"runs\": \"/tmp/rea-failure-verification-2026-10-25-30s-inventory\",\n  \"schema_source\": {\n    \"path\": \"/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json\",\n    \"sha256\": \"eee615a83fc605000af0e26183af95dd57c5e139edba714755ade273e16ebd56\"\n  },\n  \"validation\": {\n    \"invalid\": [],\n    \"invalid_count\": 0,\n    \"valid_count\": 35,\n    \"validator_error_count\": 0,\n    \"validator_errors\": []\n  },\n  \"validator\": {\n    \"limitations\": [\n      \"Does not validate full conformance to the declared schema dialect.\",\n      \"Does not establish factual correctness or semantic completeness.\",\n      \"Failed calls and successful calls without object payloads are skipped.\"\n    ],\n    \"mode\": \"compatible_shape_constraints\",\n    \"name\": \"jsonschema\",\n    \"schema_transform\": \"recursively remove $id and $schema\",\n    \"version\": \"1.5.0\"\n  }\n}\n"
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/summarize.py",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+        "--before",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-host-before.json",
+        "--after",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-host-after.json",
+        "--output-dir",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/summary-pe-resources"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:33.530555+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_results.py",
+        "--aggregate",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+        "--work-dir",
+        "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/audit-pe-resources.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:33.632601+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/audit_schema_shapes.py",
+        "--runs",
+        "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+        "--catalog",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/schema-audit-pe-resources.json"
+      ],
+      "returncode": 1,
+      "started_at_utc": "2026-10-25T21:45:33.739650+00:00",
+      "stderr_tail": "",
+      "stdout_tail": "rces-round-004/call-0003.json\",\n        \"tool\": \"inspect_pe_resources\"\n      },\n      {\n        \"errors\": [\n          {\n            \"argument\": \"icons\",\n            \"message\": \"is not allowed to have the additional property \\\"icons\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"cursors\",\n            \"message\": \"is not allowed to have the additional property \\\"cursors\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"cursor_groups\",\n            \"message\": \"is not allowed to have the additional property \\\"cursor_groups\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"bitmaps\",\n            \"message\": \"is not allowed to have the additional property \\\"bitmaps\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"fonts\",\n            \"message\": \"is not allowed to have the additional property \\\"fonts\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"version_info\",\n            \"message\": \"is not allowed to have the additional property \\\"version_info\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"manifests\",\n            \"message\": \"is not allowed to have the additional property \\\"manifests\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"html\",\n            \"message\": \"is not allowed to have the additional property \\\"html\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"rcdata\",\n            \"message\": \"is not allowed to have the additional property \\\"rcdata\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"strings\",\n            \"message\": \"is not allowed to have the additional property \\\"strings\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"dialogs\",\n            \"message\": \"is not allowed to have the additional property \\\"dialogs\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"menus\",\n            \"message\": \"is not allowed to have the additional property \\\"menus\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          },\n          {\n            \"argument\": \"accelerators\",\n            \"message\": \"is not allowed to have the additional property \\\"accelerators\\\"\",\n            \"name\": \"additionalProperties\",\n            \"property\": \"instance.normalized_result\"\n          }\n        ],\n        \"file\": \"/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-005/call-0003.json\",\n        \"tool\": \"inspect_pe_resources\"\n      }\n    ],\n    \"invalid_count\": 5,\n    \"valid_count\": 0,\n    \"validator_error_count\": 0,\n    \"validator_errors\": []\n  },\n  \"validator\": {\n    \"limitations\": [\n      \"Does not validate full conformance to the declared schema dialect.\",\n      \"Does not establish factual correctness or semantic completeness.\",\n      \"Failed calls and successful calls without object payloads are skipped.\"\n    ],\n    \"mode\": \"compatible_shape_constraints\",\n    \"name\": \"jsonschema\",\n    \"schema_transform\": \"recursively remove $id and $schema\",\n    \"version\": \"1.5.0\"\n  }\n}\n"
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/validate_pe_resources.py",
+        "--work-dir",
+        "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-validation.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:34.218496+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/validate_pe_version.py",
+        "--target",
+        "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+        "--workdir",
+        "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources"
+      ],
+      "output": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-version-validation.json",
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:34.328347+00:00",
+      "stderr_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/finalize_coverage.py",
+        "--catalog",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+        "--raw",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+        "--coverage",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/coverage.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:34.482584+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/python3",
+        "/private/tmp/rea-benchmark-fixes/scripts/benchmarks/compare_failures.py",
+        "--baseline",
+        "main=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/main-raw.json",
+        "--current",
+        "main=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/main-raw.json",
+        "--baseline-work-dir",
+        "main=/tmp/rea-failure-verification-20261025",
+        "--current-work-dir",
+        "main=/tmp/rea-failure-verification-2026-10-25-30s-main",
+        "--baseline",
+        "inventory=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/inventory-raw.json",
+        "--current",
+        "inventory=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/inventory-raw.json",
+        "--baseline-work-dir",
+        "inventory=/tmp/rea-failure-verification-20261025-inventory",
+        "--current-work-dir",
+        "inventory=/tmp/rea-failure-verification-2026-10-25-30s-inventory",
+        "--baseline",
+        "pe-resources=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/pe-resources-raw.json",
+        "--current",
+        "pe-resources=/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/pe-resources-raw.json",
+        "--baseline-work-dir",
+        "pe-resources=/tmp/rea-failure-verification-20261025-pe-resources",
+        "--current-work-dir",
+        "pe-resources=/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+        "--output",
+        "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/comparison.json"
+      ],
+      "returncode": 0,
+      "started_at_utc": "2026-10-25T21:45:34.674400+00:00",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    }
+  ],
+  "comparison_baseline": "published failure-verification-2026-10-25",
+  "generated_at_utc": "2026-10-25T21:45:37.927553+00:00",
+  "status": "validation_failed"
+}

@@ -1,0 +1,11 @@
+{
+  "verified_at_utc": "2026-10-25T21:25:38.820021+00:00",
+  "status": "only_csv_line_ending_change",
+  "baseline_commit": "f2318c616c51720086dc5dc16c18ca5683e69f34",
+  "current_runner_commit": "5e22b8011ed82001e01b5d1ab432a901bc5886a6",
+  "baseline_sha256": "42ae9e2b7b8658386bc5e93dc2e4a4a9a9b3dbf639eb13dfd66193454fb9dacc",
+  "current_sha256": "2d48ccca8f51a3ab7fbc47c8cc9554845d4ac7adf805cd9753da55ab9980f31a",
+  "before": "writer = csv.DictWriter(stream, fieldnames=fields)",
+  "after": "writer = csv.DictWriter(stream, fieldnames=fields, lineterminator=\"\\n\")",
+  "measurement_scope": "CSV writing follows all recorded workflow measurements; sampling and call-execution source is unchanged."
+}

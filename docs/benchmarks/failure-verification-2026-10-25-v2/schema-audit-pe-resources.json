@@ -1,0 +1,508 @@
+{
+  "collection": {
+    "counts": {
+      "malformed_successful": 0,
+      "receipt_count": 15,
+      "skipped_unstructured": 10,
+      "skipped_unsuccessful": 0,
+      "successful_receipts": 15,
+      "successful_structured_payloads": 5
+    },
+    "skipped": [
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-001/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-001/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-002/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-002/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-003/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-003/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-004/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-004/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-005/call-0001.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      },
+      {
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-005/call-0002.json",
+        "reason": "no structuredContent or JSON object in content",
+        "tool": null
+      }
+    ]
+  },
+  "runs": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources",
+  "schema_source": {
+    "path": "/private/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25-v2/catalog.json",
+    "sha256": "eee615a83fc605000af0e26183af95dd57c5e139edba714755ade273e16ebd56"
+  },
+  "validation": {
+    "invalid": [
+      {
+        "errors": [
+          {
+            "argument": "icons",
+            "message": "is not allowed to have the additional property \"icons\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursors",
+            "message": "is not allowed to have the additional property \"cursors\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursor_groups",
+            "message": "is not allowed to have the additional property \"cursor_groups\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "bitmaps",
+            "message": "is not allowed to have the additional property \"bitmaps\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "fonts",
+            "message": "is not allowed to have the additional property \"fonts\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "version_info",
+            "message": "is not allowed to have the additional property \"version_info\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "manifests",
+            "message": "is not allowed to have the additional property \"manifests\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "html",
+            "message": "is not allowed to have the additional property \"html\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "rcdata",
+            "message": "is not allowed to have the additional property \"rcdata\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "strings",
+            "message": "is not allowed to have the additional property \"strings\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "dialogs",
+            "message": "is not allowed to have the additional property \"dialogs\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "menus",
+            "message": "is not allowed to have the additional property \"menus\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "accelerators",
+            "message": "is not allowed to have the additional property \"accelerators\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          }
+        ],
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-001/call-0003.json",
+        "tool": "inspect_pe_resources"
+      },
+      {
+        "errors": [
+          {
+            "argument": "icons",
+            "message": "is not allowed to have the additional property \"icons\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursors",
+            "message": "is not allowed to have the additional property \"cursors\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursor_groups",
+            "message": "is not allowed to have the additional property \"cursor_groups\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "bitmaps",
+            "message": "is not allowed to have the additional property \"bitmaps\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "fonts",
+            "message": "is not allowed to have the additional property \"fonts\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "version_info",
+            "message": "is not allowed to have the additional property \"version_info\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "manifests",
+            "message": "is not allowed to have the additional property \"manifests\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "html",
+            "message": "is not allowed to have the additional property \"html\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "rcdata",
+            "message": "is not allowed to have the additional property \"rcdata\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "strings",
+            "message": "is not allowed to have the additional property \"strings\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "dialogs",
+            "message": "is not allowed to have the additional property \"dialogs\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "menus",
+            "message": "is not allowed to have the additional property \"menus\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "accelerators",
+            "message": "is not allowed to have the additional property \"accelerators\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          }
+        ],
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-002/call-0003.json",
+        "tool": "inspect_pe_resources"
+      },
+      {
+        "errors": [
+          {
+            "argument": "icons",
+            "message": "is not allowed to have the additional property \"icons\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursors",
+            "message": "is not allowed to have the additional property \"cursors\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursor_groups",
+            "message": "is not allowed to have the additional property \"cursor_groups\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "bitmaps",
+            "message": "is not allowed to have the additional property \"bitmaps\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "fonts",
+            "message": "is not allowed to have the additional property \"fonts\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "version_info",
+            "message": "is not allowed to have the additional property \"version_info\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "manifests",
+            "message": "is not allowed to have the additional property \"manifests\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "html",
+            "message": "is not allowed to have the additional property \"html\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "rcdata",
+            "message": "is not allowed to have the additional property \"rcdata\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "strings",
+            "message": "is not allowed to have the additional property \"strings\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "dialogs",
+            "message": "is not allowed to have the additional property \"dialogs\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "menus",
+            "message": "is not allowed to have the additional property \"menus\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "accelerators",
+            "message": "is not allowed to have the additional property \"accelerators\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          }
+        ],
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-003/call-0003.json",
+        "tool": "inspect_pe_resources"
+      },
+      {
+        "errors": [
+          {
+            "argument": "icons",
+            "message": "is not allowed to have the additional property \"icons\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursors",
+            "message": "is not allowed to have the additional property \"cursors\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursor_groups",
+            "message": "is not allowed to have the additional property \"cursor_groups\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "bitmaps",
+            "message": "is not allowed to have the additional property \"bitmaps\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "fonts",
+            "message": "is not allowed to have the additional property \"fonts\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "version_info",
+            "message": "is not allowed to have the additional property \"version_info\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "manifests",
+            "message": "is not allowed to have the additional property \"manifests\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "html",
+            "message": "is not allowed to have the additional property \"html\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "rcdata",
+            "message": "is not allowed to have the additional property \"rcdata\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "strings",
+            "message": "is not allowed to have the additional property \"strings\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "dialogs",
+            "message": "is not allowed to have the additional property \"dialogs\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "menus",
+            "message": "is not allowed to have the additional property \"menus\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "accelerators",
+            "message": "is not allowed to have the additional property \"accelerators\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          }
+        ],
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-004/call-0003.json",
+        "tool": "inspect_pe_resources"
+      },
+      {
+        "errors": [
+          {
+            "argument": "icons",
+            "message": "is not allowed to have the additional property \"icons\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursors",
+            "message": "is not allowed to have the additional property \"cursors\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "cursor_groups",
+            "message": "is not allowed to have the additional property \"cursor_groups\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "bitmaps",
+            "message": "is not allowed to have the additional property \"bitmaps\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "fonts",
+            "message": "is not allowed to have the additional property \"fonts\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "version_info",
+            "message": "is not allowed to have the additional property \"version_info\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "manifests",
+            "message": "is not allowed to have the additional property \"manifests\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "html",
+            "message": "is not allowed to have the additional property \"html\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "rcdata",
+            "message": "is not allowed to have the additional property \"rcdata\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "strings",
+            "message": "is not allowed to have the additional property \"strings\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "dialogs",
+            "message": "is not allowed to have the additional property \"dialogs\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "menus",
+            "message": "is not allowed to have the additional property \"menus\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          },
+          {
+            "argument": "accelerators",
+            "message": "is not allowed to have the additional property \"accelerators\"",
+            "name": "additionalProperties",
+            "property": "instance.normalized_result"
+          }
+        ],
+        "file": "/tmp/rea-failure-verification-2026-10-25-30s-pe-resources/unity-pe-resources-round-005/call-0003.json",
+        "tool": "inspect_pe_resources"
+      }
+    ],
+    "invalid_count": 5,
+    "valid_count": 0,
+    "validator_error_count": 0,
+    "validator_errors": []
+  },
+  "validator": {
+    "limitations": [
+      "Does not validate full conformance to the declared schema dialect.",
+      "Does not establish factual correctness or semantic completeness.",
+      "Failed calls and successful calls without object payloads are skipped."
+    ],
+    "mode": "compatible_shape_constraints",
+    "name": "jsonschema",
+    "schema_transform": "recursively remove $id and $schema",
+    "version": "1.5.0"
+  }
+}
