@@ -1,0 +1,138 @@
+{
+  "attempts": [
+    {
+      "evidence": {
+        "elapsed_ms": 45546.38891600189,
+        "error": {
+          "category": "timeout",
+          "code": "provider_timeout",
+          "message": "Analysis took too long. Try a smaller request, then run `rea doctor` if it continues.",
+          "retryable": true
+        },
+        "max_processes": 4,
+        "name": "postman",
+        "peak_rss_bytes": 1807695872,
+        "source_receipt": "/tmp/rea-ts-postman-20261025/receipt.json",
+        "source_sha256": "8dd9eb747fd4f889af89ccdbac4ba24301e0e5f5149d3bcb860642b10a5ece92"
+      },
+      "kind": "analysis-attempt",
+      "name": "postman",
+      "preservation": "Receipt and wrapper error are both retained; the wrapper error is not treated as an analysis result.",
+      "status": "provider_timeout",
+      "wrapper_error": {
+        "source": "evidence/postman_wrapper_error.txt",
+        "text": "TypeError('sequence item 1: expected str instance, NoneType found')"
+      }
+    },
+    {
+      "evidence": {
+        "elapsed_ms": 2830.568042001687,
+        "error": {
+          "category": "integrity_mismatch",
+          "code": "artifact_integrity_mismatch",
+          "message": "Declared ASAR integrity for unpacked entry node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node contradicts its companion file; packaging tools commonly sign or strip unpacked native binaries after writing the archive. If expected, rerun analyze_javascript_application with integrity_policy=record-and-continue (CLI: --integrity-policy record-and-continue) to retain observed bytes as untrusted; otherwise get a fresh copy.",
+          "retryable": false
+        },
+        "exit_code": 0,
+        "max_processes": 1,
+        "name": "chatgpt",
+        "peak_rss_bytes": 543883264,
+        "sample_count": 25,
+        "source_receipt": "/tmp/rea-ts-chatgpt-20261025/receipt.json",
+        "source_sha256": "ff530752e6cefbe0fcadd0a6b198f64770e7a346a1525a3dbc08d335ab9ce8a2",
+        "target_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+        "target_sha256": "9d0260dd37f9c45546d5a89d9d782b8362c9957b70b992e2c3f91df60a046b07",
+        "target_size_bytes": 626348697
+      },
+      "interpretation": "Declared and calculated digest mismatch for an unpacked native companion entry; bytes were present.",
+      "kind": "analysis-attempt",
+      "name": "chatgpt",
+      "status": "artifact_integrity_mismatch"
+    },
+    {
+      "evidence": {
+        "elapsed_ms": 790.8020000031684,
+        "error": {
+          "category": "execution_failure",
+          "code": "artifact_operation_failed",
+          "message": "Artifact is invalid or has changed. Get a fresh copy and try again.",
+          "retryable": false
+        },
+        "exit_code": 0,
+        "max_processes": 1,
+        "name": "figma",
+        "peak_rss_bytes": 389758976,
+        "sample_count": 8,
+        "source_receipt": "/tmp/rea-ts-figma-20261025/receipt.json",
+        "source_sha256": "ba483860760e7b7c3cf751d50a3b184f5ea061f930f3d7024a87c66c320cb802",
+        "target_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+        "target_sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+        "target_size_bytes": 9724384
+      },
+      "interpretation": "Observed generic malformed-ASAR error in the original receipt; a separate header-only follow-up established the .codesign size -1000 and schema diagnosis.",
+      "kind": "analysis-attempt",
+      "name": "figma",
+      "status": "artifact_operation_failed"
+    },
+    {
+      "elapsed_s": 120,
+      "evidence": {
+        "semantic_result": false,
+        "source": "evidence/kiro_initial_error.txt",
+        "text": "TimeoutError(2)"
+      },
+      "interpretation": "Initial 120-second attempt produced no receipt or semantic result.",
+      "kind": "analysis-attempt",
+      "name": "kiro-initial",
+      "status": "no-response-timeout"
+    },
+    {
+      "evidence": {
+        "arguments": {
+          "analysis_timeout_ms": 30000,
+          "detail": "summary",
+          "format": "asar",
+          "input_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+          "integrity_policy": "fail",
+          "max_heap_mb": 1024,
+          "max_semantic_nodes": 100000,
+          "max_semantic_nodes_per_file": 20000,
+          "max_semantic_unknowns": 100000,
+          "max_semantic_unknowns_per_file": 20000
+        },
+        "elapsed_ms": 40292.738458985696,
+        "error": {
+          "category": "execution_failure",
+          "code": "unreadable_output",
+          "message": "Analysis returned an unreadable result. Run `rea doctor` and review the reported details; repeating the unchanged request is not expected to succeed.",
+          "retryable": false
+        },
+        "exit_code": 0,
+        "max_processes": 4,
+        "name": "kiro",
+        "peak_rss_bytes": 1846853632,
+        "sample_count": 318,
+        "source_receipt": "/tmp/rea-ts-kiro-20261025-r2/receipt.json",
+        "source_sha256": "434c9f658d1f5fc15b0eedd8e1582fdfe6e150368380f08b3ffc3e3a79a09b6a",
+        "target_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+        "target_sha256": "8482a1bee3eb61eea1bd6cc9c6ad71054d0880957ee3353b795a15ad132d2e1c",
+        "target_size_bytes": 108958118
+      },
+      "interpretation": "ENOSPC occurred while transferring worker output; no semantic result is claimed.",
+      "kind": "analysis-attempt",
+      "name": "kiro-r2",
+      "status": "unreadable_output"
+    },
+    {
+      "evidence": {
+        "source": "evidence/postman_wrapper_error.txt",
+        "text": "TypeError('sequence item 1: expected str instance, NoneType found')"
+      },
+      "interpretation": "Wrapper-side TypeError during shutdown/collection; kept separate from the provider timeout.",
+      "kind": "wrapper-event",
+      "name": "postman-wrapper-shutdown",
+      "status": "wrapper_shutdown_error"
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/Applications/Discord.app/Contents/Resources/app.asar",
+    "bytes": 3619312,
+    "sha256": "61a72bb967b1681d3926886c5f41489ceccd1a4237b2f11feb0da1747765a4e5"
+  },
+  {
+    "path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+    "bytes": 626348697,
+    "sha256": "9d0260dd37f9c45546d5a89d9d782b8362c9957b70b992e2c3f91df60a046b07"
+  },
+  {
+    "path": "/Applications/ChatGPT.app/Contents/Resources/app.asar.unpacked/node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node",
+    "bytes": 136656,
+    "sha256": "a91e14413102247046ac2aac96a1932b1ec5ecad36902eee4cc4d3cdbf8fb7f9"
+  }
+]

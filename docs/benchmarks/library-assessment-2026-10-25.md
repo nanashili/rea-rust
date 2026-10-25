@@ -1,12 +1,12 @@
 # Rust library assessment
 
-Reviewed on 2026-10-25 against the Rust benchmark-fix source at REA commit `b067b8431f317efda7c3b3573933b6d92d79ac62`. This is a source and dependency assessment. The eight libraries below have not been compared in REA performance runs, and this assessment adds no runtime dependencies or backend changes.
+Reviewed on 2026-10-25 against the Rust benchmark-fix source at REA commit `b067b8431f317efda7c3b3573933b6d92d79ac62`, with the `indexmap` implementation update recorded on 2026-10-26. The eight libraries have not been compared individually in REA performance runs.
 
-`indexmap` is the strongest candidate for graph storage, starting with the fact registry described below. String storage deserves a separate experiment at the `JsString` owner. `zlib-rs` is a relatively contained backend experiment for compressed inputs. The remaining choices need a demonstrated workload or ownership change first. These are proposed priorities, not measured speedups.
+`indexmap` now backs the semantic pass's insertion-ordered binding and scope maps. The graph fact registry remains a separate candidate. String storage deserves a separate experiment at the `JsString` owner. `zlib-rs` is a contained backend experiment for compressed inputs. The remaining choices need a demonstrated workload or ownership change first. These priorities do not establish measured speedups.
 
 | User priority | Library | Current REA use | Assessment |
 | ---: | --- | --- | --- |
-| 1 | [indexmap](https://github.com/indexmap-rs/indexmap) | Versions 1.9.3 and 2.14.2 occur transitively; graph `Obj` uses an ordered vector. | Start with `OrderedFacts`, then test wide objects. Include small-object overhead and copy-on-write detachment. |
+| 1 | [indexmap](https://github.com/indexmap-rs/indexmap) | Pinned 2.14.2 directly in `rea-application` for semantic `InsertionMap`; graph `Obj` still uses an ordered vector. | Removes duplicate key ownership in the old vector-plus-index representation. `OrderedFacts` and wide graph objects remain separate experiments. |
 | 2 | [compact_str](https://github.com/ParkMyCar/compact_str) | 0.9.1 is already used through Oxc. REA's `JsString` has its own shared UTF-8/UTF-16 storage. | Test inline UTF-8 storage inside that owner. It cannot replace arbitrary JavaScript strings. |
 | 3 | [lasso](https://github.com/Kixiron/lasso) | Absent from the runtime lockfile. | Consider a bounded, analysis-scoped pool for repeated valid UTF-8 names after measuring duplication. |
 | 4 | [smallvec](https://github.com/servo/rust-smallvec) | 1.16.3 occurs transitively. | Test short UTF-16 buffers or selected short lists after collecting length distributions. Avoid blanket `Vec` replacement. |
@@ -18,6 +18,8 @@ Reviewed on 2026-10-25 against the Rust benchmark-fix source at REA commit `b067
 Lockfile presence does not mean REA uses a library at a particular boundary. The dependency observations above come from `Cargo.lock` and `cargo tree --locked`; backend selection was checked with `cargo tree --locked -i flate2 -e features`.
 
 ## Ordered graph objects: indexmap
+
+[`InsertionMap`](../../crates/application/rea-application/src/javascript/semantic/state.rs) now uses `IndexMap<String, V>`. Its former `HashMap<String, usize>` and ordered vector each owned the same keys. The replacement keeps first insertion order and in-place replacement while removing that duplication. The application suite passed after the change. This is a representation improvement; the combined JavaScript changes and failing large-source diagnostics do not isolate a timing or RSS benefit from `indexmap`.
 
 A narrower first candidate is [`OrderedFacts`](../../crates/application/rea-application/src/javascript/graph/semantic_graph.rs). It maintains both `Vec<String>` insertion order and `HashMap<String, Json>` lookup storage. A new identifier is cloned into the order vector, and insertion checks the table before inserting into it. `IndexMap<String, Json>` could give both responsibilities one owner and remove the duplicate identifier allocation. Its valid UTF-8 identifiers avoid the arbitrary JavaScript-key issue below. Review `keys()` consumers, insertion order and move-out behavior when prototyping this change; its current API exposes a key slice.
 
@@ -81,6 +83,6 @@ Pin the Rust binding and the bundled native implementation separately when repor
 
 ## Measurement status
 
-No REA timing, CPU, allocation, RSS, token or energy improvement is claimed for these eight choices. The [bbtree parent-map replay](bbtree-parent-map-2026-10-25/README.md) is a separate measured experiment: compact parser-ID links used about 45% less retained table allocation than the former hash map on the two captured AST traces. It does not answer the graph-object, string, decompression or allocator questions above.
+No isolated REA timing, CPU, allocation, RSS, token or energy improvement is claimed for these eight choices, including the adopted semantic `IndexMap`. The [bbtree parent-map replay](bbtree-parent-map-2026-10-25/README.md) is a separate measured experiment: compact parser-ID links used about 45% less retained table allocation than the former hash map on the two captured AST traces. It does not answer the graph-object, string, decompression or allocator questions above.
 
 For each proposed experiment, compare equivalent completed CLI/MCP tasks and retain result provenance, coverage and partial-failure behavior. Separate fresh-process runs from reused-session runs, record wall and CPU time plus peak process-family memory, and state uncontrolled filesystem-cache and host activity. Include schemas, extra calls and retries when measuring agent tokens. Report unmeasured costs explicitly.

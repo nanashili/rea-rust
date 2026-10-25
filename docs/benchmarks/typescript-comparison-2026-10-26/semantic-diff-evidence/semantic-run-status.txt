@@ -1,0 +1,3 @@
+import ts=0 rust=0 compare=0
+require ts=0 rust=0 compare=0
+compiler-dependent ts=0 rust=0 compare=0

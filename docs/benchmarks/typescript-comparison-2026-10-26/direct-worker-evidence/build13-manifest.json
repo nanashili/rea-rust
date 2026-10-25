@@ -1,0 +1,66 @@
+{
+  "revision": "7ae9719396de2f35493ae1640f91647f0af475b1",
+  "source_diff": "clean for Cargo.toml Cargo.lock crates ghidra-rust-worker scripts/benchmarks; report documentation uncommitted",
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "-p",
+    "rea",
+    "--release"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "/tmp/rea-target-shared"
+  },
+  "build_exit": 0,
+  "binary": {
+    "path": "/tmp/rea-js-fixed-build13/rea",
+    "bytes": 54072240,
+    "sha256": "f3e3803f497d128f2aab5a126c5e0b69864c68bcf2a6f1816c476e5583d972cd"
+  },
+  "logs": [
+    {
+      "path": "/tmp/rea-build13-release.log",
+      "bytes": 11994,
+      "sha256": "68ae4c09b082b69e7709b9ab3a434a9447d4970d929acb2341a59e6370b616e6"
+    },
+    {
+      "path": "/tmp/rea-build13-clippy.log",
+      "bytes": 801987,
+      "sha256": "bc1466aa65dc0cbb4efe73416ff282c5a5be46d0bd04efc331728b561061fb2b"
+    }
+  ],
+  "source_provenance": {
+    "revision": "7ae9719396de2f35493ae1640f91647f0af475b1",
+    "source_diff": "clean for Cargo.toml, Cargo.lock and crates; benchmark documentation remains uncommitted",
+    "commands": [
+      [
+        "clippy",
+        [
+          "cargo",
+          "clippy",
+          "--locked",
+          "-p",
+          "rea-application",
+          "-p",
+          "rea-tools-artifacts",
+          "-p",
+          "rea-mcp",
+          "--lib"
+        ]
+      ],
+      [
+        "release",
+        [
+          "cargo",
+          "build",
+          "--locked",
+          "-p",
+          "rea",
+          "--release"
+        ]
+      ]
+    ]
+  },
+  "scope": "CLI build13; no Ghidra worker needed for JavaScript validation"
+}

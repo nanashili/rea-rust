@@ -1,0 +1,19 @@
+{
+  "compared": 21,
+  "differences": 0,
+  "modes": {
+    "compiler-dependent": {
+      "compared": 21,
+      "difference_count": 0
+    },
+    "import": {
+      "compared": 21,
+      "difference_count": 0
+    },
+    "require": {
+      "compared": 21,
+      "difference_count": 0
+    }
+  },
+  "scope": "synthetic semantic differential"
+}

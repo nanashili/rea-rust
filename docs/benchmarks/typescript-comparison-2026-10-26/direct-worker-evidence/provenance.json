@@ -1,0 +1,74 @@
+{
+  "attempts": [
+    {
+      "artifact": "results-attempt1.json",
+      "reason": "Initial comparison omitted the Rust 1024 MiB worker heap flag; retain for audit, exclude from equivalence claims.",
+      "status": "invalid-comparison"
+    },
+    {
+      "artifact": "results-attempt2-heapflag.json",
+      "reason": "Heap flag present. Rust AgentWorker row is classified as native_heap_exhaustion from exit 122 with no error text; this is a harness/runtime outcome, not semantic completion.",
+      "status": "diagnostic"
+    },
+    {
+      "artifact": "results-final.json",
+      "reason": "Latest bounded result set; CPU/RSS are sampled lower bounds.",
+      "status": "selected-diagnostic-result"
+    }
+  ],
+  "build": {
+    "rust_executable": "/tmp/rea-js-fixed-build12/rea",
+    "rust_executable_sha256": "53e9b3c7774836adbff6347576228a404ae04d5e06b974fe0026465b2ddfb91f",
+    "rust_worker_heap_flag": "--rea-javascript-worker-max-heap-mb=1024",
+    "typescript_node": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+    "typescript_node_sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+    "typescript_worker_entry": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/runtime-benchmark-20261024-v2/typescript/dist/composition/javascriptAnalysisWorkerProcess.js",
+    "typescript_worker_entry_bytes": 3347,
+    "typescript_worker_entry_observation": "Inspected after the run; the direct-worker results did not capture this file digest at launch.",
+    "typescript_worker_entry_sha256": "ede2ca3ca26fa0a01f978a9f18ba79516285e030d8cdb99b3d898cdf58a68cf5"
+  },
+  "collection": "direct-worker-comparison-20261026",
+  "limitations": [
+    "Background Cargo activity was ongoing during collection.",
+    "The direct worker run is not the full public MCP benchmark workflow.",
+    "No token measurement was collected.",
+    "No speed, winner, or full semantic parity claim is supported.",
+    "Latest Rust ASAR runtime verification remains pending; the synthetic semantic differential is complete."
+  ],
+  "request_policy": {
+    "cleanup_grace_seconds": 2,
+    "comparison_note": "The diagnostic harness output cap and TypeScript semantic admission are 128 MiB; the public worker policy has a minimum 512 MiB transfer bound. No completed case hit the diagnostic cap.",
+    "direct_worker_deadline_seconds": 30,
+    "family_rss_cap_bytes": 4294967296,
+    "output_cap_bytes": 134217728,
+    "protocols": {
+      "rust": "one-source worker invocation per comparison",
+      "typescript": "persistent worker process for each source request"
+    },
+    "semantic_admission_bytes": 134217728,
+    "typescript_heap_flags": [
+      "--max-old-space-size=1024",
+      "--max-semi-space-size=8",
+      "--v8-pool-size=1",
+      "--expose-gc",
+      "--stack_size=2048"
+    ],
+    "typescript_node_budget": 20000,
+    "typescript_unknown_budget": 20000
+  },
+  "result_source": "/tmp/rea-direct-worker-comparison-20261026/results-final.json",
+  "result_source_sha256": "18e9222eab31116d99d48c764205a115597a9bf922ace2d5855efcfe15d4625f",
+  "retrospective_pe_schema_audit": {
+    "artifact": "direct-worker-evidence/pe-retrospective-shape-audit.json",
+    "catalog_path": "/tmp/rea-build12-public-catalog.json",
+    "catalog_sha256": "8438129787e13859043d41c93d9c95547f4594173653d769b23d31de24b5c715",
+    "scope": "15 successful receipts, 5 structured payloads validated; 10 unstructured calls skipped; shape validation only."
+  },
+  "runner_source": {
+    "bytes": 13034,
+    "path": "/tmp/rea-direct-worker-comparison-20261026/run_direct_worker.py",
+    "sha256": "392ffae24e2b7d457b25e049fb2381c731bc4169777b214666fbdb0f23c1bc9a"
+  },
+  "schema_version": 1,
+  "status": "diagnostic-only"
+}

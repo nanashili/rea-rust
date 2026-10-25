@@ -114,7 +114,9 @@ with elapsed time, CPU, memory, per-call results and documented failures.
 The [failure verification rerun](docs/benchmarks/failure-verification-2026-10-25-v2/README.md)
 records fixes, repeated measurements, and remaining failures. The
 [library assessment](docs/benchmarks/library-assessment-2026-10-25.md) covers
-proposed data-structure, string, compression and allocator experiments.
+data-structure, string, compression and allocator work. The
+[TypeScript failure comparison](docs/benchmarks/typescript-comparison-2026-10-26/README.md)
+records matching-source diagnostics and acquisition differences on the large apps.
 
 The separate TypeScript/native comparison used frozen builds, measured on an
 Apple M1 Pro on 24 October 2026, with warm filesystem caches. Seven sessions per

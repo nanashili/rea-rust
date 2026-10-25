@@ -1,0 +1,226 @@
+{
+  "artifacts": {
+    "README.md": {
+      "bytes": 1361,
+      "path": "/tmp/rea-semantic-diffharness/README.md",
+      "sha256": "a77117acceba015d81aaaa5f7810f916a09f7da25897c4f8a9d4eae57b66641e"
+    },
+    "compare.mjs": {
+      "bytes": 2612,
+      "path": "/tmp/rea-semantic-diffharness/compare.mjs",
+      "sha256": "8b6c38846cfd385b349b89b5bb6a173472817d375fedaf95201b360efc03506c"
+    },
+    "corpus": [
+      {
+        "bytes": 342,
+        "path": "/tmp/rea-semantic-diffharness/corpus/closures.js",
+        "sha256": "345f137a0f69a98fee96387e75cd2676a235a572e504f32d077f0ecc6de966b8"
+      },
+      {
+        "bytes": 160,
+        "path": "/tmp/rea-semantic-diffharness/corpus/commonjs.cjs",
+        "sha256": "397446d403194414e20ebb89787e52e2352c0dc27a55cab5159be62994ed1a85"
+      },
+      {
+        "bytes": 150,
+        "path": "/tmp/rea-semantic-diffharness/corpus/eval.js",
+        "sha256": "ce36ed15f7c3dce5594375966a64289047591387cdda89a00ec9c93d502f428d"
+      },
+      {
+        "bytes": 403,
+        "path": "/tmp/rea-semantic-diffharness/corpus/hoisting.js",
+        "sha256": "d36c94ee785477bfe75e7006ba68f30756d825a33d03cc48cfb9eeb9322fef1a"
+      },
+      {
+        "bytes": 27,
+        "path": "/tmp/rea-semantic-diffharness/corpus/import-typeof.ts",
+        "sha256": "ea8a86b6cf6518c1b0e7614bf2b02fe670b5922ea4b378585a156dba1f703d40"
+      },
+      {
+        "bytes": 114,
+        "path": "/tmp/rea-semantic-diffharness/corpus/imports-mode.mjs",
+        "sha256": "3a86148a50243293a8c9d72c17c4a1aea54addd7b5a312e0908068108db3fdf7"
+      },
+      {
+        "bytes": 577,
+        "path": "/tmp/rea-semantic-diffharness/corpus/imports.ts",
+        "sha256": "8bc8f9b7fe14db029a635c3aec71775abbcc4ac0f2d74c1c3bf7df18a1ed9ec2"
+      },
+      {
+        "bytes": 675,
+        "path": "/tmp/rea-semantic-diffharness/corpus/loops.js",
+        "sha256": "b034ec7ce7e21e10ebc1093e3f6ef8ea0668bf639ad0057d09b4754517850c1a"
+      },
+      {
+        "bytes": 653,
+        "path": "/tmp/rea-semantic-diffharness/corpus/param-scopes.js",
+        "sha256": "fe0b707fa609e4f4f516335733b1e50500305dd6910f7936223b2895346c1b24"
+      },
+      {
+        "bytes": 122,
+        "path": "/tmp/rea-semantic-diffharness/corpus/targeted-aliases.js",
+        "sha256": "972c1a20c61ab9080efddd0e5e0ef32989e3317a0d2389ed5e1b14553161c493"
+      },
+      {
+        "bytes": 189,
+        "path": "/tmp/rea-semantic-diffharness/corpus/targeted-callable-return.js",
+        "sha256": "af443ca7f0b2c2a47f31cac749ff88a69c10312b4d5b9e458c22247377f9fe21"
+      },
+      {
+        "bytes": 108,
+        "path": "/tmp/rea-semantic-diffharness/corpus/targeted-cyclic-object.js",
+        "sha256": "a8f7097ed76e31da3750e3570ca39c9d8ca24c48ed0fb5f0b6024c5bb8591267"
+      },
+      {
+        "bytes": 143,
+        "path": "/tmp/rea-semantic-diffharness/corpus/targeted-reassignment.js",
+        "sha256": "6f0ffe3f0d7e9d4aa50a3c052781eb125701db9c34895032172b703edd20a105"
+      },
+      {
+        "bytes": 163,
+        "path": "/tmp/rea-semantic-diffharness/corpus/ts-targets.ts",
+        "sha256": "bd3a508069b14e93f7b4ef53984d379116cf14c0c40949962b46d2d73217cc08"
+      },
+      {
+        "bytes": 126,
+        "path": "/tmp/rea-semantic-diffharness/corpus/unicode.js",
+        "sha256": "0452b40ff5cb2993a77c0a5c8a2cd0263771cce13ba357186b69af0084251e57"
+      },
+      {
+        "bytes": 254,
+        "path": "/tmp/rea-semantic-diffharness/corpus/with-proto.js",
+        "sha256": "230d98fad2f7fe335d3a5fdcb779c0cf1ec971c38b2d7b923ab491383fd1bf11"
+      },
+      {
+        "bytes": 592,
+        "path": "/tmp/rea-semantic-diffharness/corpus/with.js",
+        "sha256": "8d6335387ba8394d93d259ca2ea3bb71bf95f672250003075d6b1ee782bf3897"
+      }
+    ],
+    "diff-compiler-dependent.json": {
+      "bytes": 42,
+      "path": "/tmp/rea-semantic-diffharness/diff-compiler-dependent.json",
+      "sha256": "db6ee0f26952ebce3b612a4a8aed7c4faf6d5f6db3a3a81d91a36dac963edbaa"
+    },
+    "diff-import.json": {
+      "bytes": 42,
+      "path": "/tmp/rea-semantic-diffharness/diff-import.json",
+      "sha256": "db6ee0f26952ebce3b612a4a8aed7c4faf6d5f6db3a3a81d91a36dac963edbaa"
+    },
+    "diff-require.json": {
+      "bytes": 42,
+      "path": "/tmp/rea-semantic-diffharness/diff-require.json",
+      "sha256": "db6ee0f26952ebce3b612a4a8aed7c4faf6d5f6db3a3a81d91a36dac963edbaa"
+    },
+    "example-source.sha256": {
+      "bytes": 160,
+      "path": "/tmp/rea-semantic-diffharness/example-source.sha256",
+      "sha256": "82791461744b3f2f17c7be5931557b29c6c394a67cbc47534c96f27a6d54b8b0"
+    },
+    "input-and-ts-digests.txt": {
+      "bytes": 1404,
+      "path": "/tmp/rea-semantic-diffharness/input-and-ts-digests.txt",
+      "sha256": "7691f27d885e04c94d1e81e720890082ecd2479670f755143ddf43cbdcb4f628"
+    },
+    "lock.sha256": {
+      "bytes": 107,
+      "path": "/tmp/rea-semantic-diffharness/lock.sha256",
+      "sha256": "495d38b6a854e0b7ebb28f233c4e69bac631b13e0242f824cf6892ba8957bf1f"
+    },
+    "manifest-sha.txt": {
+      "bytes": 80,
+      "path": "/tmp/rea-semantic-diffharness/manifest-sha.txt",
+      "sha256": "18b4599d4ac27bf597be574ff453afbf63794a9d3240203bd0f51ce474656c05"
+    },
+    "manifest.json": {
+      "bytes": 2415,
+      "path": "/tmp/rea-semantic-diffharness/manifest.json",
+      "sha256": "2339f61948b2f1b9720999e9d87c76bcf0ea20c154bc147da4a4ffe92a7b307b"
+    },
+    "metadata.json": {
+      "bytes": 1829,
+      "path": "/tmp/rea-semantic-diffharness/metadata.json",
+      "sha256": "b1a9cf955a410e9bed240784a1505becd286652588c0865e6144137bc3c2fac1"
+    },
+    "run-diff.sh": {
+      "bytes": 841,
+      "path": "/tmp/rea-semantic-diffharness/run-diff.sh",
+      "sha256": "4546ef949a244d41bb1fb89516ef878a5d367fb79f58e0224c5e34b375d397a3"
+    },
+    "rust-binary.sha256": {
+      "bytes": 126,
+      "path": "/tmp/rea-semantic-diffharness/rust-binary.sha256",
+      "sha256": "e7ee16d48d7e80fb4f88c48052eea72d4d0e7bacb567346b5d8a4788bf70609e"
+    },
+    "semantic-run-status.txt": {
+      "bytes": 100,
+      "path": "/tmp/rea-semantic-diffharness/semantic-run-status.txt",
+      "sha256": "6dc65d4e298a7128af65c98fe638982dbc9cf5144df0d57cc2e37251b9fbcad6"
+    },
+    "toolchain.txt": {
+      "bytes": 72,
+      "path": "/tmp/rea-semantic-diffharness/toolchain.txt",
+      "sha256": "8b3d4f07f031513394326ca916c6be9cd6142d06305493bb5bdd005a0bb73916"
+    },
+    "ts-dump.mjs": {
+      "bytes": 1578,
+      "path": "/tmp/rea-semantic-diffharness/ts-dump.mjs",
+      "sha256": "16e6ca2f9779a74fafd3593be29e6ca2397055e5927b8018384d65a1f3c0ee60"
+    },
+    "workspace-lock.sha256": {
+      "bytes": 102,
+      "path": "/tmp/rea-semantic-diffharness/workspace-lock.sha256",
+      "sha256": "66b551cce85c3dbfca0ace06e8512007405bfd062496d9a9f736e97913c4ccb9"
+    },
+    "src-main.rs": {
+      "bytes": 4014,
+      "path": "/tmp/rea-benchmark-fixes/docs/benchmarks/typescript-comparison-2026-10-26/semantic-diff-evidence/src-main.rs",
+      "sha256": "e09912e3b10dcbd6f49234b20228f4354ccb7177de81f33157e9aeed25dc65e4"
+    }
+  },
+  "build": {
+    "command": "cd /tmp/rea-semantic-diffharness && REA_RUST_SEMANTIC_BIN=/tmp/rea-semantic-diffharness/js-full-semantic-diff-release ./run-diff.sh",
+    "note": "The isolated Cargo workspace and build output were temporary; this report retains the source copy and provenance hashes.",
+    "toolchain": "semantic-diff-evidence/toolchain.txt"
+  },
+  "comparison_scope": "21 synthetic corpus entries in three modes; exact diff files contain only compared count and empty differences.",
+  "corpus": {
+    "entry_count": 21,
+    "manifest": "semantic-diff-evidence/manifest.json",
+    "manifest_sha256": "2339f61948b2f1b9720999e9d87c76bcf0ea20c154bc147da4a4ffe92a7b307b",
+    "synthetic_files_copied": true
+  },
+  "limitations": [
+    "No broad application parity claim.",
+    "No target application source, binary, or full IR is copied.",
+    "Current checkout parser and supplied Rust harness are separate from the frozen full-application TypeScript baseline.",
+    "Build13 live ASAR validation is recorded in the parent comparison report."
+  ],
+  "results": {
+    "compiler-dependent": {
+      "compared": 21,
+      "difference_count": 0
+    },
+    "import": {
+      "compared": 21,
+      "difference_count": 0
+    },
+    "require": {
+      "compared": 21,
+      "difference_count": 0
+    }
+  },
+  "rust": {
+    "binary_sha256": "add8dba06ec5bcbd24a47509a39a2350cfebcab97eb35adf14198f3d1f2c366b",
+    "source_copy": "/tmp/rea-semantic-diffharness/src-main.rs",
+    "source_state": "dirty patch bbbddc... supplied by build agent",
+    "workspace_lock_sha256": "08dfada42720f557d4a6df04e05bd2f2182059d3ae97b2df65567835448c3a37"
+  },
+  "schema_version": 1,
+  "status": "diagnostic-only",
+  "typescript_baseline": {
+    "checkout_dist_parser_sha256": "54355ad94379cf8f29488ec14e0439c2260e1ffd0f1686e168fd757e97779955",
+    "distinction": "This is current-checkout parser evidence, not the frozen full-application TypeScript baseline in the cross-app attempts.",
+    "source": "current checkout dist/domain/javascript"
+  }
+}

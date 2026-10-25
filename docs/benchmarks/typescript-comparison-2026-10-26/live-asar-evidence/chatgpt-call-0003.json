@@ -1,0 +1,68 @@
+{
+  "label": "analyze_javascript_application#1",
+  "method": "tools/call",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "analyze_javascript_application",
+      "arguments": {
+        "input_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+        "format": "asar",
+        "detail": "summary",
+        "integrity_policy": "fail",
+        "analysis_timeout_ms": 30000,
+        "max_heap_mb": 1024,
+        "max_semantic_nodes": 100000,
+        "max_semantic_nodes_per_file": 20000,
+        "max_semantic_unknowns": 100000,
+        "max_semantic_unknowns_per_file": 20000
+      }
+    }
+  },
+  "wall_ms": 2582.943209010409,
+  "output_bytes": 1645,
+  "status": "failure",
+  "error": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"error\":{\"code\":\"artifact_integrity_mismatch\",\"category\":\"integrity_mismatch\",\"message\":\"Declared ASAR integrity for unpacked entry node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node contradicts its companion file; packaging tools commonly sign or strip unpacked native binaries after writing the archive. If expected, rerun analyze_javascript_application with integrity_policy=record-and-continue (CLI: --integrity-policy record-and-continue) to retain observed bytes as untrusted; otherwise get a fresh copy.\",\"retryable\":false,\"remediation\":{\"action\":\"Declared ASAR integrity for unpacked entry node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node contradicts its companion file; packaging tools commonly sign or strip unpacked native binaries after writing the archive. If expected, rerun analyze_javascript_application with integrity_policy=record-and-continue (CLI: --integrity-policy record-and-continue) to retain observed bytes as untrusted; otherwise get a fresh copy.\"},\"details\":{\"logical_path\":\"node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node\",\"declared_sha256\":\"5f2f66c4fe19493bba7ca2e0c322ed256e39f66d4a58865875431c2ddd4d58a1\",\"calculated_sha256\":\"a91e14413102247046ac2aac96a1932b1ec5ecad36902eee4cc4d3cdbf8fb7f9\",\"unpacked\":true}}}"
+      }
+    ],
+    "_meta": {
+      "provenance": {
+        "untrusted_content": true,
+        "source": "analysis_target"
+      }
+    },
+    "isError": true
+  },
+  "sampled_family_cpu_ms": 2340.438571999999,
+  "sampled_family_user_cpu_ms": 2073.485903999999,
+  "sampled_family_system_cpu_ms": 266.9526680000001,
+  "sampled_family_peak_rss_bytes": 1500315648,
+  "sampled_family_max_processes": 1,
+  "sampled_max_gap_ms": 107.86499999812804,
+  "response_sha256": "6ec5e103ceb29b063f019faa9425b206a38cecf1785b70869a6d5cb99e1c0d7f",
+  "response": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"error\":{\"code\":\"artifact_integrity_mismatch\",\"category\":\"integrity_mismatch\",\"message\":\"Declared ASAR integrity for unpacked entry node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node contradicts its companion file; packaging tools commonly sign or strip unpacked native binaries after writing the archive. If expected, rerun analyze_javascript_application with integrity_policy=record-and-continue (CLI: --integrity-policy record-and-continue) to retain observed bytes as untrusted; otherwise get a fresh copy.\",\"retryable\":false,\"remediation\":{\"action\":\"Declared ASAR integrity for unpacked entry node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node contradicts its companion file; packaging tools commonly sign or strip unpacked native binaries after writing the archive. If expected, rerun analyze_javascript_application with integrity_policy=record-and-continue (CLI: --integrity-policy record-and-continue) to retain observed bytes as untrusted; otherwise get a fresh copy.\"},\"details\":{\"logical_path\":\"node_modules/@worklouder/device-kit-oai/node_modules/@worklouder/wl-device-kit/dist/native/darwin/permissions.node\",\"declared_sha256\":\"5f2f66c4fe19493bba7ca2e0c322ed256e39f66d4a58865875431c2ddd4d58a1\",\"calculated_sha256\":\"a91e14413102247046ac2aac96a1932b1ec5ecad36902eee4cc4d3cdbf8fb7f9\",\"unpacked\":true}}}"
+        }
+      ],
+      "_meta": {
+        "provenance": {
+          "untrusted_content": true,
+          "source": "analysis_target"
+        }
+      },
+      "isError": true
+    },
+    "jsonrpc": "2.0",
+    "id": 3
+  }
+}

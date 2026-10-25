@@ -1,0 +1,43 @@
+{
+  "runtime": {
+    "node": "v24.18.0",
+    "nodePath": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/.cache/toolchains/node-v24.18.0-darwin-arm64/bin/node",
+    "asarModule": "/Users/tihan-nico/Developer/rea-rust-ghidra-prism/node_modules/@electron/asar/lib/asar.js",
+    "asarModuleSha256": "8924adb72f6d64d38b4841c3841718791983e6aaa2bccd9f269acff03570102a",
+    "asarListingSha256": "54f4771b63bae4da4982ebff9069dc0a1dcd5e506b77aa529e4eff0c4827fe99"
+  },
+  "target": {
+    "path": "/Applications/Figma.app/Contents/Resources/app.asar",
+    "size": 9724384,
+    "sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+    "header": {
+      "headerSize": 28320,
+      "headerStringLength": 28309,
+      "topLevelEntries": 25
+    }
+  },
+  "codesignEntries": [
+    {
+      "path": ".codesign",
+      "metadata": {
+        "size": -1000,
+        "offset": "0",
+        "integrity": {
+          "algorithm": "SHA256",
+          "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "blockSize": 4194304,
+          "blocks": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ]
+        }
+      }
+    }
+  ],
+  "typescriptListingProjection": {
+    "result": "rejected",
+    "error": {
+      "name": "ZodError",
+      "message": "[\n  {\n    \"origin\": \"number\",\n    \"code\": \"too_small\",\n    \"minimum\": 0,\n    \"inclusive\": true,\n    \"path\": [\n      \"size\"\n    ],\n    \"message\": \"Too small: expected number to be >=0\"\n  }\n]"
+    }
+  }
+}

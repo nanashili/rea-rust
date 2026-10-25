@@ -1,0 +1,32 @@
+{
+  "classification": "bounded-header-followup",
+  "purpose": "Proves the TypeScript ASAR header reader accepted the Figma archive and the listing projection rejected the .codesign size -1000 entry.",
+  "scope": "Header and listing projection only; no worker, MCP, or full application analysis was run.",
+  "source_files": [
+    {
+      "path": "figma-header-evidence.json",
+      "bytes": 1557,
+      "sha256": "ea89619ee180d2733b68c9b769f3b2295dade99698303a4ac9ca3b352e5884da"
+    },
+    {
+      "path": "figma-header-check.mjs",
+      "bytes": 2375,
+      "sha256": "c8baefd46ecbfca7964253321303eeb9a00d40e0ae979deacfcc7837e477065a"
+    }
+  ],
+  "source_evidence_path": "/tmp/rea-ts-figma-header-evidence-20261026.json",
+  "source_script_path": "/tmp/rea-ts-figma-header-check.mjs",
+  "target_sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+  "asar_module_sha256": "8924adb72f6d64d38b4841c3841718791983e6aaa2bccd9f269acff03570102a",
+  "asar_listing_sha256": "54f4771b63bae4da4982ebff9069dc0a1dcd5e506b77aa529e4eff0c4827fe99",
+  "captured_evidence": {
+    "raw_header": "accepted",
+    "header_size": 28320,
+    "header_string_length": 28309,
+    "top_level_entries": 25,
+    "codesign_path": ".codesign",
+    "codesign_size": -1000,
+    "listing_projection": "rejected",
+    "listing_error": "ZodError: size too small; expected number to be >=0"
+  }
+}

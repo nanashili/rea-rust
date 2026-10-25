@@ -1,0 +1,107 @@
+[
+  {
+    "id": "commonjs-structure",
+    "file": "corpus/commonjs.cjs",
+    "path": "/project/src/commonjs.cjs"
+  },
+  {
+    "id": "imports",
+    "file": "corpus/imports.ts",
+    "path": "/project/src/imports.ts"
+  },
+  {
+    "id": "closures",
+    "file": "corpus/closures.js",
+    "path": "/project/src/closures.js"
+  },
+  {
+    "id": "loops",
+    "file": "corpus/loops.js",
+    "path": "/project/src/loops.js"
+  },
+  {
+    "id": "unicode",
+    "file": "corpus/unicode.js",
+    "path": "/project/src/unicode.js"
+  },
+  {
+    "id": "promise-ownership",
+    "file": "promise-ownership.js",
+    "path": "/project/src/promise-ownership.js"
+  },
+  {
+    "id": "surrogates",
+    "file": "surrogates.js",
+    "path": "/project/src/surrogates.js"
+  },
+  {
+    "id": "eval",
+    "file": "corpus/eval.js",
+    "path": "/project/src/eval.js"
+  },
+  {
+    "id": "hoisting",
+    "file": "corpus/hoisting.js",
+    "path": "/project/src/hoisting.js"
+  },
+  {
+    "id": "param-scopes",
+    "file": "corpus/param-scopes.js",
+    "path": "/project/src/param-scopes.js"
+  },
+  {
+    "id": "with-proto",
+    "file": "corpus/with-proto.js",
+    "path": "/project/src/with-proto.js"
+  },
+  {
+    "id": "with",
+    "file": "corpus/with.js",
+    "path": "/project/src/with.js"
+  },
+  {
+    "id": "import-typeof",
+    "file": "corpus/import-typeof.ts",
+    "path": "/project/src/import-typeof.ts"
+  },
+  {
+    "id": "ts-targets",
+    "file": "corpus/ts-targets.ts",
+    "path": "/project/src/ts-targets.ts"
+  },
+  {
+    "id": "imports-mode",
+    "file": "corpus/imports-mode.mjs",
+    "path": "/project/src/imports-mode.mjs"
+  },
+  {
+    "id": "broad-producers",
+    "file": "broad-producers.js",
+    "path": "/project/src/broad-producers.js"
+  },
+  {
+    "id": "edge-boundaries",
+    "file": "edge-boundaries.mjs",
+    "path": "/project/src/edge-boundaries.mjs"
+  },
+  {
+    "id": "targeted-aliases",
+    "file": "corpus/targeted-aliases.js",
+    "path": "/project/src/targeted-aliases.js"
+  },
+  {
+    "id": "targeted-reassignment",
+    "file": "corpus/targeted-reassignment.js",
+    "path": "/project/src/targeted-reassignment.js"
+  },
+  {
+    "id": "targeted-cyclic-object",
+    "file": "corpus/targeted-cyclic-object.js",
+    "path": "/project/src/targeted-cyclic-object.js"
+  },
+  {
+    "id": "targeted-callable-return",
+    "file": "corpus/targeted-callable-return.js",
+    "path": "/project/src/targeted-callable-return.js"
+  }
+]

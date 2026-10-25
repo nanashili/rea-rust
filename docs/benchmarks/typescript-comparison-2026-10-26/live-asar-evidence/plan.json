@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "plan_id": "asar-integrity-validation-2026-10-26",
+  "purpose": "One public MCP regression per input; diagnostic validation, not a repeated performance benchmark. ChatGPT must reject its observed unpacked-companion digest mismatch; Discord exercises a successful JavaScript analysis.",
+  "workflows": [
+    {
+      "name": "discord-electron-static",
+      "target": "/Applications/Discord.app",
+      "cases": [
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Discord.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "chatgpt-electron-static",
+      "target": "/Applications/ChatGPT.app",
+      "cases": [
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    }
+  ]
+}

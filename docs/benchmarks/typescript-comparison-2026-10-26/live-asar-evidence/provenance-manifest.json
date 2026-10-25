@@ -1,0 +1,82 @@
+{
+  "classification": "live-public-mcp-asar-validation",
+  "scope": "One build13 public MCP call per target; diagnostic regression validation, not a repeated performance benchmark.",
+  "source_aggregate": "/tmp/rea-build13-asar-validation.json",
+  "source_runs": "/tmp/rea-build13-asar-validation-runs",
+  "rea_sha256": "f3e3803f497d128f2aab5a126c5e0b69864c68bcf2a6f1816c476e5583d972cd",
+  "plan_sha256": "6e3df7e507fc3fa6ac9af727367cc80d573c27e13e216f737eb6bb7ebb16727c",
+  "catalog_sha256": "760c6a8c9d962de9504620ef486884809e02c6a7c0d6e0c94567b5d0e84ae60b",
+  "files": [
+    {
+      "path": "aggregate.json",
+      "bytes": 31625,
+      "sha256": "28429cface0952fb1139fdad6257fd0efb07cac6b7ba42d14b031b50d899a889"
+    },
+    {
+      "path": "chatgpt-call-0003.json",
+      "bytes": 4646,
+      "sha256": "6013c9bcd7435d2c76d03157e814be9334b996eb5070829a15eb7aeb8207ff78"
+    },
+    {
+      "path": "chatgpt-receipt.json",
+      "bytes": 14714,
+      "sha256": "064dda702b70b45cdd86119a9730a5b7171c028b5610948491c0b320888de533"
+    },
+    {
+      "path": "discord-call-0003.json",
+      "bytes": 32513,
+      "sha256": "5e0b178e064144522f1b88dd791fde7489c6271a9dc613689d7db87478aee58d"
+    },
+    {
+      "path": "discord-receipt.json",
+      "bytes": 12946,
+      "sha256": "db1570699d12742e8df610e10d22860f40f2744152af65ace04405b114ac9211"
+    },
+    {
+      "path": "plan.json",
+      "bytes": 1701,
+      "sha256": "f950e8e2262147f11f82838b7aaa06afb37d8a7258c2337fdd97de36b6d528af"
+    },
+    {
+      "path": "targets-after.json",
+      "bytes": 671,
+      "sha256": "4d84db35a4f00c67335f863c402d61fdc14e4245b9c32d4f163d362d53ec3462"
+    },
+    {
+      "path": "targets-before.json",
+      "bytes": 671,
+      "sha256": "4d84db35a4f00c67335f863c402d61fdc14e4245b9c32d4f163d362d53ec3462"
+    }
+  ],
+  "results": {
+    "discord-electron-static": {
+      "status": "success",
+      "runtime_exit_code": 0,
+      "wall_ms": 30113.855542003876,
+      "sampled_family_peak_rss_bytes": 1498464256,
+      "sampled_family_cpu_ms": 20306.795993999993,
+      "call_status": "success",
+      "application_status": "partial",
+      "semantic_status": "partial",
+      "semantic_truncated": true,
+      "semantic_unknowns": 20319
+    },
+    "chatgpt-electron-static": {
+      "status": "failure",
+      "runtime_exit_code": 0,
+      "wall_ms": 2582.943209010409,
+      "sampled_family_peak_rss_bytes": 1500315648,
+      "sampled_family_cpu_ms": 2340.438571999999,
+      "call_status": "failure",
+      "call_error_code": "artifact_integrity_mismatch",
+      "declared_sha256": "5f2f66c4fe19493bba7ca2e0c322ed256e39f66d4a58865875431c2ddd4d58a1",
+      "calculated_sha256": "a91e14413102247046ac2aac96a1932b1ec5ecad36902eee4cc4d3cdbf8fb7f9"
+    }
+  },
+  "interpretation": {
+    "chatgpt": "Expected negative: artifact_integrity_mismatch with declared 5f2f66...d58a1 and observed a91e144...f7f9; runtime exit 0, aggregate runner exit 1 because the expected negative was observed.",
+    "discord": "Protocol success in 30.114 s, but application and semantic coverage are partial and truncated at configured capacity; this is not full semantic completion.",
+    "targets_unchanged": true,
+    "cleanup": "No observed descendants or reader threads remained; termination_error was null."
+  }
+}
