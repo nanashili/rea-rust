@@ -391,6 +391,7 @@ def workflow_metrics(receipts: list[dict[str, Any]]) -> dict[str, dict[str, Any]
 def matched_success_metrics(
     baseline: dict[str, Any],
     current: dict[str, Any],
+    eligible_workflows: set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Summarize only rounds that succeeded in both comparable receipts."""
     baseline_by_key = {
@@ -414,6 +415,8 @@ def matched_success_metrics(
         ):
             continue
         workflow, round_number = key
+        if eligible_workflows is not None and workflow not in eligible_workflows:
+            continue
         rounds.setdefault(workflow, []).append(round_number)
         workflow_samples = samples.setdefault(
             workflow,
@@ -440,6 +443,145 @@ def matched_success_metrics(
             },
         }
         for workflow, values_by_metric in sorted(samples.items())
+    }
+
+
+def index_task_calls(
+    raw: dict[str, Any],
+) -> tuple[
+    dict[tuple[str, int, str], tuple[str, dict[str, Any]]],
+    set[tuple[str, int, str]],
+]:
+    calls: dict[tuple[str, int, str], tuple[str, dict[str, Any]]] = {}
+    duplicates: set[tuple[str, int, str]] = set()
+    for receipt in raw.get("receipts", []):
+        if not isinstance(receipt, dict):
+            continue
+        workflow, round_number = receipt_key(receipt)
+        for call in receipt.get("calls", []):
+            if not isinstance(call, dict):
+                continue
+            params = call.get("request", {}).get("params", {})
+            key = (workflow, round_number, str(call.get("label", "")))
+            if key in calls:
+                duplicates.add(key)
+                continue
+            calls[key] = (str(params.get("name", "")), params.get("arguments", {}))
+    return calls, duplicates
+
+
+def expected_export_path(work_dir: Path, workflow: str, round_number: int) -> Path:
+    return work_dir / f"{workflow}-round-{round_number:03d}" / "evidence-export.json"
+
+
+def is_generated_export_call(
+    tool: str,
+    arguments: Any,
+    workflow: str,
+    round_number: int,
+    work_dir: Path,
+) -> bool:
+    if (
+        tool not in {"export_evidence_bundle", "import_evidence_bundle"}
+        or not isinstance(arguments, dict)
+    ):
+        return False
+    expected_keys = {"path", "overwrite"} if tool == "export_evidence_bundle" else {"path"}
+    if set(arguments) != expected_keys:
+        return False
+    if tool == "export_evidence_bundle" and arguments.get("overwrite") is not False:
+        return False
+    path = arguments.get("path")
+    if not isinstance(path, str):
+        return False
+    try:
+        return Path(path).resolve() == expected_export_path(work_dir, workflow, round_number).resolve()
+    except OSError:
+        return False
+
+
+def classify_call_difference(
+    left: tuple[str, dict[str, Any]],
+    right: tuple[str, dict[str, Any]],
+    workflow: str,
+    round_number: int,
+    baseline_work_dir: Path | None,
+    current_work_dir: Path | None,
+) -> str:
+    if left[0] != right[0] or left[1] == right[1]:
+        return "changed_task_input"
+    if baseline_work_dir and current_work_dir and left[0] == right[0]:
+        left_is_generated = is_generated_export_call(
+            left[0], left[1], workflow, round_number, baseline_work_dir
+        )
+        right_is_generated = is_generated_export_call(
+            right[0], right[1], workflow, round_number, current_work_dir
+        )
+        if left_is_generated and right_is_generated:
+            return "run_scoped_output"
+    return "changed_task_input"
+
+
+def task_input_equivalence(
+    baseline: dict[str, Any],
+    current: dict[str, Any],
+    baseline_work_dir: Path | None,
+    current_work_dir: Path | None,
+) -> dict[str, Any]:
+    """Compare caller inputs while allowing only the plan's generated exports."""
+    baseline_calls, baseline_duplicates = index_task_calls(baseline)
+    current_calls, current_duplicates = index_task_calls(current)
+    differences: list[dict[str, Any]] = []
+    for key in sorted(baseline_duplicates | current_duplicates):
+        differences.append(
+            {
+                "workflow": key[0],
+                "round": key[1],
+                "label": key[2],
+                "category": "duplicate_call",
+            }
+        )
+    for key in sorted(set(baseline_calls) | set(current_calls)):
+        left, right = baseline_calls.get(key), current_calls.get(key)
+        if left is None or right is None:
+            differences.append(
+                {
+                    "workflow": key[0],
+                    "round": key[1],
+                    "label": key[2],
+                    "category": "missing_call",
+                }
+            )
+        elif left != right:
+            differences.append(
+                {
+                    "workflow": key[0],
+                    "round": key[1],
+                    "label": key[2],
+                    "category": classify_call_difference(
+                        left,
+                        right,
+                        key[0],
+                        key[1],
+                        baseline_work_dir,
+                        current_work_dir,
+                    ),
+                    "baseline": left,
+                    "current": right,
+                }
+            )
+    changed_workflows = {
+        item["workflow"]
+        for item in differences
+        if item["category"] != "run_scoped_output"
+    }
+    observed_workflows = {key[0] for key in set(baseline_calls) & set(current_calls)}
+    return {
+        "equivalent": not changed_workflows,
+        "equivalent_workflows": sorted(observed_workflows - changed_workflows),
+        "differences": differences[:50],
+        "difference_count": len(differences),
+        "unpaired_call_count": len(set(baseline_calls) ^ set(current_calls)),
     }
 
 
@@ -574,6 +716,12 @@ def compare_series(
     baseline_calls = call_identity(baseline)
     current_calls = call_identity(current)
     structural = structural_equivalence(baseline, current)
+    task_inputs = task_input_equivalence(
+        baseline,
+        current,
+        baseline_work_dir,
+        current_work_dir,
+    )
     return {
         "series": name,
         "structural_equivalence": structural,
@@ -592,7 +740,12 @@ def compare_series(
             "current_rows": sum(current_calls.values()),
             "same_identity_status_rows": sum((baseline_calls & current_calls).values()),
         },
-        "matched_success_metrics": matched_success_metrics(baseline, current),
+        "task_input_equivalence": task_inputs,
+        "matched_success_metrics": matched_success_metrics(
+            baseline,
+            current,
+            set(task_inputs["equivalent_workflows"]),
+        ),
     }
 
 
