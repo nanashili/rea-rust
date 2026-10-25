@@ -140,3 +140,8 @@ inherits = "release"
 opt-level = 1
 lto = false
 codegen-units = 16
+
+# Ada's always_inline C++ routines fail with GCC 12 at -O1. Preserve the
+# dependency's working release optimization while keeping workspace CI fast.
+[profile.ci.package.ada-url]
+opt-level = 3
