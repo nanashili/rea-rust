@@ -37,13 +37,21 @@ def run_powershell(
     *,
     command: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    # Let each shell resolve its own modules instead of inheriting PowerShell 7's
+    # module path when the test launches Windows PowerShell 5.1.
+    process_environment = {
+        name: value
+        for name, value in os.environ.items()
+        if name.upper() != "PSMODULEPATH"
+    }
+    process_environment.update(environment)
     with tempfile.NamedTemporaryFile("w", suffix=".ps1", delete=False, encoding="utf-8") as handle:
         handle.write(script)
         path = Path(handle.name)
     try:
         return subprocess.run(
             [command or powershell(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(path)],
-            env={**os.environ, **environment},
+            env=process_environment,
             text=True,
             capture_output=True,
             check=False,
