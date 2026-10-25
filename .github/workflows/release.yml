@@ -168,6 +168,20 @@ jobs:
           rustup default "$RUST_TOOLCHAIN"
           rustup target add "${{ matrix.target }}"
 
+      - name: Restore Cargo build cache
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/release
+            target/${{ matrix.target }}/release
+            ghidra-rust-worker/target/release
+            ghidra-rust-worker/target/${{ matrix.target }}/release
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ matrix.target == 'x86_64-pc-windows-msvc' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ matrix.target == 'x86_64-pc-windows-msvc' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-
+
       - name: Build REA
         if: runner.os != 'Windows'
         shell: bash
@@ -193,6 +207,13 @@ jobs:
           $command = "call `"$devCmd`" -arch=amd64 -host_arch=amd64 && cargo build --locked --release --target ${{ matrix.target }} -p rea && cargo build --locked --release --manifest-path ghidra-rust-worker/Cargo.toml --target ${{ matrix.target }}"
           cmd.exe /d /s /c $command
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test Windows launcher module path
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: cargo test --locked --release --target x86_64-pc-windows-msvc -p rea-host process::launcher
 
       - name: Verify Windows runtime dependencies
         if: runner.os == 'Windows'

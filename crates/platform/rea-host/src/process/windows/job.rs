@@ -2,10 +2,12 @@
 
 #[cfg(windows)]
 use std::cell::Cell;
+#[cfg(windows)]
+use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 
 #[cfg(windows)]
 use windows_sys::Win32::{
-    Foundation::{CloseHandle, GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_TIMEOUT},
+    Foundation::{GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_TIMEOUT},
     System::IO::{CreateIoCompletionPort, GetQueuedCompletionStatus, OVERLAPPED},
     System::JobObjects::{
         AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_JOB_MEMORY,
@@ -114,8 +116,8 @@ mod tests {
 
 #[cfg(windows)]
 pub struct OwnedWindowsJob {
-    handle: HANDLE,
-    completion_port: HANDLE,
+    handle: OwnedHandle,
+    completion_port: Option<OwnedHandle>,
     memory_limit_reached: Cell<bool>,
 }
 
@@ -124,10 +126,11 @@ impl OwnedWindowsJob {
     pub fn create(limits: WindowsJobLimits) -> Result<Self, String> {
         limits.validate()?;
 
-        let handle = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
-        if handle.is_null() {
+        let raw_handle = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+        if raw_handle.is_null() {
             return Err("CreateJobObjectW failed".into());
         }
+        let handle = unsafe { OwnedHandle::from_raw_handle(raw_handle) };
 
         let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
         info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -135,10 +138,7 @@ impl OwnedWindowsJob {
         if let Some(memory) = limits.memory_bytes {
             info.JobMemoryLimit = match usize::try_from(memory) {
                 Ok(value) => value,
-                Err(_) => {
-                    unsafe { CloseHandle(handle) };
-                    return Err("memory limit exceeds platform size".into());
-                }
+                Err(_) => return Err("memory limit exceeds platform size".into()),
             };
             info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
         }
@@ -147,64 +147,56 @@ impl OwnedWindowsJob {
             let duration = i64::try_from(cpu)
                 .ok()
                 .and_then(|seconds| seconds.checked_mul(10_000_000))
-                .ok_or_else(|| {
-                    unsafe { CloseHandle(handle) };
-                    "CPU limit exceeds platform size"
-                })?;
+                .ok_or("CPU limit exceeds platform size")?;
             info.BasicLimitInformation.PerJobUserTimeLimit = duration;
             info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_TIME;
         }
 
         let configured = unsafe {
             SetInformationJobObject(
-                handle,
+                handle.as_raw_handle(),
                 JobObjectExtendedLimitInformation,
                 (&info as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
                 std::mem::size_of_val(&info) as u32,
             )
         } != 0;
         if !configured {
-            unsafe { CloseHandle(handle) };
             return Err("SetInformationJobObject failed".into());
         }
 
         let completion_port = if limits.memory_bytes.is_some() {
-            let completion_port = unsafe {
+            let raw_completion_port = unsafe {
                 CreateIoCompletionPort(
                     INVALID_HANDLE_VALUE,
                     std::ptr::null_mut(),
-                    handle as usize,
+                    handle.as_raw_handle() as usize,
                     1,
                 )
             };
-            if completion_port.is_null() {
-                unsafe { CloseHandle(handle) };
+            if raw_completion_port.is_null() {
                 return Err("CreateIoCompletionPort failed".into());
             }
+            let completion_port = unsafe { OwnedHandle::from_raw_handle(raw_completion_port) };
 
             let association = JOBOBJECT_ASSOCIATE_COMPLETION_PORT {
-                CompletionKey: handle.cast(),
-                CompletionPort: completion_port,
+                CompletionKey: handle.as_raw_handle(),
+                CompletionPort: completion_port.as_raw_handle(),
             };
             let associated = unsafe {
                 SetInformationJobObject(
-                    handle,
+                    handle.as_raw_handle(),
                     JobObjectAssociateCompletionPortInformation,
                     (&association as *const JOBOBJECT_ASSOCIATE_COMPLETION_PORT).cast(),
                     std::mem::size_of_val(&association) as u32,
                 )
             } != 0;
             if !associated {
-                unsafe {
-                    CloseHandle(completion_port);
-                    CloseHandle(handle);
-                }
                 return Err("SetInformationJobObject completion port failed".into());
             }
 
-            completion_port
+            Some(completion_port)
         } else {
-            std::ptr::null_mut()
+            None
         };
 
         Ok(Self {
@@ -215,7 +207,7 @@ impl OwnedWindowsJob {
     }
 
     pub fn assign(&self, process: HANDLE) -> Result<(), String> {
-        if unsafe { AssignProcessToJobObject(self.handle, process) } == 0 {
+        if unsafe { AssignProcessToJobObject(self.handle.as_raw_handle(), process) } == 0 {
             return Err("AssignProcessToJobObject failed".into());
         }
 
@@ -230,11 +222,11 @@ impl OwnedWindowsJob {
     }
 
     pub(crate) fn raw_handle(&self) -> HANDLE {
-        self.handle
+        self.handle.as_raw_handle()
     }
 
     pub fn terminate(&self, exit_code: u32) -> Result<(), String> {
-        if unsafe { TerminateJobObject(self.handle, exit_code) } == 0 {
+        if unsafe { TerminateJobObject(self.handle.as_raw_handle(), exit_code) } == 0 {
             return Err("TerminateJobObject failed".into());
         }
 
@@ -254,7 +246,7 @@ impl OwnedWindowsJob {
         let mut info = JOBOBJECT_BASIC_ACCOUNTING_INFORMATION::default();
         let queried = unsafe {
             QueryInformationJobObject(
-                self.handle,
+                self.handle.as_raw_handle(),
                 JobObjectBasicAccountingInformation,
                 (&mut info as *mut JOBOBJECT_BASIC_ACCOUNTING_INFORMATION).cast(),
                 std::mem::size_of_val(&info) as u32,
@@ -272,7 +264,7 @@ impl OwnedWindowsJob {
         let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
         let queried = unsafe {
             QueryInformationJobObject(
-                self.handle,
+                self.handle.as_raw_handle(),
                 JobObjectExtendedLimitInformation,
                 (&mut info as *mut JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),
                 std::mem::size_of_val(&info) as u32,
@@ -287,9 +279,9 @@ impl OwnedWindowsJob {
     }
 
     pub fn observe_memory_limit(&self) -> Result<bool, String> {
-        if self.completion_port.is_null() {
+        let Some(completion_port) = self.completion_port.as_ref() else {
             return Ok(false);
-        }
+        };
 
         loop {
             let mut message = 0u32;
@@ -297,7 +289,7 @@ impl OwnedWindowsJob {
             let mut detail: *mut OVERLAPPED = std::ptr::null_mut();
             let received = unsafe {
                 GetQueuedCompletionStatus(
-                    self.completion_port,
+                    completion_port.as_raw_handle(),
                     &mut message,
                     &mut key,
                     &mut detail,
@@ -313,19 +305,11 @@ impl OwnedWindowsJob {
                     "GetQueuedCompletionStatus failed with Windows error {error}"
                 ));
             }
-            if key == self.handle as usize && message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT {
+            if key == self.handle.as_raw_handle() as usize
+                && message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT
+            {
                 self.memory_limit_reached.set(true);
             }
         }
-    }
-}
-
-#[cfg(windows)]
-impl Drop for OwnedWindowsJob {
-    fn drop(&mut self) {
-        if !self.completion_port.is_null() {
-            unsafe { CloseHandle(self.completion_port) };
-        }
-        unsafe { CloseHandle(self.handle) };
     }
 }

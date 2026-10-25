@@ -11,13 +11,13 @@ use std::{io, os::windows::ffi::OsStrExt, path::Path, ptr};
 
 #[cfg(windows)]
 use windows_sys::Win32::{
-    Foundation::{CloseHandle, GetLastError, HANDLE, INVALID_HANDLE_VALUE},
+    Foundation::{CloseHandle, GENERIC_READ, GetLastError, HANDLE, INVALID_HANDLE_VALUE},
     Storage::FileSystem::{
         BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_ATTRIBUTE_REPARSE_POINT, FILE_BASIC_INFO,
         FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_FLAG_SEQUENTIAL_SCAN,
         FILE_INFO_BY_HANDLE_CLASS, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
-        FILE_STANDARD_INFO, FileBasicInfo, FileStandardInfo, GENERIC_READ,
-        GetFileInformationByHandle, GetFileInformationByHandleEx, OPEN_EXISTING, ReadFile,
+        FILE_STANDARD_INFO, FileBasicInfo, FileStandardInfo, GetFileInformationByHandle,
+        GetFileInformationByHandleEx, OPEN_EXISTING, ReadFile,
     },
 };
 

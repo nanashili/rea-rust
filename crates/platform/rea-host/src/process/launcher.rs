@@ -732,27 +732,43 @@ mod windows {
     const INPUT_WRITE_CHUNK_SIZE: usize = 64 * 1024;
     const CLEANUP_DEADLINE_MILLISECONDS: u32 = 5_000;
 
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle as KernelHandle};
     use std::path::Path;
     use std::ptr;
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+    use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
+    use std::time::{Duration, Instant};
+
+    const INPUT_WRITE_TIMEOUT_MILLISECONDS: u32 = 1_000;
+    static INPUT_PIPE_SEQUENCE: AtomicU32 = AtomicU32::new(1);
 
     use windows_sys::Win32::{
         Foundation::{
-            CloseHandle, ERROR_BROKEN_PIPE, GetLastError, HANDLE, HANDLE_FLAG_INHERIT,
-            SetHandleInformation, WAIT_OBJECT_0, WAIT_TIMEOUT,
+            CloseHandle, ERROR_BROKEN_PIPE, ERROR_IO_PENDING, ERROR_NOT_FOUND,
+            ERROR_OPERATION_ABORTED, ERROR_PIPE_CONNECTED, GENERIC_WRITE, GetLastError, HANDLE,
+            HANDLE_FLAG_INHERIT, INVALID_HANDLE_VALUE, SetHandleInformation, WAIT_OBJECT_0,
+            WAIT_TIMEOUT,
         },
         Security::{
             GetTokenInformation, SECURITY_ATTRIBUTES, SetTokenInformation, TOKEN_ADJUST_DEFAULT,
             TOKEN_OWNER, TOKEN_QUERY, TOKEN_USER, TokenOwner, TokenUser,
         },
-        Storage::FileSystem::{ReadFile, WriteFile},
+        Storage::FileSystem::{
+            CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_FLAG_FIRST_PIPE_INSTANCE,
+            FILE_FLAG_OVERLAPPED, OPEN_EXISTING, PIPE_ACCESS_INBOUND, ReadFile, WriteFile,
+        },
+        System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED},
         System::JobObjects::IsProcessInJob,
-        System::Pipes::{CreatePipe, PeekNamedPipe},
+        System::Pipes::{
+            ConnectNamedPipe, CreateNamedPipeW, CreatePipe, PIPE_READMODE_BYTE, PIPE_TYPE_BYTE,
+            PIPE_WAIT, PeekNamedPipe,
+        },
         System::Threading::{
-            CREATE_NO_WINDOW, CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessW,
-            GetCurrentProcess, GetExitCodeProcess, GetPriorityClass, GetProcessAffinityMask,
-            GetProcessGroupAffinity, OpenProcessToken, ResumeThread, STARTF_USESTDHANDLES,
-            STARTUPINFOW, SetPriorityClass, SetProcessAffinityMask, TerminateProcess,
-            WaitForSingleObject,
+            CREATE_NO_WINDOW, CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateEventW,
+            CreateProcessW, GetCurrentProcess, GetCurrentProcessId, GetExitCodeProcess,
+            GetPriorityClass, GetProcessAffinityMask, GetProcessGroupAffinity, GetProcessId,
+            OpenProcessToken, ResumeThread, STARTF_USESTDHANDLES, STARTUPINFOW, SetPriorityClass,
+            SetProcessAffinityMask, TerminateProcess, WaitForSingleObject,
         },
     };
 
@@ -761,11 +777,11 @@ mod windows {
     };
     use crate::process::windows::resources::WindowsOwnedResources;
 
-    struct OwnedHandle(HANDLE);
+    struct OwnedHandle(KernelHandle);
 
     impl OwnedHandle {
         fn new(handle: HANDLE) -> Result<Self, ProcessLaunchError> {
-            if handle.is_null() {
+            if handle.is_null() || handle == INVALID_HANDLE_VALUE {
                 return Err(ProcessLaunchError::operation(
                     "handle",
                     format!("Windows handle creation failed: {}", unsafe {
@@ -774,25 +790,279 @@ mod windows {
                 ));
             }
 
-            Ok(Self(handle))
+            // Each successful creation transfers its unique handle here.
+            Ok(Self(unsafe { KernelHandle::from_raw_handle(handle) }))
         }
 
         fn raw(&self) -> HANDLE {
-            self.0
+            self.0.as_raw_handle()
         }
     }
 
-    impl Drop for OwnedHandle {
-        fn drop(&mut self) {
-            if !self.0.is_null() {
-                unsafe { CloseHandle(self.0) };
+    struct WindowsInput {
+        handle: OwnedHandle,
+        cancel_requested: AtomicBool,
+        write_lock: Mutex<()>,
+    }
+
+    #[derive(Clone)]
+    pub(super) struct WindowsInputWriter {
+        input: Arc<WindowsInput>,
+    }
+
+    impl WindowsInput {
+        fn new(handle: OwnedHandle) -> Self {
+            Self {
+                handle,
+                cancel_requested: AtomicBool::new(false),
+                write_lock: Mutex::new(()),
             }
         }
+
+        fn writer(self: &Arc<Self>) -> WindowsInputWriter {
+            WindowsInputWriter {
+                input: Arc::clone(self),
+            }
+        }
+
+        fn cancel_pending(&self) -> Result<(), ProcessLaunchError> {
+            self.cancel_requested.store(true, Ordering::SeqCst);
+            let cancelled = unsafe { CancelIoEx(self.handle.raw(), ptr::null_mut()) };
+            if cancelled != 0 {
+                return Ok(());
+            }
+
+            let error = unsafe { GetLastError() };
+            if error == ERROR_NOT_FOUND {
+                return Ok(());
+            }
+            Err(ProcessLaunchError::operation(
+                "cancel_write",
+                format!("CancelIoEx failed: {error}"),
+            ))
+        }
+
+        fn write_frame(
+            &self,
+            bytes: &[u8],
+            timeout_milliseconds: u32,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<usize, ProcessLaunchError> {
+            let deadline = Instant::now() + Duration::from_millis(timeout_milliseconds as u64);
+            let _write_guard = self.acquire_frame(deadline, cancelled)?;
+            let mut written = 0usize;
+
+            while written < bytes.len() {
+                self.check_interruption(deadline, cancelled)?;
+                let count = self.write_chunk(&bytes[written..], deadline, cancelled)?;
+                if count == 0 {
+                    return Err(ProcessLaunchError::operation(
+                        "write_input",
+                        "WriteFile made no progress",
+                    ));
+                }
+                written += count as usize;
+            }
+
+            Ok(written)
+        }
+
+        fn acquire_frame(
+            &self,
+            deadline: Instant,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<MutexGuard<'_, ()>, ProcessLaunchError> {
+            loop {
+                self.check_interruption(deadline, cancelled)?;
+                match self.write_lock.try_lock() {
+                    Ok(guard) => return Ok(guard),
+                    Err(TryLockError::Poisoned(error)) => return Ok(error.into_inner()),
+                    Err(TryLockError::WouldBlock) => {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                }
+            }
+        }
+
+        fn check_interruption(
+            &self,
+            deadline: Instant,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<(), ProcessLaunchError> {
+            if self.cancel_requested.load(Ordering::SeqCst) || cancelled() {
+                return Err(cancelled_write_error());
+            }
+            if Instant::now() >= deadline {
+                return Err(timed_out_write_error());
+            }
+            Ok(())
+        }
+
+        fn write_chunk(
+            &self,
+            bytes: &[u8],
+            deadline: Instant,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<u32, ProcessLaunchError> {
+            let requested = bytes.len().min(INPUT_WRITE_CHUNK_SIZE) as u32;
+            let event = OwnedHandle::new(unsafe { CreateEventW(ptr::null(), 1, 0, ptr::null()) })?;
+            let mut overlapped: OVERLAPPED = unsafe { std::mem::zeroed() };
+            overlapped.hEvent = event.raw();
+
+            let started = unsafe {
+                WriteFile(
+                    self.handle.raw(),
+                    bytes.as_ptr().cast(),
+                    requested,
+                    ptr::null_mut(),
+                    &mut overlapped,
+                )
+            };
+            if started == 0 {
+                let error = unsafe { GetLastError() };
+                if error != ERROR_IO_PENDING {
+                    return Err(ProcessLaunchError::operation(
+                        "write_input",
+                        format!("WriteFile failed: {error}"),
+                    ));
+                }
+            }
+
+            self.wait_for_write_completion(&mut overlapped, event.raw(), deadline, cancelled)
+        }
+
+        fn wait_for_write_completion(
+            &self,
+            overlapped: &mut OVERLAPPED,
+            event: HANDLE,
+            deadline: Instant,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<u32, ProcessLaunchError> {
+            loop {
+                if let Err(error) = self.check_interruption(deadline, cancelled) {
+                    return Err(attach_cleanup(
+                        error,
+                        self.cancel_overlapped_and_wait(overlapped)
+                            .err()
+                            .map(|cleanup| cleanup.to_string()),
+                    ));
+                }
+
+                let remaining = deadline.saturating_duration_since(Instant::now());
+                let wait_milliseconds =
+                    remaining.min(Duration::from_millis(25)).as_millis().max(1) as u32;
+                let wait = unsafe { WaitForSingleObject(event, wait_milliseconds) };
+                if wait == WAIT_TIMEOUT {
+                    continue;
+                }
+                if wait != WAIT_OBJECT_0 {
+                    let error = ProcessLaunchError::operation(
+                        "write_input",
+                        format!("waiting for WriteFile failed: {wait}"),
+                    );
+                    return Err(attach_cleanup(
+                        error,
+                        self.cancel_overlapped_and_wait(overlapped)
+                            .err()
+                            .map(|cleanup| cleanup.to_string()),
+                    ));
+                }
+
+                return completion_count(self.handle.raw(), overlapped);
+            }
+        }
+
+        fn cancel_overlapped_and_wait(
+            &self,
+            overlapped: &mut OVERLAPPED,
+        ) -> Result<(), ProcessLaunchError> {
+            let cancellation_error = if unsafe { CancelIoEx(self.handle.raw(), overlapped) } == 0 {
+                let error = unsafe { GetLastError() };
+                (error != ERROR_NOT_FOUND).then(|| {
+                    ProcessLaunchError::operation(
+                        "cancel_write",
+                        format!("CancelIoEx failed: {error}"),
+                    )
+                })
+            } else {
+                None
+            };
+
+            let mut count = 0u32;
+            let completed = unsafe {
+                // The blocking flag is deliberate: the OVERLAPPED storage
+                // remains live until the kernel has completed cancellation.
+                GetOverlappedResult(self.handle.raw(), overlapped, &mut count, 1)
+            };
+            if completed == 0 {
+                let error = unsafe { GetLastError() };
+                if error != ERROR_OPERATION_ABORTED {
+                    let completion_error = ProcessLaunchError::operation(
+                        "cancel_write",
+                        format!("GetOverlappedResult failed after cancellation: {error}"),
+                    );
+                    return Err(match cancellation_error {
+                        Some(cancellation_error) => {
+                            cancellation_error.with_cleanup(completion_error.to_string())
+                        }
+                        None => completion_error,
+                    });
+                }
+            }
+
+            if let Some(cancellation_error) = cancellation_error {
+                return Err(cancellation_error);
+            }
+            Ok(())
+        }
+    }
+
+    impl WindowsInputWriter {
+        pub(super) fn write_input_with_timeout(
+            &self,
+            bytes: &[u8],
+            timeout_milliseconds: u32,
+        ) -> Result<usize, ProcessLaunchError> {
+            self.input
+                .write_frame(bytes, timeout_milliseconds, &|| false)
+        }
+
+        pub(super) fn write_input_with_timeout_and_cancel(
+            &self,
+            bytes: &[u8],
+            timeout_milliseconds: u32,
+            cancelled: &dyn Fn() -> bool,
+        ) -> Result<usize, ProcessLaunchError> {
+            self.input
+                .write_frame(bytes, timeout_milliseconds, cancelled)
+        }
+    }
+
+    fn cancelled_write_error() -> ProcessLaunchError {
+        ProcessLaunchError::operation("write_input", "protocol input write was cancelled")
+    }
+
+    fn timed_out_write_error() -> ProcessLaunchError {
+        ProcessLaunchError::operation("write_input", "protocol input write timed out")
+    }
+
+    fn completion_count(
+        handle: HANDLE,
+        overlapped: &mut OVERLAPPED,
+    ) -> Result<u32, ProcessLaunchError> {
+        let mut count = 0u32;
+        if unsafe { GetOverlappedResult(handle, overlapped, &mut count, 1) } == 0 {
+            return Err(ProcessLaunchError::operation(
+                "write_input",
+                format!("WriteFile completion failed: {}", unsafe { GetLastError() }),
+            ));
+        }
+        Ok(count)
     }
 
     pub(super) struct WindowsChildProcess {
         process: OwnedHandle,
-        stdin: Option<OwnedHandle>,
+        stdin: Option<Arc<WindowsInput>>,
         stdout: OwnedHandle,
         stderr: OwnedHandle,
         job: WindowsOwnedResources,
@@ -811,15 +1081,34 @@ mod windows {
         executor: &mut impl CleanupExecutor,
         exit_code: u32,
     ) -> Result<(), ProcessLaunchError> {
-        executor.terminate_for_cleanup(exit_code)?;
-        executor.wait_for_cleanup()?;
-        executor.settle_for_cleanup()
+        let mut failure = executor.terminate_for_cleanup(exit_code).err();
+
+        if let Err(error) = executor.wait_for_cleanup() {
+            failure = Some(merge_cleanup_failure(failure, error));
+        }
+
+        if let Err(error) = executor.settle_for_cleanup() {
+            failure = Some(merge_cleanup_failure(failure, error));
+        }
+
+        failure.map_or(Ok(()), Err)
+    }
+
+    fn merge_cleanup_failure(
+        primary: Option<ProcessLaunchError>,
+        cleanup: ProcessLaunchError,
+    ) -> ProcessLaunchError {
+        match primary {
+            Some(primary) => primary.with_cleanup(cleanup.to_string()),
+            None => cleanup,
+        }
     }
 
     impl WindowsChildProcess {
         fn launch_with_capture_limit(
             spec: ChildLaunchSpec,
             max_capture_bytes: usize,
+            environment: Option<&[(std::ffi::OsString, std::ffi::OsString)]>,
         ) -> Result<Self, ProcessLaunchError> {
             validate_executable_path(&spec.executable)?;
 
@@ -835,10 +1124,16 @@ mod windows {
             let working_directory_pointer = working_directory
                 .as_ref()
                 .map_or(ptr::null(), |value| value.as_ptr());
+            let environment = environment.map(environment_block).transpose()?;
+            let environment_pointer = environment
+                .as_ref()
+                .map_or(ptr::null(), |value| value.as_ptr().cast());
             let (stdout, stdout_write) = create_pipe()?;
             let (stderr, stderr_write) = create_pipe()?;
             let (stdin_read, stdin_write) = create_input_pipe()?;
-            let stdin_write = spec.protocol_stdin.then_some(stdin_write);
+            let stdin_write = spec
+                .protocol_stdin
+                .then(|| Arc::new(WindowsInput::new(stdin_write)));
             let mut startup = STARTUPINFOW {
                 cb: std::mem::size_of::<STARTUPINFOW>() as u32,
                 dwFlags: STARTF_USESTDHANDLES,
@@ -856,7 +1151,7 @@ mod windows {
                     ptr::null(),
                     1,
                     owned_process_creation_flags(),
-                    ptr::null(),
+                    environment_pointer,
                     working_directory_pointer,
                     &mut startup,
                     process_info.as_mut_ptr(),
@@ -1011,7 +1306,15 @@ mod windows {
             })
         }
 
-        fn write_input(&self, bytes: &[u8]) -> Result<usize, ProcessLaunchError> {
+        pub(super) fn input_writer(&self) -> Option<WindowsInputWriter> {
+            self.stdin.as_ref().map(WindowsInput::writer)
+        }
+
+        fn write_input_with_timeout(
+            &self,
+            bytes: &[u8],
+            timeout_milliseconds: u32,
+        ) -> Result<usize, ProcessLaunchError> {
             let Some(stdin) = self.stdin.as_ref() else {
                 return Err(ProcessLaunchError::operation(
                     "write_input",
@@ -1019,35 +1322,7 @@ mod windows {
                 ));
             };
 
-            let mut written = 0usize;
-            while written < bytes.len() {
-                let requested = (bytes.len() - written).min(INPUT_WRITE_CHUNK_SIZE) as u32;
-                let mut count = 0u32;
-                if unsafe {
-                    WriteFile(
-                        stdin.raw(),
-                        bytes[written..].as_ptr().cast(),
-                        requested,
-                        &mut count,
-                        ptr::null_mut(),
-                    )
-                } == 0
-                {
-                    return Err(ProcessLaunchError::operation(
-                        "write_input",
-                        format!("WriteFile failed: {}", unsafe { GetLastError() }),
-                    ));
-                }
-                if count == 0 {
-                    return Err(ProcessLaunchError::operation(
-                        "write_input",
-                        "WriteFile made no progress",
-                    ));
-                }
-                written += count as usize;
-            }
-
-            Ok(written)
+            stdin.write_frame(bytes, timeout_milliseconds, &|| false)
         }
 
         fn close_input(&mut self) {
@@ -1190,9 +1465,23 @@ mod windows {
 
     impl CleanupExecutor for WindowsChildProcess {
         fn terminate_for_cleanup(&mut self, exit_code: u32) -> Result<(), ProcessLaunchError> {
-            self.job
+            let input_failure = self
+                .stdin
+                .as_ref()
+                .and_then(|stdin| stdin.cancel_pending().err());
+            let termination = self
+                .job
                 .terminate_if_active(exit_code)
-                .map_err(|message| ProcessLaunchError::operation("terminate_job", message))
+                .map(|_| ())
+                .map_err(|message| ProcessLaunchError::operation("terminate_job", message));
+
+            match (input_failure, termination) {
+                (None, result) => result,
+                (Some(input_failure), Ok(())) => Err(input_failure),
+                (Some(input_failure), Err(termination_failure)) => {
+                    Err(input_failure.with_cleanup(termination_failure.to_string()))
+                }
+            }
         }
 
         fn wait_for_cleanup(&mut self) -> Result<(), ProcessLaunchError> {
@@ -1274,7 +1563,7 @@ mod windows {
         line.push(quote);
     }
 
-    fn validate_executable_path(path: &Path) -> Result<(), ProcessLaunchError> {
+    pub(super) fn validate_executable_path(path: &Path) -> Result<(), ProcessLaunchError> {
         if path.is_absolute() {
             return Ok(());
         }
@@ -1285,11 +1574,11 @@ mod windows {
         ))
     }
 
-    fn owned_process_creation_flags() -> u32 {
+    pub(super) fn owned_process_creation_flags() -> u32 {
         CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW
     }
 
-    fn normalize_child_token_owner(process: HANDLE) -> Result<(), String> {
+    pub(super) fn normalize_child_token_owner(process: HANDLE) -> Result<(), String> {
         let mut token = ptr::null_mut();
         let opened =
             unsafe { OpenProcessToken(process, TOKEN_QUERY | TOKEN_ADJUST_DEFAULT, &mut token) }
@@ -1299,7 +1588,7 @@ mod windows {
                 GetLastError()
             }));
         }
-        let token = OwnedHandle(token);
+        let token = OwnedHandle::new(token).map_err(|error| error.to_string())?;
 
         let mut required_bytes = 0u32;
         let _ = unsafe {
@@ -1357,7 +1646,7 @@ mod windows {
         Ok(())
     }
 
-    fn preserve_caller_priority(process: HANDLE) -> Result<(), String> {
+    pub(super) fn preserve_caller_priority(process: HANDLE) -> Result<(), String> {
         let caller = unsafe { GetCurrentProcess() };
         let priority = unsafe { GetPriorityClass(caller) };
         if priority == 0 {
@@ -1416,7 +1705,7 @@ mod windows {
         (read && count == 1).then_some(groups[0])
     }
 
-    fn affinity_action(
+    pub(super) fn affinity_action(
         caller_affinity: usize,
         system_affinity: usize,
         caller_group: Option<u16>,
@@ -1466,16 +1755,54 @@ mod windows {
             bInheritHandle: 1,
             lpSecurityDescriptor: ptr::null_mut(),
         };
-        let mut read = ptr::null_mut();
-        let mut write = ptr::null_mut();
-        if unsafe { CreatePipe(&mut read, &mut write, &mut security, 0) } == 0 {
+        let sequence = INPUT_PIPE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let name = wide_null(&format!(r"\\.\pipe\rea-ghidra-{}-{sequence}", unsafe {
+            GetCurrentProcessId()
+        }));
+        let read = unsafe {
+            CreateNamedPipeW(
+                name.as_ptr(),
+                PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE,
+                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                1,
+                64 * 1024,
+                64 * 1024,
+                0,
+                &mut security,
+            )
+        };
+        if read == INVALID_HANDLE_VALUE {
             return Err(ProcessLaunchError::operation(
                 "create_input_pipe",
-                format!("CreatePipe failed: {}", unsafe { GetLastError() }),
+                format!("CreateNamedPipeW failed: {}", unsafe { GetLastError() }),
             ));
         }
         let read = OwnedHandle::new(read)?;
+        let write = unsafe {
+            CreateFileW(
+                name.as_ptr(),
+                GENERIC_WRITE,
+                0,
+                ptr::null(),
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+                ptr::null_mut(),
+            )
+        };
+        if write == INVALID_HANDLE_VALUE {
+            return Err(ProcessLaunchError::operation(
+                "create_input_pipe",
+                format!("CreateFileW failed: {}", unsafe { GetLastError() }),
+            ));
+        }
         let write = OwnedHandle::new(write)?;
+        let connected = unsafe { ConnectNamedPipe(read.raw(), ptr::null_mut()) };
+        if connected == 0 && unsafe { GetLastError() } != ERROR_PIPE_CONNECTED {
+            return Err(ProcessLaunchError::operation(
+                "connect_input_pipe",
+                format!("ConnectNamedPipe failed: {}", unsafe { GetLastError() }),
+            ));
+        }
         if unsafe { SetHandleInformation(write.raw(), HANDLE_FLAG_INHERIT, 0) } == 0 {
             return Err(ProcessLaunchError::operation(
                 "protect_input_pipe",
@@ -1491,7 +1818,7 @@ mod windows {
         truncated: bool,
     }
 
-    fn requested_read_size(available: u32, already_read: usize) -> u32 {
+    pub(super) fn requested_read_size(available: u32, already_read: usize) -> u32 {
         let remaining = MAX_READ_PER_POLL.saturating_sub(already_read);
         (available as usize).min(READ_CHUNK_SIZE).min(remaining) as u32
     }
@@ -1537,6 +1864,9 @@ mod windows {
             }
             let requested = requested_read_size(available, output.len())
                 .min(capture_limit.saturating_sub(output.len()) as u32);
+            if requested == 0 {
+                break;
+            }
             let mut chunk = vec![0; requested as usize];
             let mut count = 0;
             if unsafe {
@@ -1633,14 +1963,42 @@ mod windows {
     }
 
     pub(super) fn launch(spec: ChildLaunchSpec) -> Result<WindowsChildProcess, ProcessLaunchError> {
-        launch_with_capture_limit(spec, 8 * 1024 * 1024)
+        launch_with_capture_limit(spec, 8 * 1024 * 1024, None)
     }
 
     pub(super) fn launch_with_capture_limit(
         spec: ChildLaunchSpec,
         max_capture_bytes: usize,
+        environment: Option<&[(std::ffi::OsString, std::ffi::OsString)]>,
     ) -> Result<WindowsChildProcess, ProcessLaunchError> {
-        WindowsChildProcess::launch_with_capture_limit(spec, max_capture_bytes)
+        WindowsChildProcess::launch_with_capture_limit(spec, max_capture_bytes, environment)
+    }
+
+    fn environment_block(
+        environment: &[(std::ffi::OsString, std::ffi::OsString)],
+    ) -> Result<Vec<u16>, ProcessLaunchError> {
+        use std::os::windows::ffi::OsStrExt;
+
+        let mut entries = environment.to_vec();
+        entries.sort_by_cached_key(|(key, _)| key.to_string_lossy().to_ascii_lowercase());
+        let mut block = Vec::new();
+        for (key, value) in entries {
+            if key.to_string_lossy().contains('\0')
+                || value.to_string_lossy().contains('\0')
+                || key.to_string_lossy().contains('=')
+            {
+                return Err(ProcessLaunchError::operation(
+                    "create_process_environment",
+                    "environment keys and values cannot contain NUL; keys cannot contain '='",
+                ));
+            }
+            block.extend(key.encode_wide());
+            block.push(u16::from(b'='));
+            block.extend(value.encode_wide());
+            block.push(0);
+        }
+        block.push(0);
+        Ok(block)
     }
 
     pub(super) fn wait(process: &mut WindowsChildProcess) -> Result<ChildExit, ProcessLaunchError> {
@@ -1669,7 +2027,15 @@ mod windows {
         process: &WindowsChildProcess,
         bytes: &[u8],
     ) -> Result<usize, ProcessLaunchError> {
-        process.write_input(bytes)
+        process.write_input_with_timeout(bytes, INPUT_WRITE_TIMEOUT_MILLISECONDS)
+    }
+
+    pub(super) fn write_input_with_timeout(
+        process: &WindowsChildProcess,
+        bytes: &[u8],
+        timeout_milliseconds: u32,
+    ) -> Result<usize, ProcessLaunchError> {
+        process.write_input_with_timeout(bytes, timeout_milliseconds)
     }
 
     pub(super) fn close_input(process: &mut WindowsChildProcess) {
@@ -1722,6 +2088,10 @@ mod windows {
         process: &WindowsChildProcess,
     ) -> Result<u32, ProcessLaunchError> {
         process.active_processes()
+    }
+
+    pub(super) fn id(process: &WindowsChildProcess) -> u32 {
+        unsafe { GetProcessId(process.process.raw()) }
     }
 
     #[cfg(test)]
@@ -1786,7 +2156,7 @@ mod windows {
         }
 
         #[test]
-        fn cancellation_during_final_cleanup_stops_before_later_phases() {
+        fn cleanup_attempts_later_phases_after_an_earlier_failure() {
             struct CancelledCleanup;
 
             impl CleanupExecutor for CancelledCleanup {
@@ -1801,11 +2171,11 @@ mod windows {
                 }
 
                 fn wait_for_cleanup(&mut self) -> Result<(), ProcessLaunchError> {
-                    panic!("wait must not run after termination cancellation");
+                    Ok(())
                 }
 
                 fn settle_for_cleanup(&mut self) -> Result<(), ProcessLaunchError> {
-                    panic!("settlement must not run after termination cancellation");
+                    Ok(())
                 }
             }
 
@@ -1820,6 +2190,31 @@ mod windows {
 #[cfg(windows)]
 pub struct OwnedChildProcess(windows::WindowsChildProcess);
 
+#[cfg(windows)]
+#[derive(Clone)]
+pub struct OwnedInputWriter(windows::WindowsInputWriter);
+
+#[cfg(windows)]
+impl OwnedInputWriter {
+    pub fn write_input_with_timeout(
+        &self,
+        bytes: &[u8],
+        timeout_milliseconds: u32,
+    ) -> Result<usize, ProcessLaunchError> {
+        self.0.write_input_with_timeout(bytes, timeout_milliseconds)
+    }
+
+    pub fn write_input_with_timeout_and_cancel(
+        &self,
+        bytes: &[u8],
+        timeout_milliseconds: u32,
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<usize, ProcessLaunchError> {
+        self.0
+            .write_input_with_timeout_and_cancel(bytes, timeout_milliseconds, cancelled)
+    }
+}
+
 impl OwnedChildProcess {
     #[cfg(windows)]
     pub fn launch(spec: ChildLaunchSpec) -> Result<Self, ProcessLaunchError> {
@@ -1827,11 +2222,34 @@ impl OwnedChildProcess {
     }
 
     #[cfg(windows)]
+    pub fn launch_with_environment(
+        spec: ChildLaunchSpec,
+        environment: &[(OsString, OsString)],
+        max_capture_bytes: usize,
+    ) -> Result<Self, ProcessLaunchError> {
+        windows::launch_with_capture_limit(spec, max_capture_bytes, Some(environment)).map(Self)
+    }
+
+    /// Protocol streaming is implemented by polling the Windows pipe. Callers
+    /// that require `ChildStdout` are unavailable on Windows and receive an
+    /// explicit launch error instead of inheriting an incomplete transport.
+    #[cfg(windows)]
+    pub fn launch_protocol(
+        _spec: ChildLaunchSpec,
+        _environment: &[(OsString, OsString)],
+    ) -> Result<(Self, std::process::ChildStdout), ProcessLaunchError> {
+        Err(ProcessLaunchError::operation(
+            "launch_protocol",
+            "streaming ChildStdout is unavailable on Windows",
+        ))
+    }
+
+    #[cfg(windows)]
     pub fn launch_with_capture_limit(
         spec: ChildLaunchSpec,
         max_capture_bytes: usize,
     ) -> Result<Self, ProcessLaunchError> {
-        windows::launch_with_capture_limit(spec, max_capture_bytes).map(Self)
+        windows::launch_with_capture_limit(spec, max_capture_bytes, None).map(Self)
     }
 
     #[cfg(windows)]
@@ -1857,6 +2275,20 @@ impl OwnedChildProcess {
     #[cfg(windows)]
     pub fn write_input(&self, bytes: &[u8]) -> Result<usize, ProcessLaunchError> {
         windows::write_input(&self.0, bytes)
+    }
+
+    #[cfg(windows)]
+    pub fn input_writer(&self) -> Option<OwnedInputWriter> {
+        self.0.input_writer().map(OwnedInputWriter)
+    }
+
+    #[cfg(windows)]
+    pub fn write_input_with_timeout(
+        &self,
+        bytes: &[u8],
+        timeout_milliseconds: u32,
+    ) -> Result<usize, ProcessLaunchError> {
+        windows::write_input_with_timeout(&self.0, bytes, timeout_milliseconds)
     }
 
     #[cfg(windows)]
@@ -1901,11 +2333,19 @@ impl OwnedChildProcess {
     pub fn active_processes(&self) -> Result<u32, ProcessLaunchError> {
         windows::active_processes(&self.0)
     }
+
+    #[cfg(windows)]
+    pub fn id(&self) -> u32 {
+        windows::id(&self.0)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    use std::path::Path;
 
     #[cfg(windows)]
     #[test]
@@ -1994,16 +2434,137 @@ mod tests {
         );
     }
 
+    /// The helper mode is selected through the child environment so these
+    /// tests can launch the real test executable without adding a test-only
+    /// executable to the package.
     #[cfg(windows)]
     #[test]
-    fn protocol_input_writes_use_bounded_chunks() {
-        assert_eq!(super::windows::INPUT_WRITE_CHUNK_SIZE, 64 * 1024);
+    fn windows_stalled_stdin_helper() {
+        if std::env::var_os("REA_LAUNCHER_STALLED_STDIN_HELPER").is_some() {
+            std::thread::sleep(std::time::Duration::from_secs(30));
+        }
     }
 
     #[cfg(windows)]
     #[test]
-    fn cancellation_cleanup_has_a_finite_retryable_deadline() {
-        assert_eq!(super::windows::CLEANUP_DEADLINE_MILLISECONDS, 5_000);
+    fn windows_large_output_helper() {
+        if std::env::var_os("REA_LAUNCHER_LARGE_OUTPUT_HELPER").is_none() {
+            return;
+        }
+
+        use std::io::Write;
+
+        let output = vec![b'x'; 1_250_000];
+        std::io::stdout()
+            .write_all(&output)
+            .expect("large-output helper should write to its pipe");
+        std::io::stdout()
+            .flush()
+            .expect("large-output helper should flush its pipe");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn stalled_protocol_input_honors_timeouts_and_cancellation() {
+        use std::ffi::OsString;
+        use std::time::{Duration, Instant};
+
+        let executable = std::env::current_exe().expect("current test executable");
+        let mut environment: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+        environment.push((
+            OsString::from("REA_LAUNCHER_STALLED_STDIN_HELPER"),
+            OsString::from("1"),
+        ));
+
+        let spec = ChildLaunchSpec {
+            executable,
+            arguments: ChildLaunchSpec::arguments(["windows_stalled_stdin_helper", "--nocapture"]),
+            working_directory: None,
+            protocol_stdin: true,
+            limits: WindowsJobLimits {
+                memory_bytes: None,
+                cpu_seconds: None,
+            },
+        };
+        let mut child = OwnedChildProcess::launch_with_environment(spec, &environment, 64 * 1024)
+            .expect("stalled-input helper should launch");
+
+        let started = Instant::now();
+        let error = child
+            .write_input_with_timeout(&vec![b'x'; 1_250_000], 250)
+            .expect_err("a child that never reads stdin must hit the write deadline");
+
+        assert_eq!(error.operation, "write_input");
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "write cancellation exceeded its bounded deadline: {:?}",
+            started.elapsed()
+        );
+
+        let input = child.input_writer().expect("owned protocol input writer");
+        let started = Instant::now();
+        let error = input
+            .write_input_with_timeout_and_cancel(&vec![b'x'; 1_250_000], 5_000, &|| {
+                started.elapsed() >= Duration::from_millis(100)
+            })
+            .expect_err("request cancellation must interrupt a pending write");
+
+        assert!(error.message.contains("cancelled"), "{error}");
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "request cancellation waited for the full write timeout"
+        );
+        child.cancel(1).expect("stalled helper should be cancelled");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn output_poll_drains_more_than_one_megabyte_from_the_real_child() {
+        use std::ffi::OsString;
+        use std::time::{Duration, Instant};
+
+        let executable = std::env::current_exe().expect("current test executable");
+        let mut environment: Vec<(OsString, OsString)> = std::env::vars_os().collect();
+        environment.push((
+            OsString::from("REA_LAUNCHER_LARGE_OUTPUT_HELPER"),
+            OsString::from("1"),
+        ));
+
+        let spec = ChildLaunchSpec {
+            executable,
+            arguments: ChildLaunchSpec::arguments(["windows_large_output_helper", "--nocapture"]),
+            working_directory: None,
+            protocol_stdin: false,
+            limits: WindowsJobLimits {
+                memory_bytes: None,
+                cpu_seconds: None,
+            },
+        };
+        let mut child =
+            OwnedChildProcess::launch_with_environment(spec, &environment, 2 * 1024 * 1024)
+                .expect("large-output helper should launch");
+
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let mut total_stdout = 0usize;
+        let mut stdout_closed = false;
+        while !stdout_closed && Instant::now() < deadline {
+            let output = child.read_output().expect("output poll should succeed");
+            total_stdout += output.stdout.len();
+            stdout_closed = output.stdout_closed;
+
+            if !stdout_closed {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        }
+
+        assert!(stdout_closed, "large-output child did not close stdout");
+        assert!(
+            total_stdout > 1_000_000,
+            "output poll retained only {total_stdout} bytes"
+        );
+        child
+            .wait()
+            .expect("large-output helper should exit cleanly");
     }
 
     #[cfg(not(windows))]

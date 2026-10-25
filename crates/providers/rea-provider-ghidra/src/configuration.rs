@@ -14,7 +14,8 @@
 //! - `REA_GHIDRA_RUST_CACHE_DIR`: absolute cache directory; default
 //!   `$XDG_CACHE_HOME/rea/ghidra-rust`, else the platform user cache
 //!   directory (`~/Library/Caches/rea/ghidra-rust` on macOS,
-//!   `~/.cache/rea/ghidra-rust` on Linux).
+//!   `~/.cache/rea/ghidra-rust` on Linux, `%LOCALAPPDATA%/rea/ghidra-rust`
+//!   on Windows).
 //! - `REA_GHIDRA_RUST_TIMEOUT_MS`: operation deadline; default 600000.
 //! - `REA_GHIDRA_RUST_MEMORY_MIB`: optional sampled worker-RSS threshold.
 //! - `REA_GHIDRA_RUST_DECOMPILE_THREADS`: parallel decompiler Programs; default
@@ -41,6 +42,9 @@ const DEFAULT_MAX_DECOMPILE_THREADS: usize = 4;
 /// (about 600 MiB); used to keep the default inside a memory threshold.
 const PROGRAM_MEMORY_MIB: u64 = 768;
 /// File name of the worker executable distributed beside `rea`.
+#[cfg(windows)]
+pub(crate) const WORKER_EXECUTABLE: &str = "rea-ghidra-rust-worker.exe";
+#[cfg(not(windows))]
 pub(crate) const WORKER_EXECUTABLE: &str = "rea-ghidra-rust-worker";
 
 const BUILD_GUIDANCE: &str = "For a release install, keep `rea-ghidra-rust-worker` beside the rea executable. For a source build, run `cargo build --locked --release` in ghidra-rust-worker, then place the worker beside rea or set REA_GHIDRA_RUST_WORKER to its absolute path.";
@@ -154,9 +158,17 @@ fn default_cache_directory(environment: &HashMap<String, String>) -> Option<Stri
     if let Some(xdg) = setting(environment, "XDG_CACHE_HOME").filter(|path| absolute(path)) {
         return Some(join(xdg, &["rea", "ghidra-rust"]));
     }
+    #[cfg(windows)]
+    let home = ["LOCALAPPDATA", "USERPROFILE", "HOME"]
+        .into_iter()
+        .filter_map(|key| setting(environment, key))
+        .find(|path| absolute(path))?;
+    #[cfg(not(windows))]
     let home = setting(environment, "HOME").filter(|path| absolute(path))?;
     if cfg!(target_os = "macos") {
         Some(join(home, &["Library", "Caches", "rea", "ghidra-rust"]))
+    } else if cfg!(windows) {
+        Some(join(home, &["rea", "ghidra-rust"]))
     } else {
         Some(join(home, &[".cache", "rea", "ghidra-rust"]))
     }
@@ -193,10 +205,14 @@ pub(crate) fn inspect(
             "The Rust Ghidra provider is disabled by REA_GHIDRA_RUST_ENABLED. Unset it or set REA_GHIDRA_RUST_ENABLED=true to enable the provider.",
         );
     }
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return unavailable(
             "unsupported_host",
-            "The Rust worker requires macOS or Linux.",
+            "The Rust worker requires macOS, Linux, or Windows.",
         );
     }
     let invalid = || {

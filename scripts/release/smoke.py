@@ -405,16 +405,27 @@ def mcp_exchange(binary: Path, root: Path, env: dict[str, str]) -> None:
         fail("MCP binary_session did not return structured content")
 
 
-def compile_fixture(directory: Path, env: dict[str, str]) -> Path:
+def compile_fixture(directory: Path, env: dict[str, str]) -> tuple[Path, str]:
     source = directory / "smoke_fixture.c"
     binary = directory / ("smoke_fixture.exe" if os.name == "nt" else "smoke_fixture")
-    source.write_text("int main(void) { return 42; }\n", encoding="utf-8")
     compiler_name = "cl" if os.name == "nt" else "cc"
     compiler = shutil.which(compiler_name, path=env.get("PATH"))
     if compiler is None:
         fail(f"release smoke requires a C compiler named {compiler_name}")
+
+    if os.name == "nt":
+        source_text = (
+            "__declspec(dllexport) int rea_smoke_entry(void) { return 42; }\n"
+            "int main(void) { return rea_smoke_entry(); }\n"
+        )
+        selector = "rea_smoke_entry"
+    else:
+        source_text = "int main(void) { return 42; }\n"
+        selector = "main"
+
+    source.write_text(source_text, encoding="utf-8")
     command = (
-        [compiler, "/nologo", "/O0", "/Zi", "/MT", f"/Fe:{binary}", str(source)]
+        [compiler, "/nologo", "/Od", "/Zi", "/MT", f"/Fe:{binary}", str(source)]
         if os.name == "nt"
         else [compiler, "-O0", "-g", "-o", str(binary), str(source)]
     )
@@ -422,17 +433,17 @@ def compile_fixture(directory: Path, env: dict[str, str]) -> Path:
         run(command, cwd=directory, env=env, timeout=30),
         "compile Ghidra smoke fixture",
     )
-    return binary
+    return binary, selector
 
 
 def verify_ghidra(binary: Path, root: Path, env: dict[str, str], work: Path) -> None:
-    fixture = compile_fixture(work, env)
+    fixture, selector = compile_fixture(work, env)
     search = run(
         [
             str(binary),
             "search",
             str(fixture),
-            "main",
+            selector,
             "--kind",
             "procedures",
             "--provider",

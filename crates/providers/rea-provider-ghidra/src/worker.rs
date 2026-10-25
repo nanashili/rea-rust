@@ -24,7 +24,8 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, TryRecvError};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::{Duration, Instant};
 
-#[cfg(unix)]
+#[cfg(windows)]
+use rea_host::process::launcher::OwnedInputWriter;
 use rea_host::process::launcher::{ChildExit, ChildLaunchSpec, OwnedChildProcess};
 
 /// Per-request output budget (`MAX_FRAME_BYTES * 4`).
@@ -36,6 +37,7 @@ const EXIT_DRAIN: Duration = Duration::from_millis(1_000);
 /// How long `close` waits for the acknowledged worker to exit.
 const CLOSE_EXIT_WAIT: Duration = Duration::from_millis(1_000);
 const POLL: Duration = Duration::from_millis(10);
+#[cfg(unix)]
 const READ_CHUNK_BYTES: usize = 64 * 1024;
 
 /// The first interruption source of one operation.
@@ -220,6 +222,11 @@ enum ReaderEvent {
     Failed(String),
 }
 
+enum IdleObservation {
+    Failure(AnalysisError),
+    CheckProcess(Option<Arc<Mutex<OwnedChildProcess>>>),
+}
+
 /// `GhidraRustFrames`: one bounded line buffer per stream.
 #[cfg(unix)]
 fn spawn_reader(
@@ -315,6 +322,13 @@ impl MonitorState {
             Self::Unavailable => "unavailable",
         }
     }
+
+    fn is_terminal(self) -> bool {
+        matches!(
+            self,
+            Self::Stopped | Self::Exited | Self::LimitReached | Self::Unavailable
+        )
+    }
 }
 
 /// `GhidraRustMemorySupervisor` observations.
@@ -351,8 +365,9 @@ struct State {
     checkpoint_acknowledged: bool,
     close_saved: Option<bool>,
     failure: Option<AnalysisError>,
-    #[cfg(unix)]
-    process: Option<OwnedChildProcess>,
+    process: Option<Arc<Mutex<OwnedChildProcess>>>,
+    #[cfg(windows)]
+    input: Option<OwnedInputWriter>,
     pid: Option<u32>,
     channel: Option<Channel>,
     channel_busy: bool,
@@ -361,6 +376,132 @@ struct State {
     stderr_truncated: bool,
     memory: Option<Memory>,
     lineage: Option<Value>,
+}
+
+#[cfg(windows)]
+fn spawn_windows_reader(
+    state: Arc<Mutex<State>>,
+    sender: SyncSender<ReaderEvent>,
+) -> std::io::Result<()> {
+    std::thread::Builder::new()
+        .name("rea-ghidra-rust-reader".to_owned())
+        .spawn(move || {
+            let mut line = Vec::new();
+            let mut stderr_bytes = Vec::new();
+            let mut stderr_truncated = false;
+            loop {
+                let process = state
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .process
+                    .clone();
+                let Some(process) = process else {
+                    let _ = sender.send(ReaderEvent::Closed {
+                        trailing: !line.is_empty(),
+                    });
+                    return;
+                };
+                let output = read_windows_output(&process);
+                let output = match output {
+                    Ok(output) => output,
+                    Err(error) => {
+                        let _ = sender.send(ReaderEvent::Failed(error));
+                        return;
+                    }
+                };
+                retain_windows_stderr(
+                    &state,
+                    &mut stderr_bytes,
+                    &mut stderr_truncated,
+                    &output.stderr,
+                );
+                if !emit_windows_stdout(&output.stdout, &mut line, &sender) {
+                    return;
+                }
+                if output.stdout_closed {
+                    let _ = sender.send(ReaderEvent::Closed {
+                        trailing: !line.is_empty(),
+                    });
+                    return;
+                }
+                std::thread::sleep(POLL);
+            }
+        })
+        .map(|_| ())
+}
+
+#[cfg(windows)]
+fn read_windows_output(
+    process: &Arc<Mutex<OwnedChildProcess>>,
+) -> Result<rea_host::process::launcher::ChildOutput, String> {
+    process
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .read_output()
+        .map_err(|error| format!("Rust worker output read failed: {error}"))
+}
+
+#[cfg(windows)]
+fn retain_windows_stderr(
+    state: &Arc<Mutex<State>>,
+    stderr_bytes: &mut Vec<u8>,
+    stderr_truncated: &mut bool,
+    bytes: &[u8],
+) {
+    if bytes.is_empty() {
+        return;
+    }
+    let available = MAX_DIAGNOSTIC_BYTES.saturating_sub(stderr_bytes.len());
+    let retained = bytes.len().min(available);
+    stderr_bytes.extend_from_slice(&bytes[..retained]);
+    *stderr_truncated |= retained < bytes.len();
+    let (stderr, _) = bounded_text(stderr_bytes);
+    let mut guard = state
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    guard.stderr = stderr;
+    guard.stderr_truncated = *stderr_truncated;
+}
+
+#[cfg(windows)]
+fn emit_windows_stdout(
+    stdout: &[u8],
+    line: &mut Vec<u8>,
+    sender: &SyncSender<ReaderEvent>,
+) -> bool {
+    if stdout.is_empty() {
+        return true;
+    }
+    if sender.send(ReaderEvent::Bytes(stdout.len())).is_err() {
+        return false;
+    }
+    let mut offset = 0;
+    while offset < stdout.len() {
+        let remaining = &stdout[offset..];
+        let newline = remaining.iter().position(|byte| *byte == b'\n');
+        let end = newline.unwrap_or(remaining.len());
+        if line.len() + end + 1 > MAX_FRAME_BYTES {
+            let _ = sender.send(ReaderEvent::Failed(
+                "Rust worker output exceeds the 8 MiB frame budget.".into(),
+            ));
+            return false;
+        }
+        line.extend_from_slice(&remaining[..end]);
+        let Some(newline) = newline else {
+            break;
+        };
+        let frame = std::str::from_utf8(line)
+            .map_err(|error| format!("The encoded data was not valid for encoding utf-8: {error}"))
+            .and_then(|text| {
+                serde_json::from_str::<Value>(text).map_err(|error| error.to_string())
+            });
+        line.clear();
+        if sender.send(ReaderEvent::Frame(frame)).is_err() {
+            return false;
+        }
+        offset += newline + 1;
+    }
+    true
 }
 
 /// One owned worker process and its serial channel.
@@ -386,7 +527,6 @@ fn bounded_text(bytes: &[u8]) -> (String, bool) {
     }
 }
 
-#[cfg(unix)]
 fn exit_code(exit: &ChildExit) -> Option<i64> {
     if exit.signal.is_some() {
         None
@@ -395,7 +535,6 @@ fn exit_code(exit: &ChildExit) -> Option<i64> {
     }
 }
 
-#[cfg(unix)]
 fn signal_name(exit: &ChildExit) -> Value {
     match exit.signal {
         None => Value::Null,
@@ -455,15 +594,23 @@ impl Worker {
     /// `GhidraRustProcess.diagnostics()`.
     pub(crate) fn diagnostics(&self) -> Map<String, Value> {
         self.observe_idle();
-        let mut state = self.lock();
         #[cfg(unix)]
-        if let Some(process) = &state.process
-            && let Ok(output) = process.read_output()
         {
-            let (stderr, truncated) = bounded_text(&output.stderr);
-            state.stderr = stderr;
-            state.stderr_truncated = truncated;
+            let process = self.lock().process.clone();
+            if let Some(process) = process {
+                let output = process
+                    .lock()
+                    .ok()
+                    .and_then(|process| process.read_output().ok());
+                if let Some(output) = output {
+                    let mut state = self.lock();
+                    let (stderr, truncated) = bounded_text(&output.stderr);
+                    state.stderr = stderr;
+                    state.stderr_truncated = truncated;
+                }
+            }
         }
+        let state = self.lock();
         let mut diagnostics = memory_policy(self.configuration.memory_mib);
         diagnostics.insert("exit_code".into(), json!(state.exit_code));
         diagnostics.insert("stderr".into(), json!(state.stderr));
@@ -495,7 +642,7 @@ impl Worker {
     /// Convert output or an exit observed while idle into the channel failure
     /// (the original transport observed both asynchronously).
     fn observe_idle(&self) {
-        let failure = {
+        let observation = {
             let mut state = self.lock();
             if state.failure.is_some() || state.closed || state.channel_busy {
                 return;
@@ -505,27 +652,26 @@ impl Worker {
             };
             match channel.events.try_recv() {
                 Ok(ReaderEvent::Closed { .. }) | Err(TryRecvError::Disconnected) => {
-                    Some(channel.exit_failure.clone().unwrap_or_else(|| {
+                    IdleObservation::Failure(channel.exit_failure.clone().unwrap_or_else(|| {
                         protocol_error("Rust worker output closed before a close reply.")
                     }))
                 }
-                Ok(ReaderEvent::Failed(reason)) => Some(protocol_error(reason)),
-                Ok(_) => Some(protocol_error("Unsolicited Rust worker output.")),
-                Err(TryRecvError::Empty) => {
-                    #[cfg(unix)]
-                    {
-                        let exited = state
-                            .process
-                            .as_ref()
-                            .and_then(|process| process.try_wait().ok().flatten());
-                        exited.map(|exit| exit_failure(&exit))
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        None
-                    }
+                Ok(ReaderEvent::Failed(reason)) => IdleObservation::Failure(protocol_error(reason)),
+                Ok(_) => {
+                    IdleObservation::Failure(protocol_error("Unsolicited Rust worker output."))
                 }
+                Err(TryRecvError::Empty) => IdleObservation::CheckProcess(state.process.clone()),
             }
+        };
+        let failure = match observation {
+            IdleObservation::Failure(failure) => Some(failure),
+            IdleObservation::CheckProcess(process) => process.and_then(|process| {
+                process
+                    .lock()
+                    .ok()
+                    .and_then(|process| process.try_wait().ok().flatten())
+                    .map(|exit| exit_failure(&exit))
+            }),
         };
         if let Some(failure) = failure {
             let _ = self.invalidate(failure);
@@ -572,12 +718,14 @@ impl Worker {
         Ok(())
     }
 
-    #[cfg(not(unix))]
+    #[cfg(not(any(unix, windows)))]
     fn launch(&self) -> Result<(), AnalysisError> {
-        Err(process_error("The Rust worker requires macOS or Linux."))
+        Err(process_error(
+            "The Rust worker is unavailable on this host.",
+        ))
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     fn launch(&self) -> Result<(), AnalysisError> {
         let spec = ChildLaunchSpec {
             executable: self.configuration.command.clone().into(),
@@ -589,14 +737,48 @@ impl Worker {
                 cpu_seconds: None,
             },
         };
+        #[cfg(unix)]
         let (process, stdout) = OwnedChildProcess::launch_protocol(spec, &self.environment)
             .map_err(|error| process_error(format!("Could not start the Rust worker: {error}")))?;
+        #[cfg(windows)]
+        let process = OwnedChildProcess::launch_with_environment(
+            spec,
+            &self.environment,
+            MAX_REQUEST_OUTPUT_BYTES,
+        )
+        .map_err(|error| process_error(format!("Could not start the Rust worker: {error}")))?;
+        #[cfg(windows)]
+        let input = process.input_writer().ok_or_else(|| {
+            process_error("The Rust worker did not provide a protocol input owner.")
+        })?;
         let pid = process.id();
         let (sender, events) = std::sync::mpsc::sync_channel(16);
+        #[cfg(unix)]
+        let lineage = json!({
+            "status": "unavailable",
+            "observedAt": now_iso(),
+            "runId": self.run_id,
+            "launcherPid": pid,
+            "processGroupId": pid,
+            "reason": "The native runtime verifies the owned worker process group at launch but does not enumerate run-token descendants.",
+        });
+        #[cfg(windows)]
+        let lineage = json!({
+            "status": "unavailable",
+            "observedAt": now_iso(),
+            "runId": self.run_id,
+            "launcherPid": pid,
+            "jobObjectOwned": true,
+            "reason": "The native runtime verifies the worker's owned Windows Job Object at launch but does not enumerate run-token descendants.",
+        });
         {
             let mut state = self.lock();
             state.pid = Some(pid);
-            state.process = Some(process);
+            state.process = Some(Arc::new(Mutex::new(process)));
+            #[cfg(windows)]
+            {
+                state.input = Some(input);
+            }
             state.channel = Some(Channel {
                 events,
                 next_id: 1,
@@ -605,17 +787,15 @@ impl Worker {
                 exit_failure: None,
                 exit_observed_at: None,
             });
-            state.lineage = Some(json!({
-                "status": "unavailable",
-                "observedAt": now_iso(),
-                "runId": self.run_id,
-                "launcherPid": pid,
-                "processGroupId": pid,
-                "reason": "The native runtime verifies the owned worker process group at launch but does not enumerate run-token descendants.",
-            }));
+            state.lineage = Some(lineage);
         }
+        #[cfg(unix)]
         spawn_reader(stdout, sender)
             .map_err(|error| process_error(format!("Could not start the Rust worker: {error}")))?;
+        #[cfg(windows)]
+        spawn_windows_reader(Arc::clone(&self.state), sender)
+            .map_err(|error| process_error(format!("Could not start the Rust worker: {error}")))?;
+        #[cfg(any(unix, windows))]
         if let Some(limit_mib) = self.configuration.memory_mib {
             self.start_memory_supervision(limit_mib)?;
         }
@@ -624,7 +804,7 @@ impl Worker {
 
     /// `GhidraRustMemorySupervisor.start`: one ready observation, then
     /// one-second samples until the worker stops.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     fn start_memory_supervision(&self, limit_mib: u64) -> Result<(), AnalysisError> {
         self.lock().memory = Some(Memory {
             limit_mib,
@@ -752,15 +932,23 @@ impl Worker {
         let timeout_ms = self.configuration.timeout_ms;
         let deadline = Instant::now() + Duration::from_millis(timeout_ms);
         let interrupted = |control: Option<&Control>| -> Option<AnalysisError> {
-            if control.is_some_and(|control| control.interruption().is_some()) {
-                return Some(AnalysisError::cancelled(method));
+            match control.and_then(|control| control.interruption()) {
+                Some(Interruption::Timeout) => Some(AnalysisError::timeout(method, timeout_ms)),
+                Some(Interruption::Cancelled | Interruption::Closing) => {
+                    Some(AnalysisError::cancelled(method))
+                }
+                None => {
+                    (Instant::now() >= deadline).then(|| AnalysisError::timeout(method, timeout_ms))
+                }
             }
-            (Instant::now() >= deadline).then(|| AnalysisError::timeout(method, timeout_ms))
         };
         if let Some(error) = interrupted(control) {
             return Err(error);
         }
-        self.write(&frame)?;
+        let cancelled = || control.is_some_and(|control| control.interruption().is_some());
+        if let Err(error) = self.write(&frame, Some(deadline), &cancelled) {
+            return Err(interrupted(control).unwrap_or(error));
+        }
         let mut bytes = 0_usize;
         loop {
             if let Some(error) = interrupted(control) {
@@ -850,20 +1038,53 @@ impl Worker {
         }
     }
 
-    #[cfg(unix)]
-    fn write(&self, frame: &[u8]) -> Result<(), AnalysisError> {
-        let state = self.lock();
-        let Some(process) = state.process.as_ref() else {
+    #[cfg(any(unix, windows))]
+    fn write(
+        &self,
+        frame: &[u8],
+        _deadline: Option<Instant>,
+        _cancelled: &dyn Fn() -> bool,
+    ) -> Result<(), AnalysisError> {
+        #[cfg(windows)]
+        let input = self.lock().input.clone();
+        #[cfg(windows)]
+        let result = input
+            .ok_or_else(|| protocol_error("The Rust worker has no input stream."))?
+            .write_input_with_timeout_and_cancel(
+                frame,
+                _deadline
+                    .map(|deadline| {
+                        deadline
+                            .saturating_duration_since(Instant::now())
+                            .as_millis() as u32
+                    })
+                    .unwrap_or(1_000),
+                _cancelled,
+            );
+        #[cfg(unix)]
+        let process = self.lock().process.clone();
+        #[cfg(unix)]
+        let Some(process) = process else {
             return Err(protocol_error("The Rust worker has no input stream."));
         };
-        process
-            .write_input(frame)
+        #[cfg(unix)]
+        let process = process
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        #[cfg(unix)]
+        let result = process.write_input(frame);
+        result
             .map(|_| ())
             .map_err(|error| protocol_error(error.to_string()))
     }
 
-    #[cfg(not(unix))]
-    fn write(&self, _frame: &[u8]) -> Result<(), AnalysisError> {
+    #[cfg(not(any(unix, windows)))]
+    fn write(
+        &self,
+        _frame: &[u8],
+        _deadline: Option<Instant>,
+        _cancelled: &dyn Fn() -> bool,
+    ) -> Result<(), AnalysisError> {
         Err(protocol_error("The Rust worker has no input stream."))
     }
 
@@ -874,14 +1095,14 @@ impl Worker {
             return None;
         }
         if channel.exit_failure.is_none() {
-            #[cfg(unix)]
             {
-                let state = self.lock();
-                let exited = state
-                    .process
-                    .as_ref()
-                    .and_then(|process| process.try_wait().ok().flatten());
-                drop(state);
+                let process = self.lock().process.clone();
+                let exited = process.and_then(|process| {
+                    process
+                        .lock()
+                        .ok()
+                        .and_then(|process| process.try_wait().ok().flatten())
+                });
                 if let Some(exit) = exited {
                     channel.exit_failure = Some(exit_failure(&exit));
                     channel.exit_observed_at = Some(Instant::now());
@@ -920,7 +1141,7 @@ impl Worker {
 
     /// `GhidraRustProcessOwner.release`: stop the worker group, retaining
     /// ownership when cleanup is uncertain.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     fn release(&self) -> Result<(), AnalysisError> {
         let mut guard = self.lock();
         let state = &mut *guard;
@@ -932,13 +1153,18 @@ impl Worker {
         {
             memory.state = MonitorState::Stopped;
         }
-        let pid = state.pid;
-        let Some(process) = state.process.as_mut() else {
-            if !state.channel_busy {
+        let (pid, process, channel_busy) = (state.pid, state.process.clone(), state.channel_busy);
+        drop(guard);
+        let Some(process) = process else {
+            let mut state = self.lock();
+            if !channel_busy {
                 state.channel = None;
             }
             return Ok(());
         };
+        let mut process = process
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let stopped = match process.try_wait() {
             Ok(Some(_)) => process.wait().map(|_| ()),
             Ok(None) => process.cancel(1),
@@ -963,22 +1189,37 @@ impl Worker {
                 None,
             ));
         }
-        if let Ok(Some(exit)) = process.try_wait() {
-            state.exit_code = exit_code(&exit);
-        }
-        if let Ok(output) = process.drain_output() {
+        let exit_code_observed = process
+            .try_wait()
+            .ok()
+            .flatten()
+            .and_then(|exit| exit_code(&exit));
+        let drained_stderr = process.drain_output().ok().map(|output| {
             let (stderr, truncated) = bounded_text(&output.stderr);
+            (stderr, truncated)
+        });
+        drop(process);
+
+        let mut state = self.lock();
+        if let Some(exit_code) = exit_code_observed {
+            state.exit_code = Some(exit_code);
+        }
+        if let Some((stderr, truncated)) = drained_stderr {
             state.stderr = stderr;
             state.stderr_truncated = truncated;
         }
         state.process = None;
+        #[cfg(windows)]
+        {
+            state.input = None;
+        }
         if !state.channel_busy {
             state.channel = None;
         }
         Ok(())
     }
 
-    #[cfg(not(unix))]
+    #[cfg(not(any(unix, windows)))]
     fn release(&self) -> Result<(), AnalysisError> {
         Ok(())
     }
@@ -1046,15 +1287,18 @@ impl Worker {
         None
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     fn wait_for_exit(&self, limit: Duration) {
         let deadline = Instant::now() + limit;
         while Instant::now() < deadline {
-            let exited = self
-                .lock()
-                .process
-                .as_ref()
-                .is_none_or(|process| process.try_wait().ok().flatten().is_some());
+            let process = self.lock().process.clone();
+            let exited = process.is_none_or(|process| {
+                process
+                    .lock()
+                    .ok()
+                    .and_then(|process| process.try_wait().ok().flatten())
+                    .is_some()
+            });
             if exited {
                 return;
             }
@@ -1062,12 +1306,12 @@ impl Worker {
         }
     }
 
-    #[cfg(not(unix))]
+    #[cfg(not(any(unix, windows)))]
     fn wait_for_exit(&self, _limit: Duration) {}
 }
 
 /// The failure for a worker exit that preceded its close reply.
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn exit_failure(exit: &ChildExit) -> AnalysisError {
     let mut diagnostics = Map::new();
     diagnostics.insert("failure_kind".into(), json!("process"));
@@ -1078,36 +1322,68 @@ fn exit_failure(exit: &ChildExit) -> AnalysisError {
         .with_diagnostics(diagnostics)
 }
 
-/// One RSS observation under the owner lock (the PID cannot be reaped and
-/// reused while the lock is held).
-#[cfg(unix)]
+/// One RSS observation while the owned process lock prevents concurrent reap.
+#[cfg(any(unix, windows))]
 fn sample_memory(state: &Arc<Mutex<State>>) -> Option<AnalysisError> {
+    #[cfg(unix)]
     use rea_host::process::linux::memory::{MemoryObservation, ProcessMemoryObserver};
-    let mut guard = state
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let state = &mut *guard;
-    let memory = state.memory.as_mut()?;
-    if matches!(
-        memory.state,
-        MonitorState::Stopped
-            | MonitorState::Exited
-            | MonitorState::LimitReached
-            | MonitorState::Unavailable
-    ) {
-        return None;
-    }
-    let exited = state
-        .process
-        .as_ref()
-        .is_none_or(|process| process.try_wait().ok().flatten().is_some());
-    if exited {
-        memory.state = MonitorState::Exited;
-        return None;
-    }
-    let pid = state.pid.unwrap_or_default();
-    let failure = match ProcessMemoryObserver.observe(u64::from(pid)) {
+    #[cfg(windows)]
+    use rea_host::process::windows::memory::{MemoryObservation, ProcessMemoryObserver};
+
+    let (process, pid) = {
+        let guard = state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let memory = guard.memory.as_ref()?;
+        if memory.state.is_terminal() {
+            return None;
+        }
+        (guard.process.clone(), guard.pid.unwrap_or_default())
+    };
+
+    let observation = {
+        let Some(process) = process.as_ref() else {
+            let mut guard = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(memory) = guard.memory.as_mut() {
+                if memory.state.is_terminal() {
+                    return None;
+                }
+                memory.state = MonitorState::Exited;
+            }
+            return None;
+        };
+        let process = process
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if process.try_wait().ok().flatten().is_some() {
+            drop(process);
+            let mut guard = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(memory) = guard.memory.as_mut() {
+                if memory.state.is_terminal() {
+                    return None;
+                }
+                memory.state = MonitorState::Exited;
+            }
+            return None;
+        }
+        ProcessMemoryObserver.observe(u64::from(pid))
+    };
+
+    let failure = match observation {
         MemoryObservation::Readable { resident_bytes, .. } => {
+            let mut guard = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let Some(memory) = guard.memory.as_mut() else {
+                return None;
+            };
+            if memory.state.is_terminal() {
+                return None;
+            }
             memory.last_bytes = Some(resident_bytes);
             memory.peak_bytes = Some(memory.peak_bytes.unwrap_or(0).max(resident_bytes));
             memory.observed_at = Some(now_iso());
@@ -1133,10 +1409,27 @@ fn sample_memory(state: &Arc<Mutex<State>>) -> Option<AnalysisError> {
             error
         }
         MemoryObservation::Absent { .. } => {
-            memory.state = MonitorState::Exited;
+            let mut guard = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(memory) = guard.memory.as_mut() {
+                if memory.state.is_terminal() {
+                    return None;
+                }
+                memory.state = MonitorState::Exited;
+            }
             return None;
         }
         MemoryObservation::Unavailable { reason } => {
+            let mut guard = state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let Some(memory) = guard.memory.as_mut() else {
+                return None;
+            };
+            if memory.state.is_terminal() {
+                return None;
+            }
             memory.state = MonitorState::Unavailable;
             let mut diagnostics = memory.diagnostics();
             diagnostics.insert("failure_kind".into(), json!("memory_monitor"));
@@ -1149,17 +1442,28 @@ fn sample_memory(state: &Arc<Mutex<State>>) -> Option<AnalysisError> {
             .with_diagnostics(diagnostics)
         }
     };
-    if state.failure.is_none() {
-        state.failure = Some(failure.clone());
-    }
-    // The owner retains termination authority: stop the group now.
-    if let Some(process) = state.process.as_mut() {
-        let _ = process.cancel(1);
+
+    let process = {
+        let mut guard = state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if guard.failure.is_none() {
+            guard.failure = Some(failure.clone());
+        }
+        guard.process.clone()
+    };
+
+    // The owner retains termination authority: stop the group now. The
+    // regular release path remains responsible for reporting cleanup errors.
+    if let Some(process) = process {
+        if let Ok(mut process) = process.lock() {
+            let _ = process.cancel(1);
+        }
     }
     Some(failure)
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn memory_loop(state: &Weak<Mutex<State>>) {
     loop {
         std::thread::sleep(Duration::from_millis(MEMORY_SAMPLE_INTERVAL_MS));

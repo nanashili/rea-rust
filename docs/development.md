@@ -32,7 +32,7 @@ cargo build --manifest-path ghidra-rust-worker/Cargo.toml --locked --release
 cargo fmt --manifest-path ghidra-rust-worker/Cargo.toml -- --check
 ```
 
-Copy `rea-ghidra-rust-worker` beside `rea`, or set `REA_GHIDRA_RUST_WORKER` to
+Copy `rea-ghidra-rust-worker` beside `rea` (both use `.exe` on Windows), or set `REA_GHIDRA_RUST_WORKER` to
 its absolute path. The worker's [configuration module](../crates/providers/rea-provider-ghidra/src/configuration.rs)
 documents cache, timeout, memory, and concurrency settings.
 

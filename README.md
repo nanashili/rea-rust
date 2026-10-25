@@ -57,6 +57,8 @@ cargo build --manifest-path ghidra-rust-worker/Cargo.toml --locked --release
 cp ghidra-rust-worker/target/release/rea-ghidra-rust-worker target/release/
 ```
 
+In PowerShell, use `Copy-Item ghidra-rust-worker/target/release/rea-ghidra-rust-worker.exe target/release/` for the copy step.
+
 The worker uses the native Ghidra decompiler and requires no JVM. To keep it
 elsewhere, set `REA_GHIDRA_RUST_WORKER` to its absolute path.
 
