@@ -4,6 +4,7 @@
 //! derives temporal facts from those records, preserving unknown ordering
 //! instead of treating it as a later write.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 use crate::javascript::ast::{Field, Node, NodeKey, NodeParents};
@@ -66,10 +67,10 @@ pub struct BindingReadPosition {
 }
 
 #[derive(Clone, Debug)]
-pub struct SemanticBindingRead<'a> {
+pub struct SemanticBindingRead<'s, 'a> {
     pub status: BindingReadStatus,
     pub has_definite_initializer: bool,
-    pub binding: BindingState<'a>,
+    pub binding: Cow<'s, BindingState<'a>>,
     /// Consumers must use `binding` when temporal selection changed the
     /// initializer facts available at this read.
     pub selection_changed: bool,
@@ -401,7 +402,7 @@ fn cached_direct_mutation_position<'a>(
     } else if node.babel_type() == "SpreadElement" {
         parents.get(&node.key()).and_then(|array| {
             (array.babel_type() == "ArrayExpression")
-                .then(|| semantic_capture_position(*array, parents, source))
+                .then(|| cached_semantic_capture_position(cache, *array, parents, source))
                 .flatten()
         })
     } else {
@@ -696,20 +697,21 @@ fn cached_binding_read_position<'a>(
 }
 
 fn initializer_may_retain_entry<'a>(
-    initializer: &Initializer<'a>,
+    initializer_id: InitializerIdentity,
+    initializer_node: Node<'a>,
     binding: &BindingState<'a>,
     parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
-    let parent = parents.get(&initializer.node.key()).copied();
-    let assignment = if initializer.node.babel_type() == "AssignmentExpression" {
-        Some(initializer.node)
+    let parent = parents.get(&initializer_node.key()).copied();
+    let assignment = if initializer_node.babel_type() == "AssignmentExpression" {
+        Some(initializer_node)
     } else {
         parent.filter(|node| {
             node.babel_type() == "AssignmentExpression"
                 && node
                     .field(source, Field::Right)
-                    .is_some_and(|right| right.key() == initializer.node.key())
+                    .is_some_and(|right| right.key() == initializer_node.key())
         })
     };
     let Some(assignment) = assignment else {
@@ -720,12 +722,12 @@ fn initializer_may_retain_entry<'a>(
     }
     let empty_local = assignment
         .field(source, Field::Right)
-        .is_some_and(|right| right.key() == initializer.node.key())
+        .is_some_and(|right| right.key() == initializer_node.key())
         && binding.kind == super::state::DefinitionKind::Variable
         && !binding.runtime_import
         && binding.initializers.len() == 1
-        && binding.initializers[0].record_id == initializer.record_id
-        && binding.initializers[0].node.key() == initializer.node.key()
+        && binding.initializers[0].record_id == initializer_id.0
+        && binding.initializers[0].node.key() == initializer_id.1
         && binding.reference_initializers.is_empty()
         && binding.direct_origins.is_empty()
         && binding
@@ -742,34 +744,34 @@ fn initializer_may_retain_entry<'a>(
 }
 
 fn retained_initializer_origins<'a>(
-    origins: &[(Initializer<'a>, Option<StatementPosition>)],
+    origins: &[OriginFact<'a>],
     binding: &BindingState<'a>,
     parents: &NodeParents<'a>,
     source: &str,
 ) -> (HashSet<InitializerIdentity>, bool) {
     let mut latest = None;
-    for (initializer, position) in origins {
-        if initializer_may_retain_entry(initializer, binding, parents, source) {
+    for origin in origins {
+        if initializer_may_retain_entry(origin.identity, origin.node, binding, parents, source) {
             continue;
         }
-        if let Some(position) = position {
-            if latest.is_none_or(|current| precedes(current, *position)) {
-                latest = Some(*position);
+        if let Some(position) = origin.position {
+            if latest.is_none_or(|current| precedes(current, position)) {
+                latest = Some(position);
             }
         }
     }
     let retained = origins
         .iter()
-        .filter(|(_, position)| {
+        .filter(|origin| {
             latest.is_none_or(|latest| {
-                position.is_some_and(|position| {
+                origin.position.is_some_and(|position| {
                     (position.index == latest.index
                         && position.declarator_index == latest.declarator_index)
                         || precedes(latest, position)
                 })
             })
         })
-        .map(|(initializer, _)| initializer_identity(initializer))
+        .map(|origin| origin.identity)
         .collect();
     (retained, latest.is_some())
 }
@@ -786,24 +788,48 @@ fn initializer_identity<'a>(initializer: &Initializer<'a>) -> InitializerIdentit
     (initializer.record_id, initializer.node.key())
 }
 
+#[derive(Clone, Copy)]
+struct OriginFact<'a> {
+    identity: InitializerIdentity,
+    node: Node<'a>,
+    position: Option<StatementPosition>,
+}
+
 /// Select binding facts using the cache owned by the current semantic
 /// analysis. The cache is valid for the immutable AST and parent map.
-pub(crate) fn semantic_binding_at_read_cached<'a>(
+pub(crate) fn semantic_binding_at_read_cached<'s, 'a>(
     cache: &mut StatementPositionCache,
-    binding: &BindingState<'a>,
+    binding: &'s BindingState<'a>,
     read: Node<'a>,
     parents: &NodeParents<'a>,
     source: &str,
-) -> SemanticBindingRead<'a> {
+) -> SemanticBindingRead<'s, 'a> {
+    let borrowed = |status, has_definite_initializer| SemanticBindingRead {
+        status,
+        has_definite_initializer,
+        binding: Cow::Borrowed(binding),
+        selection_changed: false,
+    };
     if binding.initializers.is_empty() && binding.reference_initializers.is_empty() {
-        return SemanticBindingRead {
-            status: BindingReadStatus::Ordered,
-            has_definite_initializer: false,
-            binding: binding.clone(),
-            selection_changed: false,
-        };
+        return borrowed(BindingReadStatus::Ordered, false);
     }
     let read_position = cached_binding_read_position(cache, read, parents, source);
+    let has_definite_initializer = read_position.position.is_some_and(|read_position| {
+        binding.initializers.iter().any(|initializer| {
+            cached_initializer_position(cache, initializer, parents, false, source)
+                .is_some_and(|position| precedes(position, read_position))
+                && !initializer_may_retain_entry(
+                    initializer_identity(initializer),
+                    initializer.node,
+                    binding,
+                    parents,
+                    source,
+                )
+        })
+    });
+    if read_position.repeating || read_position.position.is_none() {
+        return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
+    }
     let mut origins = Vec::with_capacity(
         binding
             .initializers
@@ -811,83 +837,44 @@ pub(crate) fn semantic_binding_at_read_cached<'a>(
             .saturating_add(binding.reference_initializers.len()),
     );
     for initializer in &binding.initializers {
-        origins.push((
-            initializer.clone(),
-            cached_initializer_position(cache, initializer, parents, false, source),
-        ));
+        origins.push(OriginFact {
+            identity: initializer_identity(initializer),
+            node: initializer.node,
+            position: cached_initializer_position(cache, initializer, parents, false, source),
+        });
     }
     for reference in &binding.reference_initializers {
-        origins.push((
-            Initializer {
-                record_id: 0,
-                node: reference.node,
-                projection: reference.projection.clone(),
-                entry_body: None,
-            },
-            cached_reference_initializer_position(cache, reference.node, parents, source),
-        ));
-    }
-    let has_definite_initializer = read_position.position.is_some_and(|read_position| {
-        binding.initializers.iter().any(|initializer| {
-            cached_initializer_position(cache, initializer, parents, false, source)
-                .is_some_and(|position| precedes(position, read_position))
-                && !initializer_may_retain_entry(initializer, binding, parents, source)
-        })
-    });
-    if read_position.repeating || read_position.position.is_none() {
-        return SemanticBindingRead {
-            status: BindingReadStatus::Unresolved,
-            has_definite_initializer,
-            binding: binding.clone(),
-            selection_changed: false,
-        };
+        origins.push(OriginFact {
+            identity: (0, reference.node.key()),
+            node: reference.node,
+            position: cached_reference_initializer_position(cache, reference.node, parents, source),
+        });
     }
     let read_position = read_position.position.expect("checked above");
     let origin_count = origins.len();
     let mut preceding = Vec::with_capacity(origin_count);
-    for (initializer, position) in origins {
-        let Some(position) = position else {
-            return SemanticBindingRead {
-                status: BindingReadStatus::Unresolved,
-                has_definite_initializer,
-                binding: binding.clone(),
-                selection_changed: false,
-            };
+    for origin in origins {
+        let Some(position) = origin.position else {
+            return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
         };
         if position.body != read_position.body {
-            return SemanticBindingRead {
-                status: BindingReadStatus::Unresolved,
-                has_definite_initializer,
-                binding: binding.clone(),
-                selection_changed: false,
-            };
+            return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
         }
         if precedes(position, read_position) {
-            preceding.push((initializer, Some(position)));
+            preceding.push(origin);
         } else if position.index == read_position.index
             && position.declarator_index == read_position.declarator_index
         {
-            match expression_evaluation_order(
-                position_node(&initializer, source),
-                read,
-                parents,
-                source,
-            ) {
-                Some(true) => preceding.push((initializer, Some(position))),
+            match expression_evaluation_order(origin.node, read, parents, source) {
+                Some(true) => preceding.push(origin),
                 _ => {
-                    return SemanticBindingRead {
-                        status: BindingReadStatus::Unresolved,
-                        has_definite_initializer,
-                        binding: binding.clone(),
-                        selection_changed: false,
-                    };
+                    return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
                 }
             }
         }
     }
     let (retained, replaces_entry) =
         retained_initializer_origins(&preceding, binding, parents, source);
-    let mut selected = binding.clone();
     let selection_changed = binding
         .initializers
         .iter()
@@ -896,6 +883,13 @@ pub(crate) fn semantic_binding_at_read_cached<'a>(
             .reference_initializers
             .iter()
             .any(|initializer| !retained.contains(&(0, initializer.node.key())));
+    if !selection_changed {
+        return borrowed(
+            BindingReadStatus::Ordered,
+            has_definite_initializer || replaces_entry,
+        );
+    }
+    let mut selected = binding.clone();
     selected
         .initializers
         .retain(|initializer| retained.contains(&initializer_identity(initializer)));
@@ -913,13 +907,9 @@ pub(crate) fn semantic_binding_at_read_cached<'a>(
     SemanticBindingRead {
         status: BindingReadStatus::Ordered,
         has_definite_initializer: has_definite_initializer || replaces_entry,
-        binding: selected,
+        binding: Cow::Owned(selected),
         selection_changed,
     }
-}
-
-fn position_node<'a>(initializer: &Initializer<'a>, _source: &str) -> Node<'a> {
-    initializer.node
 }
 
 #[cfg(test)]
@@ -1371,9 +1361,20 @@ pub fn semantic_capture_position<'a>(
     parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_capture_position(&mut cache, node, parents, source)
+}
+
+pub(crate) fn cached_semantic_capture_position<'a>(
+    cache: &mut StatementPositionCache,
+    node: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<StatementPosition> {
     let mut current = node;
     loop {
-        if let Some(position) = direct_initializer_position(current, parents, source) {
+        if let Some(position) = cached_direct_initializer_position(cache, current, parents, source)
+        {
             return Some(position);
         }
         let parent = parents.get(&current.key())?;
@@ -1402,16 +1403,30 @@ pub fn semantic_binding_precedes_capture<'a>(
     parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_binding_precedes_capture(&mut cache, binding, capture, parents, source)
+}
+
+pub(crate) fn cached_semantic_binding_precedes_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
     if binding.initializers.len() != 1 {
         return false;
     }
     let Some(initializer) = binding.initializers.first() else {
         return false;
     };
-    let Some(source_position) = initializer_position(initializer, parents, false, source) else {
+    let Some(source_position) =
+        cached_initializer_position(cache, initializer, parents, false, source)
+    else {
         return false;
     };
-    let Some(capture_position) = semantic_capture_position(capture, parents, source) else {
+    let Some(capture_position) = cached_semantic_capture_position(cache, capture, parents, source)
+    else {
         return false;
     };
     precedes(source_position, capture_position)
@@ -1424,13 +1439,27 @@ pub fn semantic_binding_effect_follows_capture<'a>(
     parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
-    if !semantic_binding_precedes_capture(binding, capture, parents, source) {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_binding_effect_follows_capture(
+        &mut cache, binding, capture, effect, parents, source,
+    )
+}
+
+pub(crate) fn cached_semantic_binding_effect_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    effect: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    if !cached_semantic_binding_precedes_capture(cache, binding, capture, parents, source) {
         return false;
     }
-    let Some(captured) = semantic_capture_position(capture, parents, source) else {
+    let Some(captured) = cached_semantic_capture_position(cache, capture, parents, source) else {
         return false;
     };
-    let Some(written) = direct_mutation_position(effect, parents, source) else {
+    let Some(written) = cached_direct_mutation_position(cache, effect, parents, source) else {
         return false;
     };
     precedes(captured, written)
@@ -1443,9 +1472,21 @@ pub fn semantic_escape_follows_capture<'a>(
     parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_escape_follows_capture(&mut cache, binding, capture, escape, parents, source)
+}
+
+pub(crate) fn cached_semantic_escape_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    escape: Option<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
     let Some(escape) = escape else { return false };
     if binding.initializers.len() != 1
-        || !semantic_binding_precedes_capture(binding, capture, parents, source)
+        || !cached_semantic_binding_precedes_capture(cache, binding, capture, parents, source)
     {
         return false;
     }
@@ -1461,10 +1502,12 @@ pub fn semantic_escape_follows_capture<'a>(
     {
         return false;
     }
-    let Some(capture_position) = semantic_capture_position(capture, parents, source) else {
+    let Some(capture_position) = cached_semantic_capture_position(cache, capture, parents, source)
+    else {
         return false;
     };
-    let Some(escape_position) = direct_mutation_position(escape, parents, source) else {
+    let Some(escape_position) = cached_direct_mutation_position(cache, escape, parents, source)
+    else {
         return false;
     };
     precedes(capture_position, escape_position)
@@ -1716,27 +1759,29 @@ pub fn selected_initializer_origins_cached<'a>(
     };
     let mut origins = Vec::new();
     for initializer in &binding.initializers {
-        origins.push((
-            initializer.clone(),
-            cached_initializer_position(cache, initializer, parents, false, source),
-        ));
+        origins.push(OriginFact {
+            identity: initializer_identity(initializer),
+            node: initializer.node,
+            position: cached_initializer_position(cache, initializer, parents, false, source),
+        });
     }
     for initializer in &binding.reference_initializers {
-        origins.push((
-            Initializer {
-                record_id: 0,
-                node: initializer.node,
-                projection: initializer.projection.clone(),
-                entry_body: None,
-            },
-            cached_reference_initializer_position(cache, initializer.node, parents, source),
-        ));
+        origins.push(OriginFact {
+            identity: (0, initializer.node.key()),
+            node: initializer.node,
+            position: cached_reference_initializer_position(
+                cache,
+                initializer.node,
+                parents,
+                source,
+            ),
+        });
     }
-    for (_, position) in &origins {
-        let Some(position) = position else {
+    for origin in &origins {
+        let Some(position) = origin.position else {
             return None;
         };
-        if position.body != mutation_position.body || !precedes(*position, mutation_position) {
+        if position.body != mutation_position.body || !precedes(position, mutation_position) {
             return None;
         }
     }

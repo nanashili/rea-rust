@@ -433,15 +433,57 @@ impl<'a> SemanticState<'a> {
 
     /// Select binding facts at a read site using this analysis' shared
     /// source-order cache.
-    pub(crate) fn semantic_binding_at_read(
+    pub(crate) fn semantic_binding_at_read<'b>(
         &self,
-        binding: &BindingState<'a>,
+        binding: &'b BindingState<'a>,
         read: Node<'a>,
-    ) -> super::mutation_initializers::SemanticBindingRead<'a> {
+    ) -> super::mutation_initializers::SemanticBindingRead<'b, 'a> {
         super::mutation_initializers::semantic_binding_at_read_cached(
             &mut self.statement_position_cache.borrow_mut(),
             binding,
             read,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_capture_position(
+        &self,
+        node: Node<'a>,
+    ) -> Option<super::mutation_initializers::StatementPosition> {
+        super::mutation_initializers::cached_semantic_capture_position(
+            &mut self.statement_position_cache.borrow_mut(),
+            node,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_binding_precedes_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_binding_precedes_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_escape_follows_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+        escape: Option<Node<'a>>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_escape_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            escape,
             &self.parents,
             self.source,
         )

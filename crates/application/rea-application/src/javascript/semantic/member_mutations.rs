@@ -234,6 +234,11 @@ impl<'s, 'a> Collector<'s, 'a> {
             }
 
             self.replay_deferred_references();
+
+            // Reference replay can discover iterable work. Collapse those
+            // newly produced entries before iterable replay evaluates source
+            // activity and walks the value graph.
+            self.deduplicate_deferred_work();
             self.replay_deferred_iterables();
             self.replay_map_receivers();
 

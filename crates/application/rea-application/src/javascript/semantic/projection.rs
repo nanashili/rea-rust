@@ -14,7 +14,7 @@ use crate::javascript::parser::SourceRange;
 use super::reference_role::{ReferenceRole, semantic_reference_role};
 use super::state::{BindingLookup, SemanticState};
 use super::value_types::JsString;
-use super::values::{evaluate_semantic_binding, evaluate_semantic_provenance};
+use super::values::{ImmutableBindingEvaluator, evaluate_semantic_provenance};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SemanticCallable {
@@ -111,11 +111,13 @@ pub fn immutable_scopes(state: &SemanticState<'_>) -> Vec<SemanticScopeProjectio
 
 /// Evaluate values and provenance before freezing bindings into the public IR.
 pub fn immutable_bindings(state: &SemanticState<'_>) -> Vec<SemanticBinding> {
+    let mut evaluator = ImmutableBindingEvaluator::new(state);
     let mut bindings = state
         .bindings_by_id
         .values()
         .map(|index| {
             let binding = state.binding(*index);
+            let value = evaluator.evaluate(binding);
             SemanticBinding {
                 binding_id: binding.binding_id.clone(),
                 scope_id: binding.scope_id.clone(),
@@ -130,7 +132,7 @@ pub fn immutable_bindings(state: &SemanticState<'_>) -> Vec<SemanticBinding> {
                         location: definition.location.into(),
                     })
                     .collect(),
-                value: evaluate_semantic_binding(binding, state),
+                value,
                 provenance: evaluate_semantic_provenance(binding, state),
             }
         })
@@ -258,4 +260,77 @@ fn method_name<'a>(source: &'a str, node: &Node<'a>, node_start: u32) -> Option<
     }
     super::ast_values::static_property_key(source, key, true)
         .or_else(|| Some(format!("[computed@{node_start}]").into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use oxc_allocator::Allocator;
+
+    use super::*;
+    use crate::javascript::parser::parse_javascript_analysis_program;
+    use crate::javascript::semantic::analysis::prepare_state;
+    use crate::javascript::semantic::state::ResolutionMode;
+    use crate::javascript::semantic::values::{
+        evaluate_semantic_binding, evaluate_semantic_provenance,
+    };
+
+    const VALUE_PROJECTION_SOURCE: &str = r#"
+        const nested = { value: 1, branch: { value: 2 } };
+        const alias = nested;
+        const first = second;
+        const second = first;
+        let temporal = { value: 3 };
+        temporal = { value: 4 };
+        function capture() {
+            const local = { value: nested.value };
+            return () => local;
+        }
+    "#;
+
+    #[test]
+    fn shared_binding_evaluator_matches_independent_queries() {
+        let shared = projected_binding_facts(VALUE_PROJECTION_SOURCE, true);
+        let independent = projected_binding_facts(VALUE_PROJECTION_SOURCE, false);
+
+        assert_eq!(shared, independent);
+    }
+
+    fn projected_binding_facts(
+        source: &str,
+        shared_evaluator: bool,
+    ) -> Vec<(
+        String,
+        crate::javascript::semantic::value_types::SemanticValue,
+        crate::javascript::semantic::provenance::BindingProvenance,
+    )> {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(&allocator, source, Some("values.js"))
+            .expect("value projection source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+
+        if shared_evaluator {
+            let projected = immutable_bindings(state);
+            return projected
+                .into_iter()
+                .map(|binding| (binding.binding_id, binding.value, binding.provenance))
+                .collect();
+        }
+
+        let mut facts: Vec<_> = state
+            .bindings_by_id
+            .values()
+            .map(|index| {
+                let binding = state.binding(*index);
+                (
+                    binding.binding_id.clone(),
+                    evaluate_semantic_binding(binding, state),
+                    evaluate_semantic_provenance(binding, state),
+                )
+            })
+            .collect();
+        facts.sort_by(|left, right| compare_code_points(&left.0, &right.0));
+        facts
+    }
 }

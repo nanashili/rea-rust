@@ -195,13 +195,13 @@ fn expand_candidate<'a>(
             let selected = state
                 .semantic_binding_at_read(state.binding(binding_index), node)
                 .binding;
-            for initializer in selected.initializers {
+            for initializer in &selected.initializers {
                 pending.push(Candidate {
                     node: initializer.node,
                     path: prepend_projection(&initializer.projection, current.path.as_ref()),
                 });
             }
-            for initializer in selected.reference_initializers {
+            for initializer in &selected.reference_initializers {
                 pending.push(Candidate {
                     node: initializer.node,
                     path: prepend_projection(&initializer.projection, current.path.as_ref()),

@@ -751,8 +751,7 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
 
         let at_read = read
             .as_ref()
-            .map(|selected| &selected.binding)
-            .unwrap_or(&binding);
+            .map_or(&binding, |selected| selected.binding.as_ref());
         self.evaluate_binding(
             at_read,
             point.nested(),

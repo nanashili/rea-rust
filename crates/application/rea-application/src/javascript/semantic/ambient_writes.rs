@@ -715,8 +715,11 @@ where
                             .binding
                     });
                     selected
-                        .unwrap_or_else(|| state.bindings[binding].clone())
+                        .unwrap_or_else(|| std::borrow::Cow::Borrowed(&state.bindings[binding]))
                         .initializers
+                        .iter()
+                        .cloned()
+                        .collect()
                 } else {
                     state
                         .stable_initializer(binding)
