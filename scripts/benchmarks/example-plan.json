@@ -1,0 +1,39 @@
+{
+  "name": "native-function-example",
+  "target": "/absolute/path/to/thin-macho",
+  "workflows": [
+    {
+      "name": "native-function",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "$target",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "$address"
+          },
+          "repeat": 3
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    }
+  ]
+}
