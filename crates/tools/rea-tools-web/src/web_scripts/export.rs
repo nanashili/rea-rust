@@ -22,7 +22,11 @@ const OPERATION: &str = "export_web_scripts";
 const PROVIDER_ID: &str = "rea-web-script-export";
 const PROVIDER_NAME: &str = "REA captured script export";
 
+#[cfg(unix)]
 type HostFiles = rea_host::fs::unix_file::UnixFiles;
+
+#[cfg(windows)]
+type HostFiles = rea_host::fs::windows_file::WindowsFiles;
 
 /// `exportWebScriptsValidated`.
 pub fn export(context: &ToolContext<'_>, input: &Value) -> Result<Evidence, AnalysisError> {
