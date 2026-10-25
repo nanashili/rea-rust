@@ -323,7 +323,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         point: EvaluationPoint<'a>,
     ) -> BindingProvenance {
         if opaque_effects::opaque_binding_read_may_have_changed(
-            &self.opaque,
+            self.opaque.as_ref(),
             self.state,
             binding,
             read,

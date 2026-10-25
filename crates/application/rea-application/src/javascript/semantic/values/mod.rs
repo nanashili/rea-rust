@@ -7,7 +7,6 @@
 mod expressions;
 mod provenance;
 
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -116,12 +115,26 @@ impl<'a> EvaluationPoint<'a> {
 
 struct Evaluation<'s, 'a> {
     state: &'s SemanticState<'a>,
-    opaque: Cow<'s, OpaqueEffects<'a>>,
+    opaque: OpaqueSource<'s, 'a>,
     bindings: HashMap<String, usize>,
     lowest: isize,
     memo: EvaluationMemo,
     dependencies: Rc<RefCell<SemanticDependencyProofs>>,
     demanded_member_path: Option<Vec<JsString>>,
+}
+
+enum OpaqueSource<'s, 'a> {
+    Borrowed(&'s OpaqueEffects<'a>),
+    Shared(Rc<OpaqueEffects<'a>>),
+}
+
+impl<'s, 'a> OpaqueSource<'s, 'a> {
+    fn as_ref(&self) -> &OpaqueEffects<'a> {
+        match self {
+            Self::Borrowed(effects) => effects,
+            Self::Shared(effects) => effects,
+        }
+    }
 }
 
 /// Discard values derived before member or escape effects changed.
@@ -168,7 +181,7 @@ pub(crate) fn evaluate_semantic_binding_with_opaque_effects<'a>(
 ) -> SemanticValue {
     let mut evaluation = Evaluation::new_with_opaque(state, opaque);
     if binding_can_be_rebound(binding)
-        && binding_may_have_opaque_effect(&evaluation.opaque, state, binding, None, false)
+        && binding_may_have_opaque_effect(evaluation.opaque.as_ref(), state, binding, None, false)
     {
         return unknown("Direct eval may have changed this lexical binding.");
     }
@@ -218,7 +231,13 @@ pub fn evaluate_semantic_provenance<'a>(
 impl<'s, 'a> Evaluation<'s, 'a> {
     fn evaluate_public_binding(&mut self, binding: &BindingState<'a>) -> SemanticValue {
         if binding_can_be_rebound(binding)
-            && binding_may_have_opaque_effect(&self.opaque, self.state, binding, None, false)
+            && binding_may_have_opaque_effect(
+                self.opaque.as_ref(),
+                self.state,
+                binding,
+                None,
+                false,
+            )
         {
             return unknown("Direct eval may have changed this lexical binding.");
         }
@@ -228,7 +247,13 @@ impl<'s, 'a> Evaluation<'s, 'a> {
     fn evaluate_public_provenance(&mut self, binding: &BindingState<'a>) -> BindingProvenance {
         let provenance = self.provenance_for_binding(binding, EvaluationPoint::live());
         if binding_can_be_rebound(binding)
-            && binding_may_have_opaque_effect(&self.opaque, self.state, binding, None, false)
+            && binding_may_have_opaque_effect(
+                self.opaque.as_ref(),
+                self.state,
+                binding,
+                None,
+                false,
+            )
         {
             semantic_ambiguous_provenance(
                 provenance.origins(),
@@ -250,21 +275,20 @@ pub fn evaluate_semantic_provenance_at_read<'a>(
 
 impl<'s, 'a> Evaluation<'s, 'a> {
     fn new(state: &'s SemanticState<'a>) -> Self {
-        Self::new_with_opaque_owned(state, index_opaque_effects(state))
+        let opaque = {
+            let mut cache = state.opaque_effects_cache.borrow_mut();
+            cache
+                .get_or_insert_with(|| Rc::new(index_opaque_effects(state)))
+                .clone()
+        };
+        Self::new_with_opaque_value(state, OpaqueSource::Shared(opaque))
     }
 
     fn new_with_opaque(state: &'s SemanticState<'a>, opaque: &'s OpaqueEffects<'a>) -> Self {
-        Self::new_with_opaque_value(state, Cow::Borrowed(opaque))
+        Self::new_with_opaque_value(state, OpaqueSource::Borrowed(opaque))
     }
 
-    fn new_with_opaque_owned(state: &'s SemanticState<'a>, opaque: OpaqueEffects<'a>) -> Self {
-        Self::new_with_opaque_value(state, Cow::Owned(opaque))
-    }
-
-    fn new_with_opaque_value(
-        state: &'s SemanticState<'a>,
-        opaque: Cow<'s, OpaqueEffects<'a>>,
-    ) -> Self {
+    fn new_with_opaque_value(state: &'s SemanticState<'a>, opaque: OpaqueSource<'s, 'a>) -> Self {
         let dependencies = {
             let mut caches = state.value_caches.borrow_mut();
             caches
@@ -605,7 +629,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
             value,
             SemanticValue::Object { .. } | SemanticValue::Array { .. }
         ) && binding_may_have_opaque_effect(
-            &self.opaque,
+            self.opaque.as_ref(),
             self.state,
             binding,
             point.capture_point,

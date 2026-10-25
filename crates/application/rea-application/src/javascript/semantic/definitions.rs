@@ -94,6 +94,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         may_reference_global_eval: false,
         opaque_candidates: Vec::new(),
         global_eval_sites_cache: RefCell::new(None),
+        opaque_effects_cache: RefCell::new(None),
         state_facts_cache: RefCell::new(None),
         callable_result_cache: RefCell::new(HashMap::new()),
         statement_position_cache: RefCell::new(

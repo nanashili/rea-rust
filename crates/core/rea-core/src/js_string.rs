@@ -186,6 +186,26 @@ impl JsString {
         Self::from_utf16(units)
     }
 
+    /// Return this string with ordinary UTF-8 text prepended.
+    ///
+    /// Building the final representation directly avoids creating a separate
+    /// owned copy of `self` before concatenation. The UTF-16 branch remains
+    /// exact for strings containing unpaired surrogates.
+    pub fn prefixed(&self, prefix: &str) -> Self {
+        if let Some(value) = self.source_str() {
+            let mut combined = String::with_capacity(prefix.len() + value.len());
+            combined.push_str(prefix);
+            combined.push_str(value);
+            return Self::from(combined);
+        }
+
+        let prefix_units = prefix.encode_utf16().count();
+        let mut units = Vec::with_capacity(prefix_units + self.len());
+        units.extend(prefix.encode_utf16());
+        units.extend_from_slice(self.units());
+        Self::from_utf16(units)
+    }
+
     /// Return this string followed by ordinary UTF-8 text.
     pub fn concat_str(&self, other: &str) -> Self {
         self.concat(&Self::from(other))
@@ -481,6 +501,26 @@ mod tests {
             "\"large source text 🚀\""
         );
         assert!(storage.units.get().is_none());
+    }
+
+    #[test]
+    fn prefixed_preserves_unpaired_surrogates() {
+        let value = JsString::from_utf16([0xd800, b'x' as u16]);
+
+        assert_eq!(
+            value.prefixed("string:").units(),
+            &[
+                b's' as u16,
+                b't' as u16,
+                b'r' as u16,
+                b'i' as u16,
+                b'n' as u16,
+                b'g' as u16,
+                b':' as u16,
+                0xd800,
+                b'x' as u16,
+            ]
+        );
     }
 
     #[test]

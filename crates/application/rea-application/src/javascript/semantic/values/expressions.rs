@@ -746,7 +746,8 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
         }
 
         let capture_point = point.capture_point.unwrap_or(node);
-        if opaque_binding_read_may_have_changed(&self.opaque, state, binding, capture_point) {
+        if opaque_binding_read_may_have_changed(self.opaque.as_ref(), state, binding, capture_point)
+        {
             return unknown("Direct eval may have changed this lexical binding.");
         }
 

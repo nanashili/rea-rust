@@ -11,6 +11,7 @@
 
 use oxc_ast::ast::*;
 use oxc_span::Span;
+use rea_core::JsString;
 
 use super::children::{
     argument_node, assignment_target_node, binding_identifier, binding_pattern, declaration_node,
@@ -649,6 +650,24 @@ impl<'a> Node<'a> {
                 it.value.as_str(),
                 it.lone_surrogates,
             )),
+            _ => None,
+        }
+    }
+
+    /// Exact JavaScript string value, retaining UTF-8 when no lone surrogate
+    /// decoding is required.
+    pub fn string_value_js_string(&self) -> Option<JsString> {
+        match self.kind() {
+            K::StringLiteral(it) | K::DirectiveLiteral(it) => {
+                if it.lone_surrogates {
+                    Some(JsString::from_utf16(decode_lossy_surrogates(
+                        it.value.as_str(),
+                        true,
+                    )))
+                } else {
+                    Some(JsString::from(it.value.as_str()))
+                }
+            }
             _ => None,
         }
     }

@@ -18,6 +18,7 @@ use crate::javascript::static_analysis::semantics::BindingFacts;
 
 use super::ast_values::{is_identifier_named, property_key_of, static_property_key, unwrapped};
 use super::bundled_require_origin::BundledRequireProofCache;
+use super::opaque_effects::OpaqueEffects;
 use super::property_paths::PropertyPath;
 use super::value_types::JsString;
 
@@ -376,6 +377,9 @@ pub struct SemanticState<'a> {
     /// before semantic consumers run, and later semantic passes only append
     /// member effects; neither changes the inputs used by this cache.
     pub(crate) global_eval_sites_cache: RefCell<Option<std::rc::Rc<Vec<Node<'a>>>>>,
+    /// Direct-eval indexes are immutable after definitions and shared by all
+    /// value and provenance queries in this semantic state.
+    pub(crate) opaque_effects_cache: RefCell<Option<Rc<OpaqueEffects<'a>>>>,
     /// Binding facts are immutable after the definitions pass.  Consumers
     /// such as bundled-loader proof may ask for them from many AST nodes; the
     /// owner keeps one shared map instead of rebuilding and cloning every

@@ -9,7 +9,7 @@ use crate::javascript::semantic::value_types::JsString;
 use serde::Serialize;
 
 fn token(prefix: &str, value: impl Into<JsString>) -> JsString {
-    JsString::from(prefix).concat(&value.into())
+    value.into().prefixed(prefix)
 }
 
 /// Node identity (`a === b` on Babel nodes).
@@ -188,16 +188,16 @@ pub fn semantic_tokens<'a>(source: &'a str, node: &Node<'a>) -> Vec<JsString> {
     let mut tokens = vec![token("node:", kind)];
     match kind {
         "StringLiteral" => {
-            if let Some(value) = node.string_value_units() {
-                tokens.push(token("string:", JsString::from_utf16(value)));
+            if let Some(value) = node.string_value_js_string() {
+                tokens.push(token("string:", value));
             }
         }
         "BigIntLiteral" => {
             tokens.push(token("bigint:", node.bigint_decimal().unwrap_or("")));
         }
         "DirectiveLiteral" => {
-            if let Some(value) = node.string_value_units() {
-                tokens.push(token("directive:", JsString::from_utf16(value)));
+            if let Some(value) = node.string_value_js_string() {
+                tokens.push(token("directive:", value));
             }
         }
         "NumericLiteral" => tokens.push(token(
