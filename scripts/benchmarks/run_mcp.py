@@ -833,7 +833,7 @@ def main() -> int:
     with args.output.with_suffix(".csv").open("w", newline="") as stream:
         fields = ["workflow", "round", "status", "error", "wall_ms", "exit_code",
                   "sampled_family_peak_rss_bytes", "sampled_family_cpu_ms"]
-        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for receipt in receipts:
             process = receipt["process"]
