@@ -31,13 +31,18 @@ def powershell() -> str:
     raise RuntimeError("PowerShell is required")
 
 
-def run_powershell(script: str, environment: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def run_powershell(
+    script: str,
+    environment: dict[str, str],
+    *,
+    command: str | None = None,
+) -> subprocess.CompletedProcess[str]:
     with tempfile.NamedTemporaryFile("w", suffix=".ps1", delete=False, encoding="utf-8") as handle:
         handle.write(script)
         path = Path(handle.name)
     try:
         return subprocess.run(
-            [powershell(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(path)],
+            [command or powershell(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", str(path)],
             env={**os.environ, **environment},
             text=True,
             capture_output=True,
@@ -120,19 +125,16 @@ function Invoke-WebRequest {{
 '''
 
 
-def check_architecture_selection(environment: dict[str, str], target: str) -> None:
-    native_architecture = {
-        "x86_64-pc-windows-msvc": "AMD64",
-        "aarch64-pc-windows-msvc": "ARM64",
-    }[target]
-    # Windows can replace architecture variables while starting a process.
-    # Set the simulated WOW64 report inside the child before invoking the installer.
-    emulated_script = (
-        "$env:PROCESSOR_ARCHITECTURE = 'x86'\n"
-        f"$env:PROCESSOR_ARCHITEW6432 = '{native_architecture}'\n"
-        + installer_script()
+def check_architecture_selection(environment: dict[str, str]) -> None:
+    emulated_shell = (
+        Path(os.environ["SystemRoot"])
+        / "SysWOW64/WindowsPowerShell/v1.0/powershell.exe"
     )
-    emulated = run_powershell(emulated_script, environment)
+    if not emulated_shell.is_file():
+        raise AssertionError("32-bit Windows PowerShell is required to check emulated installation")
+    emulated = run_powershell(
+        installer_script(), environment, command=str(emulated_shell)
+    )
     if emulated.returncode:
         raise AssertionError("emulated shell selected the wrong archive: " + emulated.stderr)
 
@@ -143,8 +145,10 @@ def check_architecture_selection(environment: dict[str, str], target: str) -> No
         "REA_BIN_DIR": str(unsupported_root / "bin"),
     }
     unsupported_script = (
-        "$env:PROCESSOR_ARCHITECTURE = 'x86'\n"
-        "$env:PROCESSOR_ARCHITEW6432 = $null\n"
+        "function Get-ItemPropertyValue {\n"
+        "    param([string] $LiteralPath, [string] $Name)\n"
+        "    return 'unsupported-test-architecture'\n"
+        "}\n"
         + installer_script()
     )
     unsupported = run_powershell(unsupported_script, unsupported_environment)
@@ -185,7 +189,7 @@ def main() -> int:
         success = run_powershell(installer_script(), environment)
         if success.returncode:
             raise AssertionError(success.stdout + success.stderr)
-        check_architecture_selection(environment, target)
+        check_architecture_selection(environment)
         launcher = bin_dir / "rea.cmd"
         if not launcher.is_file() or VERSION not in launcher.read_text(encoding="utf-8"):
             raise AssertionError("installer did not create the stable launcher")

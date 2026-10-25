@@ -17,12 +17,10 @@ function Fail([string] $Message) {
 }
 
 function Get-ReleaseTarget {
-    # WOW64 reports the native OS architecture here when the shell is emulated.
-    $architecture = if ($env:PROCESSOR_ARCHITEW6432) {
-        $env:PROCESSOR_ARCHITEW6432
-    } else {
-        $env:PROCESSOR_ARCHITECTURE
-    }
+    # The machine value stays native when an x86 or x64 shell runs under emulation.
+    $architecture = Get-ItemPropertyValue `
+        -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' `
+        -Name 'PROCESSOR_ARCHITECTURE'
     switch ($architecture) {
         'AMD64' { return 'x86_64-pc-windows-msvc' }
         'ARM64' { return 'aarch64-pc-windows-msvc' }
