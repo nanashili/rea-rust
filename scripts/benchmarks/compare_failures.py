@@ -449,10 +449,10 @@ def matched_success_metrics(
 def index_task_calls(
     raw: dict[str, Any],
 ) -> tuple[
-    dict[tuple[str, int, str], tuple[str, dict[str, Any]]],
+    dict[tuple[str, int, str], tuple[str, dict[str, Any], bool]],
     set[tuple[str, int, str]],
 ]:
-    calls: dict[tuple[str, int, str], tuple[str, dict[str, Any]]] = {}
+    calls: dict[tuple[str, int, str], tuple[str, dict[str, Any], bool]] = {}
     duplicates: set[tuple[str, int, str]] = set()
     for receipt in raw.get("receipts", []):
         if not isinstance(receipt, dict):
@@ -466,12 +466,57 @@ def index_task_calls(
             if key in calls:
                 duplicates.add(key)
                 continue
-            calls[key] = (str(params.get("name", "")), params.get("arguments", {}))
+            tool = str(params.get("name", ""))
+            arguments = params.get("arguments", {})
+            calls[key] = (
+                tool,
+                arguments,
+                has_generated_template_proof(receipt, tool, arguments),
+            )
     return calls, duplicates
 
 
 def expected_export_path(work_dir: Path, workflow: str, round_number: int) -> Path:
     return work_dir / f"{workflow}-round-{round_number:03d}" / "evidence-export.json"
+
+
+def has_generated_template_proof(
+    receipt: dict[str, Any],
+    tool: str,
+    arguments: Any,
+) -> bool:
+    """Prove that the receipt plan generated this call's path argument."""
+    if not isinstance(arguments, dict) or tool not in {
+        "export_evidence_bundle",
+        "import_evidence_bundle",
+    }:
+        return False
+
+    workflow = receipt.get("workflow")
+    cases = workflow.get("cases") if isinstance(workflow, dict) else None
+    if not isinstance(cases, list):
+        return False
+
+    matching_cases = [
+        case
+        for case in cases
+        if isinstance(case, dict) and case.get("name") == tool
+    ]
+    if len(matching_cases) != 1:
+        return False
+
+    template_arguments = matching_cases[0].get("arguments")
+    if not isinstance(template_arguments, dict):
+        return False
+    if template_arguments.get("path") != "$export_path":
+        return False
+    if set(template_arguments) != set(arguments):
+        return False
+
+    return all(
+        key == "path" or template_arguments[key] == value
+        for key, value in arguments.items()
+    )
 
 
 def is_generated_export_call(
@@ -501,8 +546,8 @@ def is_generated_export_call(
 
 
 def classify_call_difference(
-    left: tuple[str, dict[str, Any]],
-    right: tuple[str, dict[str, Any]],
+    left: tuple[str, dict[str, Any], bool],
+    right: tuple[str, dict[str, Any], bool],
     workflow: str,
     round_number: int,
     baseline_work_dir: Path | None,
@@ -510,7 +555,13 @@ def classify_call_difference(
 ) -> str:
     if left[0] != right[0] or left[1] == right[1]:
         return "changed_task_input"
-    if baseline_work_dir and current_work_dir and left[0] == right[0]:
+    if (
+        baseline_work_dir
+        and current_work_dir
+        and left[0] == right[0]
+        and left[2]
+        and right[2]
+    ):
         left_is_generated = is_generated_export_call(
             left[0], left[1], workflow, round_number, baseline_work_dir
         )
