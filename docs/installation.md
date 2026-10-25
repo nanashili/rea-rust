@@ -128,3 +128,16 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\rea-rust"
 
 Analysis caches and evidence are separate from the installation. Remove them
 only if you intend to discard that local data.
+
+## CI builds and release builds
+
+Every pull request and push to `main` builds and smoke-tests all six native
+platforms with Cargo's `ci` profile (optimization level 1, no LTO, 16 codegen
+units). These Actions archives are for validation; they are not published as
+GitHub releases. Version tags and manual workflow runs use the unchanged fully
+optimized `release` profile. Only a version tag can publish a GitHub release.
+
+Installer checks run alongside native builds. All checks must pass before assets
+can be collected or published. The independently built Ghidra worker may be
+reused only when its source, build configuration, toolchain, target, profile,
+and runner image match; the packaged CLI and worker are smoke-tested every run.

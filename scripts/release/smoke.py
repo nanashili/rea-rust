@@ -243,15 +243,27 @@ def verify_cli(
 
     manifest_path = release_root / "release.json"
     original_manifest = manifest_path.read_text(encoding="utf-8")
-    try:
-        manifest = json.loads(original_manifest)
-        manifest["name"] = "foreign-package"
-        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        rejected = run([str(binary), "--verify-installation"], cwd=cwd, env=env, timeout=20)
-        if rejected.returncode == 0:
-            fail("rea --verify-installation accepted a foreign package manifest")
-    finally:
-        manifest_path.write_text(original_manifest, encoding="utf-8")
+    manifest = json.loads(original_manifest)
+    wrong_target = (
+        "aarch64-apple-darwin"
+        if manifest["target"] == "x86_64-unknown-linux-gnu"
+        else "x86_64-unknown-linux-gnu"
+    )
+    invalid_identities = (
+        ("name", "foreign-package", "foreign package manifest", None),
+        ("target", wrong_target, "mismatched target", "target does not match the executable"),
+    )
+    for field, value, description, expected_error in invalid_identities:
+        try:
+            changed_manifest = {**manifest, field: value}
+            manifest_path.write_text(json.dumps(changed_manifest), encoding="utf-8")
+            rejected = run([str(binary), "--verify-installation"], cwd=cwd, env=env, timeout=20)
+            if rejected.returncode == 0:
+                fail(f"rea --verify-installation accepted a {description}")
+            if expected_error and expected_error not in rejected.stdout + rejected.stderr:
+                fail(f"rea rejected {description} for an unrelated reason: {rejected}")
+        finally:
+            manifest_path.write_text(original_manifest, encoding="utf-8")
 
 
 class McpConnection:

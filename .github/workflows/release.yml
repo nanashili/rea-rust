@@ -88,8 +88,6 @@ jobs:
     name: Build (${{ matrix.target }})
     needs:
       - validate
-      - installer
-      - windows-installer
     strategy:
       fail-fast: false
       matrix:
@@ -121,6 +119,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: "13.0"
+      # Tags and manually requested release bundles retain shipping optimization.
+      BUILD_PROFILE: ${{ (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && 'release' || 'ci' }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -185,33 +185,52 @@ jobs:
           rustup default "$RUST_TOOLCHAIN"
           rustup target add "${{ matrix.target }}"
 
+      - name: Identify native build environment
+        id: build-environment
+        shell: bash
+        run: |
+          python - <<'PYTHON'
+          import os
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"image={os.environ['ImageOS']}-{os.environ['ImageVersion']}\n")
+          PYTHON
+
       - name: Restore Cargo build cache
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target/release
-            target/${{ matrix.target }}/release
-            ghidra-rust-worker/target/release
-            ghidra-rust-worker/target/${{ matrix.target }}/release
-          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-${{ github.sha }}
+            target/${{ env.BUILD_PROFILE }}
+            target/${{ matrix.target }}/${{ env.BUILD_PROFILE }}
+            ghidra-rust-worker/target/${{ env.BUILD_PROFILE }}
+            ghidra-rust-worker/target/${{ matrix.target }}/${{ env.BUILD_PROFILE }}
+          key: cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-profile-${{ env.BUILD_PROFILE }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
-            cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-
+            cargo-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-profile-${{ env.BUILD_PROFILE }}-crt-${{ runner.os == 'Windows' && 'static' || 'default' }}-${{ hashFiles('Cargo.lock', 'ghidra-rust-worker/Cargo.lock') }}-
+
+      # Reuse the independently built worker only for exactly matching inputs.
+      # Runner image identity covers the native compiler and SDK environment.
+      - name: Restore unchanged Ghidra worker
+        id: worker-cache
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+        with:
+          path: ghidra-rust-worker/target/${{ matrix.target }}/${{ env.BUILD_PROFILE }}/rea-ghidra-rust-worker${{ runner.os == 'Windows' && '.exe' || '' }}
+          key: worker-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-environment.outputs.image }}-${{ matrix.target }}-rust-${{ env.RUST_TOOLCHAIN }}-${{ env.BUILD_PROFILE }}-${{ hashFiles('ghidra-rust-worker/src/**', 'ghidra-rust-worker/Cargo.toml', 'ghidra-rust-worker/Cargo.lock', 'ghidra-rust-worker/build.rs', 'ghidra-rust-worker/rust-toolchain.toml', 'ghidra-rust-worker/.cargo/**', '.cargo/**', 'rust-toolchain.toml', '.github/workflows/release.yml') }}
 
       - name: Build REA
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          cargo build --locked --release --target "${{ matrix.target }}" -p rea
+          cargo build --locked --profile "${{ env.BUILD_PROFILE }}" --target "${{ matrix.target }}" -p rea
 
       - name: Build Ghidra worker
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && steps.worker-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           cargo build \
             --locked \
-            --release \
+            --profile "${{ env.BUILD_PROFILE }}" \
             --manifest-path ghidra-rust-worker/Cargo.toml \
             --target "${{ matrix.target }}"
 
@@ -221,8 +240,17 @@ jobs:
         run: |
           $devCmd = Join-Path $env:REA_VS_PATH "Common7\Tools\VsDevCmd.bat"
           $env:RUSTFLAGS = '-C target-feature=+crt-static'
-          $command = "call `"$devCmd`" -arch=${{ matrix.msvc_arch }} -host_arch=${{ matrix.msvc_arch }} && cargo build --locked --release --target ${{ matrix.target }} -p rea && cargo build --locked --release --manifest-path ghidra-rust-worker/Cargo.toml --target ${{ matrix.target }}"
+          $command = "call `"$devCmd`" -arch=${{ matrix.msvc_arch }} -host_arch=${{ matrix.msvc_arch }} && cargo build --locked --profile ${{ env.BUILD_PROFILE }} --target ${{ matrix.target }} -p rea"
           cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build Windows Ghidra worker
+        if: runner.os == 'Windows' && steps.worker-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: |
+          cargo build --locked --profile "${{ env.BUILD_PROFILE }}" --manifest-path ghidra-rust-worker/Cargo.toml --target "${{ matrix.target }}"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Windows launcher module path
@@ -230,21 +258,14 @@ jobs:
         shell: pwsh
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-host process::launcher
+        run: cargo test --locked --profile "${{ env.BUILD_PROFILE }}" --target "${{ matrix.target }}" -p rea-host process::launcher
 
       - name: Test Windows Evidence publication
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-host fs::staged_output
-
-      - name: Test Windows release target identity
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          RUSTFLAGS: "-C target-feature=+crt-static"
-        run: cargo test --locked --release --target "${{ matrix.target }}" -p rea-application package_identity::tests::rejects_standalone_release_with_unexpected_target
+        run: cargo test --locked --profile "${{ env.BUILD_PROFILE }}" --target "${{ matrix.target }}" -p rea-host fs::staged_output
 
       - name: Verify Windows runtime dependencies
         if: runner.os == 'Windows'
@@ -252,8 +273,8 @@ jobs:
         run: |
           $dumpbin = (Get-Command dumpbin.exe -ErrorAction Stop).Source
           $binaries = @(
-            "target\${{ matrix.target }}\release\rea.exe",
-            "ghidra-rust-worker\target\${{ matrix.target }}\release\rea-ghidra-rust-worker.exe"
+            "target\${{ matrix.target }}\${{ env.BUILD_PROFILE }}\rea.exe",
+            "ghidra-rust-worker\target\${{ matrix.target }}\${{ env.BUILD_PROFILE }}\rea-ghidra-rust-worker.exe"
           )
           foreach ($binary in $binaries) {
             if (-not (Test-Path $binary)) {
@@ -274,12 +295,12 @@ jobs:
         run: |
           python3 scripts/release/package.py \
             --target "${{ matrix.target }}" \
-            --output-dir dist
+            --output-dir dist --profile "${{ env.BUILD_PROFILE }}"
 
       - name: Package Windows archive
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python scripts/release/package.py --target "${{ matrix.target }}" --output-dir dist
+        run: python scripts/release/package.py --target "${{ matrix.target }}" --output-dir dist --profile "${{ env.BUILD_PROFILE }}"
 
       - name: Smoke test archive
         if: runner.os != 'Windows'
@@ -301,14 +322,35 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  checks:
+    name: All platform checks
+    if: always()
+    needs: [validate, installer, windows-installer, build]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require every check to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+          results = json.loads(os.environ["RESULTS"])
+          failed = [name for name, job in results.items() if job["result"] != "success"]
+          if failed:
+              raise SystemExit(f"Required checks did not succeed: {', '.join(failed)}")
+          PYTHON
+
   collect:
     name: Collect release assets
     if: >-
       ${{
         needs.build.result == 'success' &&
+        needs.installer.result == 'success' &&
+        needs.windows-installer.result == 'success' &&
         (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
       }}
-    needs: build
+    needs: [build, installer, windows-installer]
     runs-on: ubuntu-22.04
     steps:
       - name: Check out source

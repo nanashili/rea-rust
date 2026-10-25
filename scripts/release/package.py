@@ -142,6 +142,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", choices=TARGETS)
     parser.add_argument("--output-dir", type=Path, default=Path("dist"))
+    parser.add_argument("--profile", choices=("release", "ci"), default="release")
     parser.add_argument("--rea", type=Path)
     parser.add_argument("--worker", type=Path)
     parser.add_argument("--validate-tag")
@@ -163,9 +164,9 @@ def main():
     executable_suffix = ".exe" if is_windows else ""
     archive_target = options.target.replace("-unknown-linux-", "-linux-")
     output = output_directory / f"rea-rust-{archive_target}{archive_extension}"
-    rea = options.rea or ROOT / f"target/{options.target}/release/rea{executable_suffix}"
+    rea = options.rea or ROOT / f"target/{options.target}/{options.profile}/rea{executable_suffix}"
     worker = options.worker or ROOT / (
-        f"ghidra-rust-worker/target/{options.target}/release/rea-ghidra-rust-worker{executable_suffix}"
+        f"ghidra-rust-worker/target/{options.target}/{options.profile}/rea-ghidra-rust-worker{executable_suffix}"
     )
     with tempfile.TemporaryDirectory(prefix="rea-release-stage-") as temporary:
         destination = Path(temporary) / "rea-rust"

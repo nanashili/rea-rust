@@ -133,3 +133,10 @@ unsafe_code = "forbid"
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# Routine CI keeps native execution coverage without release link-time costs.
+[profile.ci]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 16
