@@ -273,10 +273,12 @@ class OwnedProcess:
             stderr=subprocess.PIPE,
             start_new_session=(os.name != "nt"),
         )
+        self.root_identity = (self.process.pid, psutil.Process(self.process.pid).create_time())
         self.timeout = timeout
         self.sampler = FamilySampler(self.process.pid, DEFAULT_SAMPLE_INTERVAL, rss_limit)
         self.abort_reason: str | None = None
         self.termination_error: str | None = None
+        self.group_termination_error: OSError | None = None
         self.messages: queue.Queue[tuple[bytes, int]] = queue.Queue(maxsize=4096)
         self.stdout_overflow = threading.Event()
         self.stdout_done = threading.Event()
@@ -315,10 +317,77 @@ class OwnedProcess:
                 os.killpg(self.process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
-        except PermissionError as exc:
-            self._record_cleanup_error(f"{type(exc).__name__}: {exc}")
+        except OSError as exc:
+            self.group_termination_error = exc
+            self._terminate_root_after_group_failure(exc)
         self._terminate_observed_descendants()
         return reason
+
+    def _terminate_root_after_group_failure(self, group_error: OSError) -> None:
+        """Recover when a macOS process group contains an inaccessible member.
+
+        The root is still an owned subprocess even when one member of its
+        process group makes ``killpg`` return EPERM.  Kill that root directly;
+        descendants are handled independently below.  The caller separately
+        verifies that the original group disappeared before clearing the group
+        error.
+        """
+        try:
+            if os.name == "nt":
+                self.process.kill()
+            else:
+                # Popen.kill() may poll and reap on POSIX.  Keep wait4 as the
+                # sole owner of root exit status and resource accounting.
+                os.kill(self.process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        except OSError as exc:
+            self._record_cleanup_error(
+                f"group termination: {type(group_error).__name__}: {group_error}; "
+                f"root termination: {type(exc).__name__}: {exc}"
+            )
+
+    def _settle_group_termination(self) -> None:
+        """Settle a group-kill error after the root and descendants are reaped."""
+        group_error = self.group_termination_error
+        if group_error is None or os.name == "nt":
+            return
+
+        try:
+            root = psutil.Process(self.root_identity[0])
+            if root.create_time() != self.root_identity[1]:
+                self._record_cleanup_error(
+                    f"group termination unresolved after PID reuse: "
+                    f"{type(group_error).__name__}: {group_error}"
+                )
+                return
+            self._record_cleanup_error(
+                f"group termination unresolved while owned root remains: "
+                f"{type(group_error).__name__}: {group_error}"
+            )
+            return
+        except psutil.NoSuchProcess:
+            pass
+        except (psutil.AccessDenied, OSError) as exc:
+            self._record_cleanup_error(
+                f"group termination ownership check failed: {type(exc).__name__}: {exc}"
+            )
+            return
+
+        try:
+            os.killpg(self.root_identity[0], 0)
+        except ProcessLookupError:
+            return
+        except OSError as exc:
+            self._record_cleanup_error(
+                f"group termination unresolved: {type(group_error).__name__}: {group_error}; "
+                f"group probe: {type(exc).__name__}: {exc}"
+            )
+            return
+        self._record_cleanup_error(
+            f"group termination unresolved: {type(group_error).__name__}: {group_error}; "
+            "the original process group still exists"
+        )
 
     def _terminate_observed_descendants(self) -> None:
         """Kill only descendants whose PID and creation time were observed."""
@@ -387,6 +456,7 @@ class OwnedProcess:
             self._record_cleanup_error(f"sampler: {type(exc).__name__}: {exc}")
         for reader in self.readers:
             reader.join(timeout=PROCESS_CLEANUP_TIMEOUT)
+        self._settle_group_termination()
 
     def _close_stdin(self) -> None:
         if self.process.stdin is not None:
@@ -449,6 +519,7 @@ class OwnedProcess:
         returncode, root_metrics = self._reap_root(waited)
         self._terminate_observed_descendants()
         self._wait_for_observed_descendants()
+        self._settle_group_termination()
         for reader in self.readers:
             reader.join(timeout=PROCESS_CLEANUP_TIMEOUT)
         elapsed = (time.perf_counter() - self.started) * 1000

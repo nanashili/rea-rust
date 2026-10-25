@@ -19,8 +19,6 @@ use std::time::{Duration, Instant};
 #[cfg(not(target_os = "macos"))]
 use super::linux::identity::{Observation, ProcessIdentityObserver};
 use super::linux::run_token::{ProcessRunTokenObserver, RunTokenObservation};
-#[cfg(not(target_os = "macos"))]
-use rea_core::linux_proc::stat::Lifecycle;
 
 /// `PROCESS_CLEANUP_VERIFICATION_GRACE_MS` / `_INTERVAL_MS`.
 pub const CLEANUP_VERIFICATION_GRACE: Duration = Duration::from_millis(1_000);
@@ -92,6 +90,34 @@ pub enum GroupObservation {
     Unverifiable(String),
 }
 
+/// Observe whether requested process groups still have live members.
+///
+/// This deliberately reports membership only. It does not authenticate a
+/// member to a run token, and `Unverifiable` must remain a cleanup failure.
+pub fn observe_process_group_members(group_ids: &[u32]) -> BTreeMap<u32, GroupObservation> {
+    let groups: BTreeSet<u32> = group_ids.iter().copied().collect();
+    let mut observations: BTreeMap<u32, GroupObservation> = groups
+        .iter()
+        .map(|group| (*group, GroupObservation::Empty))
+        .collect();
+
+    match strict_rows() {
+        Ok(processes) => {
+            for process in processes.into_iter().filter(|row| !row.zombie) {
+                if let Some(observation) = observations.get_mut(&process.entry.process_group_id) {
+                    *observation = GroupObservation::Alive;
+                }
+            }
+        }
+        Err(reason) => {
+            for observation in observations.values_mut() {
+                *observation = GroupObservation::Unverifiable(reason.clone());
+            }
+        }
+    }
+    observations
+}
+
 /// One process-table row; zombies are kept so callers can choose.
 struct Row {
     entry: ProcessEntry,
@@ -116,9 +142,11 @@ fn rows() -> Result<Vec<Row>, String> {
 }
 
 #[cfg(target_os = "macos")]
-fn lookup(pid: u32) -> Option<Row> {
-    let process = super::macos::process_table::process(pid).ok()??;
-    Some(Row {
+fn lookup(pid: u32) -> Result<Option<Row>, String> {
+    let Some(process) = super::macos::process_table::process(pid)? else {
+        return Ok(None);
+    };
+    Ok(Some(Row {
         zombie: process.zombie,
         entry: ProcessEntry {
             pid: process.pid,
@@ -127,29 +155,14 @@ fn lookup(pid: u32) -> Option<Row> {
             uid: Some(u64::from(process.uid)),
             identity: process.identity,
         },
-    })
+    }))
 }
 
 #[cfg(not(target_os = "macos"))]
 fn row_from(pid: u32, observation: &Observation) -> Option<Row> {
-    match observation {
-        Observation::Readable {
-            identity,
-            lifecycle,
-            relation: Some(relation),
-            effective_uid,
-        } => Some(Row {
-            zombie: *lifecycle == Some(Lifecycle::Zombie),
-            entry: ProcessEntry {
-                pid,
-                parent_pid: u32::try_from(relation.parent_pid).ok()?,
-                process_group_id: u32::try_from(relation.process_group_id?).ok()?,
-                uid: *effective_uid,
-                identity: identity.clone(),
-            },
-        }),
-        _ => None,
-    }
+    // Display inventories intentionally include only readable entries. Cleanup
+    // uses strict_rows so this omission is never an absence proof.
+    required_row(pid, observation).ok().flatten()
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -161,23 +174,137 @@ fn rows() -> Result<Vec<Row>, String> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn lookup(pid: u32) -> Option<Row> {
-    row_from(pid, &ProcessIdentityObserver.observe(u64::from(pid), true))
+fn lookup(pid: u32) -> Result<Option<Row>, String> {
+    required_row(pid, &ProcessIdentityObserver.observe(u64::from(pid), true))
 }
 
 /// The live (non-zombie) generation of one PID.
-fn live_entry(pid: u32) -> Option<ProcessEntry> {
-    lookup(pid).filter(|row| !row.zombie).map(|row| row.entry)
+fn live_entry(pid: u32) -> Result<Option<ProcessEntry>, String> {
+    Ok(lookup(pid)?.filter(|row| !row.zombie).map(|row| row.entry))
 }
 
 #[cfg(target_os = "linux")]
 fn all_pids() -> Result<Vec<u32>, String> {
     let entries = std::fs::read_dir("/proc")
         .map_err(|error| format!("process table could not be listed: {error}"))?;
-    Ok(entries
-        .filter_map(Result::ok)
-        .filter_map(|entry| entry.file_name().to_str()?.parse::<u32>().ok())
-        .collect())
+    let mut pids = Vec::new();
+    for entry in entries {
+        let entry =
+            entry.map_err(|error| format!("process table entry could not be read: {error}"))?;
+        if let Some(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse().ok())
+        {
+            pids.push(pid);
+        }
+    }
+    Ok(pids)
+}
+
+/// Observe every listed process through the existing bounded identity parser.
+/// Unlike the display inventory, this cannot omit an unreadable record when
+/// its absence would be used to release cleanup ownership.
+#[cfg(target_os = "linux")]
+fn strict_rows() -> Result<Vec<Row>, String> {
+    let mut processes = Vec::new();
+    for pid in all_pids()? {
+        let observation = ProcessIdentityObserver.observe(u64::from(pid), false);
+        if let Some(row) = required_row(pid, &observation)? {
+            processes.push(row);
+        }
+    }
+    Ok(processes)
+}
+
+#[cfg(target_os = "macos")]
+fn strict_rows() -> Result<Vec<Row>, String> {
+    rows()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn strict_rows() -> Result<Vec<Row>, String> {
+    Err("process group liveness inspection is unsupported on this host".to_owned())
+}
+
+#[cfg(any(not(target_os = "macos"), test))]
+fn required_row(
+    pid: u32,
+    observation: &super::linux::identity::Observation,
+) -> Result<Option<Row>, String> {
+    use super::linux::identity::Observation;
+    use rea_core::linux_proc::stat::Lifecycle;
+
+    match observation {
+        Observation::Absent { .. } => Ok(None),
+        Observation::Unavailable { reason } => {
+            Err(format!("process {pid} could not be observed: {reason}"))
+        }
+        Observation::Readable {
+            identity,
+            lifecycle,
+            relation,
+            effective_uid,
+        } => {
+            let relation = relation
+                .as_ref()
+                .ok_or_else(|| format!("process {pid} has no observed process relations"))?;
+            let parent_pid = u32::try_from(relation.parent_pid)
+                .map_err(|_| format!("process {pid} parent PID is out of range"))?;
+            let process_group_id = relation
+                .process_group_id
+                .and_then(|group| u32::try_from(group).ok())
+                .ok_or_else(|| format!("process {pid} has no valid process group"))?;
+            Ok(Some(Row {
+                entry: ProcessEntry {
+                    pid,
+                    parent_pid,
+                    process_group_id,
+                    uid: *effective_uid,
+                    identity: identity.clone(),
+                },
+                zombie: matches!(lifecycle, Some(Lifecycle::Zombie | Lifecycle::Dead)),
+            }))
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn validate_owned_groups(
+    relation: &OwnershipRelation,
+    observed: &[ProcessEntry],
+) -> Result<(), String> {
+    let groups: BTreeSet<_> = [relation.process_group_id]
+        .into_iter()
+        .chain(relation.sampled_process_group_ids.iter().copied())
+        .collect();
+    for row in strict_rows()? {
+        if row.zombie || !groups.contains(&row.entry.process_group_id) {
+            continue;
+        }
+        if !observed.iter().any(|process| {
+            process.pid == row.entry.pid
+                && process.identity == row.entry.identity
+                && process.process_group_id == row.entry.process_group_id
+        }) {
+            return Err(format!(
+                "live group member {} was missing or changed during cleanup observation",
+                row.entry.pid
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Membership alone grants no signal authority. An unknown observation is
+/// retained so callers cannot mistake it for a zombie-only process group.
+pub(crate) fn group_has_live_members(group_id: u32) -> Result<bool, String> {
+    match observe_process_group_members(&[group_id]).remove(&group_id) {
+        Some(GroupObservation::Empty) => Ok(false),
+        Some(GroupObservation::Alive) => Ok(true),
+        Some(GroupObservation::Unverifiable(reason)) => Err(reason),
+        None => Err("process group was not observed".to_owned()),
+    }
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -293,15 +420,22 @@ pub fn descendants_of(roots: &[u32], processes: &[ProcessEntry]) -> Vec<ProcessE
 enum TokenFact {
     Exited,
     Changed,
+    Unavailable(String),
     Token(RunTokenObservation),
 }
 
 fn read_token_fact(process: &ProcessEntry) -> TokenFact {
     let token = ProcessRunTokenObserver.observe(u64::from(process.pid));
     match live_entry(process.pid) {
-        None => TokenFact::Exited,
-        Some(after) if after.identity != process.identity => TokenFact::Changed,
-        Some(_) => TokenFact::Token(token),
+        Ok(None) => TokenFact::Exited,
+        Ok(Some(after))
+            if after.identity != process.identity
+                || after.process_group_id != process.process_group_id =>
+        {
+            TokenFact::Changed
+        }
+        Ok(Some(_)) => TokenFact::Token(token),
+        Err(reason) => TokenFact::Unavailable(reason),
     }
 }
 
@@ -346,7 +480,8 @@ pub fn scan_token_owned(
             TokenFact::Token(
                 RunTokenObservation::Readable { .. } | RunTokenObservation::Absent { .. },
             ) => {}
-            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
+            TokenFact::Unavailable(reason)
+            | TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
                 unreadable.push((process, reason))
             }
         }
@@ -473,7 +608,8 @@ pub fn observe_process_groups(
             TokenFact::Token(RunTokenObservation::Readable {
                 run_id: Some(found),
             }) if found == run_id => GroupObservation::Alive,
-            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
+            TokenFact::Unavailable(reason)
+            | TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
                 GroupObservation::Unverifiable(format!(
                     "process ownership could not be revalidated for PID {}: {reason}",
                     process.pid
@@ -581,6 +717,61 @@ fn validation_failure(failures: &[OwnershipFailure]) -> String {
     "process ownership could not be revalidated".to_owned()
 }
 
+/// Refresh membership immediately before signaling. A historical group with
+/// no currently authenticated live member grants no signal authority.
+fn revalidate_group_members(
+    group: u32,
+    run_id: &str,
+    previously_owned: &[ProcessEntry],
+) -> Result<bool, String> {
+    let members = strict_rows()?
+        .into_iter()
+        .filter(|row| !row.zombie && row.entry.process_group_id == group)
+        .map(|row| row.entry);
+    verify_group_members(members, run_id, previously_owned, read_token_fact)
+}
+
+fn verify_group_members(
+    members: impl Iterator<Item = ProcessEntry>,
+    run_id: &str,
+    previously_owned: &[ProcessEntry],
+    mut observe: impl FnMut(&ProcessEntry) -> TokenFact,
+) -> Result<bool, String> {
+    let mut has_verified_member = false;
+    for member in members {
+        if !previously_owned.iter().any(|owned| {
+            owned.pid == member.pid
+                && owned.identity == member.identity
+                && owned.process_group_id == member.process_group_id
+        }) {
+            return Err(format!(
+                "process group gained an unverified member before signal: PID {}",
+                member.pid
+            ));
+        }
+        match observe(&member) {
+            TokenFact::Exited => {}
+            TokenFact::Token(RunTokenObservation::Readable {
+                run_id: Some(found),
+            }) if found == run_id => has_verified_member = true,
+            TokenFact::Unavailable(reason)
+            | TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
+                return Err(format!(
+                    "process {} could not be revalidated before signal: {reason}",
+                    member.pid
+                ));
+            }
+            _ => {
+                return Err(format!(
+                    "process {} identity or ownership changed before signal",
+                    member.pid
+                ));
+            }
+        }
+    }
+    Ok(has_verified_member)
+}
+
 /// Signal every token-owned process group whose live members all carry the
 /// token from the same generation, then verify no owned process remains.
 /// The PTY root group itself is released by its owner before this sweep.
@@ -600,6 +791,15 @@ pub fn cleanup_token_owned_processes(
             };
         }
     };
+    #[cfg(target_os = "linux")]
+    if let Err(reason) = validate_owned_groups(relation, &processes) {
+        return CleanupResult {
+            cleaned: false,
+            reason: Some(reason),
+            signaled: false,
+            unverified: Vec::new(),
+        };
+    }
     let scan = scan_token_owned(&processes, run_id, baseline, Some(relation));
     let mut unverified = scan.unverified.clone();
     let mut signaled = false;
@@ -609,38 +809,17 @@ pub fn cleanup_token_owned_processes(
         .map(|process| process.process_group_id)
         .collect();
     for group in owned_groups {
-        let members: Vec<_> = processes
-            .iter()
-            .filter(|process| process.process_group_id == group)
-            .collect();
-        let all_owned = members.iter().all(|member| {
-            matches!(read_token_fact(member), TokenFact::Exited)
-                || scan
-                    .owned
-                    .iter()
-                    .any(|owned| owned.pid == member.pid && owned.identity == member.identity)
-        });
-        if !all_owned {
-            return CleanupResult {
-                cleaned: false,
-                reason: Some("process ownership could not be revalidated".to_owned()),
-                signaled,
-                unverified,
-            };
-        }
-        // Revalidate the group leader generation immediately before signaling.
-        let leader_ok = members
-            .iter()
-            .all(|member| !matches!(read_token_fact(member), TokenFact::Changed));
-        if !leader_ok {
-            return CleanupResult {
-                cleaned: false,
-                reason: Some(
-                    "process identity changed or became unavailable before signal".to_owned(),
-                ),
-                signaled,
-                unverified,
-            };
+        match revalidate_group_members(group, run_id, &scan.owned) {
+            Ok(false) => continue,
+            Ok(true) => {}
+            Err(reason) => {
+                return CleanupResult {
+                    cleaned: false,
+                    reason: Some(reason),
+                    signaled,
+                    unverified,
+                };
+            }
         }
         // SAFETY: kill(2) on a group whose every live member carries this run's token.
         let result = unsafe { libc::kill(-(group as libc::pid_t), libc::SIGKILL) };
@@ -701,6 +880,15 @@ pub fn verify_no_token_owned_processes(
             };
         }
     };
+    #[cfg(target_os = "linux")]
+    if let Err(reason) = validate_owned_groups(relation, &processes) {
+        return CleanupResult {
+            cleaned: false,
+            reason: Some(reason),
+            signaled: false,
+            unverified: Vec::new(),
+        };
+    }
     let scan = scan_token_owned(&processes, run_id, baseline, Some(relation));
     let (cleaned, reason) = if !scan.failures.is_empty() {
         (false, Some(validation_failure(&scan.failures)))
@@ -726,10 +914,110 @@ mod tests {
     use std::os::unix::process::CommandExt;
 
     #[test]
+    fn group_signal_requires_a_current_verified_member() {
+        let owned = ProcessEntry {
+            pid: 42,
+            parent_pid: 1,
+            process_group_id: 42,
+            uid: Some(501),
+            identity: "generation-1".into(),
+        };
+        let previous = [owned.clone()];
+        assert!(
+            !verify_group_members(std::iter::empty(), "run-1", &previous, |_| panic!(
+                "empty groups require no token read"
+            ),)
+            .unwrap()
+        );
+        assert!(
+            !verify_group_members([owned.clone()].into_iter(), "run-1", &previous, |_| {
+                TokenFact::Exited
+            },)
+            .unwrap()
+        );
+        assert!(
+            verify_group_members([owned.clone()].into_iter(), "run-1", &previous, |_| {
+                TokenFact::Token(RunTokenObservation::Readable {
+                    run_id: Some("run-1".into()),
+                })
+            },)
+            .unwrap()
+        );
+        assert!(
+            verify_group_members([owned.clone()].into_iter(), "run-1", &previous, |_| {
+                TokenFact::Unavailable("identity read failed".into())
+            },)
+            .is_err()
+        );
+
+        let newcomer = ProcessEntry { pid: 43, ..owned };
+        assert!(
+            verify_group_members([newcomer].into_iter(), "run-1", &previous, |_| panic!(
+                "new members have no previous ownership proof"
+            ),)
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn strict_rows_preserve_unknowns_and_terminal_lifecycle() {
+        use super::super::linux::identity::{Observation, Relation};
+        use rea_core::linux_proc::stat::Lifecycle;
+
+        let absent = Observation::Absent {
+            reason: "not-found",
+        };
+        assert!(required_row(42, &absent).unwrap().is_none());
+        let unavailable = Observation::Unavailable {
+            reason: "malformed stat".into(),
+        };
+        assert!(required_row(42, &unavailable).is_err());
+
+        let mut readable = Observation::Readable {
+            identity: "linux-starttime:10".into(),
+            lifecycle: None,
+            relation: None,
+            effective_uid: None,
+        };
+        assert!(required_row(42, &readable).is_err());
+        if let Observation::Readable { relation, .. } = &mut readable {
+            *relation = Some(Relation {
+                parent_pid: 1,
+                process_group_id: Some(42),
+                session_id: Some(42),
+                parent_identity: None,
+            });
+        }
+        // Unknown lifecycle cannot establish that a process has exited.
+        assert!(!required_row(42, &readable).unwrap().unwrap().zombie);
+        for terminal in [Lifecycle::Zombie, Lifecycle::Dead] {
+            if let Observation::Readable { lifecycle, .. } = &mut readable {
+                *lifecycle = Some(terminal);
+            }
+            assert!(required_row(42, &readable).unwrap().unwrap().zombie);
+        }
+    }
+
+    #[test]
     fn lists_own_process_with_native_relation() {
         let own = std::process::id();
         let processes = list_live_processes().unwrap();
         assert!(processes.iter().any(|process| process.pid == own));
+    }
+
+    #[test]
+    fn observes_live_members_without_token_authentication() {
+        let own = std::process::id();
+        let process = list_live_processes()
+            .unwrap()
+            .into_iter()
+            .find(|process| process.pid == own)
+            .unwrap();
+        let observations = observe_process_group_members(&[process.process_group_id]);
+        assert_eq!(
+            observations.get(&process.process_group_id),
+            Some(&GroupObservation::Alive)
+        );
     }
 
     #[test]

@@ -28,6 +28,7 @@ use portable_pty::{MasterPty, PtySize, native_pty_system};
 use super::launcher::unix::{verify_group_owner, verify_owned_process_group, wait_for_group_exit};
 use super::launcher::{ChildExit, ProcessLaunchError};
 use super::terminal::TerminalSize;
+use crate::process::ownership::group_has_live_members;
 
 /// One master read, matching the 64 KiB buffer libuv/Node stream reads use.
 const READ_CHUNK_SIZE: usize = 64 * 1024;
@@ -347,7 +348,7 @@ impl OwnedPtyProcess {
         target: libc::pid_t,
         signal: i32,
     ) -> Result<(), ProcessLaunchError> {
-        if self.settled {
+        if self.settled || self.reaped {
             return Ok(());
         }
         self.verify_unless_exited()?;
@@ -437,20 +438,39 @@ impl OwnedPtyProcess {
         if self.settled {
             return Ok(());
         }
-        // Kill the group while the leader is still unreaped when possible so
-        // the group ID is provably ours.
-        self.verify_unless_exited()?;
-        // SAFETY: kill(2) on the verified owned group (or a group whose
-        // leader we reaped and whose ID is still unused if ESRCH follows).
-        if unsafe { libc::kill(-self.process_group_id, libc::SIGKILL) } != 0 {
-            let error = std::io::Error::last_os_error();
-            // macOS returns EPERM when every remaining member is a zombie;
-            // settlement below polls until the group is provably gone.
-            if !matches!(error.raw_os_error(), Some(libc::ESRCH | libc::EPERM)) {
-                return Err(failure("terminate_process_group", error.to_string()));
-            }
-        }
+        // Kill the group while the leader is still unreaped so the group ID
+        // is provably ours. A retry after reaping only waits for settlement;
+        // signaling a bare, reusable PGID would lose that proof.
         if !self.reaped {
+            self.verify_unless_exited()?;
+            let leader_exit_observed = self.exit.is_some();
+            // SAFETY: kill(2) on the verified owned group.
+            if unsafe { libc::kill(-self.process_group_id, libc::SIGKILL) } != 0 {
+                let error = std::io::Error::last_os_error();
+                // macOS returns EPERM when every remaining member is a zombie;
+                // settlement below polls until the group is provably gone.
+                let group_is_gone = error.raw_os_error() == Some(libc::ESRCH);
+                let zombie_group = if leader_exit_observed
+                    && error.raw_os_error() == Some(libc::EPERM)
+                {
+                    match group_has_live_members(self.process_group_id as u32) {
+                        Ok(has_live_members) => !has_live_members,
+                        Err(reason) => {
+                            return Err(failure(
+                                "verify_process_group_settlement",
+                                format!(
+                                    "group signal failed: {error}; membership verification failed: {reason}"
+                                ),
+                            ));
+                        }
+                    }
+                } else {
+                    false
+                };
+                if !group_is_gone && !zombie_group {
+                    return Err(failure("terminate_process_group", error.to_string()));
+                }
+            }
             let status = self
                 .child
                 .wait()

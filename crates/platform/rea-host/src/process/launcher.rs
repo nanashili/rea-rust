@@ -130,6 +130,7 @@ pub(crate) mod unix {
         ChildCompletion, ChildExit, ChildLaunchSpec, ChildOutput, JobSettlement, ProcessLaunchError,
     };
     use crate::process::linux::identity::{Observation, ProcessIdentityObserver};
+    use crate::process::ownership::group_has_live_members;
 
     const READ_CHUNK_SIZE: usize = 64 * 1024;
     const MAX_CAPTURE_BYTES: usize = 8 * 1024 * 1024;
@@ -150,6 +151,7 @@ pub(crate) mod unix {
         stderr: Arc<Mutex<CapturedStream>>,
         process_group_id: libc::pid_t,
         process_identity: String,
+        child_exit: Option<ChildExit>,
         child_reaped: bool,
         settled: bool,
         cleanup_failure: Option<ProcessLaunchError>,
@@ -169,10 +171,10 @@ pub(crate) mod unix {
         /// Deliver `signal` to the owned process group after re-verifying its
         /// identity. A group that already exited is not an error.
         pub(super) fn signal_group(&self, signal: i32) -> Result<(), ProcessLaunchError> {
-            if self.settled {
+            if self.settled || self.child_reaped {
                 return Ok(());
             }
-            if !self.child_reaped {
+            if peek_child_exit(self.process_group_id)?.is_none() {
                 verify_group_owner(self.process_group_id, &self.process_identity)?;
             }
             // SAFETY: ownership was re-verified above; a negative pid targets
@@ -255,6 +257,7 @@ pub(crate) mod unix {
                     stderr: stderr_state,
                     process_group_id,
                     process_identity,
+                    child_exit: None,
                     child_reaped: false,
                     settled: false,
                     cleanup_failure: None,
@@ -287,16 +290,14 @@ pub(crate) mod unix {
         }
 
         pub(super) fn try_wait(&self) -> Result<Option<ChildExit>, ProcessLaunchError> {
-            let status = self
-                .child
-                .lock()
-                .map_err(|_| mutex_error("try_wait"))?
-                .try_wait()
-                .map_err(|error| ProcessLaunchError::operation("try_wait", error.to_string()))?;
-            Ok(status.map(|status| ChildExit {
-                code: status.code().unwrap_or_default() as u32,
-                signal: std::os::unix::process::ExitStatusExt::signal(&status),
-            }))
+            if self.child_reaped {
+                return Ok(self.child_exit);
+            }
+
+            // `Child::try_wait` reaps an exited child. Keep the leader as a
+            // waitable zombie until cleanup so its PID remains part of our
+            // ownership proof and cannot be reused between lifecycle phases.
+            peek_child_exit(self.process_group_id)
         }
 
         pub(super) fn read_output(&self) -> Result<ChildOutput, ProcessLaunchError> {
@@ -382,20 +383,12 @@ pub(crate) mod unix {
         }
 
         pub(super) fn settlement(&self) -> Result<JobSettlement, ProcessLaunchError> {
-            let active_processes = if self
-                .child
-                .lock()
-                .map_err(|_| mutex_error("observe_process"))?
-                .try_wait()
-                .map_err(|error| {
-                    ProcessLaunchError::operation("observe_process", error.to_string())
-                })?
-                .is_some()
-            {
-                0
-            } else {
-                1
-            };
+            let active_processes =
+                if self.child_reaped || peek_child_exit(self.process_group_id)?.is_some() {
+                    0
+                } else {
+                    1
+                };
             Ok(JobSettlement {
                 active_processes,
                 peak_memory_bytes: 0,
@@ -409,12 +402,19 @@ pub(crate) mod unix {
 
         fn cleanup(&mut self, _exit_code: u32) -> Result<(), ProcessLaunchError> {
             if !self.settled {
-                terminate_owned_group(
-                    self.process_group_id,
-                    &self.process_identity,
-                    self.child_reaped,
-                )?;
-                let _ = self.wait_for_child()?;
+                // Group termination is authorized while the unreaped leader
+                // still proves ownership. Once it has been reaped, retries
+                // must only wait for settlement; signaling a bare, reusable
+                // PGID would lose that proof.
+                if !self.child_reaped {
+                    let leader_exit_observed = peek_child_exit(self.process_group_id)?.is_some();
+                    terminate_owned_group(
+                        self.process_group_id,
+                        &self.process_identity,
+                        leader_exit_observed,
+                    )?;
+                    let _ = self.wait_for_child()?;
+                }
             }
 
             wait_for_group_exit(self.process_group_id)?;
@@ -439,6 +439,11 @@ pub(crate) mod unix {
                 .map_err(|_| mutex_error("wait"))?
                 .wait()
                 .map_err(|error| ProcessLaunchError::operation("wait", error.to_string()))?;
+            let exit = ChildExit {
+                code: status.code().unwrap_or_default() as u32,
+                signal: std::os::unix::process::ExitStatusExt::signal(&status),
+            };
+            self.child_exit = Some(exit);
             self.child_reaped = true;
             Ok(status)
         }
@@ -512,12 +517,13 @@ pub(crate) mod unix {
     fn terminate_owned_group(
         process_group_id: libc::pid_t,
         process_identity: &str,
-        child_reaped: bool,
+        leader_exit_observed: bool,
     ) -> Result<(), ProcessLaunchError> {
-        if !child_reaped {
+        if !leader_exit_observed {
             verify_group_owner(process_group_id, process_identity)?;
         }
-        // SAFETY: ownership was re-verified above when the child was live; the
+        // SAFETY: ownership was re-verified above when the child was live, or
+        // the unreaped leader still proves the process-group identity; the
         // negative pid addresses that process group only.
         let result = unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
         if result == 0 {
@@ -527,10 +533,71 @@ pub(crate) mod unix {
         if error.raw_os_error() == Some(libc::ESRCH) {
             return Ok(());
         }
+        if leader_exit_observed && error.raw_os_error() == Some(libc::EPERM) {
+            match group_has_live_members(process_group_id as u32) {
+                Ok(false) => return Ok(()),
+                Ok(true) => {}
+                Err(reason) => {
+                    return Err(ProcessLaunchError::operation(
+                        "verify_process_group_settlement",
+                        format!(
+                            "group signal failed: {error}; membership verification failed: {reason}"
+                        ),
+                    ));
+                }
+            }
+        }
         Err(ProcessLaunchError::operation(
             "terminate_process_group",
             error.to_string(),
         ))
+    }
+
+    /// Observe an owned child without reaping it. `Child::try_wait` cannot be
+    /// used here because cleanup relies on the leader zombie to retain the
+    /// process-group ownership proof until the group has settled.
+    fn peek_child_exit(
+        process_group_id: libc::pid_t,
+    ) -> Result<Option<ChildExit>, ProcessLaunchError> {
+        // SAFETY: `waitid` writes the provided siginfo value and only observes
+        // this process's own unreaped child without changing its wait state.
+        let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+        // SAFETY: `P_PID` addresses the owned leader, `info` is a valid
+        // out-parameter, and `WNOWAIT` leaves the child available to reap.
+        let result = unsafe {
+            libc::waitid(
+                libc::P_PID,
+                process_group_id as libc::id_t,
+                &mut info,
+                libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+            )
+        };
+        if result != 0 {
+            return Err(ProcessLaunchError::operation(
+                "try_wait",
+                std::io::Error::last_os_error().to_string(),
+            ));
+        }
+
+        #[cfg(target_os = "linux")]
+        let (child, status) = unsafe { (info.si_pid(), info.si_status()) };
+        #[cfg(not(target_os = "linux"))]
+        let (child, status) = (info.si_pid, info.si_status);
+        if child == 0 {
+            return Ok(None);
+        }
+
+        Ok(Some(if info.si_code == libc::CLD_EXITED {
+            ChildExit {
+                code: status as u32,
+                signal: None,
+            }
+        } else {
+            ChildExit {
+                code: 0,
+                signal: Some(status),
+            }
+        }))
     }
 
     pub(crate) fn wait_for_group_exit(
@@ -2599,6 +2666,48 @@ mod tests {
         let error = result.expect_err("non-Windows launch should be unavailable");
         assert_eq!(error.operation, "create_process");
         assert!(error.cleanup.is_none());
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn unix_try_wait_keeps_the_leader_waitable_until_cleanup() {
+        use std::time::{Duration, Instant};
+
+        let mut child = OwnedChildProcess::launch(ChildLaunchSpec {
+            executable: PathBuf::from("/bin/sh"),
+            arguments: ChildLaunchSpec::arguments(["-c", "exit 7"]),
+            working_directory: None,
+            protocol_stdin: false,
+            limits: WindowsJobLimits {
+                memory_bytes: None,
+                cpu_seconds: None,
+            },
+        })
+        .expect("shell should launch");
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let exit = loop {
+            if let Some(exit) = child.try_wait().expect("exit observation should succeed") {
+                break exit;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "shell did not exit before deadline"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        };
+        assert_eq!(exit.code, 7);
+        assert_eq!(
+            child
+                .settlement()
+                .expect("settlement should observe exit")
+                .active_processes,
+            0
+        );
+
+        child
+            .cancel(1)
+            .expect("cleanup should reap the observed leader and settle its group");
     }
 
     #[test]

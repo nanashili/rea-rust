@@ -24,8 +24,6 @@ const MAX_LATE_OUTPUT_BYTES: usize = 64 * 1024;
 const OUTPUT_CLOSE_GRACE: Duration = Duration::from_millis(1_000);
 /// Grace for the group leader to exit after SIGKILL.
 const KILL_GRACE: Duration = Duration::from_millis(1_000);
-/// Grace for every other group member to disappear after SIGKILL.
-const GROUP_SETTLE_GRACE: Duration = Duration::from_millis(1_000);
 
 /// Spawn coordinates for one owned provider process.
 #[derive(Clone, Debug)]
@@ -370,6 +368,16 @@ impl OwnedProcess {
             Err(reason) => StopResult::Incomplete { reason },
         }
     }
+
+    #[cfg(test)]
+    fn fail_next_descendant_verification(&mut self) {
+        self.inner.fail_next_descendant_verification();
+    }
+
+    #[cfg(test)]
+    fn fail_next_exit_observation(&mut self) {
+        self.inner.fail_next_exit_observation();
+    }
 }
 
 impl Drop for OwnedProcess {
@@ -422,22 +430,35 @@ where
 
 #[cfg(unix)]
 mod platform {
-    use super::{
-        Capture, GROUP_SETTLE_GRACE, KILL_GRACE, ProcessSpec, SpawnFailure, signal_name,
-        spawn_reader,
-    };
+    use super::{Capture, KILL_GRACE, ProcessSpec, SpawnFailure, signal_name, spawn_reader};
     use crate::node;
+    use rea_host::process::ownership::{self, OwnershipBaseline, OwnershipRelation};
     use rustix::process::{Pid, Signal, WaitId, WaitIdOptions};
     use std::os::unix::process::CommandExt;
     use std::process::{Command, Stdio};
     use std::sync::{Arc, Mutex};
     use std::time::{Duration, Instant};
 
+    fn preserve_signal_failure(error: String, signal_failure: Option<&String>) -> String {
+        match signal_failure {
+            Some(signal) => format!("{error}; initial signal failed: {signal}"),
+            None => error,
+        }
+    }
+
     pub(super) struct Child {
         child: std::process::Child,
         pid: Pid,
+        run_id: String,
+        baseline: OwnershipBaseline,
+        relation: OwnershipRelation,
         exited: Option<(Option<i64>, Option<String>)>,
+        observation_failure: Option<String>,
         reaped: bool,
+        #[cfg(test)]
+        fail_next_descendant_verification: bool,
+        #[cfg(test)]
+        fail_next_exit_observation: u8,
     }
 
     pub(super) fn spawn(
@@ -450,6 +471,10 @@ mod platform {
                 message: "Owned process memory limits require the Windows Job Object launcher; no limit can be enforced on this host.".into(),
             });
         }
+        let baseline = ownership::capture_baseline().map_err(|reason| SpawnFailure {
+            code: None,
+            message: format!("owned process baseline could not be captured: {reason}"),
+        })?;
         let mut command = Command::new(&spec.command);
         command
             .args(&spec.arguments)
@@ -488,11 +513,34 @@ mod platform {
             Child {
                 child,
                 pid,
+                run_id: spec.run_id.clone(),
+                baseline,
+                relation: OwnershipRelation {
+                    leader_pid: pid_number,
+                    process_group_id: pid_number,
+                    sampled_process_group_ids: vec![pid_number],
+                },
                 exited: None,
+                observation_failure: None,
                 reaped: false,
+                #[cfg(test)]
+                fail_next_descendant_verification: false,
+                #[cfg(test)]
+                fail_next_exit_observation: 0,
             },
             pid_number,
         ))
+    }
+
+    #[cfg(test)]
+    impl Child {
+        pub(super) fn fail_next_descendant_verification(&mut self) {
+            self.fail_next_descendant_verification = true;
+        }
+
+        pub(super) fn fail_next_exit_observation(&mut self) {
+            self.fail_next_exit_observation = 2;
+        }
     }
 
     impl Child {
@@ -507,12 +555,29 @@ mod platform {
             if self.exited.is_some() {
                 return self.exited.clone();
             }
-            let status = rustix::process::waitid(
+            #[cfg(test)]
+            if self.fail_next_exit_observation > 0 {
+                self.fail_next_exit_observation -= 1;
+                self.observation_failure = Some("test-injected exit observation failure".into());
+                return None;
+            }
+            let observation = rustix::process::waitid(
                 WaitId::Pid(self.pid),
                 WaitIdOptions::EXITED | WaitIdOptions::NOWAIT | WaitIdOptions::NOHANG,
-            )
-            .ok()
-            .flatten()?;
+            );
+            let status = match observation {
+                Ok(status) => {
+                    self.observation_failure = None;
+                    status?
+                }
+                Err(error) => {
+                    self.observation_failure = Some(format!(
+                        "owned provider exit could not be observed: {}",
+                        std::io::Error::from(error)
+                    ));
+                    return None;
+                }
+            };
             let observed = if let Some(code) = status.exit_status() {
                 (Some(i64::from(code)), None)
             } else if let Some(signal) = status.terminating_signal() {
@@ -524,23 +589,46 @@ mod platform {
             Some(observed)
         }
 
-        fn group_exists(&self) -> Result<bool, String> {
-            match rustix::process::test_kill_process_group(self.pid) {
-                Ok(()) => Ok(true),
-                Err(rustix::io::Errno::SRCH) => Ok(false),
-                Err(errno) => Err(format!(
-                    "owned process group could not be inspected: {}",
-                    std::io::Error::from(errno)
-                )),
+        fn settle_owned_descendants(
+            &mut self,
+            signal_failure: Option<&String>,
+        ) -> Result<(), String> {
+            #[cfg(test)]
+            if std::mem::take(&mut self.fail_next_descendant_verification) {
+                return Err("test-injected descendant verification failure".to_owned());
             }
+            let result = ownership::cleanup_token_owned_processes(
+                &self.run_id,
+                &self.baseline,
+                &self.relation,
+            );
+            if result.cleaned {
+                return Ok(());
+            }
+            let reason = result
+                .reason
+                .unwrap_or_else(|| "owned descendants could not be verified after cleanup".into());
+            Err(preserve_signal_failure(reason, signal_failure))
         }
 
-        /// Kill the owned group while the unreaped leader pins its ID, reap
-        /// the leader, then confirm no group member remains.
+        /// Kill the owned group while the unreaped leader pins its ID, settle
+        /// all members, then reap the leader.
         pub(super) fn cleanup(&mut self) -> Result<Option<(Option<i64>, Option<String>)>, String> {
+            let mut signal_failure = None;
             if !self.reaped {
                 match rustix::process::kill_process_group(self.pid, Signal::KILL) {
                     Ok(()) | Err(rustix::io::Errno::SRCH) => {}
+                    Err(rustix::io::Errno::PERM) => {
+                        signal_failure = Some("operation not permitted".to_owned());
+                        if let Err(error) = self.child.kill()
+                            && error.kind() != std::io::ErrorKind::NotFound
+                        {
+                            return Err(preserve_signal_failure(
+                                format!("owned provider leader could not be signaled: {error}"),
+                                signal_failure.as_ref(),
+                            ));
+                        }
+                    }
                     Err(errno) => {
                         return Err(format!(
                             "owned process group signal failed: {}",
@@ -550,40 +638,30 @@ mod platform {
                 }
                 let deadline = Instant::now() + KILL_GRACE;
                 while self.observe_exit().is_none() {
+                    if let Some(error) = &self.observation_failure {
+                        return Err(preserve_signal_failure(
+                            error.clone(),
+                            signal_failure.as_ref(),
+                        ));
+                    }
                     if Instant::now() >= deadline {
-                        return Err(
-                            "verified process-group cleanup did not stop the launcher".into()
-                        );
+                        return Err(preserve_signal_failure(
+                            "verified process-group cleanup did not stop the launcher".into(),
+                            signal_failure.as_ref(),
+                        ));
                     }
                     std::thread::sleep(Duration::from_millis(5));
                 }
+                self.settle_owned_descendants(signal_failure.as_ref())?;
                 match self.child.wait() {
                     Ok(_) => self.reaped = true,
                     Err(error) => {
-                        return Err(format!(
-                            "owned provider process could not be reaped: {error}"
+                        return Err(preserve_signal_failure(
+                            format!("owned provider process could not be reaped: {error}"),
+                            signal_failure.as_ref(),
                         ));
                     }
                 }
-            } else if self.group_exists()? {
-                // Surviving members still pin the group ID, so it cannot name
-                // another group; repeat the group signal for a retry.
-                match rustix::process::kill_process_group(self.pid, Signal::KILL) {
-                    Ok(()) | Err(rustix::io::Errno::SRCH) => {}
-                    Err(errno) => {
-                        return Err(format!(
-                            "owned process group signal failed: {}",
-                            std::io::Error::from(errno)
-                        ));
-                    }
-                }
-            }
-            let deadline = Instant::now() + GROUP_SETTLE_GRACE;
-            while self.group_exists()? {
-                if Instant::now() >= deadline {
-                    return Err("owned process group remained active after cleanup deadline".into());
-                }
-                std::thread::sleep(Duration::from_millis(10));
             }
             Ok(self.exited.clone())
         }
@@ -955,4 +1033,98 @@ fn collect(
 /// A fresh run token with the selected prefix (`${prefix}${randomUUID()}`).
 pub fn run_id(prefix: &str) -> String {
     format!("{prefix}{}", node::random_uuid())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::{OwnedProcess, ProcessSpec, StopResult, run_id};
+    use std::collections::HashMap;
+    use std::time::Duration;
+
+    #[test]
+    fn cleanup_reaps_an_exited_true_without_group_reuse() {
+        let spec = ProcessSpec::new(
+            "/usr/bin/true",
+            Vec::new(),
+            None,
+            &HashMap::new(),
+            &[],
+            run_id("rea-process-test-"),
+        );
+        let mut process = OwnedProcess::spawn(&spec, Some(1024))
+            .expect("true should be launchable for the lifecycle test");
+
+        assert!(process.wait_for_output_close(Duration::from_secs(1)));
+        assert_eq!(process.stop(), StopResult::Stopped);
+
+        let snapshot = process.snapshot();
+        assert_eq!(snapshot.exit_code, Some(0));
+        assert!(snapshot.exited);
+    }
+
+    #[test]
+    fn cleanup_stops_a_live_process_group_before_reaping_the_leader() {
+        let spec = ProcessSpec::new(
+            "/bin/sh",
+            vec!["-c".into(), "printf ready; sleep 5 & wait".into()],
+            None,
+            &HashMap::new(),
+            &[],
+            run_id("rea-process-test-"),
+        );
+        let mut process = OwnedProcess::spawn(&spec, Some(1024))
+            .expect("shell should be launchable for the group lifecycle test");
+
+        let ready_deadline = std::time::Instant::now() + Duration::from_secs(1);
+        while !process.snapshot().stdout.text.contains("ready") {
+            assert!(std::time::Instant::now() < ready_deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(process.stop(), StopResult::Stopped);
+        let snapshot = process.snapshot();
+        assert!(snapshot.exited);
+        assert_eq!(snapshot.signal.as_deref(), Some("SIGKILL"));
+    }
+
+    #[test]
+    fn incomplete_descendant_verification_retains_owner_for_retry() {
+        let spec = ProcessSpec::new(
+            "/bin/sh",
+            vec!["-c".into(), "sleep 5 & wait".into()],
+            None,
+            &HashMap::new(),
+            &[],
+            run_id("rea-process-test-"),
+        );
+        let mut process = OwnedProcess::spawn(&spec, Some(1024))
+            .expect("shell should be launchable for the retry lifecycle test");
+        process.fail_next_descendant_verification();
+
+        let first = process.stop();
+        assert!(matches!(first, StopResult::Incomplete { .. }));
+        assert!(!process.released);
+
+        assert_eq!(process.stop(), StopResult::Stopped);
+        assert!(process.released);
+    }
+
+    #[test]
+    fn transient_exit_observation_failure_recovers_on_retry() {
+        let spec = ProcessSpec::new(
+            "/bin/sh",
+            vec!["-c".into(), "sleep 5".into()],
+            None,
+            &HashMap::new(),
+            &[],
+            run_id("rea-process-test-"),
+        );
+        let mut process = OwnedProcess::spawn(&spec, Some(1024))
+            .expect("shell should be launchable for the observation retry test");
+        process.fail_next_exit_observation();
+
+        assert!(matches!(process.stop(), StopResult::Incomplete { .. }));
+        assert!(!process.released);
+        assert_eq!(process.stop(), StopResult::Stopped);
+        assert!(process.released);
+    }
 }

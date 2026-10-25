@@ -13,6 +13,17 @@ pub fn objdump_identity() -> EvidenceProvider {
     EvidenceProvider::new("gnu.objdump", "GNU objdump", None)
 }
 
+fn objdump_identity_for(
+    executable: &str,
+    environment: &HashMap<String, String>,
+) -> EvidenceProvider {
+    if apple_llvm_objdump(executable, environment) {
+        EvidenceProvider::new("apple.llvm-objdump", "Apple LLVM objdump", None)
+    } else {
+        objdump_identity()
+    }
+}
+
 /// `RIZIN_PROVIDER_IDENTITY`.
 pub fn rizin_identity() -> EvidenceProvider {
     EvidenceProvider::new("rizin", "Rizin", None)
@@ -36,10 +47,12 @@ pub fn objdump_command(input: &Value, environment: &HashMap<String, String>) -> 
             .unwrap_or_else(|| "objdump".to_owned()),
         environment,
     );
+    let arguments = objdump_arguments(input, &executable, environment);
+    let identity = objdump_identity_for(&executable, environment);
     ProviderCommand {
         executable,
-        arguments: objdump_arguments(input),
-        identity: objdump_identity(),
+        arguments,
+        identity,
         environment_overrides: vec![("DEBUGINFOD_URLS", String::new())],
     }
 }
@@ -79,7 +92,11 @@ pub fn rizin_command(input: &Value, environment: &HashMap<String, String>) -> Pr
 }
 
 /// `objdumpCommand(input)`.
-fn objdump_arguments(input: &Value) -> Vec<String> {
+fn objdump_arguments(
+    input: &Value,
+    executable: &str,
+    environment: &HashMap<String, String>,
+) -> Vec<String> {
     let operation = input
         .get("operation")
         .and_then(Value::as_str)
@@ -112,8 +129,71 @@ fn objdump_arguments(input: &Value) -> Vec<String> {
         // The schema restricts `operation`; preserve a stable default otherwise.
         _ => vec!["-d".to_owned()],
     };
+    if apple_llvm_objdump(executable, environment) && input_path_is_macho(input) {
+        arguments.insert(0, "--macho".to_owned());
+    }
     arguments.push(absolute_caller_path(path));
     arguments
+}
+
+#[cfg(target_os = "macos")]
+fn apple_llvm_objdump(executable: &str, environment: &HashMap<String, String>) -> bool {
+    let name = std::path::Path::new(executable)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    let candidate = if std::path::Path::new(executable).is_absolute() {
+        executable.to_owned()
+    } else {
+        environment
+            .get("PATH")
+            .and_then(|path| {
+                path.split(':')
+                    .map(|entry| {
+                        let directory = if entry.is_empty() { "." } else { entry };
+                        std::path::Path::new(directory).join(executable)
+                    })
+                    .find(|path| path.is_file())
+            })
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    let candidate_name = std::path::Path::new(&candidate)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(name);
+    candidate_name == "objdump"
+        && (candidate == "/usr/bin/objdump"
+            || candidate.contains("XcodeDefault.xctoolchain/usr/bin/objdump"))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apple_llvm_objdump(_executable: &str, _environment: &HashMap<String, String>) -> bool {
+    false
+}
+
+fn input_path_is_macho(input: &Value) -> bool {
+    let Some(path) = input.get("path").and_then(Value::as_str) else {
+        return false;
+    };
+    let Ok(mut file) = std::fs::File::open(absolute_caller_path(path)) else {
+        return false;
+    };
+    let mut magic = [0_u8; 4];
+    if std::io::Read::read_exact(&mut file, &mut magic).is_err() {
+        return false;
+    }
+    matches!(
+        magic,
+        [0xfe, 0xed, 0xfa, 0xce]
+            | [0xce, 0xfa, 0xed, 0xfe]
+            | [0xfe, 0xed, 0xfa, 0xcf]
+            | [0xcf, 0xfa, 0xed, 0xfe]
+            | [0xca, 0xfe, 0xba, 0xbe]
+            | [0xbe, 0xba, 0xfe, 0xca]
+            | [0xca, 0xfe, 0xba, 0xbf]
+            | [0xbf, 0xba, 0xfe, 0xca]
+    )
 }
 
 /// `providerExecutable(executable, environment, platform)`.
@@ -338,4 +418,40 @@ fn split_windows_path(value: &str) -> Vec<String> {
             }
         })
         .collect()
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn default_macos_objdump_requests_macho_parser() {
+        let path = std::env::temp_dir().join(format!("rea-objdump-test-{}", std::process::id()));
+        std::fs::write(&path, [0xfe, 0xed, 0xfa, 0xcf]).expect("write Mach-O magic");
+        let command = objdump_command(
+            &json!({"operation": "file_headers", "path": path}),
+            &HashMap::from([(
+                String::from("REA_OBJDUMP_COMMAND"),
+                String::from("/usr/bin/objdump"),
+            )]),
+        );
+        std::fs::remove_file(path).expect("remove test fixture");
+
+        assert_eq!(command.arguments.first(), Some(&String::from("--macho")));
+        assert_eq!(command.arguments.get(1), Some(&String::from("-f")));
+    }
+
+    #[test]
+    fn configured_gnu_objdump_keeps_gnu_arguments() {
+        let command = objdump_command(
+            &json!({"operation": "file_headers", "path": "/tmp/sample"}),
+            &HashMap::from([(
+                String::from("REA_OBJDUMP_COMMAND"),
+                String::from("gobjdump"),
+            )]),
+        );
+
+        assert_eq!(command.arguments.first(), Some(&String::from("-f")));
+    }
 }
