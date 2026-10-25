@@ -110,8 +110,9 @@ directory. See the [header](../crates/platform/rea-ffi/include/rea.h) and
 
 The [release workflow](../.github/workflows/release.yml) builds six native
 archives on pushes and pull requests: macOS, Linux, and Windows on ARM64 and
-x86-64. Tagging the commit with `v` followed by the `rea` crate version publishes a release after every platform passes. Manual
-workflow runs build downloadable artifacts without publishing.
+x86-64. Tagging the commit with `v` followed by the `rea` crate version publishes
+a release after every platform passes. Manual workflow runs build downloadable
+artifacts without publishing.
 
 Each archive contains the CLI, Ghidra worker, investigation skill, license,
 version, and a file digest manifest. The workflow tests the packaged executable

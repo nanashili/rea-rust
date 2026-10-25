@@ -125,12 +125,14 @@ def check_architecture_selection(environment: dict[str, str], target: str) -> No
         "x86_64-pc-windows-msvc": "AMD64",
         "aarch64-pc-windows-msvc": "ARM64",
     }[target]
-    emulated_environment = {
-        **environment,
-        "PROCESSOR_ARCHITECTURE": "x86",
-        "PROCESSOR_ARCHITEW6432": native_architecture,
-    }
-    emulated = run_powershell(installer_script(), emulated_environment)
+    # Windows can replace architecture variables while starting a process.
+    # Set the simulated WOW64 report inside the child before invoking the installer.
+    emulated_script = (
+        "$env:PROCESSOR_ARCHITECTURE = 'x86'\n"
+        f"$env:PROCESSOR_ARCHITEW6432 = '{native_architecture}'\n"
+        + installer_script()
+    )
+    emulated = run_powershell(emulated_script, environment)
     if emulated.returncode:
         raise AssertionError("emulated shell selected the wrong archive: " + emulated.stderr)
 
@@ -139,12 +141,18 @@ def check_architecture_selection(environment: dict[str, str], target: str) -> No
         **environment,
         "REA_INSTALL_ROOT": str(unsupported_root),
         "REA_BIN_DIR": str(unsupported_root / "bin"),
-        "PROCESSOR_ARCHITECTURE": "x86",
-        "PROCESSOR_ARCHITEW6432": "",
     }
-    unsupported = run_powershell(installer_script(), unsupported_environment)
+    unsupported_script = (
+        "$env:PROCESSOR_ARCHITECTURE = 'x86'\n"
+        "$env:PROCESSOR_ARCHITEW6432 = $null\n"
+        + installer_script()
+    )
+    unsupported = run_powershell(unsupported_script, unsupported_environment)
     if unsupported.returncode == 0 or "unsupported Windows architecture" not in unsupported.stderr:
-        raise AssertionError("unsupported architecture was not rejected")
+        raise AssertionError(
+            "unsupported architecture was not rejected: "
+            + unsupported.stdout + unsupported.stderr
+        )
     if unsupported_root.exists():
         raise AssertionError("unsupported architecture created installation directories")
 
