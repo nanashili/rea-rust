@@ -1,14 +1,11 @@
 //! Shared helpers for tool families.
-#[cfg(unix)]
 use rea_application::inputs::InputError;
 use rea_core::analysis_error::AnalysisError;
-#[cfg(unix)]
 use rea_core::analysis_error::InputIssue;
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation, SubjectTarget};
 use serde_json::{Map, Value};
 
 /// Convert application input parsing issues into the shared input failure.
-#[cfg(unix)]
 pub fn input_error(operation: &str, error: InputError) -> AnalysisError {
     AnalysisError::input(
         operation,

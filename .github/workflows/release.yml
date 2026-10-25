@@ -215,6 +215,13 @@ jobs:
           RUSTFLAGS: "-C target-feature=+crt-static"
         run: cargo test --locked --release --target x86_64-pc-windows-msvc -p rea-host process::launcher
 
+      - name: Test Windows Evidence publication
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: cargo test --locked --release --target x86_64-pc-windows-msvc -p rea-host fs::staged_output
+
       - name: Verify Windows runtime dependencies
         if: runner.os == 'Windows'
         shell: pwsh

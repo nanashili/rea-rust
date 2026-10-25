@@ -1,6 +1,7 @@
 //! POSIX caller spelling, independent of filesystem canonical lookup identity.
 use std::io;
 
+#[cfg(unix)]
 pub fn absolute(original: &str) -> io::Result<String> {
     let absolute = if original.starts_with('/') {
         original.to_owned()
@@ -22,4 +23,18 @@ pub fn absolute(original: &str) -> io::Result<String> {
         parts.join("/"),
         if directory { "/" } else { "" }
     ))
+}
+
+#[cfg(windows)]
+pub fn absolute(original: &str) -> io::Result<String> {
+    let path = std::path::Path::new(original);
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    absolute
+        .into_os_string()
+        .into_string()
+        .map_err(|_| io::Error::other("path is not valid Unicode"))
 }

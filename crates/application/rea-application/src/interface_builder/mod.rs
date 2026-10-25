@@ -9,6 +9,7 @@ pub mod component;
 pub mod keyed_archive;
 pub mod nib_archive;
 pub mod nib_view_hierarchy;
+pub mod types;
 pub mod view;
 use rea_rust_analysis::plist::Report;
 use serde::Serialize;

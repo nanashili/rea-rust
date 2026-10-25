@@ -26,11 +26,10 @@ use std::{
     path::Path,
 };
 
+pub use super::types::{InterfaceBuilderLimits, MAX_CONNECTIONS, MAX_DOCUMENTS, MAX_OBJECTS};
+
 pub const OPERATION: &str = "decode_interface_builder";
 const MAX_DIRECTORY_ENTRIES: usize = 100_000;
-pub const MAX_DOCUMENTS: usize = 64;
-pub const MAX_OBJECTS: usize = 20_000;
-pub const MAX_CONNECTIONS: usize = 40_000;
 const MAX_REPORTED_OMISSIONS: usize = 64;
 const MAX_AGGREGATE_INPUT_BYTES: usize = 32 * 1024 * 1024;
 const MAX_AGGREGATE_DECODE_BYTES: usize = 256 * 1024 * 1024;
@@ -182,29 +181,11 @@ struct InvestigationCoverage {
     omitted: usize,
 }
 
-/// Caller-selected graph bounds for one compiled Interface Builder inspection.
-#[derive(Clone, Debug, Serialize)]
-pub struct InterfaceBuilderLimits {
-    pub max_documents: usize,
-    pub max_objects: usize,
-    pub max_connections: usize,
-}
-
 /// Parsed resource-key facts used by the asset-catalog workflow.
 #[derive(Clone, Debug, Default)]
 pub struct InterfaceBuilderAssetReferences {
     pub references: Vec<apple::asset_catalog::ResourceReference>,
     pub graph_truncated: bool,
-}
-
-impl Default for InterfaceBuilderLimits {
-    fn default() -> Self {
-        Self {
-            max_documents: MAX_DOCUMENTS,
-            max_objects: MAX_OBJECTS,
-            max_connections: MAX_CONNECTIONS,
-        }
-    }
 }
 
 #[derive(Debug)]

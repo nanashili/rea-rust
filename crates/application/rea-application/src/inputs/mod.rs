@@ -6,7 +6,7 @@ use crate::{
         Page as AssetCatalogPage,
     },
     apple::keyed_archive::KeyedArchiveSelection,
-    interface_builder::bundle::{
+    interface_builder::types::{
         InterfaceBuilderLimits, MAX_CONNECTIONS, MAX_DOCUMENTS, MAX_OBJECTS,
     },
     ledger::artifact_records::{DetailLevel, Filters, Query, UnknownQuery},

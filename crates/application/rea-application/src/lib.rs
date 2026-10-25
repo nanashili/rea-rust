@@ -16,7 +16,6 @@ pub mod firmware;
 pub mod flutter;
 pub mod harmony;
 pub mod il2cpp;
-#[cfg(unix)]
 pub mod inputs;
 pub mod interface_builder;
 pub mod investigation;
