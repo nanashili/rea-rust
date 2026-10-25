@@ -1,0 +1,37 @@
+{
+  "status": "interrupted",
+  "provenance": {
+    "created_at": "2026-10-25T20:38:00.709366+00:00",
+    "commit": "0173375f35d85d96be62f8aaa4f263a7a14b260e",
+    "patch_sha256": "463d725548b22f3d1df9df635d22943c838c254343b65f6c4307492aa78d89f2",
+    "binaries": {
+      "rea": {
+        "sha256": "3d53d5210fadd9d37f42984b511ac2771debd2be034e53bd5f150b9cbae7e8db",
+        "bytes": 54142768
+      },
+      "rea-ghidra-rust-worker": {
+        "sha256": "1c66d0b5674ff6a0ec696dca6986a6247326634b4baa66c235a08cb114782aed",
+        "bytes": 9714752
+      }
+    },
+    "scope": "Intermediate unchanged-limit diagnostic of reviewed Rust source; no TypeScript changes."
+  },
+  "series": [],
+  "runner_status_before_annotation": "failed",
+  "interruption": {
+    "at_utc": "2026-10-25T20:52:35.645821+00:00",
+    "reason": "User requested a 30-second JavaScript worker timeout; stop the 15-second series and restart separately.",
+    "runner_pid": 63141,
+    "runner_created": 1792960697.662597,
+    "observed_children": [
+      {
+        "pid": 82015,
+        "created": 1792961494.885995,
+        "name": "rea"
+      }
+    ]
+  },
+  "completed_main_receipts": 44,
+  "planned_total_receipts": 110,
+  "interrupted_work_directory": "/tmp/rea-failure-verification-2026-10-25-v2-main"
+}

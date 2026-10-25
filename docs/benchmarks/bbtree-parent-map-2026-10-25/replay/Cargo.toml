@@ -1,0 +1,14 @@
+[package]
+name = "rea-parent-map-bench"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+bbtree = { git = "https://github.com/XiangpengHao/bbtree", rev = "8adae97a0ed97e5c98fa2790312eb0aec9719846" }
+rustc-hash = "=2.1.3"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[workspace]

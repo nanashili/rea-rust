@@ -1,0 +1,1344 @@
+{
+  "schema_version": 1,
+  "plan_id": "local-applications-2026-10-25",
+  "status": "qualified",
+  "purpose": "Read-only benchmark workflows for installed macOS applications and representative static artifacts.",
+  "authority": "shipped-artifact",
+  "host_scope": {
+    "platform": "macos",
+    "architecture": "arm64",
+    "application_roots": [
+      "/Applications",
+      "/System/Applications"
+    ],
+    "target_policy": "Read application files and REA-owned cache only. Do not launch, attach to, mutate, sign, save, or close a target application."
+  },
+  "measurement_contract": {
+    "samples_per_case": 5,
+    "order": "Sequential workflows; reverse workflow order in even rounds; five fresh process samples per workflow.",
+    "per_case_timeout_seconds": 120,
+    "family_memory_limit_mib": 4096,
+    "metrics": [
+      "wall_time_ms",
+      "wait4_user_cpu_ms",
+      "wait4_system_cpu_ms",
+      "wait4_maxrss_bytes",
+      "sampled_family_peak_rss_bytes",
+      "sampled_family_cpu_ms",
+      "sampled_family_max_processes",
+      "sampled_max_gap_ms",
+      "output_bytes",
+      "wait4_minor_faults",
+      "wait4_major_faults",
+      "wait4_block_input_operations",
+      "wait4_block_output_operations",
+      "wait4_voluntary_context_switches",
+      "wait4_involuntary_context_switches",
+      "harness_cpu_ms",
+      "result_status",
+      "response_sha256"
+    ],
+    "cache_states": [
+      "fresh_process_and_isolated_REA_provider_cache_every_round",
+      "retained_session_repeated_calls_when_repeat_is_set",
+      "uncontrolled_OS_filesystem_cache_warmed_by_qualification_and_provenance_hashing"
+    ],
+    "provenance": [
+      "target_path",
+      "target_version",
+      "target_architecture",
+      "target_size_bytes",
+      "selected_artifact_sha256",
+      "rea_executable_sha256",
+      "catalog_sha256",
+      "host_os_build",
+      "toolchain_versions",
+      "harness_revision"
+    ],
+    "unmeasured": [
+      "actual_agent_tokens",
+      "energy",
+      "physical_disk_bytes",
+      "CPU_hardware_counters",
+      "standalone_provider_startup",
+      "full_application_correctness"
+    ],
+    "sample_interval_seconds": 0.005
+  },
+  "workflows": [
+    {
+      "name": "terminal-static-fast",
+      "target": "/System/Applications/Utilities/Terminal.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/System/Applications/Utilities/Terminal.app",
+            "detail": "summary",
+            "max_entries": 2000,
+            "max_probe_bytes": 1048576
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/System/Applications/Utilities/Terminal.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "zed-native-analysis",
+      "target": "/Applications/Zed Preview.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Zed Preview.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Zed Preview.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "inspect_signature",
+          "arguments": {}
+        },
+        {
+          "name": "list_architectures",
+          "arguments": {}
+        },
+        {
+          "name": "list_segments",
+          "arguments": {}
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "search_procedures",
+          "arguments": {
+            "pattern": "main",
+            "mode": "literal",
+            "case_sensitive": false
+          }
+        },
+        {
+          "name": "search_strings",
+          "arguments": {
+            "pattern": "zed",
+            "mode": "literal",
+            "case_sensitive": false
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "openunity-native-analysis",
+      "target": "/Applications/OpenUnity.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/OpenUnity.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/OpenUnity.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "inspect_signature",
+          "arguments": {}
+        },
+        {
+          "name": "list_architectures",
+          "arguments": {}
+        },
+        {
+          "name": "list_segments",
+          "arguments": {}
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "list_strings",
+          "arguments": {},
+          "repeat": 2
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "chrome-native-analysis",
+      "target": "/Applications/Google Chrome.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Google Chrome.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Google Chrome.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "xcode-static-artifacts",
+      "target": "/Applications/Xcode.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Xcode.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Xcode.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "inspect_signature",
+          "arguments": {}
+        },
+        {
+          "name": "list_architectures",
+          "arguments": {}
+        },
+        {
+          "name": "list_segments",
+          "arguments": {}
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "inspect_sqlite_database",
+          "arguments": {
+            "path": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/AppIntentSchemas.framework/Versions/A/Resources/AppIntentSchemas.sqlite",
+            "schema_scope": "inventory"
+          }
+        },
+        {
+          "name": "decode_interface_builder",
+          "arguments": {
+            "detail": "summary",
+            "max_documents": 8,
+            "max_objects": 1000,
+            "max_connections": 1000
+          }
+        },
+        {
+          "name": "inspect_asset_catalog",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "discord-electron-static",
+      "target": "/Applications/Discord.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Discord.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Discord.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_electron_fuses",
+          "arguments": {
+            "path": "/Applications/Discord.app/Contents/MacOS/Discord"
+          }
+        },
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Discord.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "figma-electron-static",
+      "target": "/Applications/Figma.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Figma.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Figma.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_electron_fuses",
+          "arguments": {
+            "path": "/Applications/Figma.app/Contents/MacOS/Figma"
+          }
+        },
+        {
+          "name": "inspect_asset_catalog",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          }
+        },
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ],
+      "input_files": [
+        "/Applications/Figma.app/Contents/Resources/Assets.car"
+      ]
+    },
+    {
+      "name": "postman-electron-static",
+      "target": "/Applications/Postman.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Postman.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Postman.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_electron_fuses",
+          "arguments": {
+            "path": "/Applications/Postman.app/Contents/MacOS/Postman"
+          }
+        },
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Postman.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "chatgpt-electron-static",
+      "target": "/Applications/ChatGPT.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/ChatGPT.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/ChatGPT.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_electron_fuses",
+          "arguments": {
+            "path": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+          }
+        },
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/ChatGPT.app/Contents/Resources/app.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "kiro-electron-static",
+      "target": "/Applications/Kiro.app",
+      "cases": [
+        {
+          "name": "inspect_desktop_application",
+          "arguments": {
+            "path": "/Applications/Kiro.app",
+            "detail": "summary",
+            "max_entries": 20000,
+            "max_probe_bytes": 8388608
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Kiro.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_plist",
+          "arguments": {
+            "path": "Contents/Info.plist"
+          }
+        },
+        {
+          "name": "inspect_electron_fuses",
+          "arguments": {
+            "path": "/Applications/Kiro.app/Contents/MacOS/Kiro"
+          }
+        },
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar",
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "unity-managed-library",
+      "target": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app",
+      "cases": [
+        {
+          "name": "inspect_managed_artifact",
+          "arguments": {
+            "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "inspect_managed_members",
+          "arguments": {
+            "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "inspect_managed_native_boundaries",
+          "arguments": {
+            "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll"
+          }
+        }
+      ]
+    },
+    {
+      "name": "go-toolchain-binary",
+      "target": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "cases": [
+        {
+          "name": "inspect_go_binary",
+          "arguments": {
+            "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt"
+          }
+        },
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_artifact",
+          "arguments": {
+            "detail": "summary",
+            "integrity_policy": "fail"
+          }
+        }
+      ]
+    },
+    {
+      "name": "interface-builder-artifact",
+      "target": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/Unity.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_keyed_archive",
+          "arguments": {
+            "path": "Contents/Resources/MainMenu.nib/keyedobjects.nib",
+            "limit": 1000,
+            "offset": 0
+          }
+        },
+        {
+          "name": "decode_interface_builder",
+          "arguments": {
+            "detail": "summary",
+            "max_documents": 4,
+            "max_objects": 1000,
+            "max_connections": 1000
+          }
+        },
+        {
+          "name": "inspect_asset_catalog",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "xcode-deep-read-only",
+      "target": "/Applications/Xcode.app",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Xcode.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          },
+          "capture": {
+            "native_evidence": "result.structuredContent.normalized_result.parent_evidence_id"
+          }
+        },
+        {
+          "name": "list_documents",
+          "arguments": {}
+        },
+        {
+          "name": "current_document",
+          "arguments": {}
+        },
+        {
+          "name": "list_segments",
+          "arguments": {}
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "analyze_function",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "inspect_analysis_view",
+          "arguments": {
+            "source": {
+              "kind": "retained-evidence",
+              "evidence_id": "$native_evidence"
+            },
+            "view": {
+              "kind": "summary"
+            }
+          }
+        },
+        {
+          "name": "procedure_info",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callers",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callees",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "$address",
+            "direction": "outgoing"
+          }
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "$address"
+          },
+          "repeat": 3
+        },
+        {
+          "name": "xrefs",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "$address",
+            "length": 256
+          }
+        },
+        {
+          "name": "address_to_file_offset",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "get_call_graph",
+          "arguments": {
+            "address": "$address",
+            "direction": "forward"
+          }
+        },
+        {
+          "name": "search_bytes",
+          "arguments": {
+            "pattern": "48 8B ?? ?? 89",
+            "limit": 100
+          }
+        },
+        {
+          "name": "batch_decompile",
+          "arguments": {
+            "addresses": [
+              "$address"
+            ]
+          }
+        },
+        {
+          "name": "inspect_native_load_image",
+          "arguments": {}
+        },
+        {
+          "name": "inspect_native_instruction",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "resolve_native_call_targets",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "address_name",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "procedure_address",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "resolve_containing_procedure",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "trace_native_values",
+          "arguments": {
+            "procedure": "$address",
+            "max_depth": 2,
+            "max_functions": 8,
+            "max_nodes": 2000,
+            "max_edges": 4000,
+            "limit": 100
+          }
+        },
+        {
+          "name": "inspect_native_dispatch_metadata",
+          "arguments": {
+            "max_records": 1000
+          }
+        },
+        {
+          "name": "get_objc_classes",
+          "arguments": {}
+        },
+        {
+          "name": "get_objc_protocols",
+          "arguments": {}
+        },
+        {
+          "name": "analyze_swift_types",
+          "arguments": {}
+        },
+        {
+          "name": "inspect_native_api",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "trace_feature",
+          "arguments": {
+            "query": "Xcode",
+            "case_sensitive": false
+          }
+        },
+        {
+          "name": "trace_call_path",
+          "arguments": {
+            "start": "$address",
+            "direction": "forward"
+          }
+        },
+        {
+          "name": "get_navigation_context",
+          "arguments": {}
+        },
+        {
+          "name": "inspect_address_context",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "list_unknowns",
+          "arguments": {
+            "limit": 100
+          }
+        },
+        {
+          "name": "get_evidence_bundle",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "export_evidence_bundle",
+          "arguments": {
+            "path": "$export_path",
+            "overwrite": false
+          }
+        },
+        {
+          "name": "import_evidence_bundle",
+          "arguments": {
+            "path": "$export_path"
+          }
+        },
+        {
+          "name": "binary_session",
+          "arguments": {}
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "zed-rust-metadata",
+      "target": "/Applications/Zed Preview.app",
+      "cases": [
+        {
+          "name": "inspect_rust_binary",
+          "arguments": {
+            "path": "/Applications/Zed Preview.app/Contents/MacOS/zed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "gofmt-deep",
+      "target": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/opt/homebrew/Cellar/go/1.26.5/libexec/bin/gofmt",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "procedure_info",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callers",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callees",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "$address"
+          },
+          "repeat": 3
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "session-evidence-roundtrip",
+      "target": "/Applications/Xcode.app",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Xcode.app",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "binary_session",
+          "arguments": {}
+        },
+        {
+          "name": "get_evidence_bundle",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "export_evidence_bundle",
+          "arguments": {
+            "path": "$export_path",
+            "overwrite": false
+          }
+        },
+        {
+          "name": "import_evidence_bundle",
+          "arguments": {
+            "path": "$export_path"
+          }
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "figma-framework-deep",
+      "target": "/Applications/Figma.app",
+      "cases": [
+        {
+          "name": "open_binary",
+          "arguments": {
+            "path": "/Applications/Figma.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
+            "provider_id": "ghidra-rust"
+          }
+        },
+        {
+          "name": "inspect_macho",
+          "arguments": {
+            "detail": "summary"
+          },
+          "capture": {
+            "native_evidence": "result.structuredContent.normalized_result.parent_evidence_id"
+          }
+        },
+        {
+          "name": "list_documents",
+          "arguments": {}
+        },
+        {
+          "name": "current_document",
+          "arguments": {}
+        },
+        {
+          "name": "list_segments",
+          "arguments": {}
+        },
+        {
+          "name": "list_procedures",
+          "arguments": {}
+        },
+        {
+          "name": "analyze_function",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "inspect_analysis_view",
+          "arguments": {
+            "source": {
+              "kind": "retained-evidence",
+              "evidence_id": "$native_evidence"
+            },
+            "view": {
+              "kind": "summary"
+            }
+          }
+        },
+        {
+          "name": "procedure_info",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_assembly",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "read_function_instructions",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callers",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_callees",
+          "arguments": {
+            "procedure": "$address"
+          }
+        },
+        {
+          "name": "procedure_references",
+          "arguments": {
+            "procedure": "$address",
+            "direction": "outgoing"
+          }
+        },
+        {
+          "name": "procedure_pseudo_code",
+          "arguments": {
+            "procedure": "$address"
+          },
+          "repeat": 3
+        },
+        {
+          "name": "xrefs",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "read_bytes",
+          "arguments": {
+            "address": "$address",
+            "length": 256
+          }
+        },
+        {
+          "name": "address_to_file_offset",
+          "arguments": {
+            "address": "$address"
+          }
+        },
+        {
+          "name": "get_call_graph",
+          "arguments": {
+            "address": "$address",
+            "direction": "forward"
+          }
+        },
+        {
+          "name": "search_bytes",
+          "arguments": {
+            "pattern": "48 8B ?? ?? 89",
+            "limit": 100
+          }
+        },
+        {
+          "name": "batch_decompile",
+          "arguments": {
+            "addresses": [
+              "$address"
+            ]
+          }
+        },
+        {
+          "name": "inspect_native_load_image",
+          "arguments": {}
+        },
+        {
+          "name": "get_evidence_bundle",
+          "arguments": {
+            "detail": "summary"
+          }
+        },
+        {
+          "name": "export_evidence_bundle",
+          "arguments": {
+            "path": "$export_path",
+            "overwrite": false
+          }
+        },
+        {
+          "name": "import_evidence_bundle",
+          "arguments": {
+            "path": "$export_path"
+          }
+        },
+        {
+          "name": "binary_session",
+          "arguments": {}
+        },
+        {
+          "name": "close_binary",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "name": "kiro-node-pty-javascript",
+      "target": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib",
+      "cases": [
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib",
+            "format": "directory",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024
+          },
+          "capture": {
+            "javascript_evidence": "result.structuredContent.normalized_result.parent_evidence_id"
+          }
+        },
+        {
+          "name": "inspect_analysis_view",
+          "arguments": {
+            "source": {
+              "kind": "retained-evidence",
+              "evidence_id": "$javascript_evidence"
+            },
+            "view": {
+              "kind": "summary"
+            }
+          }
+        },
+        {
+          "name": "trace_application_feature",
+          "arguments": {
+            "application": {
+              "kind": "retained-evidence",
+              "evidence_id": "$javascript_evidence"
+            },
+            "seed": {
+              "kind": "module",
+              "match": "exact",
+              "value": "worker/conoutSocketWorker.js",
+              "case_sensitive": true
+            },
+            "direction": "both"
+          }
+        },
+        {
+          "name": "trace_javascript_semantics",
+          "arguments": {
+            "application": {
+              "kind": "retained-evidence",
+              "evidence_id": "$javascript_evidence"
+            },
+            "query": {
+              "seed": {
+                "kind": "property",
+                "name": "conoutPipeName"
+              },
+              "direction": "forward-influence"
+            }
+          }
+        }
+      ],
+      "input_files": [
+        "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/shared/conout.js",
+        "/Applications/Kiro.app/Contents/Resources/app/node_modules.asar.unpacked/node-pty/lib/worker/conoutSocketWorker.js"
+      ]
+    }
+  ],
+  "excluded_operations": {
+    "target_mutation": [
+      "annotate_native_function",
+      "set_address_name",
+      "set_addresses_names",
+      "set_bookmark",
+      "set_comment",
+      "set_inline_comment",
+      "unset_bookmark"
+    ],
+    "live_or_execution": [
+      "capture_process",
+      "observe_native_calls",
+      "capture_native_ui_scenario",
+      "observe_web_session",
+      "capture_electron_scenario",
+      "instrument_with_frida",
+      "debug_with_gdb",
+      "debug_with_rizin",
+      "execute_rizin_command",
+      "list_electron_targets",
+      "list_javascript_runtime_targets",
+      "inspect_electron_page",
+      "reconcile_javascript_runtime"
+    ],
+    "network_or_device": [
+      "capture_browser_scenario",
+      "capture_web_screenshot",
+      "capture_adb_screen",
+      "start_adb_app",
+      "install_adb_package",
+      "push_adb_file"
+    ],
+    "reason": "Static, read-only artifact coverage only; live runtime, target execution, mutation, device control, and network workflows require a separately authorized fixture."
+  },
+  "coverage_accounting": {
+    "catalog_source": "/tmp/rea-benchmark-catalog.json",
+    "catalog_tool_count": 209,
+    "benchmark_binary": "/tmp/rea-benchmark-release-6cb6773/unpacked/rea-rust/bin/rea",
+    "benchmark_commit": "6cb6773",
+    "report_required": [
+      "advertised_tool_count",
+      "implemented_tool_count",
+      "measured_operation_count",
+      "unsupported_operation_count",
+      "excluded_operation_count",
+      "per-workflow-status"
+    ],
+    "result_statuses": [
+      "pass",
+      "partial",
+      "resource_constraint",
+      "timeout",
+      "unsupported",
+      "failed"
+    ]
+  }
+}

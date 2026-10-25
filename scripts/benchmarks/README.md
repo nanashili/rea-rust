@@ -84,6 +84,14 @@ canonical executable; it does not hash every file in an application bundle.
 
 `audit_results.py --aggregate results.json --work-dir /tmp/my-run --output audit.json`
 extracts bounded result counts without publishing source or decompiled text.
+`audit_schema_shapes.py --runs /tmp/my-run --catalog /tmp/my-run/catalog.json --output shapes.json`
+checks successful object payloads with Node's `jsonschema` package. It removes
+`$id` and `$schema` recursively, so this checks compatible shape constraints;
+it does not establish declared-dialect conformance or factual correctness.
+Failed calls and successful calls without object payloads have separate skip
+counts. The report records the validator version. Make the package available
+to Node directly or through `NODE_PATH`.
+
 `summarize.py` reports time, CPU, RSS, discovery bytes, OS resource counters,
 and instrumentation CPU separately. CPU samples are lower bounds, RSS sums
 can count shared pages more than once, and harness overhead is not subtracted

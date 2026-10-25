@@ -67,8 +67,14 @@ METRIC_NAMES = (
 
 def error_info(value: Any, tool: str = "") -> tuple[str, str, str, str]:
     if isinstance(value, str):
+        if value.startswith("TimeoutError:"):
+            return "mcp_timeout", "harness", value, "mcp_timeout"
         if value.startswith("MemoryError:"):
-            return "harness_rss_limit", "harness", value, "harness_resource_limit"
+            if "stdout queue limit" in value:
+                return "harness_stdout_queue_limit", "harness", value, "harness_resource_limit"
+            if "RSS limit" in value or "rss limit" in value:
+                return "harness_rss_limit", "harness", value, "harness_resource_limit"
+            return "harness_memory_limit", "harness", value, "harness_resource_limit"
         return "unknown", "harness", value, "unknown"
     if isinstance(value, dict):
         for item in value.get("content", []):
@@ -117,6 +123,12 @@ def outcome(receipt: dict[str, Any]) -> str:
 def response_json(call_file: Path) -> dict[str, Any] | None:
     try:
         envelope = json.loads(call_file.read_text())
+        request = envelope.get("request", {})
+        operation_hint = (
+            request.get("params", {}).get("name")
+            if isinstance(request, dict)
+            else None
+        )
         response = envelope.get("response", {})
         result = response.get("result", {})
         candidates: list[dict[str, Any]] = []
@@ -139,6 +151,11 @@ def response_json(call_file: Path) -> dict[str, Any] | None:
             value = candidate.get("result") if isinstance(candidate.get("result"), dict) else candidate
             if isinstance(value, dict) and "operation" in value and "normalized_result" in value:
                 return value
+            if (
+                operation_hint in {"get_navigation_context", "trace_feature"}
+                and isinstance(value, dict)
+            ):
+                return {"operation": operation_hint, "normalized_result": value}
         return None
     except (OSError, TypeError, ValueError, json.JSONDecodeError):
         return None
@@ -151,7 +168,6 @@ def explicit_semantics(value: dict[str, Any], call_file: Path) -> dict[str, Any]
     if not isinstance(operation, str) or not isinstance(normalized, dict):
         return None
 
-    coverage = normalized.get("coverage")
     limitations = normalized.get("limitations")
     result: dict[str, Any] = {
         "operation": operation,
@@ -159,21 +175,205 @@ def explicit_semantics(value: dict[str, Any], call_file: Path) -> dict[str, Any]
         "status": "semantic_unknown",
         "independent_validation": "not_performed",
         "provider_coverage_status": None,
+        "facts": {},
         "limitations": [],
     }
     if isinstance(limitations, list):
         result["limitations"] = [str(item)[:240] for item in limitations if isinstance(item, str)]
 
-    known_coverage_operation = operation in {
-        "inspect_analysis_view",
-        "inspect_pe_resources",
-        "list_procedures",
-    }
-    if not known_coverage_operation or not isinstance(coverage, dict):
+    interpreter = SEMANTIC_INTERPRETERS.get(operation)
+    if interpreter is not None:
+        result.update(interpreter(normalized))
         return result
-    if isinstance(coverage.get("status"), str):
-        result["provider_coverage_status"] = coverage["status"]
+
+    coverage = normalized.get("coverage")
+    if operation in {"inspect_analysis_view", "inspect_pe_resources", "list_procedures"}:
+        if isinstance(coverage, dict) and isinstance(coverage.get("status"), str):
+            result["provider_coverage_status"] = coverage["status"]
     return result
+
+
+def load_image_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    provider_status = normalized.get("status")
+    status_meanings = {
+        "unsupported": "unsupported",
+        "supported": "supported",
+        "available": "supported",
+    }
+    semantics = (
+        status_meanings.get(provider_status, "unknown")
+        if isinstance(provider_status, str)
+        else "unknown"
+    )
+    return {
+        "status": "unsupported" if semantics == "unsupported" else "semantic_unknown",
+        "facts": {
+            "provider_status": provider_status,
+            "load_image_semantics": semantics,
+        },
+    }
+
+
+def procedure_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    body = normalized.get("body")
+    classification = normalized.get("classification")
+    return {
+        "facts": {
+            "body_available": body.get("available") if isinstance(body, dict) else None,
+            "classification_state": (
+                "present" if isinstance(classification, dict) else "unknown"
+            ),
+            "classification_fields_unknown": sorted(
+                key for key in ("external", "thunk", "thunk_target")
+                if isinstance(classification, dict) and classification.get(key) is None
+            ),
+        },
+    }
+
+
+def containing_procedure_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    procedure = normalized.get("procedure")
+    body = procedure.get("body") if isinstance(procedure, dict) else None
+    return {
+        "facts": {
+            "found": normalized.get("found"),
+            "body_available": body.get("available") if isinstance(body, dict) else None,
+        },
+    }
+
+
+def navigation_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    unknowns = normalized.get("unknowns")
+    return {
+        "facts": {
+            "address_state": navigation_facet_state(normalized.get("address")),
+            "procedure_state": navigation_facet_state(normalized.get("procedure")),
+            "unknown_facet_count": len(unknowns) if isinstance(unknowns, list) else None,
+        },
+    }
+
+
+def feature_trace_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    residual = normalized.get("residual_unknowns")
+    incomplete = normalized.get("truncated") is True or bool(residual)
+    return {
+        "status": "partial_semantic_coverage" if incomplete else "semantic_unknown",
+        "facts": {
+            "truncated": normalized.get("truncated"),
+            "residual_unknown_count": len(residual) if isinstance(residual, list) else None,
+        },
+    }
+
+
+def native_value_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    unknowns = normalized.get("unknowns")
+    unknown_reasons = [
+        item.get("reason")
+        for item in unknowns
+        if isinstance(item, dict) and isinstance(item.get("reason"), str)
+    ] if isinstance(unknowns, list) else []
+    provider_reported_no_def_use_model = any(
+        "no native def-use model" in reason
+        for reason in unknown_reasons
+    )
+    incomplete = provider_reported_no_def_use_model or bool(unknowns)
+
+    return {
+        "status": "partial_semantic_coverage" if incomplete else "semantic_unknown",
+        "facts": {
+            "def_use_status": (
+                "provider_reported_no_def_use_model"
+                if provider_reported_no_def_use_model
+                else "unknown"
+            ),
+            "total_nodes": normalized.get("total_nodes"),
+            "total_edges": normalized.get("total_edges"),
+            "decompilations": normalized.get("decompilations"),
+            "truncated": normalized.get("truncated"),
+            "unknown_count": len(unknowns) if isinstance(unknowns, list) else None,
+            "unknown_reasons": unknown_reasons,
+        },
+    }
+
+
+def native_api_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    boundary = normalized.get("boundary")
+    substeps = normalized.get("substeps")
+    unsupported_branches = normalized.get("unsupported_branches")
+    residual_unknowns = normalized.get("residual_unknowns")
+    unsupported_steps = [
+        step.get("operation")
+        for step in substeps
+        if isinstance(step, dict) and step.get("status") == "unsupported"
+    ] if isinstance(substeps, list) else []
+    boundary_available = boundary.get("available") if isinstance(boundary, dict) else None
+    boundary_status = (
+        boundary.get("status")
+        if isinstance(boundary, dict) and isinstance(boundary.get("status"), str)
+        else "unknown"
+    )
+    incomplete = boundary_available is False or bool(unsupported_steps) or bool(residual_unknowns)
+
+    return {
+        "status": "partial_semantic_coverage" if incomplete else "semantic_unknown",
+        "facts": {
+            "boundary_available": boundary_available,
+            "boundary_status": boundary_status,
+            "unsupported_step_operations": unsupported_steps,
+            "unsupported_step_count": len(unsupported_steps),
+            "unsupported_branches": (
+                [item for item in unsupported_branches if isinstance(item, str)]
+                if isinstance(unsupported_branches, list)
+                else []
+            ),
+            "residual_unknown_count": (
+                len(residual_unknowns)
+                if isinstance(residual_unknowns, list)
+                else None
+            ),
+        },
+    }
+
+
+def dispatch_semantics(normalized: dict[str, Any]) -> dict[str, Any]:
+    dispatch_result = normalized.get("result")
+    coverage = dispatch_result.get("coverage") if isinstance(dispatch_result, dict) else None
+    coverage_statuses = Counter(
+        item.get("status")
+        for item in coverage
+        if isinstance(item, dict) and isinstance(item.get("status"), str)
+    ) if isinstance(coverage, list) else Counter()
+    incomplete = "unsupported" in coverage_statuses or "partial" in coverage_statuses
+
+    return {
+        "status": "partial_semantic_coverage" if incomplete else "semantic_unknown",
+        "facts": {
+            "coverage_statuses": dict(sorted(coverage_statuses.items())),
+            "coverage_facets": len(coverage) if isinstance(coverage, list) else None,
+        },
+    }
+
+
+SEMANTIC_INTERPRETERS = {
+    "inspect_native_load_image": load_image_semantics,
+    "procedure_info": procedure_semantics,
+    "resolve_containing_procedure": containing_procedure_semantics,
+    "get_navigation_context": navigation_semantics,
+    "trace_feature": feature_trace_semantics,
+    "trace_native_values": native_value_semantics,
+    "inspect_native_api": native_api_semantics,
+    "inspect_native_dispatch_metadata": dispatch_semantics,
+}
+
+
+def navigation_facet_state(value: Any) -> str:
+    """Return the explicit availability state of one navigation facet."""
+    if isinstance(value, str):
+        return "available"
+    if isinstance(value, dict):
+        state = value.get("state")
+        return state if isinstance(state, str) else "unknown"
+    return "unknown"
 
 
 def semantic_coverage(work_dir: Path | None) -> dict[tuple[str, int], dict[str, Any]]:
@@ -194,6 +394,7 @@ def semantic_coverage(work_dir: Path | None) -> dict[tuple[str, int], dict[str, 
                 "statuses": Counter(),
                 "provider_coverage_statuses": Counter(),
                 "provider_coverage_calls": [],
+                "facts": [],
                 "limitations": [],
             },
         )
@@ -207,6 +408,13 @@ def semantic_coverage(work_dir: Path | None) -> dict[tuple[str, int], dict[str, 
             statuses["provider_coverage_statuses"][provider_status] += 1
             statuses["provider_coverage_calls"].append(call_file.name)
         statuses["limitations"].extend(semantics["limitations"])
+        statuses["facts"].append(
+            {
+                "operation": semantics["operation"],
+                "call": semantics["call"],
+                "facts": semantics["facts"],
+            }
+        )
     for value in coverage.values():
         if value["limitations"]:
             value["limitations"] = sorted(set(value["limitations"]))
@@ -267,10 +475,11 @@ def receipt_summary(
         "semantic_coverage": {
             f"{workflow}#round-{round_number}": {
                 "statuses": dict(value["statuses"]),
-                "semantic_status": "unknown",
+                "semantic_status": semantic_group_status(value),
                 "independent_validation": "not_performed",
                 "provider_coverage_statuses": dict(value["provider_coverage_statuses"]),
                 "provider_coverage_calls": value.get("provider_coverage_calls", []),
+                "facts": value.get("facts", {}),
                 "limitations": value.get("limitations", []),
             }
             for (workflow, round_number), value in sorted((semantic_by_receipt or {}).items())
@@ -304,7 +513,7 @@ def analyze_receipt(
         errors[(code, category)] += 1
         failure_families[family] += 1
 
-    semantic_status = semantic.get("status", "semantic_unknown") if semantic else "not_audited"
+    semantic_status = semantic_group_status(semantic) if semantic else "not_audited"
     return {
         "outcome": outcome(receipt),
         "semantic_status": semantic_status,
@@ -314,6 +523,18 @@ def analyze_receipt(
         "successful_tools": successful_tools,
         "metrics": receipt_metric_values(receipt),
     }
+
+
+def semantic_group_status(semantic: dict[str, Any]) -> str:
+    """Summarize recorded call coverage without treating it as correctness."""
+    statuses = semantic.get("statuses")
+    if not isinstance(statuses, Counter):
+        return "semantic_unknown"
+    if statuses.get("partial_semantic_coverage", 0) > 0:
+        return "partial_semantic_coverage"
+    if statuses.get("unsupported", 0) > 0:
+        return "unsupported"
+    return "semantic_unknown"
 
 
 def metric_stats(values: list[float]) -> dict[str, Any]:
