@@ -10,7 +10,7 @@ use rea_host::fs::stable_file;
 use rea_host::fs::unix_file::UnixFiles;
 #[cfg(windows)]
 use rea_host::fs::windows_file::WindowsFiles;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::Digest;
 use std::{
     collections::{BTreeMap, HashSet},

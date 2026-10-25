@@ -15,7 +15,7 @@ use rea_host::fs::stable_file;
 use rea_host::fs::unix_file::UnixFiles;
 #[cfg(windows)]
 use rea_host::fs::windows_file::WindowsFiles;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 pub const OPERATION: &str = "inspect_firmware_regions";
