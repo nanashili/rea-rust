@@ -12,7 +12,9 @@
 //! `execFileOutput` stop/timeout policy and failure classification.
 use rea_core::cancellation::Cancellation;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(unix)]
+use std::time::Instant;
 /// How long a stopped process may take to exit before it is killed.
 /// `STOP_GRACE_MS` in `ExecFileOutput.ts`.
 #[cfg(unix)]
