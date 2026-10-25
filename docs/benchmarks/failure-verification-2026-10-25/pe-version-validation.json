@@ -1,0 +1,289 @@
+{
+  "oracle": "independent-pe-versioninfo",
+  "payload": {
+    "bytes": 644,
+    "expected_bytes": 644,
+    "expected_sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b",
+    "offset": 2585688,
+    "sha256": "e40cab087151f2e6df68e8ee6915bc267354d4e9d067ce6aba4e8cce0eebeb3b"
+  },
+  "provider_comparison": {
+    "authoritative": false,
+    "expected": {
+      "FileVersion": "0.0.0.0",
+      "ProductVersion": "0.0.0.0"
+    },
+    "limitations": [
+      "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+      "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+      "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+    ],
+    "matches": {
+      "FileVersion": true,
+      "ProductVersion": true
+    },
+    "observed": {
+      "FileVersion": [
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0"
+      ],
+      "ProductVersion": [
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0"
+      ],
+      "file_version": [
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0"
+      ],
+      "product_version": [
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0",
+        "0.0.0.0"
+      ]
+    },
+    "provider_limitations_remain": true,
+    "result_paths": [
+      "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-001/call-0003.json",
+      "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-002/call-0003.json",
+      "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-003/call-0003.json",
+      "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-004/call-0003.json",
+      "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-005/call-0003.json"
+    ],
+    "results": [
+      {
+        "limitations": [
+          "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+          "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+          "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+        ],
+        "matches": {
+          "FileVersion": true,
+          "ProductVersion": true
+        },
+        "path": "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-001/call-0003.json",
+        "status": "values_present",
+        "values": {
+          "FileVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "ProductVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "file_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "product_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ]
+        }
+      },
+      {
+        "limitations": [
+          "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+          "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+          "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+        ],
+        "matches": {
+          "FileVersion": true,
+          "ProductVersion": true
+        },
+        "path": "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-002/call-0003.json",
+        "status": "values_present",
+        "values": {
+          "FileVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "ProductVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "file_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "product_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ]
+        }
+      },
+      {
+        "limitations": [
+          "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+          "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+          "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+        ],
+        "matches": {
+          "FileVersion": true,
+          "ProductVersion": true
+        },
+        "path": "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-003/call-0003.json",
+        "status": "values_present",
+        "values": {
+          "FileVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "ProductVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "file_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "product_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ]
+        }
+      },
+      {
+        "limitations": [
+          "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+          "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+          "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+        ],
+        "matches": {
+          "FileVersion": true,
+          "ProductVersion": true
+        },
+        "path": "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-004/call-0003.json",
+        "status": "values_present",
+        "values": {
+          "FileVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "ProductVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "file_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "product_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ]
+        }
+      },
+      {
+        "limitations": [
+          "Static PE32/PE32+ type/name/language resource inventory; RT_MANIFEST bytes are retained up to 1 MiB without parsing or executing XML, while other payloads remain opaque.",
+          "Icon candidates are resource-table relationships. Language fallback, image decoding and actual shell/window loading are not observed.",
+          "Exact shared byte ranges are retained; non-identical overlapping resource structures or payloads are rejected."
+        ],
+        "matches": {
+          "FileVersion": true,
+          "ProductVersion": true
+        },
+        "path": "/tmp/rea-failure-verification-20261025-pe-resources/unity-pe-resources-round-005/call-0003.json",
+        "status": "values_present",
+        "values": {
+          "FileVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "ProductVersion": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "file_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ],
+          "product_version": [
+            "0.0.0.0",
+            "0.0.0.0"
+          ]
+        }
+      }
+    ],
+    "status": "values_present"
+  },
+  "status": "success",
+  "target": {
+    "bytes": 2587136,
+    "path": "/Applications/Unity/Hub/Editor/7000.0.0a8-arm64/PlaybackEngines/MacStandaloneSupport/Variations/coreclr/Managed/UnityEngine.CoreModule.dll",
+    "sha256": "08217173382655d83c873eed6d320e34bd3d76a8f9fee4621b779094ca8b8446"
+  },
+  "version_info": {
+    "blocks": 12,
+    "fixed_file_info": {
+      "file_version": "0.0.0.0",
+      "file_version_ls": 0,
+      "file_version_ms": 0,
+      "product_version": "0.0.0.0",
+      "product_version_ls": 0,
+      "product_version_ms": 0,
+      "signature": "0xfeef04bd",
+      "structure_version": 65536
+    },
+    "root": {
+      "key": "VS_VERSION_INFO",
+      "length": 644,
+      "value_length": 52
+    },
+    "strings": {
+      "Assembly Version": [
+        "0.0.0.0"
+      ],
+      "FileDescription": [
+        " "
+      ],
+      "FileVersion": [
+        "0.0.0.0"
+      ],
+      "InternalName": [
+        "UnityEngine.CoreModule.dll"
+      ],
+      "LegalCopyright": [
+        " "
+      ],
+      "OriginalFilename": [
+        "UnityEngine.CoreModule.dll"
+      ],
+      "ProductVersion": [
+        "0.0.0.0"
+      ]
+    }
+  }
+}

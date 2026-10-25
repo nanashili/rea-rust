@@ -1,0 +1,96 @@
+workflow,round,status,error,wall_ms,exit_code,sampled_family_peak_rss_bytes,sampled_family_cpu_ms
+terminal-static-fast,1,success,,351.5330840018578,0,184352768,179.17567200000005
+zed-native-analysis,1,success,,10693.551457981812,0,1569603584,9996.415967000006
+openunity-native-analysis,1,success,,1941.244458022993,0,319422464,1227.5313529999999
+chrome-native-analysis,1,success,,548.0326670221984,0,189841408,370.06065600000005
+xcode-static-artifacts,1,success,,28354.49745799997,0,792412160,24692.190708999973
+discord-electron-static,1,failure,analyze_javascript_application#1: tool failure,15623.978540999815,0,627228672,15428.541528000018
+figma-electron-static,1,failure,analyze_javascript_application#1: tool failure,16760.370583011536,0,421478400,16390.46381600001
+postman-electron-static,1,failure,analyze_javascript_application#1: tool failure,25665.567500022007,0,2471886848,25284.709484
+chatgpt-electron-static,1,failure,analyze_javascript_application#1: tool failure,19217.954708001344,-9,4333584384,18814.06214699999
+kiro-electron-static,1,failure,analyze_javascript_application#1: tool failure,90568.85120799416,-9,4479221760,80911.40092799993
+unity-managed-library,1,success,,1968.3769590046722,0,856129536,1703.851088
+go-toolchain-binary,1,success,,335.16129199415445,0,176193536,172.399042
+interface-builder-artifact,1,success,,5783.733417018084,0,190873600,4817.510272
+xcode-deep-read-only,1,failure,procedure_info#1: tool failure,1572.3074580018874,0,282591232,794.4842740000003
+zed-rust-metadata,1,success,,805.6532500195317,0,350896128,660.8020280000002
+gofmt-deep,1,failure,procedure_info#1: tool failure,1162.642874987796,0,282787840,2337.1952479999995
+session-evidence-roundtrip,1,success,,969.4784169842023,0,217923584,589.2957829999999
+figma-framework-deep,1,failure,procedure_info#1: tool failure,30366.394749988103,0,2537684992,98125.47631099948
+kiro-node-pty-javascript,1,success,,438.29795898636803,0,189104128,239.0118
+kiro-node-pty-javascript,2,success,,425.8191659755539,0,199639040,245.98688199999998
+figma-framework-deep,2,failure,procedure_info#1: tool failure,32055.750333995093,0,2552020992,105774.9579239997
+session-evidence-roundtrip,2,success,,1054.65429200558,0,212566016,601.607758
+gofmt-deep,2,failure,procedure_info#1: tool failure,1444.6681250119582,0,280985600,2751.1793279999993
+zed-rust-metadata,2,success,,790.3480419772677,0,349880320,651.654588
+xcode-deep-read-only,2,failure,procedure_info#1: tool failure,1568.2037910155486,0,283197440,774.625622
+interface-builder-artifact,2,success,,4475.997500005178,0,206274560,4285.568800000002
+go-toolchain-binary,2,success,,308.97408397868276,0,187432960,173.53837199999995
+unity-managed-library,2,success,,1849.073582998244,0,833159168,1687.7138320000001
+kiro-electron-static,2,failure,analyze_javascript_application#1: tool failure,89339.61495800759,-9,4351492096,79371.55511399987
+chatgpt-electron-static,2,failure,analyze_javascript_application#1: tool failure,31737.813249987084,-9,4295966720,30900.75775500002
+postman-electron-static,2,failure,analyze_javascript_application#1: tool failure,25796.022708003875,0,2491383808,25305.278485000017
+figma-electron-static,2,failure,analyze_javascript_application#1: tool failure,16720.36316600861,0,431898624,16418.93991
+discord-electron-static,2,failure,analyze_javascript_application#1: tool failure,15592.77699998347,0,621707264,15347.712816000014
+xcode-static-artifacts,2,success,,27273.853291000705,0,791379968,24841.445447999977
+chrome-native-analysis,2,success,,532.2946250089444,0,201998336,368.264952
+openunity-native-analysis,2,success,,2005.0866660021711,0,316276736,1256.7331029999998
+zed-native-analysis,2,success,,10893.070000020089,0,1587134464,10016.704676000008
+terminal-static-fast,2,success,,306.0061249998398,0,176979968,174.33604200000002
+terminal-static-fast,3,success,,317.0925420126878,0,180502528,164.497712
+zed-native-analysis,3,success,,10948.149333999027,0,1569013760,10142.322818000002
+openunity-native-analysis,3,success,,1990.2298340166453,0,307986432,1211.6433039999997
+chrome-native-analysis,3,success,,503.282958001364,0,194363392,353.55712800000003
+xcode-static-artifacts,3,success,,26944.929916004185,0,796901376,24481.306543000035
+discord-electron-static,3,failure,analyze_javascript_application#1: tool failure,15589.968165993923,0,615661568,15438.797496
+figma-electron-static,3,failure,analyze_javascript_application#1: tool failure,16803.124915983062,0,434847744,16469.87832299999
+postman-electron-static,3,failure,analyze_javascript_application#1: tool failure,25578.102708008373,0,2474000384,25283.58981400004
+chatgpt-electron-static,3,failure,analyze_javascript_application#1: tool failure,31149.521332990844,-9,4302340096,30801.55280899994
+kiro-electron-static,3,failure,analyze_javascript_application#1: tool failure,87883.52304097498,-9,4497227776,78076.86297499976
+unity-managed-library,3,success,,1847.5214159989264,0,856637440,1694.4449679999993
+go-toolchain-binary,3,success,,334.41316700191237,0,182386688,181.95283000000003
+interface-builder-artifact,3,success,,4969.086249999236,0,202948608,4658.012544
+xcode-deep-read-only,3,failure,procedure_info#1: tool failure,1587.9215830063913,0,278478848,785.5553709999999
+zed-rust-metadata,3,success,,793.7789999996312,0,350109696,655.0732159999998
+gofmt-deep,3,failure,procedure_info#1: tool failure,1162.6250839908607,0,281624576,2339.6893639999994
+session-evidence-roundtrip,3,success,,938.9976669917814,0,215957504,579.8828720000001
+figma-framework-deep,3,failure,procedure_info#1: tool failure,32322.97483397997,0,2548645888,102898.080281
+kiro-node-pty-javascript,3,success,,421.2580420135055,0,196820992,245.729537
+kiro-node-pty-javascript,4,success,,407.320417027222,0,191053824,230.27537999999998
+figma-framework-deep,4,failure,procedure_info#1: tool failure,30497.902292001527,0,2543845376,99639.1075420003
+session-evidence-roundtrip,4,success,,944.5167910016607,0,216072192,582.7392150000001
+gofmt-deep,4,failure,procedure_info#1: tool failure,1402.3065420042258,0,281640960,2851.095392000001
+zed-rust-metadata,4,success,,798.298874986358,0,350126080,647.7806519999999
+xcode-deep-read-only,4,failure,procedure_info#1: tool failure,1537.3762090166565,0,284835840,780.0790160000001
+interface-builder-artifact,4,success,,4540.739832998952,0,195903488,4300.515584000001
+go-toolchain-binary,4,success,,323.1993330118712,0,180961280,169.145788
+unity-managed-library,4,success,,1898.5247920209076,0,856965120,1717.97192
+kiro-electron-static,4,failure,analyze_javascript_application#1: tool failure,89374.52233399381,-9,4356423680,79124.07082599994
+chatgpt-electron-static,4,failure,analyze_javascript_application#1: tool failure,30860.306374990614,-9,4298932224,30507.290546999855
+postman-electron-static,4,failure,analyze_javascript_application#1: tool failure,25586.96549999877,0,2489204736,25293.57114699996
+figma-electron-static,4,failure,analyze_javascript_application#1: tool failure,16716.92212499329,0,430473216,16444.63406000005
+discord-electron-static,4,failure,analyze_javascript_application#1: tool failure,15683.67841601139,0,616726528,15436.146256000018
+xcode-static-artifacts,4,success,,26206.951833999483,0,816300032,23798.78234699998
+chrome-native-analysis,4,success,,506.6610419889912,0,205914112,350.33458400000006
+openunity-native-analysis,4,success,,1912.977125000907,0,320339968,1198.4367690000001
+zed-native-analysis,4,success,,10659.556957980385,0,1599848448,9958.365593
+terminal-static-fast,4,success,,334.2090419901069,0,185319424,181.85391199999998
+terminal-static-fast,5,success,,311.15150000550784,0,185647104,171.14404
+zed-native-analysis,5,success,,10690.883290983038,0,1599012864,9965.123496999991
+openunity-native-analysis,5,success,,1957.9415420012083,0,286932992,1252.028469
+chrome-native-analysis,5,success,,491.8192920158617,0,200589312,344.58936800000004
+xcode-static-artifacts,5,success,,25411.207834025845,0,792330240,22953.493213999962
+discord-electron-static,5,failure,analyze_javascript_application#1: tool failure,15589.388207998127,0,619249664,15436.255088000014
+figma-electron-static,5,failure,analyze_javascript_application#1: tool failure,16687.07520799944,0,433455104,16417.583998000016
+postman-electron-static,5,failure,analyze_javascript_application#1: tool failure,25539.407333009876,0,2465906688,25242.457877999983
+chatgpt-electron-static,5,failure,analyze_javascript_application#1: tool failure,30930.844541988336,-9,4297654272,30581.20142499986
+kiro-electron-static,5,failure,analyze_javascript_application#1: tool failure,89194.00425002095,-9,4539891712,79234.32022600003
+unity-managed-library,5,success,,1817.7659580251202,0,824213504,1667.0566719999997
+go-toolchain-binary,5,success,,323.5352089977823,0,181485568,174.21704199999996
+interface-builder-artifact,5,success,,4972.131124988664,0,203587584,4748.939008000002
+xcode-deep-read-only,5,failure,procedure_info#1: tool failure,1589.8101250058971,0,282951680,773.1714560000003
+zed-rust-metadata,5,success,,784.9800420226529,0,359301120,650.7694399999998
+gofmt-deep,5,failure,procedure_info#1: tool failure,1158.3087920153048,0,280936448,2346.7818339999994
+session-evidence-roundtrip,5,success,,963.4570830094162,0,226934784,582.250021
+figma-framework-deep,5,failure,procedure_info#1: tool failure,30769.98487499077,0,2539241472,102582.17121200013
+kiro-node-pty-javascript,5,success,,422.40837498684414,0,188907520,235.74840799999998

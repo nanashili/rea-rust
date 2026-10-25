@@ -275,7 +275,6 @@ def receipt_summary(
             }
             for (workflow, round_number), value in sorted((semantic_by_receipt or {}).items())
         },
-        "metrics": {key: metric_stats(values) for key, values in metrics.items()},
         "all_receipt_metrics": {key: metric_stats(values) for key, values in metrics.items()},
         "protocol_success_metrics": {
             key: metric_stats(values) for key, values in protocol_success_metrics.items()

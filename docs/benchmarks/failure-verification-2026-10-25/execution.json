@@ -1,0 +1,65 @@
+[
+  {
+    "series": "pe-resources",
+    "returncode": 0,
+    "receipts": 5,
+    "command": [
+      "python3",
+      "scripts/benchmarks/run_mcp.py",
+      "--plan",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-pe-resources-plan.json",
+      "--rea",
+      "/tmp/rea-final-benchmark-build/rea",
+      "--worker",
+      "/tmp/rea-final-benchmark-build/rea-ghidra-rust-worker",
+      "--work-dir",
+      "/tmp/rea-failure-verification-20261025-pe-resources",
+      "--output",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/pe-resources-raw.json",
+      "--rounds",
+      "5"
+    ]
+  },
+  {
+    "series": "inventory",
+    "returncode": 0,
+    "receipts": 10,
+    "command": [
+      "python3",
+      "scripts/benchmarks/run_mcp.py",
+      "--plan",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-inventory-plan.json",
+      "--rea",
+      "/tmp/rea-final-benchmark-build/rea",
+      "--worker",
+      "/tmp/rea-final-benchmark-build/rea-ghidra-rust-worker",
+      "--work-dir",
+      "/tmp/rea-failure-verification-20261025-inventory",
+      "--output",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/inventory-raw.json",
+      "--rounds",
+      "5"
+    ]
+  },
+  {
+    "series": "main",
+    "returncode": 1,
+    "receipts": 95,
+    "command": [
+      "python3",
+      "scripts/benchmarks/run_mcp.py",
+      "--plan",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/local-applications-2026-10-25-plan.json",
+      "--rea",
+      "/tmp/rea-final-benchmark-build/rea",
+      "--worker",
+      "/tmp/rea-final-benchmark-build/rea-ghidra-rust-worker",
+      "--work-dir",
+      "/tmp/rea-failure-verification-20261025",
+      "--output",
+      "/tmp/rea-benchmark-fixes/docs/benchmarks/failure-verification-2026-10-25/main-raw.json",
+      "--rounds",
+      "5"
+    ]
+  }
+]

@@ -1,5 +1,9 @@
 # Local application benchmarks — 25 October 2026
 
+The [failure verification rerun](../failure-verification-2026-10-25/README.md)
+records subsequent fixes and remaining failures. The results below describe the
+original build.
+
 Native REA was measured against selected artifacts from 11 installed macOS
 applications and the Go toolchain. The main suite ran 19 workflows five times,
 using a fresh REA process and isolated provider cache for every sample. It

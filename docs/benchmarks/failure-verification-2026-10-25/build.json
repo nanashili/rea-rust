@@ -1,0 +1,18 @@
+{
+  "source_commit": "f2318c616c51720086dc5dc16c18ca5683e69f34",
+  "created_at_utc": "2026-10-25T16:45:06.262310+00:00",
+  "profile": "release",
+  "binaries": {
+    "rea": {
+      "path": "/tmp/rea-final-benchmark-build/rea",
+      "bytes": 53644560,
+      "sha256": "8df3d8b7ac7db2e6862a9cad033d67300728f034523bc5f47a1b1996f612436c"
+    },
+    "rea-ghidra-rust-worker": {
+      "path": "/tmp/rea-final-benchmark-build/rea-ghidra-rust-worker",
+      "bytes": 9698224,
+      "sha256": "175dc42ac921ee6f090231bb891a46a8a0fb40e976c5243195d5039cf07bd463"
+    }
+  },
+  "worker_cache_id": "ghidra-rust-268c3a4-v13"
+}
