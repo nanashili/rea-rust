@@ -16,6 +16,7 @@ pub mod application_graph;
 pub mod builder;
 mod bundlers;
 pub mod context;
+pub(crate) mod direct_serializer;
 mod documents;
 pub mod electron;
 pub mod evidence;

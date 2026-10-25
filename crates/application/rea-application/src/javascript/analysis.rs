@@ -641,8 +641,8 @@ fn empty_electron_findings() -> ElectronFindings {
 }
 
 fn serialized<T: serde::Serialize>(value: &T) -> Json {
-    let text = serde_json::to_string(value).expect("analysis contract is serializable");
-    parse(&text).expect("analysis contract is valid JSON")
+    super::graph::direct_serializer::serialize(value)
+        .expect("analysis contract is serializable and valid JSON")
 }
 
 fn file_value(file: &JavaScriptArtifactFile) -> Json {
@@ -828,8 +828,8 @@ pub(crate) fn analyze_source_for_worker_with_checkpoint(
         let Some(ir) = analysis.semantic_ir? else {
             return Ok(None);
         };
-        let ir_json = serialized(&ir);
-        drop(ir);
+        let ir_json = super::graph::direct_serializer::serialize_semantic_ir(ir)
+            .expect("semantic IR contract is serializable and valid JSON");
 
         let file = worker_semantic_file(path, metadata);
         project_semantic_response(

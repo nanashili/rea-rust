@@ -40,6 +40,7 @@ pub struct StatementPositionCache {
     direct_initializers: HashMap<NodeKey, Option<StatementPosition>>,
     reference_initializers: HashMap<NodeKey, Option<StatementPosition>>,
     binding_reads: HashMap<NodeKey, BindingReadPosition>,
+    position_entries: usize,
 }
 
 const STATEMENT_POSITION_CACHE_ENTRY_LIMIT: usize = 16_384;
@@ -50,13 +51,19 @@ struct BodyPositionIndex {
     declarators: HashMap<(NodeKey, NodeKey), isize>,
 }
 
-fn cache_position<K: std::hash::Hash + Eq + Copy>(
-    entries: &mut HashMap<K, Option<StatementPosition>>,
-    key: K,
-    position: Option<StatementPosition>,
-) {
-    if entries.len() < STATEMENT_POSITION_CACHE_ENTRY_LIMIT {
-        entries.insert(key, position);
+impl StatementPositionCache {
+    fn admit_position(&mut self) {
+        if self.position_entries >= STATEMENT_POSITION_CACHE_ENTRY_LIMIT {
+            // These maps contain facts derived solely from the immutable AST.
+            // Rotate the bounded generation instead of permanently disabling
+            // admission for every later node in a large source file.
+            self.direct_mutations.clear();
+            self.direct_initializers.clear();
+            self.reference_initializers.clear();
+            self.binding_reads.clear();
+            self.position_entries = 0;
+        }
+        self.position_entries += 1;
     }
 }
 
@@ -453,7 +460,8 @@ fn cached_direct_mutation_position<'a>(
             result
         }
     };
-    cache_position(&mut cache.direct_mutations, node.key(), position);
+    cache.admit_position();
+    cache.direct_mutations.insert(node.key(), position);
     position
 }
 
@@ -514,7 +522,8 @@ fn cached_direct_initializer_position<'a>(
             None
         }
     };
-    cache_position(&mut cache.direct_initializers, node.key(), position);
+    cache.admit_position();
+    cache.direct_initializers.insert(node.key(), position);
     position
 }
 
@@ -566,7 +575,8 @@ fn cached_reference_initializer_position<'a>(
         }
         current = *parent;
     };
-    cache_position(&mut cache.reference_initializers, node.key(), position);
+    cache.admit_position();
+    cache.reference_initializers.insert(node.key(), position);
     position
 }
 
@@ -690,9 +700,8 @@ fn cached_binding_read_position<'a>(
             result.position = position;
         }
     }
-    if cache.binding_reads.len() < STATEMENT_POSITION_CACHE_ENTRY_LIMIT {
-        cache.binding_reads.insert(read.key(), result);
-    }
+    cache.admit_position();
+    cache.binding_reads.insert(read.key(), result);
     result
 }
 
@@ -1352,6 +1361,50 @@ mod tests {
                     .key()
             )
         );
+    }
+
+    #[test]
+    fn position_cache_rotates_without_dropping_unresolved_facts_permanently() {
+        let source = "const value = 1; for (;;) value;";
+        let allocator = Allocator::default();
+        let (_context, nodes) = parse(&allocator, source);
+        let initializer = first(&nodes, "NumericLiteral");
+        let read = nodes
+            .nodes
+            .iter()
+            .copied()
+            .rev()
+            .find(|node| is_identifier(node) && node.identifier_name() == Some("value"))
+            .expect("loop read");
+
+        let mut cache = StatementPositionCache::default();
+        let expected_initializer = cached_direct_initializer_position(
+            &mut StatementPositionCache::default(),
+            initializer,
+            &nodes.parents,
+            source,
+        );
+        let actual_initializer =
+            cached_direct_initializer_position(&mut cache, initializer, &nodes.parents, source);
+        assert_eq!(actual_initializer, expected_initializer);
+        assert!(!cache.body_indexes.is_empty());
+        let body_index_count = cache.body_indexes.len();
+
+        cache.position_entries = STATEMENT_POSITION_CACHE_ENTRY_LIMIT;
+        let expected_read = cached_binding_read_position(
+            &mut StatementPositionCache::default(),
+            read,
+            &nodes.parents,
+            source,
+        );
+        let actual_read = cached_binding_read_position(&mut cache, read, &nodes.parents, source);
+
+        assert_eq!(actual_read, expected_read);
+        assert!(actual_read.position.is_none());
+        assert!(actual_read.repeating);
+        assert_eq!(cache.body_indexes.len(), body_index_count);
+        assert!(cache.direct_mutations.is_empty());
+        assert!(cache.binding_reads.contains_key(&read.key()));
     }
 }
 
