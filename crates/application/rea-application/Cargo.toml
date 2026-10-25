@@ -17,11 +17,23 @@ oxc_ast.workspace = true
 oxc_parser.workspace = true
 oxc_semantic.workspace = true
 oxc_span.workspace = true
+regex.workspace = true
 flate2 = { workspace = true, features = ["runtime_detection"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true, features = ["raw_value"] }
+serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 sha2.workspace = true
+toml_edit.workspace = true
+yaml-rust2.workspace = true
+sha1.workspace = true
+ryu-js.workspace = true
+unicode-normalization.workspace = true
+# WHATWG URL parsing for JavaScript artifact resolution: Ada, the parser
+# Node.js embeds, so file-URL path and host quirks match the TypeScript oracle.
+ada-url = { version = "=4.0.0", default-features = false, features = ["bundled", "std"] }
+# WHATWG HTML tokenizer and tree builder for inert HTML reference extraction.
+html5ever = "=0.35.0"
 tempfile.workspace = true
+ureq.workspace = true
 
 [dev-dependencies]
 rusqlite = { workspace = true, features = ["bundled"] }

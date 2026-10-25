@@ -10,6 +10,7 @@ use rea_application::{
     apple,
     interface_builder,
 };
+use rea_application::javascript::graph::json as graph_json;
 use rea_core::{
     evidence::record::EvidenceRecord,
     failure::{Detail, Failure},
@@ -61,7 +62,21 @@ pub fn dispatch(operation: &str, input: Value) -> Result<Value, Failure> {
 pub fn dispatch_typed(operation: AppleOperation, input: &Value) -> Result<Value, Failure> {
     match operation {
         AppleOperation::ProjectApplicationGraph => {
-            apple::application_graph::project_evidence(input)
+            let graph_input = graph_json::parse(
+                &serde_json::to_string(input).map_err(|error| {
+                    invalid(
+                        "project_apple_application_graph",
+                        &format!("input cannot be represented as graph JSON: {error}"),
+                    )
+                })?,
+            )
+            .map_err(|error| {
+                invalid(
+                    "project_apple_application_graph",
+                    &format!("input is not valid graph JSON: {error}"),
+                )
+            })?;
+            apple::application_graph::project_evidence(&graph_input)
                 .and_then(|evidence| {
                     serde_json::from_str(evidence.get()).map_err(|error| {
                         invalid(

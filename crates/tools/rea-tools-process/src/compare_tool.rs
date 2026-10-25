@@ -6,7 +6,7 @@
 //! `recordDerivedEvidence`.
 use crate::capture;
 use crate::comparison::{self, Comparison, DIMENSIONS};
-use crate::trace::spec::{self, Specification};
+use rea_application::process::trace::spec::{self, Specification};
 use rea_core::analysis_error::{AnalysisError, InputIssue};
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation};
 use rea_core::evidence::record::{EvidenceRecord, EvidenceRecordError};
@@ -239,7 +239,14 @@ pub fn compare_process_captures(context: &ToolContext<'_>, input: Value) -> Tool
         if !issues.is_empty() {
             let issues = issues
                 .into_iter()
-                .map(|(path, message)| (std::iter::once("trace_spec".to_owned()).chain(path).collect(), message))
+                .map(|(path, message)| {
+                    (
+                        std::iter::once("trace_spec".to_owned())
+                            .chain(path)
+                            .collect(),
+                        message,
+                    )
+                })
                 .collect();
             return crate::input_failure::refinement_failure(context, issues);
         }

@@ -105,10 +105,6 @@ impl XmlPlistSignatureProbe {
         }
     }
 
-    pub fn state(&self) -> XmlPlistProbeState {
-        self.state
-    }
-
     fn encoded_length(&self, text: &str) -> usize {
         if self.utf16 {
             // JS `text.length * 2`: text.length counts UTF-16 code units.

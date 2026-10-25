@@ -37,9 +37,15 @@ struct ServiceWorkerPolicy {
 
 fn random_token() -> String {
     let mut bytes = [0u8; 16];
-    let filled = std::fs::File::open("/dev/urandom").and_then(|mut file| std::io::Read::read_exact(&mut file, &mut bytes));
+    let filled = std::fs::File::open("/dev/urandom")
+        .and_then(|mut file| std::io::Read::read_exact(&mut file, &mut bytes));
     if filled.is_err() {
-        let seed = format!("{:?}{}{:p}", std::time::SystemTime::now(), std::process::id(), &bytes);
+        let seed = format!(
+            "{:?}{}{:p}",
+            std::time::SystemTime::now(),
+            std::process::id(),
+            &bytes
+        );
         bytes.copy_from_slice(&super::secrets::sha256_hex(seed.as_bytes()).as_bytes()[..16]);
     }
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
@@ -63,7 +69,10 @@ impl ServiceWorkerPolicy {
     }
 
     fn restore_script(&self) -> String {
-        format!("(() => {{ const restore = globalThis[{0}]; if (typeof restore === \"function\") restore({1}); return null; }})()", self.restore_key, self.secret)
+        format!(
+            "(() => {{ const restore = globalThis[{0}]; if (typeof restore === \"function\") restore({1}); return null; }})()",
+            self.restore_key, self.secret
+        )
     }
 
     fn assert_script(&self) -> String {
@@ -79,7 +88,9 @@ impl ServiceWorkerPolicy {
 
 /// `assertBlocked` for the main frame of an attached page.
 fn assert_blocked(session: &mut Session, scope: &Scope) -> Result<(), AnalysisError> {
-    let Some(policy) = &session.service_workers else { return Ok(()) };
+    let Some(policy) = &session.service_workers else {
+        return Ok(());
+    };
     let script = policy.assert_script();
     match session.driver().evaluate_main(&script, scope) {
         Ok(Value::String(reason)) => Err(cdp::observation_error(
@@ -112,7 +123,8 @@ impl Session {
 }
 
 fn requested_for_step(scenario: &Scenario, index: usize) -> BTreeSet<String> {
-    let mut requested: BTreeSet<String> = scenario.capture.after_each_step.iter().cloned().collect();
+    let mut requested: BTreeSet<String> =
+        scenario.capture.after_each_step.iter().cloned().collect();
     if index == scenario.actions.len() {
         requested.extend(scenario.capture.at_end.iter().cloned());
     }
@@ -133,9 +145,24 @@ fn completeness(missing: Vec<String>, truncated: Vec<String>) -> Value {
 }
 
 fn step_completeness(artifacts: &Value, status: &str) -> Value {
-    let state = |kind: &str| artifacts.get(kind).and_then(|item| item.get("state")).and_then(Value::as_str).unwrap_or_default().to_owned();
-    let mut missing: Vec<String> = SNAPSHOT_KINDS.iter().filter(|kind| state(kind) == "missing").map(|kind| (*kind).to_owned()).collect();
-    let truncated: Vec<String> = SNAPSHOT_KINDS.iter().filter(|kind| state(kind) == "truncated").map(|kind| (*kind).to_owned()).collect();
+    let state = |kind: &str| {
+        artifacts
+            .get(kind)
+            .and_then(|item| item.get("state"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    };
+    let mut missing: Vec<String> = SNAPSHOT_KINDS
+        .iter()
+        .filter(|kind| state(kind) == "missing")
+        .map(|kind| (*kind).to_owned())
+        .collect();
+    let truncated: Vec<String> = SNAPSHOT_KINDS
+        .iter()
+        .filter(|kind| state(kind) == "truncated")
+        .map(|kind| (*kind).to_owned())
+        .collect();
     if status != "completed" {
         missing.push("action".to_owned());
     }
@@ -208,20 +235,41 @@ fn limitations(session: &Session, scenario: &Scenario, events: &[Value]) -> Vec<
 }
 
 fn event_limitations(world: &World) -> Vec<String> {
-    let gaps = world.network.as_ref().map(Network::limitations).unwrap_or_default();
+    let gaps = world
+        .network
+        .as_ref()
+        .map(Network::limitations)
+        .unwrap_or_default();
     world.recorder.limitations(gaps)
 }
 
 /// `browserScenarioCaptureData`.
-fn capture_data(session: &Session, scenario: &Scenario, started: Instant, steps: &[Value], cleanup: &str, extra: &[&str]) -> Map<String, Value> {
+fn capture_data(
+    session: &Session,
+    scenario: &Scenario,
+    started: Instant,
+    steps: &[Value],
+    cleanup: &str,
+    extra: &[&str],
+) -> Map<String, Value> {
     let world = &session.opened.driver.world;
-    let range = world.network.as_ref().map(Network::omitted_range).unwrap_or(Value::Null);
+    let range = world
+        .network
+        .as_ref()
+        .map(Network::omitted_range)
+        .unwrap_or(Value::Null);
     let events = world.recorder.result(range);
     let items = world.recorder.items().to_vec();
     let mut limitations = limitations(session, scenario, &items);
     limitations.extend(extra.iter().map(|item| (*item).to_owned()));
-    let start_origin = url::Url::parse(&scenario.start_url.url).map(|url| url.origin().ascii_serialization()).unwrap_or_default();
-    let mut secret_references: Vec<String> = scenario.secrets.iter().map(|secret| secret.secret_id.clone()).collect();
+    let start_origin = url::Url::parse(&scenario.start_url.url)
+        .map(|url| url.origin().ascii_serialization())
+        .unwrap_or_default();
+    let mut secret_references: Vec<String> = scenario
+        .secrets
+        .iter()
+        .map(|secret| secret.secret_id.clone())
+        .collect();
     secret_references.sort();
     let families: BTreeSet<&String> = scenario.capture.events.iter().collect();
     let mut data = Map::new();
@@ -274,19 +322,36 @@ fn families(scenario: &Scenario) -> Families {
 }
 
 /// `addSeeds`: resolved entries per exact origin, in declaration order.
-fn seeds(items: &[super::input::StorageSeed], secrets: &Secrets) -> BTreeMap<String, Vec<(String, String)>> {
+fn seeds(
+    items: &[super::input::StorageSeed],
+    secrets: &Secrets,
+) -> BTreeMap<String, Vec<(String, String)>> {
     let mut table: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
     for seed in items {
         let entries = table.entry(seed.origin.clone()).or_default();
-        entries.extend(seed.entries.iter().map(|(name, value)| (name.clone(), secrets.value(value))));
+        entries.extend(
+            seed.entries
+                .iter()
+                .map(|(name, value)| (name.clone(), secrets.value(value))),
+        );
     }
     table
 }
 
-fn open(scenario: &Scenario, secrets: Secrets, cancellation: &Cancellation, environment: &BTreeMap<String, String>) -> Result<Session, AnalysisError> {
+fn open(
+    scenario: &Scenario,
+    secrets: Secrets,
+    cancellation: &Cancellation,
+    environment: &BTreeMap<String, String>,
+) -> Result<Session, AnalysisError> {
     let launch_mode = matches!(scenario.browser, BrowserSelection::Launch { .. });
     let families = families(scenario);
-    let network = families.has("network").then(|| Network::new(scenario.capture.network.clone(), scenario.capture.limits.clone()));
+    let network = families.has("network").then(|| {
+        Network::new(
+            scenario.capture.network.clone(),
+            scenario.capture.limits.clone(),
+        )
+    });
     let recorder = Recorder::new(scenario.capture.limits.clone(), families, launch_mode);
     let local = seeds(&scenario.local_storage, &secrets);
     let session = seeds(&scenario.session_storage, &secrets);
@@ -305,12 +370,21 @@ fn open(scenario: &Scenario, secrets: Secrets, cancellation: &Cancellation, envi
         world.init_scripts.push(policy.install_script());
     }
     let opened = match &scenario.browser {
-        BrowserSelection::Launch { executable_path, headless } => {
-            launch::launch(executable_path, *headless, environment, world, cancellation)?
-        }
-        BrowserSelection::Connect { endpoint, target_id } => {
-            launch::connect(endpoint, target_id, &scenario.environment, block, world, cancellation)?
-        }
+        BrowserSelection::Launch {
+            executable_path,
+            headless,
+        } => launch::launch(executable_path, *headless, environment, world, cancellation)?,
+        BrowserSelection::Connect {
+            endpoint,
+            target_id,
+        } => launch::connect(
+            endpoint,
+            target_id,
+            &scenario.environment,
+            block,
+            world,
+            cancellation,
+        )?,
     };
     let initial_url = opened.driver.world.current_url();
     Ok(Session {
@@ -322,7 +396,11 @@ fn open(scenario: &Scenario, secrets: Secrets, cancellation: &Cancellation, envi
     })
 }
 
-fn install_cookies(session: &mut Session, scenario: &Scenario, scope: &Scope) -> Result<(), CallError> {
+fn install_cookies(
+    session: &mut Session,
+    scenario: &Scenario,
+    scope: &Scope,
+) -> Result<(), CallError> {
     if scenario.cookies.is_empty() {
         return Ok(());
     }
@@ -352,27 +430,53 @@ fn install_cookies(session: &mut Session, scenario: &Scenario, scope: &Scope) ->
             })
         })
         .collect();
-    session.driver().call(None, "Storage.setCookies", json!({ "cookies": cookies }), scope).map(|_| ())
+    session
+        .driver()
+        .call(
+            None,
+            "Storage.setCookies",
+            json!({ "cookies": cookies }),
+            scope,
+        )
+        .map(|_| ())
 }
 
-fn action_error_text(secrets: &Secrets, error: &ActionError, timeout_ms: Option<u64>) -> (String, String) {
+fn action_error_text(
+    secrets: &Secrets,
+    error: &ActionError,
+    timeout_ms: Option<u64>,
+) -> (String, String) {
     match error {
         ActionError::Interrupted(CallError::Deadline) => (
             "failed".into(),
-            secrets.redact(&AnalysisError::timeout(OPERATION, timeout_ms.unwrap_or_default()).message()),
+            secrets.redact(
+                &AnalysisError::timeout(OPERATION, timeout_ms.unwrap_or_default()).message(),
+            ),
         ),
-        ActionError::Interrupted(_) => ("cancelled".into(), secrets.redact(&AnalysisError::cancelled(OPERATION).message())),
+        ActionError::Interrupted(_) => (
+            "cancelled".into(),
+            secrets.redact(&AnalysisError::cancelled(OPERATION).message()),
+        ),
         ActionError::Message(message) => ("failed".into(), secrets.redact(message)),
     }
 }
 
-fn close_session(session: &mut Session, stop_loading: bool) -> Result<CleanupKind, launch::CleanupFailure> {
+fn close_session(
+    session: &mut Session,
+    stop_loading: bool,
+) -> Result<CleanupKind, launch::CleanupFailure> {
     {
         let driver = &mut session.opened.driver;
         let request = Cancellation::default();
         let scope = Scope::new(&request, Some(30_000));
         driver.pump(&scope);
-        let World { network, recorder, secrets, requests, .. } = &mut driver.world;
+        let World {
+            network,
+            recorder,
+            secrets,
+            requests,
+            ..
+        } = &mut driver.world;
         if let Some(network) = network.as_mut() {
             network.finish(recorder, secrets, requests, stop_loading);
         }
@@ -394,25 +498,31 @@ fn cleanup_failed(failure: &launch::CleanupFailure, detail: Option<String>) -> A
 }
 
 /// `runScenario` + `captureBrowserScenario`.
-pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Evidence, AnalysisError> {
+pub(crate) fn run(
+    scenario: &Scenario,
+    cancellation: &Cancellation,
+) -> Result<Evidence, AnalysisError> {
     if cancellation.reason().is_some() {
         return Err(cdp::observation_error(OPERATION, "cancelled", None));
     }
     let environment = environment();
-    let secrets = Secrets::resolve(scenario, &environment).ok_or_else(|| cdp::observation_error(OPERATION, "secret_unavailable", None))?;
+    let secrets = Secrets::resolve(scenario, &environment)
+        .ok_or_else(|| cdp::observation_error(OPERATION, "secret_unavailable", None))?;
     let started = Instant::now();
     let mut session = open(scenario, secrets, cancellation, &environment)?;
 
     // Initial navigation (`waitUntil: "load"`, no deadline).
     let navigation = {
         let scope = Scope::new(cancellation, None);
-        install_cookies(&mut session, scenario, &scope).map_err(ActionError::from).and_then(|()| {
-            // `new PlaywrightScenarioEvents` follows page initialization.
-            session.driver().pump(&scope);
-            session.opened.driver.world.recorder.listening = true;
-            let start = session.opened.driver.world.secrets.url(&scenario.start_url);
-            actions::navigate_start(session.driver(), &start, &scope)
-        })
+        install_cookies(&mut session, scenario, &scope)
+            .map_err(ActionError::from)
+            .and_then(|()| {
+                // `new PlaywrightScenarioEvents` follows page initialization.
+                session.driver().pump(&scope);
+                session.opened.driver.world.recorder.listening = true;
+                let start = session.opened.driver.world.secrets.url(&scenario.start_url);
+                actions::navigate_start(session.driver(), &start, &scope)
+            })
     };
     let navigation = navigation.map_err(Err).and_then(|()| {
         let scope = Scope::new(cancellation, None);
@@ -429,7 +539,14 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
             Ok(kind) => kind.label(),
             Err(_) => "incomplete",
         };
-        let data = capture_data(&session, scenario, started, &[], label, &["Scenario navigation failed before the initial state was captured."]);
+        let data = capture_data(
+            &session,
+            scenario,
+            started,
+            &[],
+            label,
+            &["Scenario navigation failed before the initial state was captured."],
+        );
         // The TS owner wraps the Playwright navigation error without
         // diagnostics; its text is not part of the projected failure.
         let primary = match typed {
@@ -450,7 +567,16 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
         let requested = requested_for_step(scenario, 0);
         let artifacts = match capture_step(&mut session, &requested, &scope) {
             Ok(artifacts) => artifacts,
-            Err(error) => return Err(operation_failure(&mut session, scenario, started, &steps, error, cancellation)),
+            Err(error) => {
+                return Err(operation_failure(
+                    &mut session,
+                    scenario,
+                    started,
+                    &steps,
+                    error,
+                    cancellation,
+                ));
+            }
         };
         let world = &session.opened.driver.world;
         steps.push(step(
@@ -487,14 +613,20 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
                 before,
                 event_start,
                 end,
-                artifacts::unavailable(&requested, "action was not executed after an earlier failure"),
+                artifacts::unavailable(
+                    &requested,
+                    "action was not executed after an earlier failure",
+                ),
             ));
             continue;
         }
         let action_started = Instant::now();
         session.opened.driver.world.recorder.set_step(index as u64);
         let (status, error) = if cancellation.reason().is_some() {
-            ("cancelled".to_owned(), Some("scenario request cancelled".to_owned()))
+            (
+                "cancelled".to_owned(),
+                Some("scenario request cancelled".to_owned()),
+            )
         } else {
             let timeout = match &action.kind {
                 super::input::ActionKind::WaitForTimeout { .. } => None,
@@ -509,7 +641,11 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
                 Ok(()) => ("completed".to_owned(), None),
                 Err(error) => {
                     let (status, text) = action_error_text(&secrets, &error, timeout);
-                    let status = if cancellation.reason().is_some() { "cancelled".to_owned() } else { status };
+                    let status = if cancellation.reason().is_some() {
+                        "cancelled".to_owned()
+                    } else {
+                        status
+                    };
                     (status, Some(text))
                 }
             }
@@ -520,7 +656,16 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
             let scope = Scope::new(cancellation, None);
             match capture_step(&mut session, &requested, &scope) {
                 Ok(artifacts) => artifacts,
-                Err(error) => return Err(operation_failure(&mut session, scenario, started, &steps, error, cancellation)),
+                Err(error) => {
+                    return Err(operation_failure(
+                        &mut session,
+                        scenario,
+                        started,
+                        &steps,
+                        error,
+                        cancellation,
+                    ));
+                }
             }
         };
         let world = &session.opened.driver.world;
@@ -548,15 +693,27 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
             let mut data = capture_data(&session, scenario, started, &steps, kind.label(), &[]);
             let mut missing: Vec<String> = steps
                 .iter()
-                .flat_map(|step| step.pointer("/completeness/missing_sections").and_then(Value::as_array).cloned().unwrap_or_default())
+                .flat_map(|step| {
+                    step.pointer("/completeness/missing_sections")
+                        .and_then(Value::as_array)
+                        .cloned()
+                        .unwrap_or_default()
+                })
                 .filter_map(|item| item.as_str().map(str::to_owned))
                 .collect();
             let truncated: Vec<String> = steps
                 .iter()
-                .flat_map(|step| step.pointer("/completeness/truncated_sections").and_then(Value::as_array).cloned().unwrap_or_default())
+                .flat_map(|step| {
+                    step.pointer("/completeness/truncated_sections")
+                        .and_then(Value::as_array)
+                        .cloned()
+                        .unwrap_or_default()
+                })
                 .filter_map(|item| item.as_str().map(str::to_owned))
                 .collect();
-            if session.mode == "connect" || !event_limitations(&session.opened.driver.world).is_empty() {
+            if session.mode == "connect"
+                || !event_limitations(&session.opened.driver.world).is_empty()
+            {
                 missing.push("events".to_owned());
             }
             let limitations = data.remove("limitations").unwrap_or(Value::Null);
@@ -570,12 +727,20 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
                     items.push(json!("Scenario capture was cancelled; collected steps, observations, and cleanup state are retained."));
                 }
                 let partial_evidence = evidence_value(scenario, &capture, session.mode)?;
-                return Err(AnalysisError::cancelled(OPERATION).retain_partial_observation(partial_evidence));
+                return Err(AnalysisError::cancelled(OPERATION)
+                    .retain_partial_observation(partial_evidence));
             }
             return Ok(evidence);
         }
     };
-    let data = capture_data(&session, scenario, started, &steps, "incomplete", &["Scenario observations are partial because browser cleanup could not be confirmed."]);
+    let data = capture_data(
+        &session,
+        scenario,
+        started,
+        &steps,
+        "incomplete",
+        &["Scenario observations are partial because browser cleanup could not be confirmed."],
+    );
     let detail = format!(
         "Browser scenario cleanup could not be confirmed: {}. Collected steps and events are retained in partial_observation. Review the reported resources before retrying.",
         failure.reason
@@ -584,11 +749,22 @@ pub(crate) fn run(scenario: &Scenario, cancellation: &Cancellation) -> Result<Ev
 }
 
 /// `session.capture`: the service-worker policy check, then artifacts.
-fn capture_step(session: &mut Session, requested: &BTreeSet<String>, scope: &Scope) -> Result<Value, AnalysisError> {
+fn capture_step(
+    session: &mut Session,
+    requested: &BTreeSet<String>,
+    scope: &Scope,
+) -> Result<Value, AnalysisError> {
     assert_blocked(session, scope)?;
     let secrets = session.opened.driver.world.secrets.clone();
     let viewport = session.viewport;
-    Ok(artifacts::capture(session.driver(), &secrets, requested, viewport, None, scope))
+    Ok(artifacts::capture(
+        session.driver(),
+        &secrets,
+        requested,
+        viewport,
+        None,
+        scope,
+    ))
 }
 
 /// `runScenario`'s operation-failure path after cleanup.
@@ -603,11 +779,29 @@ fn operation_failure(
     let cleanup = close_session(session, cancellation.reason().is_some());
     match cleanup {
         Ok(kind) => {
-            let data = capture_data(session, scenario, started, steps, kind.label(), &["Scenario capture ended after an operation failed; uncollected steps are not represented."]);
+            let data = capture_data(
+                session,
+                scenario,
+                started,
+                steps,
+                kind.label(),
+                &[
+                    "Scenario capture ended after an operation failed; uncollected steps are not represented.",
+                ],
+            );
             error.retain_partial_observation(partial(data))
         }
         Err(failure) => {
-            let data = capture_data(session, scenario, started, steps, "incomplete", &["Scenario observations are partial because browser cleanup could not be confirmed."]);
+            let data = capture_data(
+                session,
+                scenario,
+                started,
+                steps,
+                "incomplete",
+                &[
+                    "Scenario observations are partial because browser cleanup could not be confirmed.",
+                ],
+            );
             with_cleanup(error.retain_partial_observation(partial(data)), &failure)
         }
     }
@@ -616,7 +810,13 @@ fn operation_failure(
 fn with_cleanup(primary: AnalysisError, failure: &launch::CleanupFailure) -> AnalysisError {
     let mut diagnostics = Map::new();
     diagnostics.insert("reason".into(), json!(failure.reason));
-    let cleanup = cleanup::provider_cleanup_error(PROVIDER_ID, failure.resources.clone(), diagnostics, Some("close_browser_scenario"), None);
+    let cleanup = cleanup::provider_cleanup_error(
+        PROVIDER_ID,
+        failure.resources.clone(),
+        diagnostics,
+        Some("close_browser_scenario"),
+        None,
+    );
     cleanup::with_cleanup_failure(primary, cleanup, OPERATION)
 }
 
@@ -637,9 +837,14 @@ fn observation(scenario: &Scenario, capture: &Value, mode: &str) -> Observation 
         .flatten()
         .filter_map(Value::as_str)
         .map(str::to_owned)
-        .chain(std::iter::once("Browser host platform and architecture were not observed.".to_owned()))
+        .chain(std::iter::once(
+            "Browser host platform and architecture were not observed.".to_owned(),
+        ))
         .collect();
-    let version = capture.pointer("/browser/version").and_then(Value::as_str).unwrap_or_default();
+    let version = capture
+        .pointer("/browser/version")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
     Observation::new(OPERATION, parameters(scenario), capture.clone())
         .predicate("rea.browser-scenario-capture")
         .confidence("observed")
@@ -654,10 +859,18 @@ fn observation(scenario: &Scenario, capture: &Value, mode: &str) -> Observation 
 }
 
 fn evidence(scenario: &Scenario, capture: &Value, mode: &str) -> Result<Evidence, AnalysisError> {
-    Evidence::create(None, &provider(), observation(scenario, capture, mode))
-        .map_err(|_| AnalysisError::output(OPERATION, "Browser scenario provider returned a malformed completed capture."))
+    Evidence::create(None, &provider(), observation(scenario, capture, mode)).map_err(|_| {
+        AnalysisError::output(
+            OPERATION,
+            "Browser scenario provider returned a malformed completed capture.",
+        )
+    })
 }
 
-fn evidence_value(scenario: &Scenario, capture: &Value, mode: &str) -> Result<Value, AnalysisError> {
+fn evidence_value(
+    scenario: &Scenario,
+    capture: &Value,
+    mode: &str,
+) -> Result<Value, AnalysisError> {
     evidence(scenario, capture, mode).map(Evidence::into_value)
 }

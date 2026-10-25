@@ -21,7 +21,10 @@
 //! run token (`rea_host::process::ownership`).
 
 use super::normalize::{Bounded, Normalizer, RawSample, bucket};
-use super::paths::{LaunchedExecutable, capture_environment, observe_launched_executable, observe_selected_executable};
+use super::paths::{
+    LaunchedExecutable, capture_environment, observe_launched_executable,
+    observe_selected_executable,
+};
 use super::renderer::Renderer;
 use super::result::{self, CaptureFacts};
 use super::sampler::{Sampler, SamplerContext};
@@ -91,8 +94,20 @@ fn sorted_report(owned: Value, renderer: Value, temporary: Value) -> Value {
 pub fn report_failure(report: &Value) -> Option<String> {
     let failures: Vec<String> = ["owned_process_group", "terminal_renderer", "temporary_root"]
         .iter()
-        .filter(|key| matches!(report[**key]["state"].as_str(), Some("failed" | "unverified")))
-        .map(|key| format!("{key}: {}", report[*key]["reason"].as_str().unwrap_or_else(|| report[*key]["state"].as_str().unwrap_or_default())))
+        .filter(|key| {
+            matches!(
+                report[**key]["state"].as_str(),
+                Some("failed" | "unverified")
+            )
+        })
+        .map(|key| {
+            format!(
+                "{key}: {}",
+                report[*key]["reason"]
+                    .as_str()
+                    .unwrap_or_else(|| report[*key]["state"].as_str().unwrap_or_default())
+            )
+        })
         .collect();
     (!failures.is_empty()).then(|| failures.join("; "))
 }
@@ -101,7 +116,12 @@ pub fn report_failure(report: &Value) -> Option<String> {
 pub fn report_resources(report: &Value) -> Vec<String> {
     ["owned_process_group", "terminal_renderer", "temporary_root"]
         .iter()
-        .filter(|key| matches!(report[**key]["state"].as_str(), Some("failed" | "unverified")))
+        .filter(|key| {
+            matches!(
+                report[**key]["state"].as_str(),
+                Some("failed" | "unverified")
+            )
+        })
         .map(|key| (*key).to_owned())
         .collect()
 }
@@ -109,7 +129,9 @@ pub fn report_resources(report: &Value) -> Vec<String> {
 impl RetainedResources {
     /// Release the PTY group, sweep token-owned descendants, remove the root.
     pub fn release(&mut self) -> Value {
-        let owned = if self.report["owned_process_group"]["state"] == "cleaned" || self.report["owned_process_group"]["state"] == "not_required" {
+        let owned = if self.report["owned_process_group"]["state"] == "cleaned"
+            || self.report["owned_process_group"]["state"] == "not_required"
+        {
             self.report["owned_process_group"].clone()
         } else {
             let root = match self.pty.as_mut().map(OwnedPtyProcess::cancel) {
@@ -119,7 +141,11 @@ impl RetainedResources {
             match root {
                 Some(reason) => outcome("failed", Some(reason)),
                 None => {
-                    let result = ownership::cleanup_token_owned_processes(&self.run_id, &self.baseline, &self.relation);
+                    let result = ownership::cleanup_token_owned_processes(
+                        &self.run_id,
+                        &self.baseline,
+                        &self.relation,
+                    );
                     let mut value = if result.cleaned {
                         outcome("cleaned", None)
                     } else {
@@ -139,7 +165,9 @@ impl RetainedResources {
                 }
             }
         };
-        let temporary = if self.report["temporary_root"]["state"] == "cleaned" || self.report["temporary_root"]["state"] == "not_required" {
+        let temporary = if self.report["temporary_root"]["state"] == "cleaned"
+            || self.report["temporary_root"]["state"] == "not_required"
+        {
             self.report["temporary_root"].clone()
         } else if matches!(owned["state"].as_str(), Some("failed" | "unverified")) {
             outcome(
@@ -147,7 +175,9 @@ impl RetainedResources {
                 Some(format!(
                     "temporary root retained because owned process cleanup is {}: {}",
                     owned["state"].as_str().unwrap_or_default(),
-                    owned["reason"].as_str().unwrap_or("ownership could not be verified")
+                    owned["reason"]
+                        .as_str()
+                        .unwrap_or("ownership could not be verified")
                 )),
             )
         } else {
@@ -155,7 +185,9 @@ impl RetainedResources {
                 None => outcome("not_required", None),
                 Some(path) => match std::fs::remove_dir_all(path) {
                     Ok(()) => outcome("cleaned", None),
-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => outcome("cleaned", None),
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        outcome("cleaned", None)
+                    }
                     Err(error) => outcome("failed", Some(error.to_string())),
                 },
             }
@@ -168,7 +200,6 @@ impl RetainedResources {
         self.report = sorted_report(owned, renderer, temporary);
         self.report.clone()
     }
-
 }
 
 /// `event_journal` writer.
@@ -178,7 +209,8 @@ struct Journal(Vec<Value>);
 impl Journal {
     fn record(&mut self, collection: &str, index: usize) {
         let order = self.0.len();
-        self.0.push(json!({"capture_order": order, "collection": collection, "index": index}));
+        self.0
+            .push(json!({"capture_order": order, "collection": collection, "index": index}));
     }
 }
 
@@ -203,9 +235,19 @@ struct ObservedExit {
 }
 
 enum ExitWait {
-    Exited { exit: ObservedExit, reason: &'static str, finalization: Option<Value> },
+    ObservationFailed {
+        message: String,
+    },
+    Exited {
+        exit: ObservedExit,
+        reason: &'static str,
+        finalization: Option<Value>,
+    },
     /// The finalization SIGKILL could not be delivered (`unobserved: true`).
-    Unobserved { reason: &'static str, finalization: Value },
+    Unobserved {
+        reason: &'static str,
+        finalization: Value,
+    },
 }
 
 struct Runtime<'a> {
@@ -215,6 +257,7 @@ struct Runtime<'a> {
     pty: OwnedPtyProcess,
     output: PtyOutput,
     output_closed: bool,
+    exit_observation_error: Option<String>,
     decoder: Utf8Decoder,
     normalizer: Normalizer,
     renderer: Renderer,
@@ -262,7 +305,11 @@ impl Runtime<'_> {
         if length > budget.saturating_sub(self.raw_bytes) {
             return;
         }
-        let Bounded::Normalized(normalized) = self.normalizer.bounded(&data, budget.saturating_sub(self.normalized_bytes), self.root_pid) else {
+        let Bounded::Normalized(normalized) = self.normalizer.bounded(
+            &data,
+            budget.saturating_sub(self.normalized_bytes),
+            self.root_pid,
+        ) else {
             self.normalized_omitted += 1;
             return;
         };
@@ -284,7 +331,10 @@ impl Runtime<'_> {
 
     fn flush_render(&mut self) {
         for (text, at_ms) in std::mem::take(&mut self.pending_render) {
-            if let Some(sequence) = self.renderer.write(&text, at_ms, &self.normalizer, self.root_pid) {
+            if let Some(sequence) =
+                self.renderer
+                    .write(&text, at_ms, &self.normalizer, self.root_pid)
+            {
                 self.journal.record("rendered_frames", sequence);
             }
         }
@@ -310,17 +360,58 @@ impl Runtime<'_> {
             wait = wait.saturating_sub(hold);
         }
         let mut next = self.output.next_timeout(wait);
+        let mut stop_future_reads = false;
         while let Some(event) = next {
             match event {
-                PtyEvent::Output { bytes, .. } => self.on_output(&bytes),
+                PtyEvent::Output { bytes, .. } => {
+                    self.on_output(&bytes);
+
+                    // A read cycle can queue more than one PTY chunk. Once
+                    // the session leader exits, keep the chunks already read
+                    // by this cycle, then stop asking the master for future
+                    // data from descendants that retain the slave.
+                    match self.pty.try_wait() {
+                        Ok(Some(_)) => stop_future_reads = true,
+                        Ok(None) => {}
+                        Err(error) => {
+                            self.exit_observation_error.get_or_insert(error.message);
+                        }
+                    }
+                }
                 PtyEvent::Closed { .. } | PtyEvent::ReadFailed { .. } => {
                     self.output_closed = true;
                     break;
                 }
             }
             next = self.output.try_next();
+            if next.is_none() && stop_future_reads {
+                self.output_closed = true;
+                break;
+            }
         }
         self.record_samples();
+    }
+
+    /// Stop accepting future PTY output once the owned session leader exits.
+    ///
+    /// Bytes already queued by the master remain part of the capture, while
+    /// descendants that retain the slave after the leader exits cannot append
+    /// a later frame to the session.
+    fn seal_output_after_exit(&mut self) {
+        if self.output_closed {
+            return;
+        }
+
+        // Drain only events already read by the master. Calling
+        // `next_timeout` here could perform a new read and admit output from
+        // a descendant that retained the slave after the leader exited.
+        while let Some(event) = self.output.try_next() {
+            match event {
+                PtyEvent::Output { bytes, .. } => self.on_output(&bytes),
+                PtyEvent::Closed { .. } | PtyEvent::ReadFailed { .. } => break,
+            }
+        }
+        self.output_closed = true;
     }
 
     fn interaction(&mut self, scheduled: u64, kind: &str, data: String, outcome: &str) {
@@ -342,6 +433,7 @@ impl Runtime<'_> {
             }
             self.dispatched[index] = true;
             let dispatched_at = self.elapsed_ms();
+            let mut resized = None;
             let (data, ok) = match &event.kind {
                 EventKind::Input { data, sensitive } => {
                     let ok = self.pty.write_input(data.as_bytes()).is_ok();
@@ -356,22 +448,42 @@ impl Runtime<'_> {
                     (shown, ok)
                 }
                 EventKind::Resize { columns, rows } => {
-                    let ok = TerminalSize::new(*columns, *rows).is_some_and(|size| self.pty.resize(size).is_ok());
+                    let ok = TerminalSize::new(*columns, *rows)
+                        .is_some_and(|size| self.pty.resize(size).is_ok());
                     if ok {
                         // xterm applies the resize after every preceding write.
                         self.flush_render();
-                        let at_ms = bucket(dispatched_at, self.scenario.time_bucket_ms);
-                        if let Some(sequence) = self.renderer.resize(*columns, *rows, at_ms, &self.normalizer, self.root_pid) {
-                            self.journal.record("rendered_frames", sequence);
-                        }
+                        // The oracle queues the resize capture on its renderer
+                        // promise chain, so it lands after this interaction.
+                        resized = Some((
+                            *columns,
+                            *rows,
+                            bucket(dispatched_at, self.scenario.time_bucket_ms),
+                        ));
                     }
                     (format!("{columns}x{rows}"), ok)
                 }
-                EventKind::Signal(name) => (name.clone(), self.pty.signal_root(signal_number(name)).is_ok()),
+                EventKind::Signal(name) => (
+                    name.clone(),
+                    self.pty.signal_root(signal_number(name)).is_ok(),
+                ),
             };
             let kind = event.type_name();
             let scheduled = event.at_ms;
-            self.interaction(scheduled, kind, data, if ok { "dispatched" } else { "failed" });
+            self.interaction(
+                scheduled,
+                kind,
+                data,
+                if ok { "dispatched" } else { "failed" },
+            );
+            if let Some((columns, rows, at_ms)) = resized {
+                if let Some(sequence) =
+                    self.renderer
+                        .resize(columns, rows, at_ms, &self.normalizer, self.root_pid)
+                {
+                    self.journal.record("rendered_frames", sequence);
+                }
+            }
         }
     }
 
@@ -410,33 +522,61 @@ impl Runtime<'_> {
         let requested = self.scenario.finalization_ms;
         loop {
             self.pump(POLL);
+            if let Some(message) = self.exit_observation_error.take() {
+                return ExitWait::ObservationFailed { message };
+            }
             self.dispatch_due();
-            if let Ok(Some(exit)) = self.pty.try_wait() {
-                let elapsed = finalization.started.map(|started| started.elapsed().as_millis() as u64);
-                let exit = ObservedExit {
-                    exit_code: if exit.signal.is_some() { 0 } else { i64::from(exit.code) },
-                    signal: exit.signal.map_or(0, i64::from),
-                };
-                self.journal.record("lifecycle", 0);
-                for index in 0..self.scenario.events.len() {
-                    if self.dispatched[index] {
-                        continue;
-                    }
-                    let event = &self.scenario.events[index];
-                    let data = match &event.kind {
-                        EventKind::Input { .. } => "<not-dispatched>".to_owned(),
-                        EventKind::Resize { columns, rows } => format!("{columns}x{rows}"),
-                        EventKind::Signal(name) => name.clone(),
+            match self.pty.try_wait() {
+                Ok(Some(exit)) => {
+                    self.seal_output_after_exit();
+                    let elapsed = finalization
+                        .started
+                        .map(|started| started.elapsed().as_millis() as u64);
+                    let exit = ObservedExit {
+                        exit_code: if exit.signal.is_some() {
+                            0
+                        } else {
+                            i64::from(exit.code)
+                        },
+                        signal: exit.signal.map_or(0, i64::from),
                     };
-                    let (scheduled, kind) = (event.at_ms, event.type_name());
-                    self.interaction(scheduled, kind, data, "target_exited");
+                    self.journal.record("lifecycle", 0);
+                    for index in 0..self.scenario.events.len() {
+                        if self.dispatched[index] {
+                            continue;
+                        }
+                        let event = &self.scenario.events[index];
+                        let data = match &event.kind {
+                            EventKind::Input { .. } => "<not-dispatched>".to_owned(),
+                            EventKind::Resize { columns, rows } => format!("{columns}x{rows}"),
+                            EventKind::Signal(name) => name.clone(),
+                        };
+                        let (scheduled, kind) = (event.at_ms, event.type_name());
+                        self.interaction(scheduled, kind, data, "target_exited");
+                    }
+                    self.dispatched
+                        .iter_mut()
+                        .for_each(|dispatched| *dispatched = true);
+                    self.flush_render();
+                    let finalization = elapsed.map(|elapsed| {
+                        finalization.snapshot(
+                            requested,
+                            Some(elapsed),
+                            (exit.exit_code >= 0 && exit.signal == 0).then_some(exit.exit_code),
+                        )
+                    });
+                    return ExitWait::Exited {
+                        exit,
+                        reason,
+                        finalization,
+                    };
                 }
-                self.dispatched.iter_mut().for_each(|dispatched| *dispatched = true);
-                self.flush_render();
-                let finalization = elapsed.map(|elapsed| {
-                    finalization.snapshot(requested, Some(elapsed), (exit.exit_code >= 0 && exit.signal == 0).then_some(exit.exit_code))
-                });
-                return ExitWait::Exited { exit, reason, finalization };
+                Ok(None) => {}
+                Err(error) => {
+                    return ExitWait::ObservationFailed {
+                        message: error.message,
+                    };
+                }
             }
             self.flush_render();
             let now = Instant::now();
@@ -446,18 +586,32 @@ impl Runtime<'_> {
                     if !finalization.escalated {
                         finalization.escalated = true;
                         if !self.attempt(&mut finalization, "SIGKILL") {
-                            return ExitWait::Unobserved { reason, finalization: finalization.snapshot(requested, None, None) };
+                            return ExitWait::Unobserved {
+                                reason,
+                                finalization: finalization.snapshot(requested, None, None),
+                            };
                         }
                     }
                 } else {
-                    let _ = self.pty.signal_root(libc::SIGKILL);
+                    if requested == 0 {
+                        let _ = self.pty.signal_root(libc::SIGKILL);
+                    } else {
+                        finalization.started = Some(Instant::now());
+                        self.attempt(&mut finalization, "SIGTERM");
+                    }
                 }
             } else if let Some(started) = finalization.started {
-                if !finalization.escalated && now.duration_since(started).as_millis() as u64 >= requested {
+                if !finalization.escalated
+                    && now.duration_since(started).as_millis() as u64 >= requested
+                {
                     finalization.escalated = true;
                     if !self.attempt(&mut finalization, "SIGKILL") {
                         return ExitWait::Unobserved {
-                            reason: if reason == "exited" { "timeout" } else { reason },
+                            reason: if reason == "exited" {
+                                "timeout"
+                            } else {
+                                reason
+                            },
                             finalization: finalization.snapshot(requested, None, None),
                         };
                     }
@@ -465,7 +619,9 @@ impl Runtime<'_> {
             } else {
                 let deadline = if self.elapsed_ms() >= self.scenario.timeout_ms {
                     Some("timeout")
-                } else if now.duration_since(self.last_output).as_millis() as u64 >= self.scenario.idle_timeout_ms {
+                } else if now.duration_since(self.last_output).as_millis() as u64
+                    >= self.scenario.idle_timeout_ms
+                {
                     Some("idle_timeout")
                 } else {
                     None
@@ -489,11 +645,18 @@ impl Runtime<'_> {
         let mut consecutive_empty = 0;
         let mut saw_live = false;
         let state = loop {
-            let observations = ownership::observe_process_groups(run_id, groups, Some(self.root_pid as u32));
-            if observations.values().any(|observation| matches!(observation, GroupObservation::Unverifiable(_))) {
+            let observations =
+                ownership::observe_process_groups(run_id, groups, Some(self.root_pid as u32));
+            if observations
+                .values()
+                .any(|observation| matches!(observation, GroupObservation::Unverifiable(_)))
+            {
                 break "unverifiable";
             }
-            if observations.values().all(|observation| *observation == GroupObservation::Empty) {
+            if observations
+                .values()
+                .all(|observation| *observation == GroupObservation::Empty)
+            {
                 consecutive_empty += 1;
                 if consecutive_empty >= 2 {
                     break "quiesced";
@@ -503,7 +666,11 @@ impl Runtime<'_> {
                 saw_live = true;
             }
             if started.elapsed().as_millis() as u64 >= self.scenario.settle_ms {
-                break if saw_live { "alive_at_deadline" } else { "unverifiable" };
+                break if saw_live {
+                    "alive_at_deadline"
+                } else {
+                    "unverifiable"
+                };
             }
             let until = Instant::now() + SETTLE_INTERVAL;
             while Instant::now() < until {
@@ -563,15 +730,32 @@ fn snapshot_value(snapshot: &Snapshot) -> Value {
 impl Observations {
     fn new(before: Option<&Snapshot>, finalization: bool) -> Self {
         let mut map = Map::new();
-        map.insert("target_pid".into(), unavailable("No PTY process was spawned before the run failed."));
+        map.insert(
+            "target_pid".into(),
+            unavailable("No PTY process was spawned before the run failed."),
+        );
         map.insert("frames".into(), available(json!([])));
-        map.insert("rendered_frames".into(), unavailable("Rendered terminal frames were not collected before capture completion finished."));
+        map.insert(
+            "rendered_frames".into(),
+            unavailable(
+                "Rendered terminal frames were not collected before capture completion finished.",
+            ),
+        );
         map.insert("interaction_events".into(), available(json!([])));
-        map.insert("exit".into(), unavailable("Terminal exit was not observed before the run failed."));
+        map.insert(
+            "exit".into(),
+            unavailable("Terminal exit was not observed before the run failed."),
+        );
         if finalization {
-            map.insert("finalization".into(), unavailable("Finalization was not observed before capture completion finished."));
+            map.insert(
+                "finalization".into(),
+                unavailable("Finalization was not observed before capture completion finished."),
+            );
         }
-        map.insert("settlement".into(), unavailable("Process settlement was not observed before capture completion finished."));
+        map.insert(
+            "settlement".into(),
+            unavailable("Process settlement was not observed before capture completion finished."),
+        );
         map.insert("process_samples".into(), available(json!([])));
         map.insert(
             "filesystem_snapshots".into(),
@@ -581,7 +765,10 @@ impl Observations {
             }),
         );
         map.insert("event_journal".into(), available(json!([])));
-        map.insert("manifest".into(), unavailable("Capture manifest was not produced before capture completion finished."));
+        map.insert(
+            "manifest".into(),
+            unavailable("Capture manifest was not produced before capture completion finished."),
+        );
         Self(map)
     }
 
@@ -640,7 +827,13 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
     }
     let run_id = uuid::Uuid::new_v4().to_string();
     let finalization_enabled = scenario.finalization_ms > 0;
-    let not_required = || sorted_report(outcome("not_required", None), outcome("not_required", None), outcome("not_required", None));
+    let not_required = || {
+        sorted_report(
+            outcome("not_required", None),
+            outcome("not_required", None),
+            outcome("not_required", None),
+        )
+    };
     let before = snapshot_roots(scenario, None).map_err(|message| {
         let mut failure = failure("process capture failed");
         failure.execution_failure = Some(message);
@@ -666,16 +859,31 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
     let started_at = SystemTime::now();
     let started = Instant::now();
     let normalizer = Normalizer::new(scenario, &temporary_text);
-    let renderer = Renderer::new(scenario.columns, scenario.rows, scenario.scrollback, scenario.output_bytes);
+    let renderer = Renderer::new(
+        scenario.columns,
+        scenario.rows,
+        scenario.scrollback,
+        scenario.output_bytes,
+    );
     let mut retained = RetainedResources {
         pty: None,
         run_id: run_id.clone(),
         baseline: baseline.clone(),
         relation: OwnershipRelation::default(),
         temporary_root: Some(temporary_root.clone()),
-        report: sorted_report(outcome("not_required", None), json!(null), outcome("unverified", Some("temporary root cleanup was not attempted".to_owned()))),
+        report: sorted_report(
+            outcome("not_required", None),
+            json!(null),
+            outcome(
+                "unverified",
+                Some("temporary root cleanup was not attempted".to_owned()),
+            ),
+        ),
     };
-    let finish_failure = |mut failure: CaptureFailure, mut retained: RetainedResources, observations: Observations| -> CaptureFailure {
+    let finish_failure = |mut failure: CaptureFailure,
+                          mut retained: RetainedResources,
+                          observations: Observations|
+     -> CaptureFailure {
         let report = retained.release();
         failure.partial_observation = Some(json!({
             "observations": Value::Object(observations.0),
@@ -691,10 +899,11 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
     if (host.cancelled)() {
         return Err(finish_failure(cancelled_failure(), retained, observations));
     }
-    let environment: Vec<(OsString, OsString)> = capture_environment(scenario, host.environment, &run_id)
-        .into_iter()
-        .map(|(key, value)| (key.into(), value.into()))
-        .collect();
+    let environment: Vec<(OsString, OsString)> =
+        capture_environment(scenario, host.environment, &run_id)
+            .into_iter()
+            .map(|(key, value)| (key.into(), value.into()))
+            .collect();
     let launch = OwnedPtyProcess::launch(PtyLaunchSpec {
         executable: PathBuf::from(&scenario.executable),
         arguments: scenario.arguments.iter().map(OsString::from).collect(),
@@ -711,8 +920,14 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
         }
     };
     let root_pid = i64::from(pty.id());
-    observations.set("target_pid", available(json!(if scenario.normalize_pids { 1 } else { root_pid })));
-    retained.report["owned_process_group"] = outcome("unverified", Some("owned process cleanup was not attempted".to_owned()));
+    observations.set(
+        "target_pid",
+        available(json!(if scenario.normalize_pids { 1 } else { root_pid })),
+    );
+    retained.report["owned_process_group"] = outcome(
+        "unverified",
+        Some("owned process cleanup was not attempted".to_owned()),
+    );
     retained.report["terminal_renderer"] = outcome("cleaned", None);
     retained.relation = OwnershipRelation {
         leader_pid: root_pid as u32,
@@ -733,6 +948,7 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
         pty,
         output,
         output_closed: false,
+        exit_observation_error: None,
         decoder: Utf8Decoder::default(),
         normalizer,
         renderer,
@@ -756,7 +972,19 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
     let exit = runtime.await_exit();
 
     let mut execution: Result<CaptureFacts, CaptureFailure> = match exit {
-        ExitWait::Unobserved { reason, finalization } => {
+        ExitWait::ObservationFailed { message } => {
+            observations.set(
+                "exit",
+                unavailable("The captured process exit could not be observed."),
+            );
+            let mut failed = failure("The captured process exit could not be observed.");
+            failed.execution_failure = Some(message);
+            Err(failed)
+        }
+        ExitWait::Unobserved {
+            reason,
+            finalization,
+        } => {
             observations.set("finalization", available(finalization));
             observations.set(
                 "exit",
@@ -767,10 +995,16 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
             Err(if reason == "cancelled" {
                 cancelled_failure()
             } else {
-                failure("The captured process exit was not observed because the finalization SIGKILL could not be delivered.")
+                failure(
+                    "The captured process exit was not observed because the finalization SIGKILL could not be delivered.",
+                )
             })
         }
-        ExitWait::Exited { exit, reason, finalization } => {
+        ExitWait::Exited {
+            exit,
+            reason,
+            finalization,
+        } => {
             if let Some(finalization) = &finalization {
                 observations.set("finalization", available(finalization.clone()));
             }
@@ -787,7 +1021,15 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
                 Err(cancelled_failure())
             } else {
                 (host.progress)("settling", "Settling process capture".to_owned());
-                complete(&mut runtime, &run_id, exit_value, &before, &launched, started_at, &mut observations)
+                complete(
+                    &mut runtime,
+                    &run_id,
+                    exit_value,
+                    &before,
+                    &launched,
+                    started_at,
+                    &mut observations,
+                )
             }
         }
     };
@@ -797,16 +1039,34 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
 
     // finishProcessRun: stop sampling and release every owned resource.
     let sampling = runtime.sampler.stop();
+    runtime.record_samples();
     runtime.pump(Duration::ZERO);
     runtime.flush_render();
     observations.set("frames", available(json!(runtime.frames)));
     observations.set("interaction_events", available(json!(runtime.interactions)));
     observations.set("event_journal", available(json!(runtime.journal.0)));
-    observations.set("process_samples", available(json!(super::normalize::normalize_samples(&sampling.samples, scenario, root_pid))));
-    if !observations.0.get("rendered_frames").is_some_and(|value| value["state"] == "available") {
-        observations.set("rendered_frames", available(json!(runtime.renderer.frames())));
+    observations.set(
+        "process_samples",
+        available(json!(super::normalize::normalize_samples(
+            &sampling.samples,
+            scenario,
+            root_pid
+        ))),
+    );
+    if !observations
+        .0
+        .get("rendered_frames")
+        .is_some_and(|value| value["state"] == "available")
+    {
+        observations.set(
+            "rendered_frames",
+            available(json!(runtime.renderer.frames())),
+        );
     }
-    retained.relation.sampled_process_group_ids = captured_groups(root_pid, &sampling.samples).into_iter().filter(|group| i64::from(*group) != root_pid).collect();
+    retained.relation.sampled_process_group_ids = captured_groups(root_pid, &sampling.samples)
+        .into_iter()
+        .filter(|group| i64::from(*group) != root_pid)
+        .collect();
     retained.pty = Some(runtime.pty);
     let report = retained.release();
     (host.progress)("cleanup", "Released process capture resources".to_owned());
@@ -827,7 +1087,9 @@ pub fn run(scenario: &Scenario, host: &CaptureHost<'_>) -> Result<Value, Capture
                 message: message.clone(),
                 cancelled: false,
                 execution_failure: None,
-                partial_observation: Some(json!({"capture": pending, "cleanup": report, "execution_failure": null})),
+                partial_observation: Some(
+                    json!({"capture": pending, "cleanup": report, "execution_failure": null}),
+                ),
                 cleanup_report: Some(report),
                 retained: Some(retained),
             })
@@ -861,6 +1123,11 @@ fn complete(
     let groups = captured_groups(runtime.root_pid, &runtime.sampler.snapshot());
     let settlement = runtime.observe_settlement(run_id, &groups);
     observations.set("settlement", available(settlement.clone()));
+    // completeCapture stops sampling after settlement, before the journal
+    // settles: every retained sample is journaled ahead of the checkpoint.
+    // The later stop in finishProcessRun is then a no-op on the same state.
+    runtime.sampler.stop();
+    runtime.record_samples();
     runtime.settle_journal();
     if (runtime.host.cancelled)() {
         return Err(cancelled_failure());
@@ -869,7 +1136,8 @@ fn complete(
         Ok(after) => after,
         Err(message) => {
             let mut filesystem = observations.0["filesystem_snapshots"].clone();
-            filesystem["after"] = unavailable(&format!("Final filesystem snapshot failed: {message}"));
+            filesystem["after"] =
+                unavailable(&format!("Final filesystem snapshot failed: {message}"));
             observations.set("filesystem_snapshots", filesystem);
             let mut failed = failure("process capture failed");
             failed.execution_failure = Some(message);

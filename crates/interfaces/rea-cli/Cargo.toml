@@ -8,10 +8,20 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+axum = { workspace = true, features = ["json", "http1", "tokio"] }
+rea-application.workspace = true
 rea-core.workspace = true
 rea-host.workspace = true
 rea-mcp.workspace = true
+rea-tools-binary.workspace = true
+futures.workspace = true
+rmcp = { workspace = true, features = ["server", "transport-streamable-http-server"] }
 serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
+tokio = { workspace = true, features = ["net", "rt", "signal", "sync", "time"] }
+tokio-util.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

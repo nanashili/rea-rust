@@ -57,7 +57,10 @@ fn source_output(script: &ScriptObservation) -> Vec<(String, Value)> {
         ("source_kind".into(), json!(script.source_kind)),
         (
             "source_path".into(),
-            script.source_path.clone().map_or(Value::Null, Value::String),
+            script
+                .source_path
+                .clone()
+                .map_or(Value::Null, Value::String),
         ),
         ("source_sha256".into(), json!(script.source_sha256)),
     ]
@@ -70,7 +73,10 @@ fn script_output(script: &ScriptObservation) -> Value {
         map.insert(key, value);
     }
     map.insert("messages".into(), Value::Array(script.messages.clone()));
-    map.insert("messages_truncated".into(), json!(script.messages_truncated));
+    map.insert(
+        "messages_truncated".into(),
+        json!(script.messages_truncated),
+    );
     Value::Object(map)
 }
 
@@ -104,7 +110,10 @@ fn session_status_output(status: &SessionStatus) -> Map<String, Value> {
         ),
     );
     map.insert("messages".into(), Value::Array(status.messages.clone()));
-    map.insert("messages_truncated".into(), json!(status.messages_truncated));
+    map.insert(
+        "messages_truncated".into(),
+        json!(status.messages_truncated),
+    );
     map
 }
 
@@ -170,7 +179,11 @@ pub(crate) fn status_evidence(
     manager: &Manager,
     session_id: &str,
 ) -> Option<Result<Evidence, AnalysisError>> {
-    let status = manager.status(session_id)?;
+    let status = match manager.status(session_id) {
+        Ok(Some(status)) => status,
+        Ok(None) => return None,
+        Err(error) => return Some(Err(error)),
+    };
     Some(frida_evidence(
         "frida_session_status",
         Value::Object(session_status_output(&status)),
@@ -224,8 +237,17 @@ pub(crate) fn instrument(
         std::thread::sleep(std::time::Duration::from_millis(input.duration_ms));
     }
 
-    let status = manager.status(&session_id);
+    let status_result = manager.status(&session_id);
     let closed = manager.close_session(&session_id);
+    let status = match status_result {
+        Ok(status) => status,
+        Err(error) => {
+            return Err(match closed {
+                Ok(_) => error,
+                Err(close) => with_cleanup_failure(error, &close, &session_id),
+            });
+        }
+    };
     let cleanup_error = match &closed {
         Ok(_) => Value::Null,
         Err(error) => Value::String(error.message()),
@@ -242,7 +264,10 @@ pub(crate) fn instrument(
             }
             map.insert("scripts".into(), Value::Array(Vec::new()));
             map.insert("messages".into(), Value::Array(loaded.messages.clone()));
-            map.insert("messages_truncated".into(), json!(loaded.messages_truncated));
+            map.insert(
+                "messages_truncated".into(),
+                json!(loaded.messages_truncated),
+            );
             map
         });
     for (key, value) in source_output(&loaded) {
@@ -296,7 +321,10 @@ fn frida_parameters(
             map.insert("pid".into(), json!(start.pid.unwrap_or(0)));
         }
         Mode::Spawn => {
-            map.insert("program".into(), json!(start.program.clone().unwrap_or_default()));
+            map.insert(
+                "program".into(),
+                json!(start.program.clone().unwrap_or_default()),
+            );
             if let Some(argv) = &start.argv {
                 map.insert("argv".into(), json!(argv));
             }
@@ -328,15 +356,19 @@ fn unreadable_script_file(source: &ScriptSource) -> Option<AnalysisError> {
     match std::fs::metadata(path) {
         Ok(metadata) if metadata.is_file() => match std::fs::File::open(path) {
             Ok(_) => None,
-            Err(cause) if is_permission(&cause) => {
-                Some(AnalysisError::access_denied("instrument_with_frida", path, "EACCES"))
-            }
+            Err(cause) if is_permission(&cause) => Some(AnalysisError::access_denied(
+                "instrument_with_frida",
+                path,
+                "EACCES",
+            )),
             Err(cause) => Some(read_input_error(path, &format!("{}", io_reason(&cause)))),
         },
         Ok(_) => Some(read_input_error(path, "it is not a regular file")),
-        Err(cause) if is_permission(&cause) => {
-            Some(AnalysisError::access_denied("instrument_with_frida", path, "EACCES"))
-        }
+        Err(cause) if is_permission(&cause) => Some(AnalysisError::access_denied(
+            "instrument_with_frida",
+            path,
+            "EACCES",
+        )),
         Err(cause) => Some(read_input_error(path, io_reason(&cause))),
     }
 }

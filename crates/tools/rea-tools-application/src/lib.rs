@@ -2,17 +2,12 @@
 //!
 //! Compatibility owner: `src/server/registerApplicationTools.ts` and
 //! `src/server/registerApplicationTools/**`.
-mod android;
-mod apple;
 mod bundle;
 mod coverage;
-mod harmony;
-mod inventory;
 mod javascript;
 mod ledger;
 mod ledger_sources;
 mod mobile_graph;
-mod projection;
 mod rejection;
 mod sdk_input;
 mod support;

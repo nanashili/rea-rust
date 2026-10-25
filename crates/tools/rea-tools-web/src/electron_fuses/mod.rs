@@ -120,6 +120,66 @@ fn run(selected_path: &str, cancellation: &Cancellation) -> Result<Evidence, Ana
     build_evidence(&selected, &resolved_path, &snapshot.sha256, &image, report)
 }
 
+/// `assertNodeCliInspectArgumentsSupported` (`PlaywrightElectronActiveFuses.ts`):
+/// `true` only when the host slice's version-1 wire explicitly disables or
+/// removes `EnableNodeCliInspectArguments`. Unknown state (missing sentinel,
+/// other wire version, unreadable or unsupported container) is `false`, as
+/// the TS owner proceeds with launch; the caller checks cancellation.
+#[cfg(feature = "electron-scenario")]
+pub(crate) fn node_cli_inspect_arguments_disabled(
+    executable: &str,
+    cancellation: &Cancellation,
+) -> bool {
+    const INDEX: usize = 3;
+    let mut target = executable.to_owned();
+    let mut current = Path::new(executable).parent();
+    while let Some(directory) = current {
+        if directory
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with(".app"))
+        {
+            if let Ok(resolved) = path::resolve_target(&directory.to_string_lossy()) {
+                target = resolved.resolved_path;
+            }
+            break;
+        }
+        current = directory.parent();
+    }
+    let Ok(snapshot) = read_stable(&target, cancellation) else {
+        return false;
+    };
+    let Ok(image) = reader::read_image(&snapshot.bytes, &target) else {
+        return false;
+    };
+    // `process.arch` with `x64` spelled as the Mach-O `x86_64`.
+    let host = match std::env::consts::ARCH {
+        "aarch64" => "arm64",
+        other => other,
+    };
+    let Some(slice) = image
+        .slices
+        .iter()
+        .find(|slice| slice.architecture.as_deref() == Some(host))
+        .or_else(|| image.slices.first())
+    else {
+        return false;
+    };
+    slice
+        .sentinels
+        .iter()
+        .filter(|sentinel| sentinel.wire_version == Some(1))
+        .any(|sentinel| {
+            sentinel
+                .fuses
+                .iter()
+                .find(|fuse| {
+                    fuse.index == INDEX || fuse.name == Some("EnableNodeCliInspectArguments")
+                })
+                .is_some_and(|fuse| matches!(fuse.state, "disabled" | "removed"))
+        })
+}
+
 /// Acquire the stable snapshot and map read failures to the fuse error algebra.
 fn read_stable(
     path: &str,

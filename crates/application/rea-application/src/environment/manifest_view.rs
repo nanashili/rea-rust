@@ -186,7 +186,7 @@ fn project_records(
     for item in records {
         accumulator.add(item, &mut limitations)?;
     }
-    let mut body = accumulator.finish(total, limitations);
+    let mut body = accumulator.finish(limitations);
     body["kind"] = Value::String("environment-manifest".into());
     body["view"] = view.clone();
     body["parent_evidence_id"] = Value::String(record.evidence_id().into());
@@ -343,7 +343,7 @@ impl ManifestAccumulator {
             body_shape,
             json_like: false,
         });
-        for (index, part) in parts.iter().enumerate() {
+        for index in 0..parts.len() {
             if let (Part::Parameter { values, .. }, Some(Part::Parameter { values: next, .. })) =
                 (&mut group.parts[index], parts.get(index))
             {
@@ -364,7 +364,7 @@ impl ManifestAccumulator {
         let _ = limitations;
         Ok(())
     }
-    fn finish(self, total: usize, mut limitations: BTreeSet<String>) -> Value {
+    fn finish(self, mut limitations: BTreeSet<String>) -> Value {
         if self.unrepresented > 0 {
             limitations.insert(format!("{} retained records without a usable request line are not represented in the manifest.", self.unrepresented));
         }
@@ -765,7 +765,6 @@ fn environment_name(origin: &str) -> String {
         .collect::<String>();
     name.trim_matches('-').to_owned()
 }
-fn extend_strings(_target: &mut BTreeSet<String>, _value: Option<&Value>) {}
 fn create_view_evidence(
     record: &EvidenceRecord,
     view: &Value,

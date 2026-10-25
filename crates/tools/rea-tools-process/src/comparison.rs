@@ -5,8 +5,8 @@
 //! observations never compare as equivalent.
 use crate::capture::validation::source_truncated;
 use crate::json::{array, canonical, field, safe_integer, same, text};
-use crate::trace::eval::{self, TraceComparison, comparable_terminal_frame};
-use crate::trace::spec::Specification;
+use rea_application::process::trace::eval::{self, TraceComparison, comparable_terminal_frame};
+use rea_application::process::trace::spec::Specification;
 use rea_core::analysis_error::{AnalysisError, InputIssue};
 use serde_json::{Map, Value, json};
 use std::collections::HashSet;

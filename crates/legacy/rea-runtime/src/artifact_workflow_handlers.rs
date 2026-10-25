@@ -134,7 +134,7 @@ fn inspect_artifact(input: &Value) -> Result<Value, Failure> {
     let normalized: Value = serde_json::from_str(record.normalized_result().get())
         .map_err(|error| invalid("inspect_artifact", &error.to_string()))?;
     if record.operation_matches("inventory_artifact") {
-        return artifacts::inventory_evidence::normalize_result(normalized)
+        return rea_core::artifact_inventory::normalize_result(normalized)
             .map_err(|error| invalid("inspect_artifact", &error));
     }
     Ok(normalized)

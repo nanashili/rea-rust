@@ -185,7 +185,6 @@ pub(super) fn parse_graph(value: &Value, path: &str) -> Result<ApplicationGraph,
     }
 
     Ok(ApplicationGraph {
-        raw: value.clone(),
         graph_id,
         root_node_ids,
         nodes,
@@ -270,7 +269,6 @@ fn parse_node(value: &Value, path: &str, index: usize) -> Result<ApplicationNode
     }
 
     Ok(ApplicationNode {
-        raw: value.clone(),
         node_id,
         kind: kind.to_owned(),
         identity: identity.clone(),
@@ -716,7 +714,6 @@ fn parse_coverage(
     }
 
     Ok(GraphCoverage {
-        raw: value.cloned().unwrap_or(Value::Null),
         status: status.to_owned(),
         truncated,
         omitted_count,

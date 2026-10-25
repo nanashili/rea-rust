@@ -232,10 +232,10 @@ fn evaluate_claim(
         .collect::<Result<Vec<_>, _>>()?;
     validate_sources(kind, &sources)?;
 
-    let (observed, mut limitations, independent_function_change) =
+    let (observed, observation_limitations, independent_function_change) =
         comparison_observation(comparison, kind, dimension)?;
-    limitations.extend(strings(comparison.get("limitations")));
-    limitations.extend(authority_limitations(kind, &sources, &sides));
+    let comparison_limitations = strings(comparison.get("limitations"));
+    let mut blockers = authority_limitations(kind, &sources, &sides);
     if kind == "structural-function"
         && (dimension == "calls" || (dimension == "overall" && !independent_function_change))
     {
@@ -245,13 +245,13 @@ fn evaluate_claim(
                 .and_then(Value::as_object)
             {
                 if coverage.get("status").and_then(Value::as_str) != Some("complete") {
-                    limitations.push(format!(
+                    blockers.push(format!(
                         "Source {}: Function call coverage is incomplete.",
                         string(source, "evidence_id")
                     ));
                 }
             } else {
-                limitations.push(format!(
+                blockers.push(format!(
                     "Source {}: Function relationship coverage is unavailable.",
                     string(source, "evidence_id")
                 ));
@@ -265,7 +265,7 @@ fn evaluate_claim(
                         call.get("address").and_then(Value::as_str),
                         call.get("reason").and_then(Value::as_str),
                     ) {
-                        limitations.push(format!(
+                        blockers.push(format!(
                             "Source {}: Unresolved call at {address}: {reason}",
                             string(source, "evidence_id")
                         ));
@@ -276,8 +276,10 @@ fn evaluate_claim(
     }
 
     let related = relevant_unknowns(heads, comparison_id, &all_source_ids, dimension);
-    let status = classify(&observed, &limitations, &related);
-    let mut claim_limitations = limitations;
+    let status = classify(&observed, &blockers, &related);
+    let mut claim_limitations = comparison_limitations;
+    claim_limitations.extend(observation_limitations);
+    claim_limitations.extend(blockers);
     claim_limitations.extend(
         related
             .iter()
@@ -415,8 +417,6 @@ fn validate_sources(kind: &str, sources: &[&Value]) -> Result<(), Failure> {
         let valid = if kind == "structural-artifact" {
             (operation == "inventory_artifact" || operation == "inspect_artifact")
                 && predicate == expected.1
-        } else if kind == "structural-artifact" {
-            predicate == expected.1
         } else {
             operation == expected.0 && predicate == expected.1
         };

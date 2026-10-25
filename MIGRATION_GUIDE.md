@@ -1,26 +1,55 @@
 # Native migration guide for tool families
 
-This guide is the working contract for porting REA's TypeScript runtime
-(`src/`) to the native Rust workspace (`native/`). The Rust executable `rea`
-(`native/crates/apps/rea`) replaces `scripts/rea.mjs`: `rea mcp` serves stdio
-MCP and every other invocation is the CLI. [README.md](README.md) maps the
-crate layers under `native/crates/` and the module layout inside each crate.
+This guide is the implementation and verification contract for REA's native
+tool families. The Rust executable `rea` (`crates/apps/rea`) is the
+production runtime selected by the parent workspace's `scripts/rea.mjs`:
+`rea mcp` serves stdio MCP and
+every other invocation is the CLI. The catalog has 209 contracts; the default
+build registers 200, while the optional `frida` feature adds the nine Frida
+contracts. All of those build variants use the same registry and adapters.
+[README.md](README.md) maps the crate layers under `crates/` and the
+module layout inside each crate.
+
+Registration is not parity evidence. A native handler is ready to claim
+behavioral compatibility only after its contract, application workflow,
+provider boundary, failure projection, Evidence retention and cleanup behavior
+have been exercised through the public CLI or MCP adapter. Keep unavailable,
+unsupported, partial and unverified states explicit when runtime verification is
+not available.
+
+The frozen-source validation currently records workspace run 117 with 1,681
+passed, 0 failed and 5 ignored tests across 94 groups, format run 120 passed,
+clippy run 118 passed with existing warnings, and pinned `npm run check:fast`
+typecheck and lint passing. Browser source-map proof 8cl passed both regular
+and indexed CLI/MCP maps; native web resolver proof 8cl passed eight
+assertions through CLI and MCP. Final release/package receipt 8cl and installed
+CLI/MCP receipts 123/124 passed for the validated macOS arm64 workflow. Linux, Windows and
+other real-provider combinations remain unverified. CLI completion proof 8cl
+records 9 exact cases and 8 qualified differences, including the intentional
+native pathname-race capability/provenance difference and doctor observation/
+shape differences; it is not a universal byte-parity claim.
 
 ## Ground rules
 
-- Port behavior exactly. The TypeScript source is the oracle: read the tool's
+- Preserve behavior exactly. The TypeScript source is the oracle: read the tool's
   contract (`src/contracts/**`), registration (`src/server/register*.ts`),
   application service (`src/application/**`), domain logic (`src/domain/**`)
   and provider adapter (`src/<provider>/**`) before writing Rust.
 - The advertised contract is frozen in
-  `native/crates/interfaces/rea-mcp/contracts/catalog/mcp-tools.json` (exact `tools/list`
+  `crates/interfaces/rea-mcp/contracts/catalog/mcp-tools.json` (exact `tools/list`
   output, plus `kind`, `returns_target_content`, `effects`, `examples`). Your
   results must satisfy the tool's `outputSchema` there. Never edit the catalog.
-- Do not write or run tests. Compile your crate until it has zero errors:
-  `CARGO_TARGET_DIR=/tmp/rea-target-<crate> cargo build -p <crate>`
-  (a private target directory avoids waiting on other builds).
+- Run the relevant focused tests for every behavior change, together with the
+  smallest production-boundary check that exercises the public CLI or MCP
+  adapter. Use the repository's configured shared `CARGO_TARGET_DIR` when one
+  is provided (the coordinated local lane uses `/tmp/rea-target-shared`); do
+  not create a private per-crate target directory to work around contention.
+  Builds and tests must use the locked dependency graph, for example:
+  `CARGO_TARGET_DIR=/tmp/rea-target-shared cargo test --locked -p <crate>`
+  and `CARGO_TARGET_DIR=/tmp/rea-target-shared cargo build --locked -p <crate>`.
+  Report checks that are unavailable separately from checks that passed.
 - Only edit files inside the crate(s) you were assigned. Do not edit
-  `rea-mcp`, `rea-core`, `rea-analysis`, `rea` (`native/crates/apps/rea`), the
+  `rea-mcp`, `rea-core`, `rea-analysis`, `rea` (`crates/apps/rea`), the
   workspace `Cargo.toml`, `Cargo.lock` by hand, or another family's crate. If a
   shared change is required, implement a local helper and list the request in
   your final report.
@@ -29,10 +58,13 @@ crate layers under `native/crates/` and the module layout inside each crate.
   dependencies) or by copying code into your crate. The legacy native code is
   uneven: verify every reused function against the TypeScript behavior. Many
   legacy handlers use "captured offline" inputs that differ from the public
-  contract; the public contract always wins. Uncompiled ("orphaned") ports
-  live outside `src/`, in a crate's `orphaned/` directory (for example
+  contract; the public contract always wins. Legacy handlers and uncompiled
+  ("orphaned") ports are reference material, not production capabilities or
+  parity evidence, until they are registered in the current composition root
+  and exercised through the public CLI/MCP workflow. Orphaned ports live
+  outside `src/`, in a crate's `orphaned/` directory (for example
   `crates/platform/rea-host/orphaned/ghidra_rust/`); copy any you need into
-  your crate rather than wiring them back into their owner.
+  your crate rather than wiring them back into their superseded owner.
 - Inherit dependencies from the workspace table (`serde.workspace = true`,
   adding only the features you use). A crates.io dependency the table lacks
   may be declared in your own `Cargo.toml` with an exact version (`=x.y.z`),
@@ -71,7 +103,12 @@ pub fn register(registry: &mut Registry) {
 - `ToolOutput::Failure(error)` – a typed failure. If
   `error.partial_observation` is complete Evidence (has `evidence_id`), it is
   retained and referenced exactly as the original partial-error delivery.
-- `ToolOutput::Raw(call_tool_result)` – only for exact legacy projections.
+- `ToolOutput::RawEvidence(record)` – retain and deliver an exact raw Evidence
+  record when normalization would lose source bytes or another raw field.
+- `ToolOutput::RawFailure { evidence, error }` – retain that raw partial
+  Evidence record before delivering the typed failure projection.
+- `ToolOutput::Raw(call_tool_result)` – only for exact legacy projections; it
+  is not a substitute for implementing the current contract.
 - `From<Result<Evidence, AnalysisError>>` and `From<AnalysisError>` exist.
 
 `ToolContext` gives `contract` (catalog entry: `kind`,

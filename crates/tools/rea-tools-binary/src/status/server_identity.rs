@@ -160,23 +160,12 @@ fn command_path() -> Option<String> {
         .map(|path| normalize_path(&path))
 }
 
-/// `package.root_path`: a faithful native equivalent of the TS package root.
-///
-/// TS resolves the package root from its module directory layout
-/// (`dist/src/..` or one level up). The native runtime has no npm package
-/// layout; the closest faithful equivalent is the directory containing the
-/// native executable (`std::env::current_exe()`'s parent). When the executable
-/// path is unavailable, the current working directory is used.
-fn package_root() -> String {
-    std::env::current_exe()
+/// Package ownership is established by the shared manifest and launcher
+/// inspector. An executable outside a verified package has an unknown root.
+fn package_root() -> Option<String> {
+    rea_application::package_identity::discover_current_package_root()
         .ok()
-        .and_then(|path| path.parent().map(std::path::Path::to_path_buf))
-        .map(|path| normalize_path(&path))
-        .unwrap_or_else(|| {
-            std::env::current_dir()
-                .map(|path| normalize_path(&path))
-                .unwrap_or_else(|_| "/".to_owned())
-        })
+        .map(|identity| normalize_path(&identity.package_root))
 }
 
 // ---------------------------------------------------------------------------

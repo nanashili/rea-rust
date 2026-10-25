@@ -69,7 +69,9 @@ impl Scope {
     }
 
     pub(crate) fn token(&self) -> &Cancellation {
-        self.deadline.as_ref().map_or(&self.request, Deadline::cancellation)
+        self.deadline
+            .as_ref()
+            .map_or(&self.request, Deadline::cancellation)
     }
 
     pub(crate) fn interrupted(&self) -> Option<CallError> {
@@ -138,6 +140,9 @@ pub(crate) struct World {
     pub recorder: Recorder,
     pub network: Option<Network>,
     pub requests: Vec<RequestRecord>,
+    /// Requests paused by a resolver-owned Fetch domain. Scenario capture
+    /// does not enable Fetch; this queue is therefore inert for normal runs.
+    pub fetch_paused: Vec<Value>,
     request_index: HashMap<(String, String), usize>,
     hops: HashMap<(String, String), Vec<usize>>,
     request_extra: HashMap<(String, String), Vec<Vec<(String, String)>>>,
@@ -200,7 +205,12 @@ impl Seeds {
             return None;
         }
         let table = |seeds: &BTreeMap<String, Vec<(String, String)>>| {
-            Value::Object(seeds.iter().map(|(origin, entries)| (origin.clone(), json!(entries))).collect())
+            Value::Object(
+                seeds
+                    .iter()
+                    .map(|(origin, entries)| (origin.clone(), json!(entries)))
+                    .collect(),
+            )
         };
         Some(format!(
             "(() => {{ const local = {}; const session = {}; const origin = location.origin; \
@@ -219,6 +229,7 @@ impl World {
             recorder,
             network,
             requests: Vec::new(),
+            fetch_paused: Vec::new(),
             request_index: HashMap::new(),
             hops: HashMap::new(),
             request_extra: HashMap::new(),
@@ -279,7 +290,11 @@ impl World {
     }
 
     fn safe_url(&self, url: &str) -> Value {
-        if url.is_empty() { Value::Null } else { self.secrets.sanitize_url(url) }
+        if url.is_empty() {
+            Value::Null
+        } else {
+            self.secrets.sanitize_url(url)
+        }
     }
 
     fn frame_event(&mut self, kind: &str, frame: &str) {
@@ -290,19 +305,42 @@ impl World {
             return;
         }
         let info = self.frames.get(frame).cloned().unwrap_or_default();
-        if !self.recorder.admit_text(&self.secrets, kind, &[&info.url, &info.name], false).retained() {
+        if !self
+            .recorder
+            .admit_text(&self.secrets, kind, &[&info.url, &info.name], false)
+            .retained()
+        {
             return;
         }
-        let name = if info.name.is_empty() { Value::Null } else { json!(self.secrets.redact(&info.name)) };
+        let name = if info.name.is_empty() {
+            Value::Null
+        } else {
+            json!(self.secrets.redact(&info.name))
+        };
         let url = self.safe_url(&info.url);
-        self.recorder.push(kind, vec![("kind", json!(kind)), ("url", url), ("name", name)]);
+        self.recorder.push(
+            kind,
+            vec![("kind", json!(kind)), ("url", url), ("name", name)],
+        );
     }
 
     /// Route one CDP event to its owner, in receipt order.
     pub(crate) fn dispatch(&mut self, event: &Value) {
-        let method = event.get("method").and_then(Value::as_str).unwrap_or_default();
-        let params = event.get("params").cloned().unwrap_or(Value::Null);
-        let session = event.get("sessionId").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let method = event
+            .get("method")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let mut params = event.get("params").cloned().unwrap_or(Value::Null);
+        let session = event
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        if method == "Fetch.requestPaused" {
+            if let Some(object) = params.as_object_mut() {
+                object.insert("sessionId".to_owned(), Value::String(session.clone()));
+            }
+        }
         if method.starts_with("Target.") && std::env::var_os("REA_SCENARIO_TRACE").is_some() {
             eprintln!("[scenario] <- {method} {session} {params}");
         }
@@ -314,26 +352,54 @@ impl World {
                     self.page_closed = true;
                 }
             }
-            "Inspector.targetCrashed" if Some(&session) == self.main_session.as_ref() => self.page_closed = true,
-            "Inspector.detached" if Some(&session) == self.main_session.as_ref() => self.page_closed = true,
+            "Inspector.targetCrashed" if Some(&session) == self.main_session.as_ref() => {
+                self.page_closed = true
+            }
+            "Inspector.detached" if Some(&session) == self.main_session.as_ref() => {
+                self.page_closed = true
+            }
             _ if !self.observed(&session) => {
                 if method == "Browser.downloadWillBegin" {
                     self.download(&params);
                 }
             }
             "Page.frameAttached" => {
-                let frame = params.get("frameId").and_then(Value::as_str).unwrap_or_default().to_owned();
-                let parent = params.get("parentFrameId").and_then(Value::as_str).map(str::to_owned);
+                let frame = params
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
+                let parent = params
+                    .get("parentFrameId")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
                 if self.frames.contains_key(&frame) {
                     return;
                 }
-                self.frames.insert(frame.clone(), FrameInfo { session: session.clone(), parent, ..FrameInfo::default() });
+                self.frames.insert(
+                    frame.clone(),
+                    FrameInfo {
+                        session: session.clone(),
+                        parent,
+                        ..FrameInfo::default()
+                    },
+                );
                 self.frame_event("frame-attached", &frame);
             }
-            "Page.frameNavigated" => self.frame_navigated(&session, params.get("frame").unwrap_or(&Value::Null), true),
+            "Page.frameNavigated" => {
+                self.frame_navigated(&session, params.get("frame").unwrap_or(&Value::Null), true)
+            }
             "Page.navigatedWithinDocument" => {
-                let frame = params.get("frameId").and_then(Value::as_str).unwrap_or_default().to_owned();
-                let url = params.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
+                let frame = params
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
+                let url = params
+                    .get("url")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
                 if let Some(info) = self.frames.get_mut(&frame) {
                     info.url = url;
                     if self.is_main_frame(&frame) {
@@ -343,22 +409,41 @@ impl World {
                 }
             }
             "Page.frameDetached" => {
-                let frame = params.get("frameId").and_then(Value::as_str).unwrap_or_default().to_owned();
+                let frame = params
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
                 if params.get("reason").and_then(Value::as_str) == Some("swap") {
                     return;
                 }
                 self.remove_frame(&frame);
             }
             "Page.frameRequestedNavigation" | "Page.frameScheduledNavigation" => {
-                if params.get("frameId").and_then(Value::as_str).is_some_and(|frame| self.is_main_frame(frame)) {
+                if params
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .is_some_and(|frame| self.is_main_frame(frame))
+                {
                     self.navigation_requests += 1;
                 }
             }
             "Page.lifecycleEvent" => {
-                let frame = params.get("frameId").and_then(Value::as_str).unwrap_or_default();
+                let frame = params
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default();
                 if self.is_main_frame(frame) {
-                    let loader = params.get("loaderId").and_then(Value::as_str).unwrap_or_default().to_owned();
-                    let name = params.get("name").and_then(Value::as_str).unwrap_or_default().to_owned();
+                    let loader = params
+                        .get("loaderId")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned();
+                    let name = params
+                        .get("name")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned();
                     if name == "init" {
                         self.lifecycle.insert(loader.clone(), BTreeSet::new());
                     }
@@ -368,20 +453,44 @@ impl World {
             "Page.downloadWillBegin" => self.download(&params),
             "Runtime.executionContextCreated" => {
                 let context = params.get("context").cloned().unwrap_or(Value::Null);
-                let id = context.get("id").and_then(Value::as_i64).unwrap_or_default();
+                let id = context
+                    .get("id")
+                    .and_then(Value::as_i64)
+                    .unwrap_or_default();
                 let aux = context.get("auxData").cloned().unwrap_or(Value::Null);
-                let frame = aux.get("frameId").and_then(Value::as_str).unwrap_or_default().to_owned();
+                let frame = aux
+                    .get("frameId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
                 let utility = context.get("name").and_then(Value::as_str) == Some(UTILITY_WORLD);
                 if utility {
                     // The seed script ran when this world was created.
-                    let origin = context.get("origin").and_then(Value::as_str).unwrap_or_default().to_owned();
+                    let origin = context
+                        .get("origin")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned();
                     self.seeds.mark_seeded(&origin);
                 }
-                let main = aux.get("isDefault").and_then(Value::as_bool).unwrap_or(false);
-                self.contexts.insert((session, id), ContextInfo { frame, utility, main });
+                let main = aux
+                    .get("isDefault")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                self.contexts.insert(
+                    (session, id),
+                    ContextInfo {
+                        frame,
+                        utility,
+                        main,
+                    },
+                );
             }
             "Runtime.executionContextDestroyed" => {
-                let id = params.get("executionContextId").and_then(Value::as_i64).unwrap_or_default();
+                let id = params
+                    .get("executionContextId")
+                    .and_then(Value::as_i64)
+                    .unwrap_or_default();
                 self.contexts.remove(&(session.clone(), id));
                 self.installed.remove(&(session, id));
             }
@@ -392,14 +501,26 @@ impl World {
             "Runtime.consoleAPICalled" => self.console_api(&session, &params),
             "Log.entryAdded" => self.log_entry(&params),
             "Runtime.exceptionThrown" => self.exception(&params),
+            "Fetch.requestPaused" => self.fetch_paused.push(params),
             "Network.requestWillBeSent" => self.request_will_be_sent(&session, &params),
             // `ResponseExtraInfoTracker`: extra info may precede or follow
             // its request/response and is matched by redirect-hop order.
             "Network.requestWillBeSentExtraInfo" | "Network.responseReceivedExtraInfo" => {
-                let id = params.get("requestId").and_then(Value::as_str).unwrap_or_default().to_owned();
+                let id = params
+                    .get("requestId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
                 let headers = headers_from_object(params.get("headers"), true);
-                let queue = if method == "Network.requestWillBeSentExtraInfo" { &mut self.request_extra } else { &mut self.response_extra };
-                queue.entry((session.clone(), id)).or_default().push(headers);
+                let queue = if method == "Network.requestWillBeSentExtraInfo" {
+                    &mut self.request_extra
+                } else {
+                    &mut self.response_extra
+                };
+                queue
+                    .entry((session.clone(), id))
+                    .or_default()
+                    .push(headers);
                 self.patch_headers(&session, &params);
             }
             "Network.responseReceived" => self.response_received(&session, &params),
@@ -408,18 +529,35 @@ impl World {
             "Network.webSocketCreated" => self.socket_created(&params),
             "Network.webSocketClosed" => self.socket_closed(&params),
             "Network.webSocketFrameSent" => self.socket_frame("websocket-frame-sent", &params),
-            "Network.webSocketFrameReceived" => self.socket_frame("websocket-frame-received", &params),
+            "Network.webSocketFrameReceived" => {
+                self.socket_frame("websocket-frame-received", &params)
+            }
             _ => {}
         }
     }
 
     fn attached(&mut self, parent: &str, params: &Value) {
-        let session = params.get("sessionId").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let session = params
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         let info = params.get("targetInfo").cloned().unwrap_or(Value::Null);
         let target_type = info.get("type").and_then(Value::as_str).unwrap_or_default();
-        let target_id = info.get("targetId").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let url = info.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let waiting = params.get("waitingForDebugger").and_then(Value::as_bool).unwrap_or(false);
+        let target_id = info
+            .get("targetId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let url = info
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let waiting = params
+            .get("waitingForDebugger")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         let parent = (!parent.is_empty()).then(|| parent.to_owned());
         let kind = match target_type {
             "page" if parent.is_none() => SessionKind::Page,
@@ -438,30 +576,76 @@ impl World {
                 self.popup(&session, &url);
             }
         }
-        if kind == SessionKind::Worker && parent.as_deref().is_some_and(|parent| self.observed(parent)) {
+        if kind == SessionKind::Worker
+            && parent
+                .as_deref()
+                .is_some_and(|parent| self.observed(parent))
+        {
             self.worker_created(&url);
         }
-        self.sessions.insert(session.clone(), SessionInfo { kind: kind.clone(), target_id, url, parent });
-        self.pending.push(PendingAttach { session, kind, waiting });
+        self.sessions.insert(
+            session.clone(),
+            SessionInfo {
+                kind: kind.clone(),
+                target_id,
+                url,
+                parent,
+            },
+        );
+        self.pending.push(PendingAttach {
+            session,
+            kind,
+            waiting,
+        });
     }
 
     fn detached(&mut self, params: &Value) {
-        let session = params.get("sessionId").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let Some(info) = self.sessions.remove(&session) else { return };
+        let session = params
+            .get("sessionId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let Some(info) = self.sessions.remove(&session) else {
+            return;
+        };
         if Some(&session) == self.main_session.as_ref() {
             self.page_closed = true;
         }
         match info.kind {
-            SessionKind::Worker if info.parent.as_deref().is_some_and(|parent| self.observed(parent)) => {
+            SessionKind::Worker
+                if info
+                    .parent
+                    .as_deref()
+                    .is_some_and(|parent| self.observed(parent)) =>
+            {
                 if self.recorder.families.has("workers") {
                     let url = self.secrets.sanitize_url(&info.url);
-                    self.recorder.push("worker-closed", vec![("kind", json!("worker-closed")), ("url", url), ("name", Value::Null)]);
+                    self.recorder.push(
+                        "worker-closed",
+                        vec![
+                            ("kind", json!("worker-closed")),
+                            ("url", url),
+                            ("name", Value::Null),
+                        ],
+                    );
                 }
             }
             SessionKind::Page if self.popups.contains(&session) => {
-                if self.recorder.families.has("popups") && self.recorder.admit_text(&self.secrets, "popup-closed", &[&info.url], false).retained() {
+                if self.recorder.families.has("popups")
+                    && self
+                        .recorder
+                        .admit_text(&self.secrets, "popup-closed", &[&info.url], false)
+                        .retained()
+                {
                     let url = self.safe_url(&info.url);
-                    self.recorder.push("popup-closed", vec![("kind", json!("popup-closed")), ("url", url), ("name", Value::Null)]);
+                    self.recorder.push(
+                        "popup-closed",
+                        vec![
+                            ("kind", json!("popup-closed")),
+                            ("url", url),
+                            ("name", Value::Null),
+                        ],
+                    );
                 }
             }
             _ => {}
@@ -476,7 +660,12 @@ impl World {
             self.popups.insert(session.to_owned());
             return;
         }
-        if !self.recorder.admit_owner("popup-opened") || !self.recorder.admit_text(&self.secrets, "popup-opened", &[url], false).retained() {
+        if !self.recorder.admit_owner("popup-opened")
+            || !self
+                .recorder
+                .admit_text(&self.secrets, "popup-opened", &[url], false)
+                .retained()
+        {
             return;
         }
         self.popups.insert(session.to_owned());
@@ -487,7 +676,14 @@ impl World {
         }
         if self.recorder.families.has("popups") {
             let url = self.safe_url(url);
-            self.recorder.push("popup-opened", vec![("kind", json!("popup-opened")), ("url", url), ("name", Value::Null)]);
+            self.recorder.push(
+                "popup-opened",
+                vec![
+                    ("kind", json!("popup-opened")),
+                    ("url", url),
+                    ("name", Value::Null),
+                ],
+            );
         }
     }
 
@@ -498,11 +694,23 @@ impl World {
         if !self.recorder.families.has("workers") {
             return;
         }
-        if !self.recorder.admit_owner("worker-created") || !self.recorder.admit_text(&self.secrets, "worker-created", &[url], false).retained() {
+        if !self.recorder.admit_owner("worker-created")
+            || !self
+                .recorder
+                .admit_text(&self.secrets, "worker-created", &[url], false)
+                .retained()
+        {
             return;
         }
         let url = self.secrets.sanitize_url(url);
-        self.recorder.push("worker-created", vec![("kind", json!("worker-created")), ("url", url), ("name", Value::Null)]);
+        self.recorder.push(
+            "worker-created",
+            vec![
+                ("kind", json!("worker-created")),
+                ("url", url),
+                ("name", Value::Null),
+            ],
+        );
     }
 
     /// `_removeFramesRecursively`: children detach before their parent.
@@ -524,22 +732,43 @@ impl World {
     }
 
     fn frame_navigated(&mut self, session: &str, frame: &Value, record: bool) {
-        let id = frame.get("id").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let parent = frame.get("parentId").and_then(Value::as_str).map(str::to_owned);
+        let id = frame
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let parent = frame
+            .get("parentId")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
         let url = format!(
             "{}{}",
             frame.get("url").and_then(Value::as_str).unwrap_or_default(),
-            frame.get("urlFragment").and_then(Value::as_str).unwrap_or_default()
+            frame
+                .get("urlFragment")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
         );
-        let name = frame.get("name").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let name = frame
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         if parent.is_none() && Some(session) == self.main_session.as_deref() {
             self.main_frame = Some(id.clone());
             if record {
                 self.commits += 1;
-                self.loader = frame.get("loaderId").and_then(Value::as_str).map(str::to_owned);
+                self.loader = frame
+                    .get("loaderId")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
             }
         }
-        let entry = self.frames.entry(id.clone()).or_insert_with(|| FrameInfo { session: session.to_owned(), parent: parent.clone(), ..FrameInfo::default() });
+        let entry = self.frames.entry(id.clone()).or_insert_with(|| FrameInfo {
+            session: session.to_owned(),
+            parent: parent.clone(),
+            ..FrameInfo::default()
+        });
         entry.url = url;
         entry.name = name;
         entry.session = session.to_owned();
@@ -552,17 +781,32 @@ impl World {
         if !self.recorder.families.has("console") {
             return;
         }
-        let context = params.get("executionContextId").and_then(Value::as_i64).unwrap_or_default();
+        let context = params
+            .get("executionContextId")
+            .and_then(Value::as_i64)
+            .unwrap_or_default();
         // Playwright knows only main-world and its utility-world contexts.
-        let known = self.contexts.get(&(session.to_owned(), context)).is_some_and(|info| info.main || info.utility);
+        let known = self
+            .contexts
+            .get(&(session.to_owned(), context))
+            .is_some_and(|info| info.main || info.utility);
         if context == 0 || !known {
             return;
         }
-        let level = params.get("type").and_then(Value::as_str).unwrap_or("log").to_owned();
+        let level = params
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or("log")
+            .to_owned();
         let text = params
             .get("args")
             .and_then(Value::as_array)
-            .map(|args| args.iter().map(render_preview).collect::<Vec<_>>().join(" "))
+            .map(|args| {
+                args.iter()
+                    .map(render_preview)
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
             .unwrap_or_default();
         let url = params
             .pointer("/stackTrace/callFrames/0/url")
@@ -576,7 +820,11 @@ impl World {
         if !self.recorder.listening {
             return;
         }
-        if !self.recorder.admit_text(&self.secrets, "console", &[text, url, level], false).retained() {
+        if !self
+            .recorder
+            .admit_text(&self.secrets, "console", &[text, url, level], false)
+            .retained()
+        {
             return;
         }
         let fields = vec![
@@ -596,9 +844,21 @@ impl World {
         if entry.get("source").and_then(Value::as_str) == Some("worker") {
             return;
         }
-        let level = entry.get("level").and_then(Value::as_str).unwrap_or("info").to_owned();
-        let text = entry.get("text").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let url = entry.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let level = entry
+            .get("level")
+            .and_then(Value::as_str)
+            .unwrap_or("info")
+            .to_owned();
+        let text = entry
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let url = entry
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         self.console(&level, &text, &url);
     }
 
@@ -609,9 +869,16 @@ impl World {
         if !self.recorder.families.has("page-errors") {
             return;
         }
-        let details = params.get("exceptionDetails").cloned().unwrap_or(Value::Null);
+        let details = params
+            .get("exceptionDetails")
+            .cloned()
+            .unwrap_or(Value::Null);
         let (message, stack) = exception_to_error(&details);
-        if !self.recorder.admit_text(&self.secrets, "page-error", &[&message, &stack], false).retained() {
+        if !self
+            .recorder
+            .admit_text(&self.secrets, "page-error", &[&message, &stack], false)
+            .retained()
+        {
             return;
         }
         let fields = vec![
@@ -629,9 +896,21 @@ impl World {
         if !self.recorder.families.has("downloads") {
             return;
         }
-        let name = params.get("suggestedFilename").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let url = params.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
-        if self.recorder.admit_text(&self.secrets, "download-cancelled", &[&name, &url], false).retained() {
+        let name = params
+            .get("suggestedFilename")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let url = params
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        if self
+            .recorder
+            .admit_text(&self.secrets, "download-cancelled", &[&name, &url], false)
+            .retained()
+        {
             let fields = vec![
                 ("kind", json!("download-cancelled")),
                 ("suggested_filename", json!(self.secrets.redact(&name))),
@@ -643,12 +922,18 @@ impl World {
 
     fn request_for(&self, session: &str, params: &Value) -> Option<usize> {
         let id = params.get("requestId").and_then(Value::as_str)?;
-        self.request_index.get(&(session.to_owned(), id.to_owned())).copied()
+        self.request_index
+            .get(&(session.to_owned(), id.to_owned()))
+            .copied()
     }
 
     /// `_patchHeaders`: raw headers apply once the hop has a response.
     fn patch_headers(&mut self, session: &str, params: &Value) {
-        let id = params.get("requestId").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let id = params
+            .get("requestId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         let key = (session.to_owned(), id);
         let hops = self.hops.get(&key).cloned().unwrap_or_default();
         for (hop, index) in hops.into_iter().enumerate() {
@@ -656,11 +941,19 @@ impl World {
                 continue;
             }
             if self.requests[index].raw_headers.is_none()
-                && let Some(headers) = self.request_extra.get(&key).and_then(|queue| queue.get(hop)).cloned()
+                && let Some(headers) = self
+                    .request_extra
+                    .get(&key)
+                    .and_then(|queue| queue.get(hop))
+                    .cloned()
             {
                 self.requests[index].raw_headers = Some(headers);
             }
-            if let Some(headers) = self.response_extra.get(&key).and_then(|queue| queue.get(hop)).cloned()
+            if let Some(headers) = self
+                .response_extra
+                .get(&key)
+                .and_then(|queue| queue.get(hop))
+                .cloned()
                 && let Some(response) = self.requests[index].response.as_mut()
                 && response.raw_headers.is_none()
             {
@@ -673,7 +966,9 @@ impl World {
         if self.favicons.contains(&index) {
             return;
         }
-        let Some(network) = self.network.as_mut() else { return };
+        let Some(network) = self.network.as_mut() else {
+            return;
+        };
         let (recorder, secrets, requests) = (&mut self.recorder, &self.secrets, &self.requests);
         match phase {
             "request" => network.request(recorder, secrets, requests, index),
@@ -688,11 +983,19 @@ impl World {
             return;
         }
         let request = params.get("request").cloned().unwrap_or(Value::Null);
-        let url = request.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let url = request
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         if url.starts_with("data:") {
             return;
         }
-        let request_id = params.get("requestId").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let request_id = params
+            .get("requestId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         let key = (session.to_owned(), request_id.clone());
         let mut redirected_from = None;
         if let Some(redirect) = params.get("redirectResponse")
@@ -707,8 +1010,14 @@ impl World {
         // Requests without a known frame belong to no observed page.
         let frame = params.get("frameId").and_then(Value::as_str);
         let session_kind = self.sessions.get(session).map(|info| info.kind.clone());
-        if frame.is_none_or(|frame| !self.frames.contains_key(frame)) && session_kind != Some(SessionKind::Worker) {
-            let known_target = frame.is_some_and(|frame| self.sessions.get(session).is_some_and(|info| info.target_id == frame));
+        if frame.is_none_or(|frame| !self.frames.contains_key(frame))
+            && session_kind != Some(SessionKind::Worker)
+        {
+            let known_target = frame.is_some_and(|frame| {
+                self.sessions
+                    .get(session)
+                    .is_some_and(|info| info.target_id == frame)
+            });
             if !known_target {
                 return;
             }
@@ -721,21 +1030,35 @@ impl World {
                 entries
                     .iter()
                     .filter_map(|entry| entry.get("bytes").and_then(Value::as_str))
-                    .flat_map(|bytes| base64::engine::general_purpose::STANDARD.decode(bytes).unwrap_or_default())
+                    .flat_map(|bytes| {
+                        base64::engine::general_purpose::STANDARD
+                            .decode(bytes)
+                            .unwrap_or_default()
+                    })
                     .collect::<Vec<u8>>()
             })
-            .or_else(|| request.get("postData").and_then(Value::as_str).map(|text| text.as_bytes().to_vec()));
+            .or_else(|| {
+                request
+                    .get("postData")
+                    .and_then(Value::as_str)
+                    .map(|text| text.as_bytes().to_vec())
+            });
         let resource_type = params
             .get("type")
             .and_then(Value::as_str)
             .map(str::to_ascii_lowercase)
             .unwrap_or_else(|| "other".to_owned());
         let index = self.requests.len();
-        let favicon = url.ends_with("/favicon.ico") || redirected_from.is_some_and(|previous| self.favicons.contains(&previous));
+        let favicon = url.ends_with("/favicon.ico")
+            || redirected_from.is_some_and(|previous| self.favicons.contains(&previous));
         self.requests.push(RequestRecord {
             session: session.to_owned(),
             request_id,
-            method: request.get("method").and_then(Value::as_str).unwrap_or("GET").to_owned(),
+            method: request
+                .get("method")
+                .and_then(Value::as_str)
+                .unwrap_or("GET")
+                .to_owned(),
             url,
             resource_type,
             headers: headers_from_object(request.get("headers"), false),
@@ -754,7 +1077,9 @@ impl World {
     }
 
     fn response_received(&mut self, session: &str, params: &Value) {
-        let Some(index) = self.request_for(session, params) else { return };
+        let Some(index) = self.request_for(session, params) else {
+            return;
+        };
         let response = params.get("response").cloned().unwrap_or(Value::Null);
         self.requests[index].response = Some(response_record(&response, true));
         self.patch_headers(session, params);
@@ -762,13 +1087,18 @@ impl World {
     }
 
     fn loading_finished(&mut self, session: &str, params: &Value) {
-        let Some(index) = self.request_for(session, params) else { return };
-        self.request_index.remove(&(session.to_owned(), self.requests[index].request_id.clone()));
+        let Some(index) = self.request_for(session, params) else {
+            return;
+        };
+        self.request_index
+            .remove(&(session.to_owned(), self.requests[index].request_id.clone()));
         self.with_network("finished", index);
     }
 
     fn loading_failed(&mut self, session: &str, params: &Value) {
-        let Some(index) = self.request_for(session, params) else { return };
+        let Some(index) = self.request_for(session, params) else {
+            return;
+        };
         let text = params
             .get("errorText")
             .and_then(Value::as_str)
@@ -777,7 +1107,9 @@ impl World {
             .unwrap_or_default()
             .to_owned();
         let request_id = self.requests[index].request_id.clone();
-        if self.loader.as_deref() == Some(request_id.as_str()) || self.requests[index].resource_type == "document" {
+        if self.loader.as_deref() == Some(request_id.as_str())
+            || self.requests[index].resource_type == "document"
+        {
             self.navigation_failure = Some((request_id.clone(), text.clone()));
         }
         self.requests[index].failure = Some(text);
@@ -789,36 +1121,73 @@ impl World {
         if !self.recorder.listening {
             return;
         }
-        let id = params.get("requestId").and_then(Value::as_str).unwrap_or_default().to_owned();
-        let url = params.get("url").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let id = params
+            .get("requestId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let url = params
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         if !self.recorder.families.has("websockets") {
             return;
         }
-        if !self.recorder.admit_owner("websocket-opened") || !self.recorder.admit_text(&self.secrets, "websocket-opened", &[&url], false).retained() {
+        if !self.recorder.admit_owner("websocket-opened")
+            || !self
+                .recorder
+                .admit_text(&self.secrets, "websocket-opened", &[&url], false)
+                .retained()
+        {
             return;
         }
         let safe = self.secrets.sanitize_url(&url);
-        self.recorder.push("websocket-opened", vec![("kind", json!("websocket-opened")), ("url", safe)]);
+        self.recorder.push(
+            "websocket-opened",
+            vec![("kind", json!("websocket-opened")), ("url", safe)],
+        );
         self.sockets.insert(id, url);
     }
 
     fn socket_closed(&mut self, params: &Value) {
-        let id = params.get("requestId").and_then(Value::as_str).unwrap_or_default();
+        let id = params
+            .get("requestId")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         if let Some(url) = self.sockets.remove(id) {
             let safe = self.secrets.sanitize_url(&url);
-            self.recorder.push("websocket-closed", vec![("kind", json!("websocket-closed")), ("url", safe)]);
+            self.recorder.push(
+                "websocket-closed",
+                vec![("kind", json!("websocket-closed")), ("url", safe)],
+            );
         }
     }
 
     fn socket_frame(&mut self, kind: &str, params: &Value) {
-        let id = params.get("requestId").and_then(Value::as_str).unwrap_or_default();
-        let Some(url) = self.sockets.get(id).cloned() else { return };
+        let id = params
+            .get("requestId")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let Some(url) = self.sockets.get(id).cloned() else {
+            return;
+        };
         let safe = self.secrets.sanitize_url(&url);
-        let opcode = params.pointer("/response/opcode").and_then(Value::as_u64).unwrap_or(1);
-        let payload = params.pointer("/response/payloadData").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let opcode = params
+            .pointer("/response/opcode")
+            .and_then(Value::as_u64)
+            .unwrap_or(1);
+        let payload = params
+            .pointer("/response/payloadData")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         if opcode == 2 {
             use base64::Engine;
-            let bytes = base64::engine::general_purpose::STANDARD.decode(&payload).map(|bytes| bytes.len()).unwrap_or_default();
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(&payload)
+                .map(|bytes| bytes.len())
+                .unwrap_or_default();
             let fields = vec![
                 ("kind", json!(kind)),
                 ("url", safe),
@@ -830,7 +1199,11 @@ impl World {
             self.recorder.push(kind, fields);
             return;
         }
-        if !self.recorder.admit_text(&self.secrets, kind, &[&payload], false).retained() {
+        if !self
+            .recorder
+            .admit_text(&self.secrets, kind, &[&payload], false)
+            .retained()
+        {
             return;
         }
         let fields = vec![
@@ -853,23 +1226,43 @@ impl World {
 /// events include the popup's initial navigation) and a launched browser's
 /// `Accept-Language` is applied, so that first request carries the context
 /// headers as in Playwright.
-fn popup_unblock(event: &Value, main: Option<&str>, network: bool, accept_language: Option<&str>) -> Vec<DetachedCommand> {
+fn popup_unblock(
+    event: &Value,
+    main: Option<&str>,
+    network: bool,
+    accept_language: Option<&str>,
+) -> Vec<DetachedCommand> {
     if event.get("method").and_then(Value::as_str) != Some("Target.attachedToTarget") {
         return Vec::new();
     }
-    let Some(params) = event.get("params") else { return Vec::new() };
-    let session = params.get("sessionId").and_then(Value::as_str).unwrap_or_default();
+    let Some(params) = event.get("params") else {
+        return Vec::new();
+    };
+    let session = params
+        .get("sessionId")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
     let page = params.pointer("/targetInfo/type").and_then(Value::as_str) == Some("page");
     if !page || main.is_none() || Some(session) == main || event.get("sessionId").is_some() {
         return Vec::new();
     }
-    let command = |method: &str, params: Value| DetachedCommand { method: method.to_owned(), params, session_id: Some(session.to_owned()) };
-    let mut commands = vec![command("Page.enable", json!({})), command("Runtime.enable", json!({}))];
+    let command = |method: &str, params: Value| DetachedCommand {
+        method: method.to_owned(),
+        params,
+        session_id: Some(session.to_owned()),
+    };
+    let mut commands = vec![
+        command("Page.enable", json!({})),
+        command("Runtime.enable", json!({})),
+    ];
     if network {
         commands.push(command("Network.enable", json!({})));
     }
     if let Some(locale) = accept_language {
-        commands.push(command("Emulation.setUserAgentOverride", json!({ "userAgent": "", "acceptLanguage": locale })));
+        commands.push(command(
+            "Emulation.setUserAgentOverride",
+            json!({ "userAgent": "", "acceptLanguage": locale }),
+        ));
     }
     commands.push(command("Runtime.runIfWaitingForDebugger", json!({})));
     commands
@@ -877,8 +1270,15 @@ fn popup_unblock(event: &Value, main: Option<&str>, network: bool, accept_langua
 
 fn response_record(response: &Value, readable: bool) -> ResponseRecord {
     ResponseRecord {
-        url: response.get("url").and_then(Value::as_str).unwrap_or_default().to_owned(),
-        status: response.get("status").and_then(Value::as_u64).unwrap_or_default(),
+        url: response
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        status: response
+            .get("status")
+            .and_then(Value::as_u64)
+            .unwrap_or_default(),
         headers: headers_from_object(response.get("headers"), false),
         raw_headers: None,
         readable,
@@ -922,30 +1322,52 @@ fn render_preview(object: &Value) -> String {
     if let Some(value) = object.get("unserializableValue").and_then(Value::as_str) {
         return value.to_owned();
     }
-    let description = object.get("description").and_then(Value::as_str).unwrap_or_default();
+    let description = object
+        .get("description")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
     if description == "Object"
-        && let Some(properties) = object.pointer("/preview/properties").and_then(Value::as_array)
+        && let Some(properties) = object
+            .pointer("/preview/properties")
+            .and_then(Value::as_array)
     {
         let tokens: Vec<String> = properties
             .iter()
             .map(|property| {
                 format!(
                     "{}: {}",
-                    property.get("name").and_then(Value::as_str).unwrap_or_default(),
-                    property.get("value").and_then(Value::as_str).unwrap_or_default()
+                    property
+                        .get("name")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default(),
+                    property
+                        .get("value")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
                 )
             })
             .collect();
         return format!("{{{}}}", tokens.join(", "));
     }
     if object.get("subtype").and_then(Value::as_str) == Some("array")
-        && let Some(properties) = object.pointer("/preview/properties").and_then(Value::as_array)
+        && let Some(properties) = object
+            .pointer("/preview/properties")
+            .and_then(Value::as_array)
     {
         let mut entries: Vec<(i64, String)> = properties
             .iter()
             .filter_map(|property| {
                 let index: i64 = property.get("name").and_then(Value::as_str)?.parse().ok()?;
-                (index >= 0).then(|| (index, property.get("value").and_then(Value::as_str).unwrap_or_default().to_owned()))
+                (index >= 0).then(|| {
+                    (
+                        index,
+                        property
+                            .get("value")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                    )
+                })
             })
             .collect();
         entries.sort_by_key(|(index, _)| *index);
@@ -975,15 +1397,34 @@ fn exception_to_error(details: &Value) -> (String, String) {
             .map(str::to_owned)
             .unwrap_or_else(|| js_string(exception.get("value").unwrap_or(&Value::Null)))
     } else {
-        let mut message = details.get("text").and_then(Value::as_str).unwrap_or_default().to_owned();
-        for frame in details.pointer("/stackTrace/callFrames").and_then(Value::as_array).into_iter().flatten() {
+        let mut message = details
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        for frame in details
+            .pointer("/stackTrace/callFrames")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
             let location = format!(
                 "{}:{}:{}",
                 frame.get("url").and_then(Value::as_str).unwrap_or_default(),
-                frame.get("lineNumber").and_then(Value::as_i64).unwrap_or_default(),
-                frame.get("columnNumber").and_then(Value::as_i64).unwrap_or_default()
+                frame
+                    .get("lineNumber")
+                    .and_then(Value::as_i64)
+                    .unwrap_or_default(),
+                frame
+                    .get("columnNumber")
+                    .and_then(Value::as_i64)
+                    .unwrap_or_default()
             );
-            let function = frame.get("functionName").and_then(Value::as_str).filter(|name| !name.is_empty()).unwrap_or("<anonymous>");
+            let function = frame
+                .get("functionName")
+                .and_then(Value::as_str)
+                .filter(|name| !name.is_empty())
+                .unwrap_or("<anonymous>");
             message.push_str(&format!("\n    at {function} ({location})"));
         }
         message
@@ -1043,8 +1484,18 @@ impl Driver {
         self.transport.is_some() && self.world.transport_lost.is_none()
     }
 
+    pub(crate) fn take_fetch_paused(&mut self) -> Vec<Value> {
+        std::mem::take(&mut self.world.fetch_paused)
+    }
+
     /// Send one command, then route the events it buffered.
-    pub(crate) fn call(&mut self, session: Option<&str>, method: &str, params: Value, scope: &Scope) -> Result<Value, CallError> {
+    pub(crate) fn call(
+        &mut self,
+        session: Option<&str>,
+        method: &str,
+        params: Value,
+        scope: &Scope,
+    ) -> Result<Value, CallError> {
         if let Some(interruption) = scope.interrupted() {
             return Err(interruption);
         }
@@ -1061,16 +1512,22 @@ impl Driver {
         }
         let main = self.world.main_session.clone();
         let network = self.world.network.is_some();
-        let accept_language = self.world.launch.as_ref().map(|environment| environment.locale.clone());
+        let accept_language = self
+            .world
+            .launch
+            .as_ref()
+            .map(|environment| environment.locale.clone());
         let mut unblocked = Vec::new();
         let mut hook = |event: &Value| {
-            let commands = popup_unblock(event, main.as_deref(), network, accept_language.as_deref());
+            let commands =
+                popup_unblock(event, main.as_deref(), network, accept_language.as_deref());
             if let Some(command) = commands.first() {
                 unblocked.extend(command.session_id.clone());
             }
             commands
         };
-        let result = transport.request_with_event_hook(method, params, session, scope.token(), &mut hook);
+        let result =
+            transport.request_with_event_hook(method, params, session, scope.token(), &mut hook);
         self.unblocked.extend(unblocked);
         let result = result.map_err(|error| {
             let classified = scope.classify(error);
@@ -1083,7 +1540,12 @@ impl Driver {
         result
     }
 
-    pub(crate) fn main_call(&mut self, method: &str, params: Value, scope: &Scope) -> Result<Value, CallError> {
+    pub(crate) fn main_call(
+        &mut self,
+        method: &str,
+        params: Value,
+        scope: &Scope,
+    ) -> Result<Value, CallError> {
         let session = self.world.main_session.clone();
         self.call(session.as_deref(), method, params, scope)
     }
@@ -1106,13 +1568,23 @@ impl Driver {
     /// `pump`, stopping right after the event that satisfies `ready`, as a
     /// Playwright waiter resumes before later protocol messages are handled.
     /// Undispatched events stay in `backlog`, ahead of newer transport events.
-    fn pump_until(&mut self, scope: &Scope, ready: &mut dyn FnMut(&World) -> bool) -> (usize, bool) {
+    fn pump_until(
+        &mut self,
+        scope: &Scope,
+        ready: &mut dyn FnMut(&World) -> bool,
+    ) -> (usize, bool) {
         let mut dispatched = 0;
         let mut satisfied = false;
         loop {
             let mut items = std::mem::take(&mut self.backlog);
             match self.transport.as_mut() {
-                Some(transport) => items.extend(transport.drain_events().items.into_iter().map(|event| event.value)),
+                Some(transport) => items.extend(
+                    transport
+                        .drain_events()
+                        .items
+                        .into_iter()
+                        .map(|event| event.value),
+                ),
                 None if items.is_empty() => return (dispatched, false),
                 None => {}
             }
@@ -1132,9 +1604,9 @@ impl Driver {
                 pending.splice(0..0, std::mem::take(&mut self.held));
             }
             if self.hold_popups {
-                let (held, now): (Vec<_>, Vec<_>) = pending
-                    .into_iter()
-                    .partition(|attach| attach.kind == SessionKind::Page && self.unblocked.contains(&attach.session));
+                let (held, now): (Vec<_>, Vec<_>) = pending.into_iter().partition(|attach| {
+                    attach.kind == SessionKind::Page && self.unblocked.contains(&attach.session)
+                });
                 self.held.extend(held);
                 pending = now;
             }
@@ -1164,23 +1636,47 @@ impl Driver {
         }
         self.servicing = true;
         loop {
-            let World { network, requests, .. } = &mut self.world;
-            let Some(job) = network.as_mut().and_then(|network| network.next_job(requests, local_only)) else { break };
+            let World {
+                network, requests, ..
+            } = &mut self.world;
+            let Some(job) = network
+                .as_mut()
+                .and_then(|network| network.next_job(requests, local_only))
+            else {
+                break;
+            };
             let read_scope = scope.child(Some(5_000));
             let request = self.world.requests[job.request].clone();
-            let selection = self.world.network.as_ref().map(|network| network.selection.clone()).unwrap_or_default();
+            let selection = self
+                .world
+                .network
+                .as_ref()
+                .map(|network| network.selection.clone())
+                .unwrap_or_default();
             let (headers_source, content_type) = if job.phase == "request" {
-                let headers = request.raw_headers.clone().unwrap_or_else(|| request.headers.clone());
-                let content_type = super::network::header_lookup(&request.headers, "content-type").map(str::to_owned);
+                let headers = request
+                    .raw_headers
+                    .clone()
+                    .unwrap_or_else(|| request.headers.clone());
+                let content_type = super::network::header_lookup(&request.headers, "content-type")
+                    .map(str::to_owned);
                 (headers, content_type)
             } else {
                 let response = request.response.clone().unwrap_or_default();
-                let headers = response.raw_headers.clone().unwrap_or_else(|| response.headers.clone());
-                let content_type = super::network::header_lookup(&response.headers, "content-type").map(str::to_owned);
+                let headers = response
+                    .raw_headers
+                    .clone()
+                    .unwrap_or_else(|| response.headers.clone());
+                let content_type = super::network::header_lookup(&response.headers, "content-type")
+                    .map(str::to_owned);
                 (headers, content_type)
             };
             let headers = if selection.header_values {
-                self.world.network.as_ref().map(|network| network.headers_value(&self.world.secrets, &headers_source)).unwrap_or(Value::Null)
+                self.world
+                    .network
+                    .as_ref()
+                    .map(|network| network.headers_value(&self.world.secrets, &headers_source))
+                    .unwrap_or(Value::Null)
             } else {
                 json!({ "state": "not_requested" })
             };
@@ -1188,15 +1684,35 @@ impl Driver {
                 Ok(body)
             } else if job.phase == "request" {
                 Err(Ok(request.post_data.clone()))
-            } else if !request.response.as_ref().is_some_and(|response| response.readable) {
-                Err(Err("Response body is unavailable for redirect responses".to_owned()))
+            } else if !request
+                .response
+                .as_ref()
+                .is_some_and(|response| response.readable)
+            {
+                Err(Err(
+                    "Response body is unavailable for redirect responses".to_owned()
+                ))
             } else {
-                match self.call(Some(&request.session), "Network.getResponseBody", json!({ "requestId": request.request_id }), &read_scope) {
+                match self.call(
+                    Some(&request.session),
+                    "Network.getResponseBody",
+                    json!({ "requestId": request.request_id }),
+                    &read_scope,
+                ) {
                     Ok(result) => {
                         use base64::Engine;
-                        let body = result.get("body").and_then(Value::as_str).unwrap_or_default();
-                        let bytes = if result.get("base64Encoded").and_then(Value::as_bool).unwrap_or(false) {
-                            base64::engine::general_purpose::STANDARD.decode(body).unwrap_or_default()
+                        let body = result
+                            .get("body")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default();
+                        let bytes = if result
+                            .get("base64Encoded")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(false)
+                        {
+                            base64::engine::general_purpose::STANDARD
+                                .decode(body)
+                                .unwrap_or_default()
                         } else {
                             body.as_bytes().to_vec()
                         };
@@ -1215,11 +1731,25 @@ impl Driver {
                     Err(error) => Err(Err(error.message())),
                 }
             };
-            let World { network, recorder, secrets, .. } = &mut self.world;
-            let Some(network) = network.as_mut() else { break };
+            let World {
+                network,
+                recorder,
+                secrets,
+                ..
+            } = &mut self.world;
+            let Some(network) = network.as_mut() else {
+                break;
+            };
             let body = match observed {
                 Ok(body) => Ok(body),
-                Err(read) => network.body_value(recorder, secrets, &job, &headers, read, content_type.as_deref()),
+                Err(read) => network.body_value(
+                    recorder,
+                    secrets,
+                    &job,
+                    &headers,
+                    read,
+                    content_type.as_deref(),
+                ),
             };
             network.emit_content(recorder, &job, headers, body);
         }
@@ -1247,7 +1777,11 @@ impl Driver {
     /// Process events until `ready` holds for the world. Readiness is checked
     /// after every event, so later events in the same batch are attributed to
     /// what the caller does next, as with a resolved Playwright waiter.
-    pub(crate) fn wait_until(&mut self, scope: &Scope, mut ready: impl FnMut(&World) -> bool) -> Result<(), CallError> {
+    pub(crate) fn wait_until(
+        &mut self,
+        scope: &Scope,
+        mut ready: impl FnMut(&World) -> bool,
+    ) -> Result<(), CallError> {
         let mut polled = false;
         loop {
             let (dispatched, satisfied) = self.pump_until(scope, &mut ready);
@@ -1269,7 +1803,9 @@ impl Driver {
     pub(crate) fn sleep(&mut self, duration: Duration, scope: &Scope) -> Result<(), CallError> {
         let until = Instant::now() + duration;
         loop {
-            let Some(remaining) = until.checked_duration_since(Instant::now()) else { return Ok(()) };
+            let Some(remaining) = until.checked_duration_since(Instant::now()) else {
+                return Ok(());
+            };
             if remaining.is_zero() {
                 return Ok(());
             }
@@ -1288,14 +1824,28 @@ impl Driver {
         if observing && matches!(attach.kind, SessionKind::Page | SessionKind::Frame) {
             let _ = self.call(s, "Page.enable", json!({}), scope);
             if let Ok(tree) = self.call(s, "Page.getFrameTree", json!({}), scope) {
-                self.seed_frames(&session, tree.get("frameTree").unwrap_or(&Value::Null), attach.kind == SessionKind::Page);
+                self.seed_frames(
+                    &session,
+                    tree.get("frameTree").unwrap_or(&Value::Null),
+                    attach.kind == SessionKind::Page,
+                );
             }
             if self.world.recorder.families.has("console") || attach.kind == SessionKind::Page {
                 let _ = self.call(s, "Log.enable", json!({}), scope);
             }
-            let _ = self.call(s, "Page.setLifecycleEventsEnabled", json!({ "enabled": true }), scope);
+            let _ = self.call(
+                s,
+                "Page.setLifecycleEventsEnabled",
+                json!({ "enabled": true }),
+                scope,
+            );
             let _ = self.call(s, "Runtime.enable", json!({}), scope);
-            let _ = self.call(s, "Page.addScriptToEvaluateOnNewDocument", json!({ "source": "", "worldName": UTILITY_WORLD }), scope);
+            let _ = self.call(
+                s,
+                "Page.addScriptToEvaluateOnNewDocument",
+                json!({ "source": "", "worldName": UTILITY_WORLD }),
+                scope,
+            );
             let _ = self.call(s, "Network.enable", json!({}), scope);
             // Child frames and workers are held until initialized; popups
             // are excluded because `window.open` blocks the opener until the
@@ -1335,12 +1885,19 @@ impl Driver {
             let _ = self.call(s, "Runtime.runIfWaitingForDebugger", json!({}), scope);
         }
         if !observing && attach.kind != SessionKind::Page {
-            let _ = self.call(None, "Target.detachFromTarget", json!({ "sessionId": session }), scope);
+            let _ = self.call(
+                None,
+                "Target.detachFromTarget",
+                json!({ "sessionId": session }),
+                scope,
+            );
         }
     }
 
     fn install_seed_script(&mut self, session: &str, scope: &Scope) {
-        let Some(source) = self.world.seeds.script() else { return };
+        let Some(source) = self.world.seeds.script() else {
+            return;
+        };
         let added = self.call(
             Some(session),
             "Page.addScriptToEvaluateOnNewDocument",
@@ -1350,7 +1907,10 @@ impl Driver {
         if let Ok(added) = added
             && let Some(identifier) = added.get("identifier").and_then(Value::as_str)
         {
-            self.world.seeds.script_ids.push((session.to_owned(), identifier.to_owned()));
+            self.world
+                .seeds
+                .script_ids
+                .push((session.to_owned(), identifier.to_owned()));
         }
     }
 
@@ -1362,7 +1922,12 @@ impl Driver {
         let previous = std::mem::take(&mut self.world.seeds.script_ids);
         let mut sessions: Vec<String> = Vec::new();
         for (session, identifier) in previous {
-            let _ = self.call(Some(&session), "Page.removeScriptToEvaluateOnNewDocument", json!({ "identifier": identifier }), scope);
+            let _ = self.call(
+                Some(&session),
+                "Page.removeScriptToEvaluateOnNewDocument",
+                json!({ "identifier": identifier }),
+                scope,
+            );
             if !sessions.contains(&session) {
                 sessions.push(session);
             }
@@ -1399,18 +1964,42 @@ impl Driver {
 
     fn seed_frames(&mut self, session: &str, tree: &Value, page: bool) {
         if let Some(frame) = tree.get("frame") {
-            let id = frame.get("id").and_then(Value::as_str).unwrap_or_default().to_owned();
-            let parent = frame.get("parentId").and_then(Value::as_str).map(str::to_owned);
+            let id = frame
+                .get("id")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_owned();
+            let parent = frame
+                .get("parentId")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             if !self.world.frames.contains_key(&id) {
-                self.world.frames.insert(id.clone(), FrameInfo { session: session.to_owned(), parent, ..FrameInfo::default() });
+                self.world.frames.insert(
+                    id.clone(),
+                    FrameInfo {
+                        session: session.to_owned(),
+                        parent,
+                        ..FrameInfo::default()
+                    },
+                );
             }
-            let is_main = page && frame.get("parentId").is_none() && Some(session) == self.world.main_session.as_deref();
+            let is_main = page
+                && frame.get("parentId").is_none()
+                && Some(session) == self.world.main_session.as_deref();
             self.world.frame_navigated(session, frame, false);
             if is_main {
-                self.world.loader = frame.get("loaderId").and_then(Value::as_str).map(str::to_owned);
+                self.world.loader = frame
+                    .get("loaderId")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
             }
         }
-        for child in tree.get("childFrames").and_then(Value::as_array).into_iter().flatten() {
+        for child in tree
+            .get("childFrames")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
             self.seed_frames(session, child, false);
         }
     }
@@ -1418,7 +2007,12 @@ impl Driver {
     /// Playwright's launch-time context options for one page.
     fn emulate(&mut self, session: &str, environment: &Environment, scope: &Scope) {
         let s = Some(session);
-        let _ = self.call(s, "Emulation.setFocusEmulationEnabled", json!({ "enabled": true }), scope);
+        let _ = self.call(
+            s,
+            "Emulation.setFocusEmulationEnabled",
+            json!({ "enabled": true }),
+            scope,
+        );
         if let Ok(window) = self.call(s, "Browser.getWindowForTarget", json!({}), scope)
             && let Some(id) = window.get("windowId").cloned()
         {
@@ -1439,9 +2033,24 @@ impl Driver {
             }),
             scope,
         );
-        let _ = self.call(s, "Emulation.setUserAgentOverride", json!({ "userAgent": "", "acceptLanguage": environment.locale }), scope);
-        let _ = self.call(s, "Emulation.setLocaleOverride", json!({ "locale": environment.locale }), scope);
-        let _ = self.call(s, "Emulation.setTimezoneOverride", json!({ "timezoneId": environment.timezone }), scope);
+        let _ = self.call(
+            s,
+            "Emulation.setUserAgentOverride",
+            json!({ "userAgent": "", "acceptLanguage": environment.locale }),
+            scope,
+        );
+        let _ = self.call(
+            s,
+            "Emulation.setLocaleOverride",
+            json!({ "locale": environment.locale }),
+            scope,
+        );
+        let _ = self.call(
+            s,
+            "Emulation.setTimezoneOverride",
+            json!({ "timezoneId": environment.timezone }),
+            scope,
+        );
         if let Some(families) = self.world.font_families.clone() {
             let _ = self.call(s, "Page.setFontFamilies", families, scope);
         }
@@ -1459,7 +2068,12 @@ impl Driver {
             }),
             scope,
         );
-        let _ = self.call(s, "Page.setInterceptFileChooserDialog", json!({ "enabled": false }), scope);
+        let _ = self.call(
+            s,
+            "Page.setInterceptFileChooserDialog",
+            json!({ "enabled": false }),
+            scope,
+        );
     }
 
     /// Platform default font families for headless launch (`_setDefaultFontFamilies`).
@@ -1477,7 +2091,9 @@ impl Driver {
 
     /// The utility-world execution context of the main frame.
     pub(crate) fn utility_context(&mut self, scope: &Scope) -> Result<i64, CallError> {
-        let session = self.world.main_session.clone().ok_or_else(|| CallError::Closed("Target page, context or browser has been closed".to_owned()))?;
+        let session = self.world.main_session.clone().ok_or_else(|| {
+            CallError::Closed("Target page, context or browser has been closed".to_owned())
+        })?;
         let frame = self.world.main_frame.clone().unwrap_or_default();
         let find = |world: &World| {
             world
@@ -1494,16 +2110,29 @@ impl Driver {
             found = find(world);
             found.is_some() || world.page_closed
         })?;
-        let id = found.ok_or_else(|| CallError::Closed("Target page, context or browser has been closed".to_owned()))?;
+        let id = found.ok_or_else(|| {
+            CallError::Closed("Target page, context or browser has been closed".to_owned())
+        })?;
         if !self.world.installed.contains(&(session.clone(), id)) {
-            self.call(Some(&session), "Runtime.evaluate", json!({ "expression": PAGE_HELPER, "contextId": id }), scope)?;
+            self.call(
+                Some(&session),
+                "Runtime.evaluate",
+                json!({ "expression": PAGE_HELPER, "contextId": id }),
+                scope,
+            )?;
             self.world.installed.insert((session, id));
         }
         Ok(id)
     }
 
     /// Evaluate in REA's utility world of the main frame.
-    pub(crate) fn evaluate_utility(&mut self, expression: &str, by_value: bool, await_promise: bool, scope: &Scope) -> Result<Value, CallError> {
+    pub(crate) fn evaluate_utility(
+        &mut self,
+        expression: &str,
+        by_value: bool,
+        await_promise: bool,
+        scope: &Scope,
+    ) -> Result<Value, CallError> {
         let context = self.utility_context(scope)?;
         self.holds_objects |= !by_value;
         let result = self.main_call(
@@ -1521,7 +2150,11 @@ impl Driver {
     }
 
     /// Evaluate in the page's main world (`page.evaluate`).
-    pub(crate) fn evaluate_main(&mut self, expression: &str, scope: &Scope) -> Result<Value, CallError> {
+    pub(crate) fn evaluate_main(
+        &mut self,
+        expression: &str,
+        scope: &Scope,
+    ) -> Result<Value, CallError> {
         let session = self.world.main_session.clone().unwrap_or_default();
         let frame = self.world.main_frame.clone().unwrap_or_default();
         let context = self
@@ -1530,7 +2163,8 @@ impl Driver {
             .iter()
             .find(|((owner, _), info)| *owner == session && info.frame == frame && info.main)
             .map(|((_, id), _)| *id);
-        let mut params = json!({ "expression": expression, "returnByValue": true, "awaitPromise": true });
+        let mut params =
+            json!({ "expression": expression, "returnByValue": true, "awaitPromise": true });
         if let Some(context) = context {
             params["contextId"] = json!(context);
         }
@@ -1539,8 +2173,18 @@ impl Driver {
     }
 
     /// Call a helper function with `this` bound to a remote element.
-    pub(crate) fn call_on(&mut self, object_id: &str, function: &str, arguments: Vec<Value>, await_promise: bool, scope: &Scope) -> Result<Value, CallError> {
-        let arguments: Vec<Value> = arguments.into_iter().map(|value| json!({ "value": value })).collect();
+    pub(crate) fn call_on(
+        &mut self,
+        object_id: &str,
+        function: &str,
+        arguments: Vec<Value>,
+        await_promise: bool,
+        scope: &Scope,
+    ) -> Result<Value, CallError> {
+        let arguments: Vec<Value> = arguments
+            .into_iter()
+            .map(|value| json!({ "value": value }))
+            .collect();
         let result = self.main_call(
             "Runtime.callFunctionOn",
             json!({
@@ -1561,7 +2205,11 @@ impl Driver {
         if !std::mem::take(&mut self.holds_objects) {
             return;
         }
-        let _ = self.main_call("Runtime.releaseObjectGroup", json!({ "objectGroup": "rea-scenario" }), scope);
+        let _ = self.main_call(
+            "Runtime.releaseObjectGroup",
+            json!({ "objectGroup": "rea-scenario" }),
+            scope,
+        );
     }
 
     /// Close the transport. The owner decides what else must be released.
@@ -1597,7 +2245,10 @@ mod tests {
     }
 
     fn methods(event: &serde_json::Value, network: bool, locale: Option<&str>) -> Vec<String> {
-        popup_unblock(event, Some("main"), network, locale).into_iter().map(|command| command.method).collect()
+        popup_unblock(event, Some("main"), network, locale)
+            .into_iter()
+            .map(|command| command.method)
+            .collect()
     }
 
     #[test]
@@ -1605,12 +2256,32 @@ mod tests {
         let event = attached("popup", "page");
         assert_eq!(
             methods(&event, true, Some("de-DE")),
-            ["Page.enable", "Runtime.enable", "Network.enable", "Emulation.setUserAgentOverride", "Runtime.runIfWaitingForDebugger"]
+            [
+                "Page.enable",
+                "Runtime.enable",
+                "Network.enable",
+                "Emulation.setUserAgentOverride",
+                "Runtime.runIfWaitingForDebugger"
+            ]
         );
-        assert_eq!(methods(&event, false, None), ["Page.enable", "Runtime.enable", "Runtime.runIfWaitingForDebugger"]);
+        assert_eq!(
+            methods(&event, false, None),
+            [
+                "Page.enable",
+                "Runtime.enable",
+                "Runtime.runIfWaitingForDebugger"
+            ]
+        );
         let commands = popup_unblock(&event, Some("main"), false, Some("de-DE"));
-        assert_eq!(commands[2].params, json!({ "userAgent": "", "acceptLanguage": "de-DE" }));
-        assert!(commands.iter().all(|command| command.session_id.as_deref() == Some("popup")));
+        assert_eq!(
+            commands[2].params,
+            json!({ "userAgent": "", "acceptLanguage": "de-DE" })
+        );
+        assert!(
+            commands
+                .iter()
+                .all(|command| command.session_id.as_deref() == Some("popup"))
+        );
     }
 
     #[test]

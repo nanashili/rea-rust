@@ -7,6 +7,7 @@
 //! archive faults map to typed `format`/`unavailable` reader failures.
 use super::reader::{ArtifactEntry, ArtifactReader, ArtifactTraversalOmission, ReaderFailure};
 use flate2::read::DeflateDecoder;
+use rea_core::JsString;
 use rea_core::cancellation::Cancellation;
 use std::io::Read;
 
@@ -119,7 +120,7 @@ impl ZipArtifactReader {
             } else {
                 "file"
             };
-            let executable = kind == "file" && (unix_mode & 0o111) != 0;
+            let executable = (unix_mode & 0o111) != 0;
             entries.push(ZipEntry {
                 index,
                 path,
@@ -224,6 +225,83 @@ impl ZipArtifactReader {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stored_zip_with_executable_directory() -> Vec<u8> {
+        let members = [
+            ("resources/", 0x41ed0000_u32),
+            ("resources/data", 0x0180_0000_u32),
+        ];
+        let mut bytes = Vec::new();
+        let mut central = Vec::new();
+
+        for (name, attributes) in members.iter() {
+            let name_bytes = name.as_bytes();
+            let local_offset = bytes.len() as u32;
+            bytes.extend_from_slice(&0x04034b50_u32.to_le_bytes());
+            bytes.extend_from_slice(&20_u16.to_le_bytes());
+            bytes.extend_from_slice(&0_u16.to_le_bytes());
+            bytes.extend_from_slice(&0_u16.to_le_bytes());
+            bytes.extend_from_slice(&0_u16.to_le_bytes());
+            bytes.extend_from_slice(&0_u16.to_le_bytes());
+            bytes.extend_from_slice(&0_u32.to_le_bytes());
+            bytes.extend_from_slice(&0_u32.to_le_bytes());
+            bytes.extend_from_slice(&0_u32.to_le_bytes());
+            bytes.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            bytes.extend_from_slice(&0_u16.to_le_bytes());
+            bytes.extend_from_slice(name_bytes);
+
+            central.extend_from_slice(&0x02014b50_u32.to_le_bytes());
+            central.extend_from_slice(&0x0314_u16.to_le_bytes());
+            central.extend_from_slice(&20_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u32.to_le_bytes());
+            central.extend_from_slice(&0_u32.to_le_bytes());
+            central.extend_from_slice(&0_u32.to_le_bytes());
+            central.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&0_u16.to_le_bytes());
+            central.extend_from_slice(&attributes.to_le_bytes());
+            central.extend_from_slice(&local_offset.to_le_bytes());
+            central.extend_from_slice(name_bytes);
+        }
+
+        let central_offset = bytes.len() as u32;
+        bytes.extend_from_slice(&central);
+        bytes.extend_from_slice(&0x06054b50_u32.to_le_bytes());
+        bytes.extend_from_slice(&0_u16.to_le_bytes());
+        bytes.extend_from_slice(&0_u16.to_le_bytes());
+        bytes.extend_from_slice(&(members.len() as u16).to_le_bytes());
+        bytes.extend_from_slice(&(members.len() as u16).to_le_bytes());
+        bytes.extend_from_slice(&(central.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&central_offset.to_le_bytes());
+        bytes.extend_from_slice(&0_u16.to_le_bytes());
+        bytes
+    }
+
+    #[test]
+    fn directory_entries_preserve_executable_mode_bits() {
+        let mut reader = ZipArtifactReader::new("zip", stored_zip_with_executable_directory());
+        let mut omissions = Vec::new();
+        let entries = reader
+            .entries(&Cancellation::default(), &mut omissions)
+            .expect("ZIP entries list");
+        let directory = entries
+            .iter()
+            .find(|entry| entry.path == "resources/")
+            .expect("directory entry is listed");
+        assert_eq!(directory.kind, "directory");
+        assert!(directory.executable);
+    }
+}
+
 impl ArtifactReader for ZipArtifactReader {
     fn format(&self) -> &'static str {
         self.format
@@ -269,7 +347,7 @@ impl ArtifactReader for ZipArtifactReader {
                 ));
             }
             out.push(ArtifactEntry {
-                path: entry.path.clone(),
+                path: JsString::from(entry.path.clone()),
                 kind: entry.kind,
                 declared_size: if entry.directory || entry.is_symlink {
                     None
@@ -287,7 +365,7 @@ impl ArtifactReader for ZipArtifactReader {
                 declared_sha256: None,
                 unpacked: false,
                 limitations,
-                adapter_key: format!("zip-entry:{}", entry.index),
+                adapter_key: JsString::from(format!("zip-entry:{}", entry.index)),
             });
         }
         Ok(out)
@@ -304,7 +382,8 @@ impl ArtifactReader for ZipArtifactReader {
         }
         let index: usize = entry
             .adapter_key
-            .strip_prefix("zip-entry:")
+            .as_str()
+            .and_then(|key| key.strip_prefix("zip-entry:"))
             .and_then(|value| value.parse().ok())
             .ok_or_else(|| {
                 ReaderFailure::new(

@@ -220,8 +220,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::{
-        Expansion, ExpansionContext, PathLookup, TreeEntry, TreeView, compatible_slice,
-        directory_of, expand_prefix, join_path, resolve_tree_path,
+        Expansion, ExpansionContext, PathLookup, TreeEntry, TreeView, directory_of, expand_prefix,
+        join_path, resolve_tree_path,
     };
 
     struct Fixture {

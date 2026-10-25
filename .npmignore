@@ -1,0 +1,5 @@
+# The release artifact is generated during prepack and is explicitly listed in
+# the root package files. Keep it packageable while the source checkout ignores
+# the generated binary.
+!bin/
+!bin/**

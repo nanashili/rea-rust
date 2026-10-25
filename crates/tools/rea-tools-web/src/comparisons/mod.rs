@@ -20,7 +20,7 @@ mod screenshot;
 use rea_core::analysis_error::AnalysisError;
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation};
 use rea_mcp::{Registry, ToolContext, ToolOutput};
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 
 const COMPARE_CAPTURES: &str = "compare_web_captures";
 const COMPARE_SCREENSHOTS: &str = "compare_web_screenshots";
@@ -193,15 +193,6 @@ fn string_array(result: &Value, key: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-/// Shared helper for the two diff modules to assemble an object.
-pub(crate) fn object(entries: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
-    let mut map = Map::new();
-    for (key, value) in entries {
-        map.insert(key.to_owned(), value);
-    }
-    Value::Object(map)
 }
 
 /// The `_ = ToolOutput` keeps the import live if a branch is cfg'd out.

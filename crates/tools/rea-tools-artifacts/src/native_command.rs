@@ -37,6 +37,7 @@ const ALLOWED_TOOLS: &[&str] = &[
     "dwarfdump",
     "file",
     "lipo",
+    "hdiutil",
     "nm",
     "otool",
     "plutil",

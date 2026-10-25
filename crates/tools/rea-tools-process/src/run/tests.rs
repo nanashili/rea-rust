@@ -33,11 +33,17 @@ fn scenario(overrides: Value) -> Scenario {
 fn host_environment() -> HashMap<String, String> {
     HashMap::from([
         ("PATH".to_owned(), "/usr/bin:/bin".to_owned()),
-        ("TMPDIR".to_owned(), std::env::temp_dir().to_string_lossy().into_owned()),
+        (
+            "TMPDIR".to_owned(),
+            std::env::temp_dir().to_string_lossy().into_owned(),
+        ),
     ])
 }
 
-fn run_with(scenario: &Scenario, cancel_after: Option<Duration>) -> Result<Value, capture::CaptureFailure> {
+fn run_with(
+    scenario: &Scenario,
+    cancel_after: Option<Duration>,
+) -> Result<Value, capture::CaptureFailure> {
     let environment = host_environment();
     let resolved = resolve_runtime_paths(scenario, &environment).unwrap();
     let flag = Arc::new(AtomicBool::new(false));
@@ -50,26 +56,58 @@ fn run_with(scenario: &Scenario, cancel_after: Option<Duration>) -> Result<Value
     }
     let cancelled = move || flag.load(Ordering::SeqCst);
     let progress = |_: &str, _: String| {};
-    capture::run(&resolved, &CaptureHost { environment: &environment, cancelled: &cancelled, progress: &progress })
+    capture::run(
+        &resolved,
+        &CaptureHost {
+            environment: &environment,
+            cancelled: &cancelled,
+            progress: &progress,
+        },
+    )
 }
 
 fn frames_text(capture: &Value) -> String {
-    capture["frames"].as_array().unwrap().iter().map(|frame| frame["data"].as_str().unwrap()).collect()
+    capture["frames"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|frame| frame["data"].as_str().unwrap())
+        .collect()
 }
 
 fn process_alive(pid: i64) -> bool {
-    rea_host::process::ownership::list_live_processes().unwrap().iter().any(|process| i64::from(process.pid) == pid)
+    rea_host::process::ownership::list_live_processes()
+        .unwrap()
+        .iter()
+        .any(|process| i64::from(process.pid) == pid)
 }
 
 #[test]
 fn normal_exit_publishes_a_verified_capture_and_releases_everything() {
-    let capture = run_with(&scenario(json!({"arguments": ["-c", "printf out; exit 3"]})), None).unwrap();
-    assert_eq!(capture["exit"], json!({"code": 3, "signal": 0, "reason": "exited"}));
+    let capture = run_with(
+        &scenario(json!({"arguments": ["-c", "printf out; exit 3"]})),
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        capture["exit"],
+        json!({"code": 3, "signal": 0, "reason": "exited"})
+    );
     assert_eq!(frames_text(&capture), "out");
     assert_eq!(capture["cleanup"]["owned_process_group"], "verified");
     assert_eq!(capture["cleanup"]["temporary_root"], "removed");
-    assert_eq!(capture["rendered_frames"].as_array().unwrap().last().unwrap()["lines"][0], "out");
-    assert_eq!(capture["manifest"]["executable_identity"]["state"], "path_metadata_unchanged");
+    assert_eq!(
+        capture["rendered_frames"]
+            .as_array()
+            .unwrap()
+            .last()
+            .unwrap()["lines"][0],
+        "out"
+    );
+    assert_eq!(
+        capture["manifest"]["executable_identity"]["state"],
+        "path_metadata_unchanged"
+    );
 }
 
 #[test]
@@ -82,7 +120,11 @@ fn output_still_buffered_when_the_root_exits_is_drained() {
     )
     .unwrap();
     let text = frames_text(&capture);
-    assert!(text.ends_with("line-1999-xxxxxxxxxxxxxxxxxxxxxxxx\r\n"), "{}", &text[text.len().saturating_sub(80)..]);
+    assert!(
+        text.ends_with("line-1999-xxxxxxxxxxxxxxxxxxxxxxxx\r\n"),
+        "{}",
+        &text[text.len().saturating_sub(80)..]
+    );
     assert_eq!(text.matches("\r\n").count(), 2000);
     let raw = &capture["truncation_details"]["raw_terminal"];
     assert_eq!(raw["observed_bytes"], raw["retained_bytes"]);
@@ -94,8 +136,18 @@ fn output_still_buffered_when_the_root_exits_is_drained() {
 
 #[test]
 fn hung_up_background_output_is_not_invented_and_the_session_settles() {
-    // The session leader's exit revokes the terminal for the background job.
-    let capture = run_with(&scenario(json!({"arguments": ["-c", "(trap '' HUP; sleep 0.2; echo late) & echo early"], "settle_ms": 1500})), None).unwrap();
+    // Wait for the background job to observe that its session leader has
+    // exited before writing. A timer only makes this ordering probabilistic
+    // when several real PTY captures run concurrently.
+    let command = "sh -c 'parent=$1; while [ \"$(ps -o ppid= -p $$ | tr -d \" \")\" = \"$parent\" ]; do sleep 0.01; done; echo late' sh \"$$\" & echo early";
+    let capture = run_with(
+        &scenario(json!({
+            "arguments": ["-c", command],
+            "settle_ms": 1500
+        })),
+        None,
+    )
+    .unwrap();
     assert_eq!(frames_text(&capture), "early\r\n");
     assert_eq!(capture["settlement"]["state"], "quiesced");
 }
@@ -103,11 +155,18 @@ fn hung_up_background_output_is_not_invented_and_the_session_settles() {
 #[test]
 fn cancellation_while_running_kills_the_group_and_reports_cleanup() {
     let started = Instant::now();
-    let failure = run_with(&scenario(json!({"arguments": ["-c", "echo up; sleep 30 & sleep 30"]})), Some(Duration::from_millis(300))).unwrap_err();
+    let failure = run_with(
+        &scenario(json!({"arguments": ["-c", "echo up; sleep 30 & sleep 30"]})),
+        Some(Duration::from_millis(300)),
+    )
+    .unwrap_err();
     assert!(started.elapsed() < Duration::from_secs(10));
     assert!(failure.cancelled);
     let report = failure.cleanup_report.unwrap();
-    assert_eq!(report["owned_process_group"]["state"], "cleaned", "{report}");
+    assert_eq!(
+        report["owned_process_group"]["state"], "cleaned",
+        "{report}"
+    );
     assert_eq!(report["temporary_root"]["state"], "cleaned");
     let partial = failure.partial_observation.unwrap();
     let root = partial["observations"]["exit"]["value"]["reason"].clone();
@@ -126,7 +185,11 @@ fn cancellation_during_finalization_escalates_at_once() {
         Some(Duration::from_millis(500)),
     )
     .unwrap_err();
-    assert!(started.elapsed() < Duration::from_secs(10), "{:?}", started.elapsed());
+    assert!(
+        started.elapsed() < Duration::from_secs(10),
+        "{:?}",
+        started.elapsed()
+    );
     assert!(failure.cancelled);
     let partial = failure.partial_observation.unwrap();
     let signals: Vec<_> = partial["observations"]["finalization"]["value"]["signals"]
@@ -136,7 +199,10 @@ fn cancellation_during_finalization_escalates_at_once() {
         .map(|signal| signal["signal"].as_str().unwrap().to_owned())
         .collect();
     assert_eq!(signals, ["SIGTERM", "SIGKILL"]);
-    assert_eq!(failure.cleanup_report.unwrap()["owned_process_group"]["state"], "cleaned");
+    assert_eq!(
+        failure.cleanup_report.unwrap()["owned_process_group"]["state"],
+        "cleaned"
+    );
 }
 
 /// Helper entry point: re-executed test binary that leaves the PTY group.
@@ -169,13 +235,55 @@ fn token_owned_descendant_outside_the_pty_group_is_swept() {
     while process_alive(pid) && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(20));
     }
-    assert!(!process_alive(pid), "detached token-owned descendant {pid} survived");
+    assert!(
+        !process_alive(pid),
+        "detached token-owned descendant {pid} survived"
+    );
+}
+
+/// Helper entry point: a token-readable (non-platform) root that outlives the timeout.
+#[test]
+#[ignore = "helper process for samples_retained_until_sampling_stops_are_journaled"]
+fn sleeping_root_helper() {
+    std::thread::sleep(Duration::from_secs(30));
+}
+
+#[test]
+fn samples_retained_until_sampling_stops_are_journaled() {
+    // A readable root is sampled throughout; samples taken while the capture
+    // completes (after settlement) must still be in the event journal, or the
+    // capture fails validation. Repeated: the window is timing-dependent.
+    let helper = std::env::current_exe().unwrap();
+    for _ in 0..2 {
+        let capture = run_with(
+            &scenario(json!({
+                "executable": helper.to_string_lossy(),
+                "arguments": ["--exact", "run::tests::sleeping_root_helper", "--ignored", "--quiet"],
+                "timeout_ms": 300, "finalization_ms": 1000,
+            })),
+            None,
+        )
+        .unwrap_or_else(|failure| panic!("{}", failure.message));
+        let samples = capture["process_samples"].as_array().unwrap().len();
+        let journaled = capture["event_journal"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry["collection"] == "process_samples")
+            .count();
+        assert_eq!(journaled, samples);
+        assert!(samples > 0);
+    }
 }
 
 #[test]
 fn failed_cleanup_is_retained_and_retry_releases_it() {
     use std::os::unix::fs::PermissionsExt;
-    let root = tempfile::Builder::new().prefix("rea-process-").tempdir().unwrap().keep();
+    let root = tempfile::Builder::new()
+        .prefix("rea-process-")
+        .tempdir()
+        .unwrap()
+        .keep();
     let locked = root.join("locked");
     std::fs::create_dir(&locked).unwrap();
     std::fs::write(locked.join("file"), "x").unwrap();

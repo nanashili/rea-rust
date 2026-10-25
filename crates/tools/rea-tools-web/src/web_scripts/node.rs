@@ -22,33 +22,6 @@ pub fn is_absolute(path: &str) -> bool {
     }
 }
 
-/// libuv error name for one host error, when the platform reports one.
-pub fn error_code(error: &io::Error) -> Option<&'static str> {
-    error.raw_os_error().and_then(code_for_raw)
-}
-
-#[cfg(unix)]
-fn code_for_raw(raw: i32) -> Option<&'static str> {
-    Some(match raw {
-        libc::EACCES => "EACCES",
-        libc::EEXIST => "EEXIST",
-        libc::EINTR => "EINTR",
-        libc::EISDIR => "EISDIR",
-        libc::ELOOP => "ELOOP",
-        libc::ENAMETOOLONG => "ENAMETOOLONG",
-        libc::ENOENT => "ENOENT",
-        libc::ENOTDIR => "ENOTDIR",
-        libc::ENXIO => "ENXIO",
-        libc::EPERM => "EPERM",
-        _ => return None,
-    })
-}
-
-#[cfg(not(unix))]
-fn code_for_raw(_raw: i32) -> Option<&'static str> {
-    None
-}
-
 /// `fs.realpath`, resolving symlinks and returning the canonical path.
 pub fn realpath(path: &str) -> io::Result<String> {
     let resolved = std::fs::canonicalize(path)?;

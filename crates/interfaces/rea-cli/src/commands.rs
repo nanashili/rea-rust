@@ -7,7 +7,7 @@ use crate::invoke::Runner;
 use crate::output::FailureKind;
 use crate::util::{absolute_caller_path, labelled, object};
 use rea_core::analysis_error::{AnalysisError, InputIssue};
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value, json, value::RawValue};
 
 const NATIVE_OPEN: [&str; 2] = ["snapshot", "provider"];
 
@@ -16,6 +16,20 @@ const NATIVE_OPEN: [&str; 2] = ["snapshot", "provider"];
 // ---------------------------------------------------------------------------
 fn get_str(value: &Value, key: &str) -> Option<String> {
     value.get(key).and_then(Value::as_str).map(str::to_owned)
+}
+
+fn option_strings(options: &Value, key: &str) -> Vec<String> {
+    options
+        .get(key)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn arg_str<'a>(value: &'a Value, key: &str) -> &'a str {
@@ -223,6 +237,29 @@ fn read_json_input(value: &str, operation: &str) -> Result<Value, Value> {
     }
 }
 
+/// Read inline JSON or one local JSON file without decoding its contents.
+/// Exact-input handlers need this representation so JavaScript UTF-16 escape
+/// sequences survive until the application parser owns their interpretation.
+fn read_raw_json_input(value: &str, operation: &str) -> Result<Box<RawValue>, Value> {
+    if let Ok(parsed) = serde_json::from_str::<Box<RawValue>>(value) {
+        return Ok(parsed);
+    }
+    match std::fs::read_to_string(value) {
+        Ok(text) => serde_json::from_str::<Box<RawValue>>(&text)
+            .map_err(|_| json_error(operation, value, "invalid-json")),
+        Err(_) => {
+            let trimmed = value.trim_start();
+            if (trimmed.starts_with('{') || trimmed.starts_with('['))
+                && !value.to_lowercase().ends_with(".json")
+            {
+                Err(json_error_inline(operation))
+            } else {
+                Err(json_error(operation, value, "read-failed"))
+            }
+        }
+    }
+}
+
 fn json_error_inline(operation: &str) -> Value {
     let projection = input_projection(
         operation,
@@ -262,8 +299,8 @@ fn json_error(operation: &str, path: &str, reason: &str) -> Value {
 
 /// Parse one `inputJson` arg and invoke `tool` with the parsed object.
 fn json_whole(runner: &Runner<'_>, tool: &str, args: &Value, operation: &str) -> Value {
-    match read_json_input(arg_str(args, "inputJson"), operation) {
-        Ok(value) => match outcome(runner.invoke(tool, value)) {
+    match read_raw_json_input(arg_str(args, "inputJson"), operation) {
+        Ok(value) => match outcome(runner.invoke_raw(tool, value)) {
             Ok(value) => value,
             Err(projection) => projection,
         },
@@ -354,9 +391,21 @@ pub fn failure_kind(name: &str) -> FailureKind {
     }
 }
 
+/// Result of command execution before CLI formatting. Raw JSON remains
+/// separate so the formatter never has to decode JavaScript lone surrogates.
+pub enum CommandOutput {
+    Value(Value),
+    Raw(Box<RawValue>),
+}
+
 /// Execute one resolved command, returning its result value.
-pub fn run_command(name: &str, args: &Value, options: &Value, runner: &Runner<'_>) -> Value {
-    match name {
+pub fn run_command(
+    name: &str,
+    args: &Value,
+    options: &Value,
+    runner: &Runner<'_>,
+) -> CommandOutput {
+    let value = match name {
         // ---- core binary (open / snapshot) --------------------------------
         "analyze" => run_analyze(runner, args, options),
         "inspect" => run_direct_analysis(
@@ -597,7 +646,7 @@ pub fn run_command(name: &str, args: &Value, options: &Value, runner: &Runner<'_
         ),
         "capture-native-ui-scenario" => run_capture_native_ui_scenario(runner, args, options),
         "import-reference-source" => {
-            labelled("Import failed", unavailable("import-reference-source"))
+            crate::application_commands::import_reference_source(runner, args, options)
         }
 
         // ---- evidence -----------------------------------------------------
@@ -935,8 +984,8 @@ pub fn run_command(name: &str, args: &Value, options: &Value, runner: &Runner<'_
             &["path"],
             &[],
         ),
-        "debug-with-gdb" => unavailable("gdb_console"),
-        "debug-with-rizin" => unavailable("rizin_debug_command"),
+        "debug-with-gdb" => crate::application_commands::debug_with_gdb(runner, args, options),
+        "debug-with-rizin" => crate::application_commands::debug_with_rizin(runner, args, options),
 
         // ---- browser / web / electron / js runtime ------------------------
         "list-browser-targets" => direct(
@@ -1170,7 +1219,7 @@ pub fn run_command(name: &str, args: &Value, options: &Value, runner: &Runner<'_
             "inspect_analysis_view",
         ),
         "inspect-evidence-bundle" => {
-            labelled("Analysis failed", unavailable("inspect-evidence-bundle"))
+            crate::application_commands::inspect_evidence_bundle(runner, args)
         }
 
         // ---- native call tracing ------------------------------------------
@@ -1238,20 +1287,53 @@ pub fn run_command(name: &str, args: &Value, options: &Value, runner: &Runner<'_
         "stop-adb-app" => direct(runner, "stop_adb_app", args, options, &[], &[]),
 
         // ---- maintenance / environment (application-only) -----------------
-        "setup" => unavailable("setup"),
-        "doctor" => unavailable("doctor"),
-        "uninstall" => unavailable("uninstall"),
-        "update" => unavailable("update"),
-        "environment-export" => labelled(
-            "Application workflow failed",
-            unavailable("environment-export"),
+        "setup" => crate::maintenance::setup(
+            &crate::maintenance::SetupOptions {
+                approved: options.get("yes").and_then(Value::as_bool).unwrap_or(false),
+                install_hopper: options
+                    .get("installHopper")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+                client_ids: option_strings(options, "client"),
+                skill_client_ids: option_strings(options, "skillClient"),
+                all_detected_clients: options
+                    .get("allDetected")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+                install_skill: options.get("skill").and_then(Value::as_bool),
+                dry_run: options
+                    .get("dryRun")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+                accessible: options
+                    .get("accessible")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+            },
+            runner,
         ),
-        "environment-serve" => labelled(
-            "Application workflow failed",
-            unavailable("environment-serve"),
+        "doctor" => crate::doctor_commands::run(options, runner),
+        "uninstall" => crate::maintenance::uninstall(
+            options
+                .get("purgeData")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            runner,
         ),
+        "update" => crate::maintenance::update(runner),
+        "environment-export" => crate::environment_export_commands::export(args, options),
+        "environment-serve" => {
+            crate::environment_commands::serve(args, options, &runner.cancellation)
+        }
 
         _ => unavailable(name),
+    };
+
+    match rea_mcp::raw_cli_output(&value) {
+        Some(raw) => CommandOutput::Raw(
+            RawValue::from_string(raw.to_owned()).expect("raw CLI result remains valid JSON"),
+        ),
+        None => CommandOutput::Value(value),
     }
 }
 
@@ -1791,7 +1873,7 @@ fn frida_remote(options: &Value) -> Option<Value> {
             ("token", "token"),
             ("certificate", "certificate"),
             ("origin", "origin"),
-            ("keepaliveInterval", "keepaliveInterval"),
+            ("keepaliveInterval", "keepalive_interval"),
         ],
     );
     Some(Value::Object(remote))
@@ -1995,10 +2077,33 @@ fn run_trace_web_module_imports(runner: &Runner<'_>, args: &Value, options: &Val
     if let Some(importer) = get_str(options, "importerUrl") {
         input.insert("importer_url".to_owned(), Value::String(importer));
     }
-    if let Some(map_path) = get_str(options, "importMapPath") {
+    let import_map_path = get_str(options, "importMapPath");
+    let import_map_base_url = get_str(options, "importMapBaseUrl");
+    if import_map_path.is_some() || import_map_base_url.is_some() {
+        let Some(map_path) = import_map_path else {
+            return input_projection(
+                "trace_web_module_imports",
+                &["import_map", "path"],
+                "missing_required",
+                "importMapPath is required when importMapBaseUrl is provided.".to_owned(),
+                Some("absolute filesystem path"),
+            );
+        };
+        let Some(base_url) = import_map_base_url else {
+            return input_projection(
+                "trace_web_module_imports",
+                &["import_map", "base_url"],
+                "missing_required",
+                "importMapBaseUrl is required when importMapPath is provided.".to_owned(),
+                Some("HTTP or HTTPS URL"),
+            );
+        };
         input.insert(
             "import_map".to_owned(),
-            Value::String(absolute_caller_path(&map_path)),
+            json!({
+                "path": absolute_caller_path(&map_path),
+                "base_url": base_url,
+            }),
         );
     }
     match outcome(runner.invoke("trace_web_module_imports", Value::Object(input))) {
@@ -2016,20 +2121,36 @@ fn run_compare_web_captures(runner: &Runner<'_>, args: &Value, options: &Value) 
         Ok(value) => value,
         Err(error) => return error,
     };
+    let scenario = is_scenario_capture(&before) || is_scenario_capture(&after);
     let mut input = Map::new();
-    input.insert("before".to_owned(), before);
-    input.insert("after".to_owned(), after);
-    if let Some(normalization) = get_str(options, "normalizationJson") {
-        if let Ok(value) = serde_json::from_str::<Value>(&normalization) {
-            input.insert("normalization".to_owned(), value);
-        } else if let Ok(value) = read_json_input(&normalization, "compare_web_captures") {
-            input.insert("normalization".to_owned(), value);
+    if scenario {
+        input.insert("before_scenario".to_owned(), before);
+        input.insert("after_scenario".to_owned(), after);
+        if let Some(normalization) = get_str(options, "normalizationJson") {
+            if let Ok(value) = serde_json::from_str::<Value>(&normalization) {
+                input.insert("normalization".to_owned(), value);
+            } else if let Ok(value) = read_json_input(&normalization, "compare_web_captures") {
+                input.insert("normalization".to_owned(), value);
+            }
         }
+    } else {
+        input.insert("before".to_owned(), before);
+        input.insert("after".to_owned(), after);
     }
     match outcome(runner.invoke("compare_web_captures", Value::Object(input))) {
         Ok(value) => value,
         Err(projection) => projection,
     }
+}
+
+fn is_scenario_capture(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    object.get("browser").is_some_and(Value::is_object)
+        && object.get("scenario").is_some_and(Value::is_object)
+        && object.get("steps").is_some_and(Value::is_array)
+        && object.get("events").is_some_and(Value::is_object)
 }
 
 fn run_compare_web_screenshots(runner: &Runner<'_>, args: &Value, options: &Value) -> Value {

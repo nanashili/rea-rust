@@ -172,7 +172,8 @@ fn live_entry(pid: u32) -> Option<ProcessEntry> {
 
 #[cfg(target_os = "linux")]
 fn all_pids() -> Result<Vec<u32>, String> {
-    let entries = std::fs::read_dir("/proc").map_err(|error| format!("process table could not be listed: {error}"))?;
+    let entries = std::fs::read_dir("/proc")
+        .map_err(|error| format!("process table could not be listed: {error}"))?;
     Ok(entries
         .filter_map(Result::ok)
         .filter_map(|entry| entry.file_name().to_str()?.parse::<u32>().ok())
@@ -186,7 +187,11 @@ fn all_pids() -> Result<Vec<u32>, String> {
 
 /// `liveProcesses(listProcesses())` with native facts; unreadable rows are omitted.
 pub fn list_live_processes() -> Result<Vec<ProcessEntry>, String> {
-    let mut entries: Vec<_> = rows()?.into_iter().filter(|row| !row.zombie).map(|row| row.entry).collect();
+    let mut entries: Vec<_> = rows()?
+        .into_iter()
+        .filter(|row| !row.zombie)
+        .map(|row| row.entry)
+        .collect();
     entries.sort_by_key(|entry| entry.pid);
     Ok(entries)
 }
@@ -204,13 +209,12 @@ pub struct CommandRow {
 fn command_of(pid: u32) -> String {
     match super::macos::run_token::read_arguments(pid as libc::pid_t) {
         Ok(arguments) if !arguments.is_empty() => arguments.join(" "),
-        _ => {
-            let mut name = [0_u8; 256];
-            // SAFETY: proc_name writes at most the passed buffer size.
-            let length = unsafe { libc::proc_name(pid as libc::c_int, name.as_mut_ptr().cast(), name.len() as u32) };
-            let name = String::from_utf8_lossy(&name[..length.max(0) as usize]).into_owned();
-            format!("({name})")
-        }
+        // `ps` prints the kernel short name (`p_comm`) in parentheses; it
+        // survives exit (zombies, exiting processes), unlike `proc_name`.
+        _ => match super::macos::process_table::process(pid) {
+            Ok(Some(process)) => format!("({})", process.command_name),
+            _ => "()".to_owned(),
+        },
     }
 }
 
@@ -218,7 +222,8 @@ fn command_of(pid: u32) -> String {
 fn command_of(pid: u32) -> String {
     match std::fs::read(format!("/proc/{pid}/cmdline")) {
         Ok(bytes) if !bytes.is_empty() => {
-            let text = String::from_utf8_lossy(bytes.strip_suffix(&[0]).unwrap_or(&bytes)).into_owned();
+            let text =
+                String::from_utf8_lossy(bytes.strip_suffix(&[0]).unwrap_or(&bytes)).into_owned();
             text.replace('\0', " ")
         }
         _ => {
@@ -250,17 +255,26 @@ pub fn list_process_commands() -> Result<Vec<CommandRow>, String> {
 
 /// Capture the prelaunch identities the sweep uses to select new candidates.
 pub fn capture_baseline() -> Result<OwnershipBaseline, String> {
-    Ok(rows()?.into_iter().map(|row| (row.entry.pid, Some(row.entry.identity))).collect())
+    Ok(rows()?
+        .into_iter()
+        .map(|row| (row.entry.pid, Some(row.entry.identity)))
+        .collect())
 }
 
 /// Breadth-first live descendants of `roots` (`descendantsOf`).
 pub fn descendants_of(roots: &[u32], processes: &[ProcessEntry]) -> Vec<ProcessEntry> {
     let mut children: HashMap<u32, Vec<&ProcessEntry>> = HashMap::new();
     for process in processes {
-        children.entry(process.parent_pid).or_default().push(process);
+        children
+            .entry(process.parent_pid)
+            .or_default()
+            .push(process);
     }
     let mut visited: BTreeSet<u32> = roots.iter().copied().collect();
-    let mut pending: Vec<&ProcessEntry> = roots.iter().flat_map(|pid| children.get(pid).cloned().unwrap_or_default()).collect();
+    let mut pending: Vec<&ProcessEntry> = roots
+        .iter()
+        .flat_map(|pid| children.get(pid).cloned().unwrap_or_default())
+        .collect();
     let mut result = Vec::new();
     let mut index = 0;
     while index < pending.len() {
@@ -306,7 +320,10 @@ pub fn scan_token_owned(
     baseline: &OwnershipBaseline,
     relation: Option<&OwnershipRelation>,
 ) -> TokenScan {
-    let baseline: HashMap<u32, &Option<String>> = baseline.iter().map(|(pid, identity)| (*pid, identity)).collect();
+    let baseline: HashMap<u32, &Option<String>> = baseline
+        .iter()
+        .map(|(pid, identity)| (*pid, identity))
+        .collect();
     let candidates: Vec<&ProcessEntry> = processes
         .iter()
         .filter(|process| match baseline.get(&process.pid) {
@@ -319,10 +336,19 @@ pub fn scan_token_owned(
     for process in candidates {
         match read_token_fact(process) {
             TokenFact::Exited => {}
-            TokenFact::Changed => unreadable.push((process, "process_identity_changed_during_token_read".to_owned())),
-            TokenFact::Token(RunTokenObservation::Readable { run_id: Some(found) }) if found == run_id => scan.owned.push(process.clone()),
-            TokenFact::Token(RunTokenObservation::Readable { .. } | RunTokenObservation::Absent { .. }) => {}
-            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => unreadable.push((process, reason)),
+            TokenFact::Changed => unreadable.push((
+                process,
+                "process_identity_changed_during_token_read".to_owned(),
+            )),
+            TokenFact::Token(RunTokenObservation::Readable {
+                run_id: Some(found),
+            }) if found == run_id => scan.owned.push(process.clone()),
+            TokenFact::Token(
+                RunTokenObservation::Readable { .. } | RunTokenObservation::Absent { .. },
+            ) => {}
+            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
+                unreadable.push((process, reason))
+            }
         }
     }
     // Bounded retries settle transient token-read races.
@@ -335,8 +361,12 @@ pub fn scan_token_owned(
         for (process, first) in unreadable {
             match read_token_fact(process) {
                 TokenFact::Exited => {}
-                TokenFact::Token(RunTokenObservation::Readable { run_id: Some(found) }) if found == run_id => scan.owned.push(process.clone()),
-                TokenFact::Token(RunTokenObservation::Readable { .. } | RunTokenObservation::Absent { .. }) => {}
+                TokenFact::Token(RunTokenObservation::Readable {
+                    run_id: Some(found),
+                }) if found == run_id => scan.owned.push(process.clone()),
+                TokenFact::Token(
+                    RunTokenObservation::Readable { .. } | RunTokenObservation::Absent { .. },
+                ) => {}
                 _ => remaining.push((process, first)),
             }
         }
@@ -346,19 +376,39 @@ pub fn scan_token_owned(
     let mut related_groups = BTreeSet::new();
     if let Some(relation) = relation {
         related_pids.insert(relation.leader_pid);
-        related_pids.extend(descendants_of(&[relation.leader_pid], processes).into_iter().map(|process| process.pid));
+        related_pids.extend(
+            descendants_of(&[relation.leader_pid], processes)
+                .into_iter()
+                .map(|process| process.pid),
+        );
         related_groups.insert(relation.process_group_id);
-        related_groups.extend(relation.sampled_process_group_ids.iter().copied().filter(|group| *group > 0));
+        related_groups.extend(
+            relation
+                .sampled_process_group_ids
+                .iter()
+                .copied()
+                .filter(|group| *group > 0),
+        );
         related_groups.extend(scan.owned.iter().map(|process| process.process_group_id));
     }
-    let live: Option<BTreeSet<u32>> = list_live_processes().ok().map(|rows| rows.into_iter().map(|row| row.pid).collect());
+    let live: Option<BTreeSet<u32>> = list_live_processes()
+        .ok()
+        .map(|rows| rows.into_iter().map(|row| row.pid).collect());
     for (process, diagnostic) in unreadable {
-        if live.as_ref().is_some_and(|live| !live.contains(&process.pid)) {
+        if live
+            .as_ref()
+            .is_some_and(|live| !live.contains(&process.pid))
+        {
             continue;
         }
-        let related = relation.is_none() || related_pids.contains(&process.pid) || related_groups.contains(&process.process_group_id);
+        let related = relation.is_none()
+            || related_pids.contains(&process.pid)
+            || related_groups.contains(&process.process_group_id);
         if !related && withheld(&diagnostic, process.uid) {
-            scan.unverified.push(UnverifiedProcess { pid: process.pid, diagnostic });
+            scan.unverified.push(UnverifiedProcess {
+                pid: process.pid,
+                diagnostic,
+            });
         } else {
             scan.failures.push(OwnershipFailure {
                 pid: process.pid,
@@ -377,19 +427,37 @@ pub fn scan_token_owned(
 /// be reused while the group has members, and only members of the same
 /// session can join it, so its live members are attributed to the run by
 /// session ownership even when the kernel withholds their environment.
-pub fn observe_process_groups(run_id: &str, group_ids: &[u32], session_group: Option<u32>) -> BTreeMap<u32, GroupObservation> {
+pub fn observe_process_groups(
+    run_id: &str,
+    group_ids: &[u32],
+    session_group: Option<u32>,
+) -> BTreeMap<u32, GroupObservation> {
     let groups: BTreeSet<u32> = group_ids.iter().copied().collect();
     let processes = match list_live_processes() {
         Ok(processes) => processes,
         Err(reason) => {
-            let failure = GroupObservation::Unverifiable(format!("process group could not be inspected: {reason}"));
-            return groups.into_iter().map(|group| (group, failure.clone())).collect();
+            let failure = GroupObservation::Unverifiable(format!(
+                "process group could not be inspected: {reason}"
+            ));
+            return groups
+                .into_iter()
+                .map(|group| (group, failure.clone()))
+                .collect();
         }
     };
-    let mut observations: BTreeMap<u32, GroupObservation> = groups.iter().map(|group| (*group, GroupObservation::Empty)).collect();
-    for process in processes.iter().filter(|process| groups.contains(&process.process_group_id)) {
+    let mut observations: BTreeMap<u32, GroupObservation> = groups
+        .iter()
+        .map(|group| (*group, GroupObservation::Empty))
+        .collect();
+    for process in processes
+        .iter()
+        .filter(|process| groups.contains(&process.process_group_id))
+    {
         let group = process.process_group_id;
-        if matches!(observations.get(&group), Some(GroupObservation::Unverifiable(_))) {
+        if matches!(
+            observations.get(&group),
+            Some(GroupObservation::Unverifiable(_))
+        ) {
             continue;
         }
         if session_group == Some(group) {
@@ -402,12 +470,18 @@ pub fn observe_process_groups(run_id: &str, group_ids: &[u32], session_group: Op
                 "native process-group membership could not be revalidated for PID {}",
                 process.pid
             )),
-            TokenFact::Token(RunTokenObservation::Readable { run_id: Some(found) }) if found == run_id => GroupObservation::Alive,
-            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => GroupObservation::Unverifiable(format!(
-                "process ownership could not be revalidated for PID {}: {reason}",
-                process.pid
-            )),
-            TokenFact::Token(_) => GroupObservation::Unverifiable("process ownership did not match".to_owned()),
+            TokenFact::Token(RunTokenObservation::Readable {
+                run_id: Some(found),
+            }) if found == run_id => GroupObservation::Alive,
+            TokenFact::Token(RunTokenObservation::Unavailable { reason }) => {
+                GroupObservation::Unverifiable(format!(
+                    "process ownership could not be revalidated for PID {}: {reason}",
+                    process.pid
+                ))
+            }
+            TokenFact::Token(_) => {
+                GroupObservation::Unverifiable("process ownership did not match".to_owned())
+            }
         };
         observations.insert(group, observation);
     }
@@ -459,17 +533,31 @@ pub fn sanitized_token_read_failure(diagnostic: Option<&str>) -> String {
 
 /// `cleanupValidationFailure` reason text.
 fn validation_failure(failures: &[OwnershipFailure]) -> String {
-    let mut mismatched: Vec<u32> = failures.iter().filter(|failure| failure.reason == "run-token-mismatch").map(|failure| failure.pid).collect();
+    let mut mismatched: Vec<u32> = failures
+        .iter()
+        .filter(|failure| failure.reason == "run-token-mismatch")
+        .map(|failure| failure.pid)
+        .collect();
     if !mismatched.is_empty() {
         mismatched.sort_unstable();
         mismatched.dedup();
-        let pids = mismatched.iter().map(u32::to_string).collect::<Vec<_>>().join(", ");
+        let pids = mismatched
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
         return format!("process ownership token mismatch for PID(s): {pids}");
     }
-    if failures.iter().any(|failure| failure.reason == "process-identity-unavailable") {
+    if failures
+        .iter()
+        .any(|failure| failure.reason == "process-identity-unavailable")
+    {
         return "process identity could not be revalidated".to_owned();
     }
-    let unreadable: Vec<_> = failures.iter().filter(|failure| failure.reason == "environment-unreadable").collect();
+    let unreadable: Vec<_> = failures
+        .iter()
+        .filter(|failure| failure.reason == "environment-unreadable")
+        .collect();
     if !unreadable.is_empty() {
         let mut counts: BTreeMap<String, usize> = BTreeMap::new();
         let mut candidates = Vec::new();
@@ -479,7 +567,11 @@ fn validation_failure(failures: &[OwnershipFailure]) -> String {
             *counts.entry(category).or_default() += 1;
         }
         candidates.sort();
-        let breakdown = counts.iter().map(|(category, count)| format!("{category}={count}")).collect::<Vec<_>>().join(", ");
+        let breakdown = counts
+            .iter()
+            .map(|(category, count)| format!("{category}={count}"))
+            .collect::<Vec<_>>()
+            .join(", ");
         return format!(
             "process ownership token could not be read for {} live process(es): {breakdown}; live candidates {}",
             unreadable.len(),
@@ -492,7 +584,11 @@ fn validation_failure(failures: &[OwnershipFailure]) -> String {
 /// Signal every token-owned process group whose live members all carry the
 /// token from the same generation, then verify no owned process remains.
 /// The PTY root group itself is released by its owner before this sweep.
-pub fn cleanup_token_owned_processes(run_id: &str, baseline: &OwnershipBaseline, relation: &OwnershipRelation) -> CleanupResult {
+pub fn cleanup_token_owned_processes(
+    run_id: &str,
+    baseline: &OwnershipBaseline,
+    relation: &OwnershipRelation,
+) -> CleanupResult {
     let processes = match list_live_processes() {
         Ok(processes) => processes,
         Err(reason) => {
@@ -507,12 +603,22 @@ pub fn cleanup_token_owned_processes(run_id: &str, baseline: &OwnershipBaseline,
     let scan = scan_token_owned(&processes, run_id, baseline, Some(relation));
     let mut unverified = scan.unverified.clone();
     let mut signaled = false;
-    let owned_groups: BTreeSet<u32> = scan.owned.iter().map(|process| process.process_group_id).collect();
+    let owned_groups: BTreeSet<u32> = scan
+        .owned
+        .iter()
+        .map(|process| process.process_group_id)
+        .collect();
     for group in owned_groups {
-        let members: Vec<_> = processes.iter().filter(|process| process.process_group_id == group).collect();
+        let members: Vec<_> = processes
+            .iter()
+            .filter(|process| process.process_group_id == group)
+            .collect();
         let all_owned = members.iter().all(|member| {
             matches!(read_token_fact(member), TokenFact::Exited)
-                || scan.owned.iter().any(|owned| owned.pid == member.pid && owned.identity == member.identity)
+                || scan
+                    .owned
+                    .iter()
+                    .any(|owned| owned.pid == member.pid && owned.identity == member.identity)
         });
         if !all_owned {
             return CleanupResult {
@@ -523,11 +629,15 @@ pub fn cleanup_token_owned_processes(run_id: &str, baseline: &OwnershipBaseline,
             };
         }
         // Revalidate the group leader generation immediately before signaling.
-        let leader_ok = members.iter().all(|member| !matches!(read_token_fact(member), TokenFact::Changed));
+        let leader_ok = members
+            .iter()
+            .all(|member| !matches!(read_token_fact(member), TokenFact::Changed));
         if !leader_ok {
             return CleanupResult {
                 cleaned: false,
-                reason: Some("process identity changed or became unavailable before signal".to_owned()),
+                reason: Some(
+                    "process identity changed or became unavailable before signal".to_owned(),
+                ),
                 signaled,
                 unverified,
             };
@@ -568,12 +678,18 @@ pub fn cleanup_token_owned_processes(run_id: &str, baseline: &OwnershipBaseline,
                 unverified,
             };
         }
-        std::thread::sleep(CLEANUP_VERIFICATION_INTERVAL.min(deadline.saturating_duration_since(Instant::now())));
+        std::thread::sleep(
+            CLEANUP_VERIFICATION_INTERVAL.min(deadline.saturating_duration_since(Instant::now())),
+        );
     }
 }
 
 /// `verifyNoTokenOwnedProcesses`.
-pub fn verify_no_token_owned_processes(run_id: &str, baseline: &OwnershipBaseline, relation: &OwnershipRelation) -> CleanupResult {
+pub fn verify_no_token_owned_processes(
+    run_id: &str,
+    baseline: &OwnershipBaseline,
+    relation: &OwnershipRelation,
+) -> CleanupResult {
     let processes = match list_live_processes() {
         Ok(processes) => processes,
         Err(reason) => {
@@ -589,7 +705,10 @@ pub fn verify_no_token_owned_processes(run_id: &str, baseline: &OwnershipBaselin
     let (cleaned, reason) = if !scan.failures.is_empty() {
         (false, Some(validation_failure(&scan.failures)))
     } else if !scan.owned.is_empty() {
-        (false, Some("token-owned process remained after cleanup".to_owned()))
+        (
+            false,
+            Some("token-owned process remained after cleanup".to_owned()),
+        )
     } else {
         (true, None)
     };
@@ -616,7 +735,11 @@ mod tests {
     #[test]
     fn command_rows_match_the_process_argument_vector() {
         let own = std::process::id();
-        let row = list_process_commands().unwrap().into_iter().find(|row| row.pid == own).unwrap();
+        let row = list_process_commands()
+            .unwrap()
+            .into_iter()
+            .find(|row| row.pid == own)
+            .unwrap();
         let expected: Vec<String> = std::env::args().collect();
         assert_eq!(row.command, expected.join(" "));
     }
@@ -631,14 +754,20 @@ mod tests {
             identity: String::new(),
         };
         let processes = vec![entry(2, 1), entry(3, 2), entry(4, 1), entry(1, 3)];
-        let pids: Vec<_> = descendants_of(&[1], &processes).into_iter().map(|process| process.pid).collect();
+        let pids: Vec<_> = descendants_of(&[1], &processes)
+            .into_iter()
+            .map(|process| process.pid)
+            .collect();
         assert_eq!(pids, vec![2, 4, 3]);
     }
 
     #[test]
     fn baseline_processes_are_not_sweep_candidates() {
         let processes = list_live_processes().unwrap();
-        let baseline: OwnershipBaseline = processes.iter().map(|process| (process.pid, Some(process.identity.clone()))).collect();
+        let baseline: OwnershipBaseline = processes
+            .iter()
+            .map(|process| (process.pid, Some(process.identity.clone())))
+            .collect();
         let scan = scan_token_owned(&processes, "run-not-present", &baseline, None);
         assert!(scan.owned.is_empty() && scan.failures.is_empty() && scan.unverified.is_empty());
     }
@@ -666,7 +795,12 @@ mod tests {
         // so a related unreadable process must keep cleanup fail-closed.
         if cfg!(target_os = "macos") {
             assert!(scan.owned.is_empty());
-            assert!(scan.failures.iter().any(|failure| failure.pid == child.id()), "{scan:?}");
+            assert!(
+                scan.failures
+                    .iter()
+                    .any(|failure| failure.pid == child.id()),
+                "{scan:?}"
+            );
             let result = cleanup_token_owned_processes(&run_id, &baseline, &relation);
             assert!(!result.cleaned);
             // Token-only observation cannot attribute it; session ownership can.
@@ -699,7 +833,12 @@ mod tests {
         let baseline = capture_baseline().unwrap();
         let run_id = format!("ownership-owned-{}", std::process::id());
         let mut child = std::process::Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", "process::ownership::tests::ownership_sleeper_helper", "--ignored", "--quiet"])
+            .args([
+                "--exact",
+                "process::ownership::tests::ownership_sleeper_helper",
+                "--ignored",
+                "--quiet",
+            ])
             .env("REA_PROCESS_RUN_ID", &run_id)
             .stdout(std::process::Stdio::null())
             .process_group(0)
@@ -713,17 +852,27 @@ mod tests {
         };
         let processes = list_live_processes().unwrap();
         let scan = scan_token_owned(&processes, &run_id, &baseline, Some(&relation));
-        assert!(scan.owned.iter().any(|process| process.pid == child.id()), "{scan:?}");
+        assert!(
+            scan.owned.iter().any(|process| process.pid == child.id()),
+            "{scan:?}"
+        );
         assert_eq!(
             observe_process_groups(&run_id, &[child.id()], None).get(&child.id()),
             Some(&GroupObservation::Alive)
         );
         // A different run never owns the process.
-        assert!(scan_token_owned(&processes, "other-run", &baseline, None).owned.is_empty());
+        assert!(
+            scan_token_owned(&processes, "other-run", &baseline, None)
+                .owned
+                .is_empty()
+        );
         let result = cleanup_token_owned_processes(&run_id, &baseline, &relation);
         assert!(result.signaled, "{result:?}");
         let status = child.wait().unwrap();
-        assert_eq!(std::os::unix::process::ExitStatusExt::signal(&status), Some(libc::SIGKILL));
+        assert_eq!(
+            std::os::unix::process::ExitStatusExt::signal(&status),
+            Some(libc::SIGKILL)
+        );
         assert!(verify_no_token_owned_processes(&run_id, &baseline, &relation).cleaned);
     }
 }

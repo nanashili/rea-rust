@@ -7,7 +7,6 @@
 //! `createServer.ts`.
 
 use rea_core::analysis_error::AnalysisError;
-use rea_core::cancellation::Cancellation;
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation};
 use rea_mcp::{SessionResource, ToolContext, ToolOutput};
 use std::collections::HashMap;

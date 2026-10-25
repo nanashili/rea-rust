@@ -5,7 +5,9 @@
 //! unresolved findings instead of being treated as unchanged behavior.
 
 use rea_core::evidence::record::EvidenceRecord;
+use rea_core::evidence::record::EvidenceRecordError;
 use rea_core::failure::{Detail, Failure};
+use rea_core::schema::{Issue, IssueKind};
 use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
 
@@ -42,11 +44,17 @@ pub fn compare(input: &Value) -> Result<Value, Failure> {
 
         let raw = serde_json::value::to_raw_value(item)
             .map_err(|error| invalid(&format!("comparison Evidence is not valid JSON: {error}")))?;
-        let record = EvidenceRecord::parse(&raw).map_err(|error| {
-            invalid(&format!(
-                "comparison Evidence failed authentication: {error}"
-            ))
-        })?;
+        let record = match EvidenceRecord::parse(&raw) {
+            Ok(record) => record,
+            Err(EvidenceRecordError::Shape(issues)) => {
+                return Err(invalid(&evidence_shape_message(item, &issues)));
+            }
+            Err(error) => {
+                return Err(invalid(&format!(
+                    "comparison Evidence failed authentication: {error}"
+                )));
+            }
+        };
         let authenticated = serde_json::from_str::<Value>(record.raw().get()).map_err(|error| {
             invalid(&format!(
                 "comparison Evidence could not be retained: {error}"
@@ -673,4 +681,111 @@ fn invalid(reason: &str) -> Failure {
         "Provide comparison Evidence and retry.".into(),
         BTreeMap::from([(String::from("operation"), Detail::Text(OPERATION.into()))]),
     )
+}
+
+fn evidence_shape_message(input: &Value, issues: &[Issue]) -> String {
+    let Some(issue) = issues.first() else {
+        return "comparison Evidence has invalid shape".into();
+    };
+    let path = issue
+        .path
+        .iter()
+        .map(|segment| match segment {
+            Value::String(name) => name.clone(),
+            Value::Number(index) => index.to_string(),
+            _ => segment.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(".");
+    let detail = match &issue.kind {
+        IssueKind::InvalidType { expected } => format!(
+            "Invalid input: expected {expected}, received {}",
+            received_type(input, &issue.path)
+        ),
+        IssueKind::InvalidValue { values } => format!(
+            "Invalid option: expected one of {}",
+            values
+                .iter()
+                .map(Value::to_string)
+                .collect::<Vec<_>>()
+                .join("|")
+        ),
+        IssueKind::TooSmall { minimum, exclusive } => {
+            size_issue_message(input, &issue.path, *minimum, *exclusive, true)
+        }
+        IssueKind::TooBig { maximum, exclusive } => {
+            size_issue_message(input, &issue.path, *maximum, *exclusive, false)
+        }
+        IssueKind::InvalidFormat { message, .. } | IssueKind::Custom { message } => message.clone(),
+        IssueKind::UnrecognizedKeys { keys } => format!(
+            "Unrecognized key{}: {}",
+            if keys.len() > 1 { "s" } else { "" },
+            keys.iter()
+                .map(|key| format!("\"{key}\""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        IssueKind::InvalidUnion { .. } => "Invalid input".into(),
+    };
+    let detail = if path.is_empty() {
+        detail
+    } else {
+        format!("at {path}: {detail}")
+    };
+    if issues.len() > 1 {
+        format!("{detail} ({} more issues)", issues.len() - 1)
+    } else {
+        detail
+    }
+}
+
+fn size_issue_message(
+    input: &Value,
+    path: &[Value],
+    bound: Option<f64>,
+    exclusive: bool,
+    too_small: bool,
+) -> String {
+    let value_type = received_type(input, path);
+    let operator = match (too_small, exclusive) {
+        (true, true) => ">",
+        (true, false) => ">=",
+        (false, true) => "<",
+        (false, false) => "<=",
+    };
+    let bound = bound.unwrap_or_default();
+
+    match value_type {
+        "string" => format!(
+            "{}: expected string to have {operator}{bound} characters",
+            if too_small { "Too small" } else { "Too big" }
+        ),
+        "array" => format!(
+            "{}: expected array to have {operator}{bound} items",
+            if too_small { "Too small" } else { "Too big" }
+        ),
+        _ => format!(
+            "{}: expected {value_type} to be {operator}{bound}",
+            if too_small { "Too small" } else { "Too big" }
+        ),
+    }
+}
+
+fn received_type(input: &Value, path: &[Value]) -> &'static str {
+    let value = path
+        .iter()
+        .try_fold(input, |current, part| match (current, part) {
+            (Value::Object(object), Value::String(key)) => object.get(key),
+            (Value::Array(items), Value::Number(index)) => items.get(index.as_u64()? as usize),
+            _ => None,
+        });
+    match value {
+        None => "undefined",
+        Some(Value::Null) => "null",
+        Some(Value::Bool(_)) => "boolean",
+        Some(Value::Number(_)) => "number",
+        Some(Value::String(_)) => "string",
+        Some(Value::Array(_)) => "array",
+        Some(Value::Object(_)) => "object",
+    }
 }

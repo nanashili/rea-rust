@@ -33,11 +33,6 @@ pub fn segment(name: &str) -> Value {
     Value::String(name.to_owned())
 }
 
-/// `new AnalysisOutputError(operation, message)`.
-pub fn output(operation: &str, message: impl Into<String>) -> AnalysisError {
-    AnalysisError::output(operation, message)
-}
-
 /// `new AnalysisCancelledError(operation)`.
 pub fn cancelled(operation: &str) -> AnalysisError {
     AnalysisError::cancelled(operation)
@@ -46,17 +41,6 @@ pub fn cancelled(operation: &str) -> AnalysisError {
 /// `new AnalysisAccessDeniedError(operation, path, code)`.
 pub fn access_denied(operation: &str, path: &str, code: &str) -> AnalysisError {
     AnalysisError::access_denied(operation, path, code)
-}
-
-/// `new AnalysisCapabilityUnavailableError(provider, operation, reason, { userMessage })`.
-pub fn capability_unavailable(
-    provider: &str,
-    operation: &str,
-    reason: &str,
-    user_message: impl Into<String>,
-) -> AnalysisError {
-    AnalysisError::capability_unavailable(provider, operation, reason)
-        .with_user_message(user_message)
 }
 
 /// `new WebScriptExportError(reason, target, diagnostic)` with no cleanup.

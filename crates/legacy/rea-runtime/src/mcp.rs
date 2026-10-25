@@ -5,20 +5,19 @@ use crate::mcp_result::{DEFAULT_RECEIVE_BYTES, Representation, ToolResult};
 use crate::{
     adb_client_live_handler, adb_device_live_handler, adb_offline_handlers,
     adb_package_pull_live_handler, analysis_inventory_handlers, android_handlers,
-    android_package_handlers, apktool_client_live_handler, artifact_workflow_handlers,
-    batch_decompile_runtime_handlers, browser_electron_offline_handlers,
-    bytes_observation_handlers, compare_artifacts_mcp_handler, compare_functions_handlers,
-    decode_signal_recording_handler, extract_artifact_handler, extract_firmware_mcp_handler,
-    find_changed_behavior_handlers, il2cpp_offline_handlers, inspect_analysis_view_handler,
-    inspect_artifact_handler, inspect_dart_aot_handler, inspect_firmware_regions_handlers,
-    inspect_managed_native_boundaries_handler, inspect_web_network_capture_handlers,
+    apktool_client_live_handler, artifact_workflow_handlers, batch_decompile_runtime_handlers,
+    browser_electron_offline_handlers, bytes_observation_handlers, compare_artifacts_mcp_handler,
+    compare_functions_handlers, decode_signal_recording_handler, extract_artifact_handler,
+    extract_firmware_mcp_handler, find_changed_behavior_handlers, il2cpp_offline_handlers,
+    inspect_analysis_view_handler, inspect_artifact_handler, inspect_dart_aot_handler,
+    inspect_firmware_regions_handlers, inspect_web_network_capture_handlers,
     javascript_runtime_handler, managed_handlers, managed_member_comparison_handler,
     native_analysis_handlers, native_navigation_handlers, native_procedure_handlers,
     native_relationship_handlers, network_signal_offline_handlers, packet_capture_handlers,
     pcap_capture_handler, pcap_client_offline_handlers, polyglot_static_handlers,
-    public_analysis_handlers, signal_decoder_handlers, static_format_offline_handlers,
-    static_runtime_handlers, verify_reconstruction_handlers, web_capture_offline_handlers,
-    web_session_live_handler, web_static_handlers, xrefs_runtime_handlers,
+    public_analysis_handlers, signal_decoder_handlers, static_runtime_handlers,
+    verify_reconstruction_handlers, web_capture_offline_handlers, web_session_live_handler,
+    web_static_handlers, xrefs_runtime_handlers,
 };
 use rea_application::analysis_view;
 use rea_application::android;
@@ -56,6 +55,7 @@ use rea_application::inputs;
 use rea_application::interface_builder;
 use rea_application::interface_builder::nib_archive::{self, NibArchiveInspection};
 use rea_application::javascript;
+use rea_application::javascript::graph::json as graph_json;
 use rea_application::ledger::artifact_records::{self, DetailLevel};
 use rea_application::ledger::bundle_comparison_command;
 use rea_application::ledger::bundle_export::{self, BundleExporter};
@@ -77,7 +77,6 @@ use rea_application::web::webmcp_discovery;
 use rea_core::evidence::bundle_comparison::RecordPair;
 use rea_core::{
     cancellation::Cancellation,
-    evidence::record::EvidenceRecord,
     evidence::{Architecture, NativeFormat, Subject},
     failure::{Detail, Failure},
 };
@@ -91,19 +90,137 @@ use rmcp::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, value::RawValue};
+#[cfg(unix)]
+use std::os::{fd::AsFd, unix::fs::MetadataExt};
 use std::{
     collections::BTreeMap,
     io::{self, Read, Write},
     net::{SocketAddr, TcpStream},
     path::{Path, PathBuf},
+    pin::Pin,
     sync::{
         Arc, Mutex,
         atomic::{AtomicU8, Ordering},
     },
+    task::{Context, Poll},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+#[cfg(unix)]
+use tokio::io::unix::AsyncFd;
+use tokio::io::{AsyncRead, ReadBuf};
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
+
+/// Poll stdin directly instead of using Tokio's blocking stdin bridge.
+///
+/// Tokio's standard-input adapter performs an uncancellable blocking read on
+/// a helper thread. Readiness-based input keeps pipe and terminal reads owned
+/// by the transport task so cancellation can release them promptly.
+#[cfg(unix)]
+struct PollableStdin {
+    inner: PollableStdinInner,
+}
+
+#[cfg(unix)]
+enum PollableStdinInner {
+    Async {
+        inner: AsyncFd<std::fs::File>,
+        original_flags: rustix::fs::OFlags,
+    },
+    Regular(tokio::fs::File),
+}
+
+#[cfg(unix)]
+impl PollableStdin {
+    fn new() -> io::Result<Self> {
+        let stdin = io::stdin();
+        let duplicate_fd = rustix::io::dup(stdin.as_fd())?;
+
+        let input = std::fs::File::from(duplicate_fd);
+        if is_finite_stdin_file(&input)? {
+            return Ok(Self {
+                inner: PollableStdinInner::Regular(tokio::fs::File::from_std(input)),
+            });
+        }
+
+        // AsyncFd requires a nonblocking descriptor. The duplicate shares the
+        // open file description with fd 0, so retain and restore its original
+        // status flags when this owned reader is dropped.
+        let original_flags = rustix::fs::fcntl_getfl(&input)?;
+        let inner = AsyncFd::new(input)?;
+        rustix::fs::fcntl_setfl(
+            inner.get_ref(),
+            original_flags | rustix::fs::OFlags::NONBLOCK,
+        )?;
+
+        Ok(Self {
+            inner: PollableStdinInner::Async {
+                inner,
+                original_flags,
+            },
+        })
+    }
+}
+
+#[cfg(unix)]
+fn is_finite_stdin_file(input: &std::fs::File) -> io::Result<bool> {
+    let metadata = input.metadata()?;
+    if metadata.file_type().is_file() {
+        return Ok(true);
+    }
+
+    let null_metadata = std::fs::metadata("/dev/null")?;
+    Ok(metadata.dev() == null_metadata.dev() && metadata.ino() == null_metadata.ino())
+}
+
+#[cfg(unix)]
+impl Drop for PollableStdin {
+    fn drop(&mut self) {
+        let PollableStdinInner::Async {
+            inner,
+            original_flags,
+        } = &self.inner
+        else {
+            return;
+        };
+
+        if let Err(error) = rustix::fs::fcntl_setfl(inner.get_ref(), *original_flags) {
+            eprintln!("failed to restore stdin status flags: {error}");
+        }
+    }
+}
+
+#[cfg(unix)]
+impl AsyncRead for PollableStdin {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buffer: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        let PollableStdinInner::Async { inner, .. } = &mut self.inner else {
+            let PollableStdinInner::Regular(file) = &mut self.inner else {
+                unreachable!("stdin reader variant changed while polling");
+            };
+            return Pin::new(file).poll_read(cx, buffer);
+        };
+
+        loop {
+            let mut readiness = match inner.poll_read_ready_mut(cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(result) => result?,
+            };
+            let unfilled = buffer.initialize_unfilled();
+            match readiness.try_io(|inner| inner.get_ref().read(unfilled)) {
+                Ok(Ok(read)) => {
+                    buffer.advance(read);
+                    return Poll::Ready(Ok(()));
+                }
+                Ok(Err(error)) => return Poll::Ready(Err(error)),
+                Err(_) => continue,
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct LosslessServer;
@@ -240,7 +357,6 @@ impl ArtifactServer {
         };
         let cancellation = Cancellation::default();
         let worker_cancellation = cancellation.clone();
-        let records = self.records.clone();
         let mut guard = CancelOnDrop {
             cancellation,
             completed: false,
@@ -279,6 +395,7 @@ impl ArtifactServer {
             self.process_observation_contract.clone(),
             self.process_cmdline_contract.clone(),
             self.process_memory_contract.clone(),
+            self.electron_fuses_contract.clone(),
             self.evm_interface_contract.clone(),
             self.evm_revert_contract.clone(),
             self.recorded_crash_contract.clone(),
@@ -918,9 +1035,33 @@ impl ArtifactServer {
             request,
             request_cancellation,
             android::application_graph::OPERATION,
-            android::application_graph::project_evidence,
+            Self::project_android_application_graph,
         )
         .await
+    }
+
+    fn project_android_application_graph(input: &Value) -> Result<Box<RawValue>, Failure> {
+        let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated Android inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?)
+        .map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated Android inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?;
+        android::application_graph::project_evidence(&graph_input)
     }
 
     async fn dispatch_android_manifest_component(
@@ -981,9 +1122,33 @@ impl ArtifactServer {
             request,
             request_cancellation,
             harmony::application_graph::OPERATION,
-            harmony::application_graph::project_evidence,
+            Self::project_harmony_application_graph,
         )
         .await
+    }
+
+    fn project_harmony_application_graph(input: &Value) -> Result<Box<RawValue>, Failure> {
+        let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated HarmonyOS inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?)
+        .map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated HarmonyOS inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?;
+        harmony::application_graph::project_evidence(&graph_input)
     }
 
     async fn dispatch_apple_application_graph(
@@ -995,9 +1160,33 @@ impl ArtifactServer {
             request,
             request_cancellation,
             apple::application_graph::OPERATION,
-            apple::application_graph::project_evidence,
+            Self::project_apple_application_graph,
         )
         .await
+    }
+
+    fn project_apple_application_graph(input: &Value) -> Result<Box<RawValue>, Failure> {
+        let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated Apple inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?)
+        .map_err(|error| {
+            Failure::new(
+                "invalid_request",
+                "invalid_input",
+                error.to_string(),
+                false,
+                "Provide authenticated Apple inventory Evidence.".into(),
+                BTreeMap::new(),
+            )
+        })?;
+        apple::application_graph::project_evidence(&graph_input)
     }
 
     async fn dispatch_inventory_projection(
@@ -1368,11 +1557,6 @@ impl ArtifactServer {
         {
             return self
                 .dispatch_batch_decompile_live(request, request_cancellation)
-                .await;
-        }
-        if is_captured_offline_operation(&request.name) {
-            return self
-                .dispatch_captured_offline(request, request_cancellation)
                 .await;
         }
         if request.name == apktool::client::OPERATION {
@@ -4495,9 +4679,7 @@ fn is_captured_offline_operation(operation: &str) -> bool {
             | "compare_artifacts"
             | "inspect_signature"
             | "inspect_desktop_application"
-            | "list_browser_targets"
             | "offline_list_electron_targets"
-            | "inspect_electron_fuses"
             | "offline_inspect_electron_page"
             | "reconcile_electron"
             | "capture_browser_scenario"
@@ -4537,27 +4719,7 @@ fn is_captured_offline_operation(operation: &str) -> bool {
             | "build_call_path"
             | "find_xrefs_to_name"
             | "resolve_native_call_targets"
-            | "inspect_go_binary"
-            | "inspect_rust_binary"
-            | "inspect_macho"
-            | "inspect_pe_resources"
-            | "inspect_pe_target"
-            | "inspect_evm_interface"
-            | "inspect_binary_layout"
-            | "inspect_plist"
-            | "inspect_wasm_artifact"
-            | "inspect_sqlite_database"
-            | "inspect_android_package"
-            | "inspect_android_class"
-            | "inspect_android_method"
-            | "search_android_classes"
-            | "trace_android_references"
-            | "project_android_application_graph"
-            | "inspect_android_resource"
-            | "inspect_android_manifest_component"
-            | "inspect_managed_artifact"
             | "compare_managed_members"
-            | "inspect_managed_native_boundaries"
             | "verify_managed_native_boundaries"
             | "compare_application_versions"
             | "analyze_web_bundle"
@@ -4568,7 +4730,6 @@ fn is_captured_offline_operation(operation: &str) -> bool {
             | "recover_javascript_sources"
             | "compare_javascript_export_shapes"
             | "decode_android_resources"
-            | "compare_artifacts"
             | "compare_functions"
             | "correlate_static_and_runtime"
             | "find_changed_behavior"
@@ -4683,7 +4844,6 @@ fn dispatch_captured_offline_value(
             artifact_workflow_handlers::dispatch(operation, input)
         }
         "list_browser_targets"
-        | "inspect_electron_fuses"
         | "offline_list_electron_targets"
         | "offline_inspect_electron_page"
         | "reconcile_electron"
@@ -4696,12 +4856,8 @@ fn dispatch_captured_offline_value(
         }
         "import_managed_reconstruction"
         | "project_managed_application_graph"
-        | "inspect_managed_artifact"
         | "compare_managed_members"
         | "verify_managed_native_boundaries" => managed_handlers::dispatch(operation, input),
-        "inspect_managed_native_boundaries" => {
-            inspect_managed_native_boundaries_handler::handle(&input)
-        }
         "inspect_native_annotation"
         | "inspect_native_api"
         | "inspect_native_data_type"
@@ -4756,27 +4912,6 @@ fn dispatch_captured_offline_value(
         }
         "batch_decompile" => batch_decompile_runtime_handlers::dispatch(input),
         "xrefs" => xrefs_runtime_handlers::dispatch(input),
-        "inspect_go_binary"
-        | "inspect_rust_binary"
-        | "inspect_macho"
-        | "inspect_pe_resources"
-        | "inspect_pe_target"
-        | "inspect_evm_interface"
-        | "inspect_binary_layout"
-        | "inspect_plist"
-        | "inspect_wasm_artifact"
-        | "inspect_sqlite_database" => static_format_offline_handlers::dispatch(operation, input),
-        "inspect_android_package"
-        | "inspect_android_class"
-        | "inspect_android_method"
-        | "search_android_classes"
-        | "trace_android_references"
-        | "project_android_application_graph" => {
-            android_package_handlers::dispatch(operation, input)
-        }
-        "inspect_android_resource" | "inspect_android_manifest_component" => {
-            android_handlers::dispatch(operation, input)
-        }
         "decode_android_resources" => android_resource_dispatch(operation, input),
         _ => return None,
     };
@@ -4922,10 +5057,6 @@ fn captured_offline_contracts() -> Result<Vec<Tool>, ErrorData> {
         (
             "offline_list_electron_targets",
             "offline_list_electron_targets.json"
-        ),
-        (
-            "inspect_electron_fuses",
-            "offline_inspect_electron_fuses.json"
         ),
         (
             "offline_inspect_electron_page",
@@ -5505,14 +5636,36 @@ fn execute_electron_target_listing(
     cancellation: &Cancellation,
 ) -> Result<Box<RawValue>, ErrorData> {
     match list_electron_targets(&input, cancellation) {
-        Ok(result) => encoded(
-            &ResultEnvelope { result },
-            Representation::Success,
-            electron_observation::OPERATION,
-            true,
-        ),
+        Ok(evidence) => {
+            let response = legacy_electron_target_response(evidence);
+            encoded(
+                &response,
+                Representation::Success,
+                electron_observation::OPERATION,
+                true,
+            )
+        }
         Err(error) => failure(&error, true),
     }
+}
+
+/// Keep the legacy result projection alongside the authenticated Evidence envelope.
+///
+/// Older MCP callers read `structuredContent.result` as the normalized observation,
+/// while newer callers need the complete authenticated envelope. Returning both at
+/// this adapter boundary preserves the producer-owned observation and its provenance.
+#[derive(Serialize)]
+struct ElectronTargetResponse {
+    result: Value,
+    evidence: Value,
+}
+
+fn legacy_electron_target_response(evidence: Value) -> ElectronTargetResponse {
+    let result = evidence
+        .get("normalized_result")
+        .cloned()
+        .unwrap_or(Value::Null);
+    ElectronTargetResponse { result, evidence }
 }
 
 /// Run the shared live Electron target-list workflow for CLI and MCP callers.
@@ -6498,8 +6651,9 @@ pub async fn run(cancellation: &Cancellation) -> Result<(), Box<dyn std::error::
     let server = ArtifactServer::new()?;
     let state = server.state.clone();
     let exports = server.exports.clone();
+    let stdin = PollableStdin::new()?;
     let transport = rmcp::transport::async_rw::AsyncRwTransport::<LosslessServer, _, _>::new(
-        tokio::io::stdin(),
+        stdin,
         tokio::io::stdout(),
     )
     .with_max_line_length(DEFAULT_RECEIVE_BYTES);

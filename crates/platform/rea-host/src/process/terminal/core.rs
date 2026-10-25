@@ -130,7 +130,11 @@ impl Core {
     }
 
     pub fn buffer(&self) -> &Buffer {
-        if self.alt_active { &self.alt } else { &self.normal }
+        if self.alt_active {
+            &self.alt
+        } else {
+            &self.normal
+        }
     }
 
     fn buf(&mut self) -> &mut Buffer {
@@ -235,7 +239,9 @@ impl Core {
                 }
             } else {
                 let trimmed = (buffer.lines.len() + 1).saturating_sub(buffer.lines.max_length());
-                buffer.lines.splice((bottom_row + 1) as usize, 0, vec![new_line]);
+                buffer
+                    .lines
+                    .splice((bottom_row + 1) as usize, 0, vec![new_line]);
                 moved = Some(bottom_row - trimmed as isize);
             }
             if !will_trim {
@@ -244,7 +250,9 @@ impl Core {
             }
         } else {
             let height = bottom_row - top_row + 1;
-            buffer.lines.shift_elements((top_row + 1) as usize, height - 1, -1);
+            buffer
+                .lines
+                .shift_elements((top_row + 1) as usize, height - 1, -1);
             buffer.lines.set(bottom_row as usize, Some(new_line));
             moved = (height > 1).then_some(bottom_row - 1);
         }
@@ -317,7 +325,13 @@ impl Core {
                         OldRow::Index(index) => {
                             let buffer = self.buf();
                             if old_width > 0 {
-                                copy_rows(buffer, index, row, old_col.max(0) as usize, old_width as usize);
+                                copy_rows(
+                                    buffer,
+                                    index,
+                                    row,
+                                    old_col.max(0) as usize,
+                                    old_width as usize,
+                                );
                             }
                             if let Some(line) = buffer.line_mut(index) {
                                 while old_col < old_cols as isize {
@@ -332,7 +346,13 @@ impl Core {
                             if old_width > 0
                                 && let Some(line) = self.buf().line_mut(row)
                             {
-                                line.copy_cells_from(&source, old_col.max(0) as usize, 0, old_width as usize, false);
+                                line.copy_cells_from(
+                                    &source,
+                                    old_col.max(0) as usize,
+                                    0,
+                                    old_width as usize,
+                                    false,
+                                );
                             }
                         }
                     }
@@ -347,7 +367,11 @@ impl Core {
             if should_join && x != 0 {
                 let buffer = self.buf();
                 if let Some(line) = buffer.line_mut(row) {
-                    let offset = if line.width((x - 1) as usize) != 0 { 1 } else { 2 };
+                    let offset = if line.width((x - 1) as usize) != 0 {
+                        1
+                    } else {
+                        2
+                    };
                     if x - offset >= 0 {
                         line.add_codepoint_to_cell((x - offset) as usize, code, width as u32);
                     }
@@ -365,7 +389,11 @@ impl Core {
                 continue;
             };
             if insert {
-                line.insert_cells(x as usize, (width - old_width).max(0) as usize, &Cell::null(cur));
+                line.insert_cells(
+                    x as usize,
+                    (width - old_width).max(0) as usize,
+                    &Cell::null(cur),
+                );
                 if line.width(cols as usize - 1) == 2 {
                     line.set_cell_from_codepoint(cols as usize - 1, 0, 1, &cur);
                 }
@@ -461,7 +489,11 @@ impl Core {
             let cols = self.cols as isize;
             let buffer = self.buf();
             let wrapped = buffer.line(index).is_some_and(|line| line.is_wrapped);
-            if buffer.x == 0 && buffer.y > buffer.scroll_top && buffer.y <= buffer.scroll_bottom && wrapped {
+            if buffer.x == 0
+                && buffer.y > buffer.scroll_top
+                && buffer.y <= buffer.scroll_bottom
+                && wrapped
+            {
                 if let Some(line) = buffer.line_mut(index) {
                     line.is_wrapped = false;
                 }
@@ -488,7 +520,14 @@ impl Core {
         self.buf().x = next;
     }
 
-    fn erase_in_buffer_line(&mut self, y: isize, start: usize, end: usize, clear_wrap: bool, protect: bool) {
+    fn erase_in_buffer_line(
+        &mut self,
+        y: isize,
+        start: usize,
+        end: usize,
+        clear_wrap: bool,
+        protect: bool,
+    ) {
         let fill = Cell::null(self.erase_attr());
         let buffer = self.buf();
         let index = buffer.ybase + y;
@@ -580,7 +619,9 @@ impl Core {
         let bottom_absolute = rows - 1 + buffer.ybase - offset + 1;
         // Iterations past the region height only replace blanks with blanks.
         for _ in 0..count.min(rows as i64) {
-            buffer.lines.splice((bottom_absolute - 1) as usize, 1, Vec::new());
+            buffer
+                .lines
+                .splice((bottom_absolute - 1) as usize, 1, Vec::new());
             let blank = buffer.blank_line(cols, &erase, false);
             buffer.lines.splice(row as usize, 0, vec![blank]);
         }
@@ -624,9 +665,15 @@ impl Core {
         let cols = self.cols;
         let buffer = self.buf();
         for _ in 0..count {
-            buffer.lines.splice((buffer.ybase + buffer.scroll_top) as usize, 1, Vec::new());
+            buffer
+                .lines
+                .splice((buffer.ybase + buffer.scroll_top) as usize, 1, Vec::new());
             let blank = buffer.blank_line(cols, &erase, false);
-            buffer.lines.splice((buffer.ybase + buffer.scroll_bottom) as usize, 0, vec![blank]);
+            buffer.lines.splice(
+                (buffer.ybase + buffer.scroll_bottom) as usize,
+                0,
+                vec![blank],
+            );
         }
     }
 
@@ -635,14 +682,24 @@ impl Core {
         let cols = self.cols;
         let buffer = self.buf();
         for _ in 0..count {
-            buffer.lines.splice((buffer.ybase + buffer.scroll_bottom) as usize, 1, Vec::new());
+            buffer.lines.splice(
+                (buffer.ybase + buffer.scroll_bottom) as usize,
+                1,
+                Vec::new(),
+            );
             let blank = buffer.blank_line(cols, &Attr::default(), false);
-            buffer.lines.splice((buffer.ybase + buffer.scroll_top) as usize, 0, vec![blank]);
+            buffer
+                .lines
+                .splice((buffer.ybase + buffer.scroll_top) as usize, 0, vec![blank]);
         }
     }
 
     /// SL/SR/DECIC/DECDC: edit every row of the scroll region.
-    fn edit_region(&mut self, params: &Params, edit: impl Fn(&mut BufferLine, usize, usize, &Cell)) {
+    fn edit_region(
+        &mut self,
+        params: &Params,
+        edit: impl Fn(&mut BufferLine, usize, usize, &Cell),
+    ) {
         let fill = Cell::null(self.erase_attr());
         let count = param_or_one(params) as usize;
         let buffer = self.buf();
@@ -673,7 +730,13 @@ impl Core {
         let text = self
             .buffer()
             .line(index)
-            .map(|line| if x >= 0 { line.string_at(x as usize) } else { String::new() })
+            .map(|line| {
+                if x >= 0 {
+                    line.string_at(x as usize)
+                } else {
+                    String::new()
+                }
+            })
             .unwrap_or_default();
         let codes: Vec<u32> = text.chars().map(u32::from).collect();
         let total = (codes.len() * count).min(MAX_REPEAT_CODES);
@@ -697,10 +760,34 @@ impl Core {
                 7 => self.dec.wraparound = on,
                 45 => self.dec.reverse_wraparound = on,
                 66 => self.dec.application_keypad = on,
-                9 => self.mouse = if on { MouseProtocol::X10 } else { MouseProtocol::None },
-                1000 => self.mouse = if on { MouseProtocol::Vt200 } else { MouseProtocol::None },
-                1002 => self.mouse = if on { MouseProtocol::Drag } else { MouseProtocol::None },
-                1003 => self.mouse = if on { MouseProtocol::Any } else { MouseProtocol::None },
+                9 => {
+                    self.mouse = if on {
+                        MouseProtocol::X10
+                    } else {
+                        MouseProtocol::None
+                    }
+                }
+                1000 => {
+                    self.mouse = if on {
+                        MouseProtocol::Vt200
+                    } else {
+                        MouseProtocol::None
+                    }
+                }
+                1002 => {
+                    self.mouse = if on {
+                        MouseProtocol::Drag
+                    } else {
+                        MouseProtocol::None
+                    }
+                }
+                1003 => {
+                    self.mouse = if on {
+                        MouseProtocol::Any
+                    } else {
+                        MouseProtocol::None
+                    }
+                }
                 1004 => self.dec.send_focus = on,
                 1048 => {
                     if on {
@@ -966,9 +1053,14 @@ impl Core {
 fn js_whitespace(c: char) -> bool {
     matches!(
         c,
-        '\u{9}' | '\u{A}' | '\u{B}' | '\u{C}' | '\u{D}' | ' ' | '\u{A0}' | '\u{1680}'
-            | '\u{2000}'..='\u{200A}' | '\u{2028}' | '\u{2029}' | '\u{202F}' | '\u{205F}'
-            | '\u{3000}' | '\u{FEFF}'
+        '\u{9}' | '\u{A}' | '\u{B}' | '\u{C}' | '\u{D}' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
     )
 }
 
@@ -1012,7 +1104,11 @@ fn sgr0(attr: &mut Attr) {
 }
 
 fn process_underline(style: i32, attr: &mut Attr) {
-    let style = if style == -1 || style > 5 { 1 } else { style as u32 };
+    let style = if style == -1 || style > 5 {
+        1
+    } else {
+        style as u32
+    };
     attr.extended.set_underline_style(style);
     attr.fg |= FG_UNDERLINE;
     if style == 0 {
@@ -1078,7 +1174,13 @@ fn extract_color(params: &Params, pos: usize, attr: &mut Attr) -> usize {
         38 => attr.fg = update_attr_color(attr.fg, accu[1], accu[3], accu[4], accu[5]),
         48 => attr.bg = update_attr_color(attr.bg, accu[1], accu[3], accu[4], accu[5]),
         58 => {
-            let color = update_attr_color(attr.extended.underline_color(), accu[1], accu[3], accu[4], accu[5]);
+            let color = update_attr_color(
+                attr.extended.underline_color(),
+                accu[1],
+                accu[3],
+                accu[4],
+                accu[5],
+            );
             attr.extended.set_underline_color(color);
         }
         _ => {}
@@ -1120,12 +1222,16 @@ impl Perform for Core {
             0x40 => self.edit_current_line(|line, x, fill| {
                 line.insert_cells(x, n as usize, fill);
             }),
-            0x2040 => self.edit_region(params, |line, _, count, fill| line.delete_cells(0, count, fill)),
+            0x2040 => self.edit_region(params, |line, _, count, fill| {
+                line.delete_cells(0, count, fill)
+            }),
             0x41 => {
                 let diff = self.buffer().y - self.buffer().scroll_top;
                 self.move_cursor(0, if diff >= 0 { -diff.min(n) } else { -n });
             }
-            0x2041 => self.edit_region(params, |line, _, count, fill| line.insert_cells(0, count, fill)),
+            0x2041 => self.edit_region(params, |line, _, count, fill| {
+                line.insert_cells(0, count, fill)
+            }),
             0x42 => {
                 let diff = self.buffer().scroll_bottom - self.buffer().y;
                 self.move_cursor(0, if diff >= 0 { diff.min(n) } else { n });
@@ -1215,8 +1321,12 @@ impl Perform for Core {
             0x72 => self.set_scroll_region(params),
             0x73 => self.save_cursor(),
             0x75 => self.restore_cursor(),
-            0x277d => self.edit_region(params, |line, x, count, fill| line.insert_cells(x, count, fill)),
-            0x277e => self.edit_region(params, |line, x, count, fill| line.delete_cells(x, count, fill)),
+            0x277d => self.edit_region(params, |line, x, count, fill| {
+                line.insert_cells(x, count, fill)
+            }),
+            0x277e => self.edit_region(params, |line, x, count, fill| {
+                line.delete_cells(x, count, fill)
+            }),
             0x2271 => match p0 {
                 1 => self.cur_attr.bg |= BG_PROTECTED,
                 0 | 2 => self.cur_attr.bg &= !BG_PROTECTED,
@@ -1263,7 +1373,10 @@ impl Perform for Core {
             self.screen_alignment_pattern();
             return;
         }
-        if matches!(collect, 0x28..=0x2f) && collect != 0x2c && charsets::CHARSET_FLAGS.contains(&flag) {
+        if matches!(collect, 0x28..=0x2f)
+            && collect != 0x2c
+            && charsets::CHARSET_FLAGS.contains(&flag)
+        {
             self.select_charset(collect, flag);
         }
     }

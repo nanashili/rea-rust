@@ -5,6 +5,7 @@
 //! operation name and preserves the operation authority on failures.
 
 use rea_application::reconstruction::reference_source_import;
+use rea_core::cancellation::Cancellation;
 use rea_core::failure::{Detail, Failure};
 use serde_json::Value;
 
@@ -18,7 +19,7 @@ pub fn dispatch(input: Value) -> Result<Value, Failure> {
 
 /// Dispatch an already-selected import request without provider access.
 pub fn dispatch_typed(input: &Value) -> Result<Value, Failure> {
-    reference_source_import::import(input).map_err(tag_failure)
+    reference_source_import::import(input, &Cancellation::default()).map_err(tag_failure)
 }
 
 fn tag_failure(mut failure: Failure) -> Failure {

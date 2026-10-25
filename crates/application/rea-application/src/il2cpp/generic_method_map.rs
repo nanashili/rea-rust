@@ -247,7 +247,7 @@ impl<'a> PointerIndex<'a> {
 
     fn lookup(&self, identity: Identity) -> PointerMatch<'a> {
         if identity.pointer_index_conflict {
-            return PointerMatch::Ambiguous(Vec::new());
+            return PointerMatch::Ambiguous;
         }
         let keys = identity.keys().collect::<Vec<_>>();
         if keys.is_empty() {
@@ -268,31 +268,27 @@ impl<'a> PointerIndex<'a> {
         candidate_rows.dedup();
 
         let mut matching = Vec::new();
-        let mut conflicting = Vec::new();
+        let mut conflicting = false;
         for row in candidate_rows {
             let value = &self.rows[row];
             match identity.match_quality(value.as_object()) {
                 IdentityMatch::Exact | IdentityMatch::Partial => matching.push((value, row)),
-                IdentityMatch::Conflict => conflicting.push(value),
+                IdentityMatch::Conflict => conflicting = true,
                 IdentityMatch::Missing => {}
             }
         }
 
-        if !conflicting.is_empty() {
-            let mut candidates = matching.iter().map(|(value, _)| *value).collect::<Vec<_>>();
-            candidates.extend(conflicting);
-            let source = candidates[0];
-            return PointerMatch::Conflicting { source, candidates };
+        if conflicting {
+            return PointerMatch::Conflicting;
         }
 
         match matching.as_slice() {
             [] => PointerMatch::Missing,
-            [(row, _)] if identity.is_partial(row.as_object()) => PointerMatch::PartiallyKnown {
-                source: *row,
-                candidates: vec![*row],
-            },
+            [(row, _)] if identity.is_partial(row.as_object()) => {
+                PointerMatch::PartiallyKnown { source: *row }
+            }
             [(row, _)] => PointerMatch::Found(*row),
-            _ => PointerMatch::Ambiguous(matching.iter().map(|(value, _)| *value).collect()),
+            _ => PointerMatch::Ambiguous,
         }
     }
 }
@@ -337,22 +333,14 @@ fn validate_pointer_address(
 
 enum PointerMatch<'a> {
     Missing,
-    Ambiguous(Vec<&'a Value>),
+    Ambiguous,
     Found(&'a Value),
     /// A source row matched one identity but omitted another requested one.
-    /// Keep both the selected source and every matching candidate for callers
-    /// that need to explain why the projection cannot claim an exact match.
     PartiallyKnown {
         source: &'a Value,
-        candidates: Vec<&'a Value>,
     },
-    /// At least one supplied identity disagreed with a candidate row.  The
-    /// source and candidate rows remain attached even though the projection
-    /// must not select a pointer from conflicting evidence.
-    Conflicting {
-        source: &'a Value,
-        candidates: Vec<&'a Value>,
-    },
+    /// At least one supplied identity disagreed with a candidate row.
+    Conflicting,
 }
 
 fn pointer_identity(
@@ -417,12 +405,6 @@ impl Identity {
         }
         if match_kinds
             .iter()
-            .any(|match_kind| matches!(match_kind, IndexMatch::Missing))
-        {
-            return IdentityMatch::Missing;
-        }
-        if match_kinds
-            .iter()
             .any(|match_kind| matches!(match_kind, IndexMatch::Partial))
         {
             IdentityMatch::Partial
@@ -441,7 +423,6 @@ enum IndexMatch {
     Exact,
     Partial,
     Conflict,
-    Missing,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -476,9 +457,7 @@ fn pointer_match(object: &Map<String, Value>, expected: Option<u64>) -> IndexMat
 
 fn pointer_value(pointer: &PointerMatch<'_>) -> Value {
     match pointer {
-        PointerMatch::Missing | PointerMatch::Ambiguous(_) | PointerMatch::Conflicting { .. } => {
-            Value::Null
-        }
+        PointerMatch::Missing | PointerMatch::Ambiguous | PointerMatch::Conflicting => Value::Null,
         PointerMatch::Found(value) => (*value).clone(),
         PointerMatch::PartiallyKnown { source, .. } => (*source).clone(),
     }
@@ -493,14 +472,10 @@ fn resolution(
     // conflicting evidence, and incomplete identity as `unknown`.
     if matches!(
         method_pointer,
-        PointerMatch::Ambiguous(_)
-            | PointerMatch::Conflicting { .. }
-            | PointerMatch::PartiallyKnown { .. }
+        PointerMatch::Ambiguous | PointerMatch::Conflicting | PointerMatch::PartiallyKnown { .. }
     ) || matches!(
         adjustor_pointer,
-        PointerMatch::Ambiguous(_)
-            | PointerMatch::Conflicting { .. }
-            | PointerMatch::PartiallyKnown { .. }
+        PointerMatch::Ambiguous | PointerMatch::Conflicting | PointerMatch::PartiallyKnown { .. }
     ) {
         return "unknown";
     }
@@ -510,15 +485,15 @@ fn resolution(
     let method_known = match method_pointer {
         PointerMatch::Found(pointer) => pointer_has_address(pointer),
         PointerMatch::Missing
-        | PointerMatch::Ambiguous(_)
+        | PointerMatch::Ambiguous
         | PointerMatch::PartiallyKnown { .. }
-        | PointerMatch::Conflicting { .. } => false,
+        | PointerMatch::Conflicting => false,
     };
     let adjustor_known = match adjustor_pointer {
         PointerMatch::Missing => true,
-        PointerMatch::Ambiguous(_)
+        PointerMatch::Ambiguous
         | PointerMatch::PartiallyKnown { .. }
-        | PointerMatch::Conflicting { .. } => false,
+        | PointerMatch::Conflicting => false,
         PointerMatch::Found(pointer) => pointer_has_address(pointer),
     };
     if method_known && adjustor_known {

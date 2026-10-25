@@ -55,6 +55,17 @@ fn agrees_with_original_rea_on_numbers_utf16_order_and_duplicate_keys() {
 }
 
 #[test]
+fn canonicalizes_adjacent_unpaired_units_in_keys_and_values() {
+    let raw: &RawValue = serde_json::from_str(r#"{"x\udc00\ud800": "\udc00\ud800"}"#).unwrap();
+    let mut bytes = Vec::new();
+
+    canonical_json::write(raw, &mut bytes).unwrap();
+
+    assert_eq!(bytes, br#"{"x\udc00\ud800":"\udc00\ud800"}"#);
+    assert_eq!(canonical_json::digest_raw(raw).unwrap().len(), 64);
+}
+
+#[test]
 fn limits_depth_without_recursive_traversal_and_rejects_non_finite_numbers() {
     for depth in [1000, 1001] {
         let text = format!("{}0{}", "[".repeat(depth), "]".repeat(depth));

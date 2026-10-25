@@ -2,6 +2,9 @@
 # `target` (for example `crates/tools/rea-tools-binary/src/target/`) stay tracked.
 /target/
 
+# Release artifacts are copied here only while assembling an npm package.
+/bin/
+
 # macOS metadata
 .DS_Store
 

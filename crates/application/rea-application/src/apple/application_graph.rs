@@ -4,14 +4,13 @@
 //! not open the inventory's target again, parse plist or signing content, or
 //! execute application code.
 
-use crate::artifacts;
+use crate::javascript::graph::json::{self, Json, Obj};
 use rea_core::{
-    canonical_json,
+    JsString,
     evidence::record::{EvidenceRecord, EvidenceRecordError},
     failure::{Detail, Failure},
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 pub const OPERATION: &str = "project_apple_application_graph";
@@ -19,55 +18,73 @@ const INVENTORY_OPERATION: &str = "inventory_artifact";
 const INSPECTION_OPERATION: &str = "inspect_artifact";
 const MAX_BRIDGE_CANDIDATE_JSON_BYTES: usize = 2 * 1024 * 1024;
 
-pub fn validate_input(input: &Value) -> Result<(), Failure> {
+pub fn validate_input(input: &Json) -> Result<(), Failure> {
     parse_input(input)
         .map(|_| ())
         .map_err(ProjectionError::into_failure)
 }
 
 /// Project authenticated inventory Evidence without reading archive contents.
-pub fn project(input: &Value) -> Result<Value, String> {
+pub fn project(input: &Json) -> Result<Json, String> {
     let parsed = parse_input(input).map_err(|error| error.to_string())?;
-    project_inventory(&parsed)
+    let projected = project_inventory(&parsed)?;
+    Ok(projected)
+}
+
+/// Validate and retain an already projected Apple graph without decoding its
+/// JavaScript strings through the canonical graph JSON model.
+pub fn retain_result(input: &Json, result: Json) -> Result<Json, Failure> {
+    validate_input(input)?;
+    if result.as_obj().is_none() {
+        return Err(invalid("Apple application graph result must be an object"));
+    }
+    Ok(result)
 }
 
 /// Wrap the deterministic graph projection in authenticated, linked Evidence.
-pub fn project_evidence(input: &Value) -> Result<Box<serde_json::value::RawValue>, Failure> {
+pub fn project_evidence(input: &Json) -> Result<Box<serde_json::value::RawValue>, Failure> {
     let parsed = parse_input(input).map_err(ProjectionError::into_failure)?;
-    let result = project_inventory(&parsed).map_err(|reason| invalid(&reason))?;
-    let source_evidence_ids = result["source_evidence_ids"].clone();
+    let projected = project_inventory(&parsed).map_err(|reason| invalid(&reason))?;
+    let result = projected;
+    let source_evidence_ids = result.at("source_evidence_ids").clone();
     let subject = projected_subject(
         parsed
             .carriers
             .first()
             .expect("parse_input rejects empty Evidence"),
-        &result["root_sha256"],
+        result
+            .get("root_sha256")
+            .ok_or_else(|| protocol_failure("projected result has no root_sha256"))?,
     )?;
-    let limitations = result["limitations"].clone();
+    let limitations = result.at("limitations").clone();
 
-    let unsigned = json!({
-        "subject": subject,
-        "provider": {
-            "id": "rea-apple-application",
-            "name": "REA Apple application workflows",
-            "version": "1"
-        },
-        "analysis_profile": null,
-        "predicate_type": "rea.apple-application-graph",
-        "operation": OPERATION,
-        "parameters": {"inventory_evidence_ids": source_evidence_ids.clone()},
-        "raw_result": null,
-        "normalized_result": result,
-        "confidence": "inferred",
-        "authority": "analyst-inference",
-        "environment": null,
-        "limitations": limitations,
-        "relationship_coverage": null,
-        "locations": [],
-        "evidence_links": source_evidence_ids
-    });
+    let unsigned = Obj::new()
+        .with("subject", subject)
+        .with(
+            "provider",
+            Obj::new()
+                .with("id", "rea-apple-application")
+                .with("name", "REA Apple application workflows")
+                .with("version", "1"),
+        )
+        .with("analysis_profile", Json::Null)
+        .with("predicate_type", "rea.apple-application-graph")
+        .with("operation", OPERATION)
+        .with(
+            "parameters",
+            Obj::new().with("inventory_evidence_ids", source_evidence_ids.clone()),
+        )
+        .with("raw_result", Json::Null)
+        .with("normalized_result", result)
+        .with("confidence", "inferred")
+        .with("authority", "analyst-inference")
+        .with("environment", Json::Null)
+        .with("limitations", limitations)
+        .with("relationship_coverage", Json::Null)
+        .with("locations", Json::Array(Vec::new()))
+        .with("evidence_links", source_evidence_ids);
 
-    let raw = serde_json::value::to_raw_value(&unsigned)
+    let raw = serde_json::value::RawValue::from_string(Json::from(unsigned).stringify())
         .map_err(|error| protocol_failure(&error.to_string()))?;
     let evidence = EvidenceRecord::create_unsigned(&raw)
         .map_err(|error| protocol_failure(&error.to_string()))?;
@@ -84,14 +101,14 @@ struct ParsedInput {
 }
 
 struct InventoryPage {
-    result: Value,
+    result: Json,
 }
 
-fn parse_input(input: &Value) -> Result<ParsedInput, ProjectionError> {
+fn parse_input(input: &Json) -> Result<ParsedInput, ProjectionError> {
     let object = input
-        .as_object()
+        .as_obj()
         .ok_or_else(|| ProjectionError::Invalid("input must be an object".into()))?;
-    if object.len() != 1 || !object.contains_key("inventory_evidence") {
+    if object.len() != 1 || !object.has("inventory_evidence") {
         return Err(ProjectionError::Invalid(
             "input must contain only inventory_evidence".into(),
         ));
@@ -99,7 +116,10 @@ fn parse_input(input: &Value) -> Result<ParsedInput, ProjectionError> {
 
     let values = object
         .get("inventory_evidence")
-        .and_then(Value::as_array)
+        .and_then(|value| match value {
+            Json::Array(values) => Some(values.as_slice()),
+            _ => None,
+        })
         .ok_or_else(|| ProjectionError::Invalid("inventory_evidence must be an array".into()))?;
     if values.is_empty() {
         return Err(ProjectionError::Invalid(
@@ -112,7 +132,9 @@ fn parse_input(input: &Value) -> Result<ParsedInput, ProjectionError> {
     let mut source_evidence_ids = Vec::with_capacity(values.len());
 
     for value in values {
-        let record = parse_evidence_record(value)?;
+        let raw = serde_json::value::RawValue::from_string(value.stringify())
+            .map_err(|error| ProjectionError::Invalid(error.to_string()))?;
+        let record = EvidenceRecord::parse(&raw).map_err(ProjectionError::from)?;
         source_evidence_ids.push(record.evidence_id().to_owned());
 
         if record.operation_matches(INVENTORY_OPERATION) {
@@ -142,15 +164,23 @@ fn parse_input(input: &Value) -> Result<ParsedInput, ProjectionError> {
     })
 }
 
-fn parse_evidence_record(value: &Value) -> Result<EvidenceRecord, ProjectionError> {
-    let raw = serde_json::value::to_raw_value(value)
+fn parse_evidence_record(value: &Json) -> Result<EvidenceRecord, ProjectionError> {
+    let raw = serde_json::value::RawValue::from_string(value.stringify())
         .map_err(|error| ProjectionError::Invalid(error.to_string()))?;
     EvidenceRecord::parse(&raw).map_err(ProjectionError::from)
 }
 
 fn parse_inventory_page(record: &EvidenceRecord) -> Result<InventoryPage, ProjectionError> {
-    let result = artifacts::inventory_evidence::normalize_result(parse_record_result(&record)?)
+    rea_core::artifact_inventory::parse_validated_result_text(record.normalized_result())
         .map_err(ProjectionError::Invalid)?;
+    let normalized =
+        rea_core::artifact_inventory::normalize_result_text(record.normalized_result())
+            .map_err(ProjectionError::Invalid)?;
+    let result = json::parse(normalized.get()).map_err(|error| {
+        ProjectionError::Invalid(format!(
+            "normalized inventory Evidence cannot be projected as graph JSON: {error}"
+        ))
+    })?;
     validate_inventory_subject(&record, &result)?;
     validate_page_shape(&result)?;
 
@@ -159,8 +189,8 @@ fn parse_inventory_page(record: &EvidenceRecord) -> Result<InventoryPage, Projec
 
 fn parse_inspection_pages(carrier: &EvidenceRecord) -> Result<Vec<InventoryPage>, ProjectionError> {
     let inspection = parse_record_result(carrier)?;
-    let inspection: ArtifactInspectionResult =
-        serde_json::from_value(inspection).map_err(|error| {
+    let inspection: ArtifactInspectionResult = serde_json::from_str(&inspection.stringify())
+        .map_err(|error| {
             ProjectionError::Invalid(format!(
                 "Artifact inspection result does not match its schema: {error}"
             ))
@@ -228,7 +258,7 @@ struct ArtifactInspectionSubstep {
     operation: String,
     status: String,
     evidence_id: String,
-    evidence: Value,
+    evidence: Json,
 }
 
 #[derive(Deserialize)]
@@ -238,7 +268,7 @@ struct ArtifactInspectionObservation {
     kind: String,
     subject: String,
     #[serde(rename = "value")]
-    _value: Value,
+    _value: Json,
     evidence_id: String,
 }
 
@@ -269,7 +299,7 @@ struct ArtifactInspectionBranch {
     branch_id: String,
     reason: String,
     detail: String,
-    next_probe: Value,
+    next_probe: Json,
     evidence_id: String,
 }
 
@@ -514,12 +544,12 @@ fn validate_inspection_evidence_links(
     Ok(())
 }
 
-fn validate_optional_probe(value: &Value) -> Result<(), ProjectionError> {
+fn validate_optional_probe(value: &Json) -> Result<(), ProjectionError> {
     if value.is_null() {
         return Ok(());
     }
     let probe: ArtifactInspectionProbe =
-        serde_json::from_value(value.clone()).map_err(|error| {
+        serde_json::from_str(&value.stringify()).map_err(|error| {
             ProjectionError::Invalid(format!(
                 "Artifact inspection next_probe does not match its schema: {error}"
             ))
@@ -577,30 +607,30 @@ fn invalid_inspection_field(field: &str, reason: &str) -> ProjectionError {
     ProjectionError::Invalid(format!("Artifact inspection {field} {reason}"))
 }
 
-fn parse_record_result(record: &EvidenceRecord) -> Result<Value, ProjectionError> {
-    serde_json::from_str(record.normalized_result().get()).map_err(|error| {
+fn parse_record_result(record: &EvidenceRecord) -> Result<Json, ProjectionError> {
+    json::parse(record.normalized_result().get()).map_err(|error| {
         ProjectionError::Invalid(format!("Evidence normalized_result is invalid: {error}"))
     })
 }
 
 fn validate_inventory_subject(
     record: &EvidenceRecord,
-    result: &Value,
+    result: &Json,
 ) -> Result<(), ProjectionError> {
     let manifest = result
         .get("manifest")
         .ok_or_else(|| ProjectionError::Invalid("inventory result has no manifest".into()))?;
     let root_sha256 = required_string(manifest, "root_sha256", "inventory manifest")?;
     let root_format = required_string(manifest, "root_format", "inventory manifest")?;
-    let subject: Value = serde_json::from_str(record.subject().get())
+    let subject = json::parse(record.subject().get())
         .map_err(|error| ProjectionError::Invalid(error.to_string()))?;
     if subject.is_null()
         || subject
             .get("digest")
             .and_then(|digest| digest.get("sha256"))
-            .and_then(Value::as_str)
+            .and_then(Json::as_str)
             != Some(root_sha256)
-        || subject.get("format").and_then(Value::as_str) != Some(root_format)
+        || subject.get("format").and_then(Json::as_str) != Some(root_format)
     {
         return Err(ProjectionError::Invalid(
             "Artifact inventory Evidence subject does not match its root digest".into(),
@@ -612,26 +642,26 @@ fn validate_inventory_subject(
 fn validate_inspection_subject(
     carrier: &EvidenceRecord,
     inspection: &ArtifactInspectionResult,
-    first_inventory: &Value,
+    first_inventory: &Json,
 ) -> Result<(), ProjectionError> {
     let manifest = first_inventory
         .get("manifest")
         .ok_or_else(|| ProjectionError::Invalid("inventory has no manifest".into()))?;
     if Some(inspection.subject.manifest_id.as_str())
-        != manifest.get("manifest_id").and_then(Value::as_str)
+        != manifest.get("manifest_id").and_then(Json::as_str)
         || Some(inspection.subject.root_artifact_id.as_str())
-            != manifest.get("root_artifact_id").and_then(Value::as_str)
+            != manifest.get("root_artifact_id").and_then(Json::as_str)
         || Some(inspection.subject.root_sha256.as_str())
-            != manifest.get("root_sha256").and_then(Value::as_str)
+            != manifest.get("root_sha256").and_then(Json::as_str)
         || Some(inspection.subject.root_format.as_str())
-            != manifest.get("root_format").and_then(Value::as_str)
+            != manifest.get("root_format").and_then(Json::as_str)
     {
         return Err(ProjectionError::Invalid(
             "Artifact inspection subject does not match its inventory manifest".into(),
         ));
     }
 
-    let outer_subject: Value = serde_json::from_str(carrier.subject().get())
+    let outer_subject = json::parse(carrier.subject().get())
         .map_err(|error| ProjectionError::Invalid(error.to_string()))?;
     if outer_subject.is_null()
         || outer_subject
@@ -647,34 +677,31 @@ fn validate_inspection_subject(
     Ok(())
 }
 
-fn validate_page_shape(result: &Value) -> Result<(), ProjectionError> {
+fn validate_page_shape(result: &Json) -> Result<(), ProjectionError> {
     for field in ["nodes", "occurrences", "edges", "integrity_contradictions"] {
-        if !result.get(field).is_some_and(Value::is_array) {
+        if !result.get(field).is_some_and(Json::is_array) {
             return Err(ProjectionError::Invalid(format!(
                 "inventory result {field} must be an array"
             )));
         }
     }
-    if !result.get("coverage").is_some_and(Value::is_object) {
+    if !result.get("coverage").is_some_and(Json::is_object) {
         return Err(ProjectionError::Invalid(
             "inventory result has no coverage declaration".into(),
         ));
     }
     let manifest = result
         .get("manifest")
-        .and_then(Value::as_object)
+        .and_then(Json::as_obj)
         .ok_or_else(|| ProjectionError::Invalid("inventory result has no manifest".into()))?;
+    let manifest = Json::from(manifest.clone());
     for field in [
         "root_artifact_id",
         "root_sha256",
         "root_format",
         "graph_sha256",
     ] {
-        required_string(
-            &Value::Object(manifest.clone()),
-            field,
-            "inventory manifest",
-        )?;
+        required_string(&manifest, field, "inventory manifest")?;
     }
 
     for node in result["nodes"].as_array().expect("validated array") {
@@ -694,7 +721,7 @@ fn validate_page_shape(result: &Value) -> Result<(), ProjectionError> {
 }
 
 fn assert_unique_page_ids(
-    result: &Value,
+    result: &Json,
     collection: &str,
     identity: &str,
     label: &str,
@@ -714,7 +741,7 @@ fn assert_unique_page_ids(
     Ok(())
 }
 
-fn project_inventory(parsed: &ParsedInput) -> Result<Value, String> {
+fn project_inventory(parsed: &ParsedInput) -> Result<Json, String> {
     let inventory = Inventory::assemble(&parsed.pages)?;
     let root_format = match inventory.root_format.as_str() {
         "ipa" | "directory" | "zip" | "dmg" => inventory.root_format.as_str(),
@@ -730,11 +757,10 @@ fn project_inventory(parsed: &ParsedInput) -> Result<Value, String> {
         .carriers
         .first()
         .ok_or("Apple projection requires Evidence")?;
-    let subject: Value =
-        serde_json::from_str(first_carrier.subject().get()).map_err(|error| error.to_string())?;
+    let subject = json::parse(first_carrier.subject().get()).map_err(|error| error.to_string())?;
     let subject_name = subject
         .get("name")
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         .unwrap_or_default();
     let roots = application_roots(&tree, subject_name, root_format);
     let bundles = detect_bundles(&tree, &roots);
@@ -769,11 +795,11 @@ fn project_inventory(parsed: &ParsedInput) -> Result<Value, String> {
         .filter(|entry| entry.kind == "symlink")
         .map(|entry| entry.path.clone())
         .collect::<Vec<_>>();
-    symlinks.sort();
+    symlinks.sort_by(|left, right| left.compare_code_points(right));
     let uninventoried_image = root_format == "dmg" && inventory.occurrences.len() == 1;
     let inventory_complete = inventory.complete
-        && inventory.coverage.get("scope").and_then(Value::as_str) == Some("container-entries")
-        && inventory.coverage.get("status").and_then(Value::as_str) == Some("complete");
+        && inventory.coverage.get("scope").and_then(Json::as_str) == Some("container-entries")
+        && inventory.coverage.get("status").and_then(Json::as_str) == Some("complete");
     let complete = inventory_complete && !uninventoried_image;
     let limitations = projection_limitations(
         &inventory,
@@ -788,30 +814,43 @@ fn project_inventory(parsed: &ParsedInput) -> Result<Value, String> {
         &bridge.coverage,
     );
 
-    let mut without_id = json!({
-        "root_sha256": inventory.root_sha256,
-        "root_format": root_format,
-        "platforms": platforms_of(&bundles),
-        "source_evidence_ids": parsed.source_evidence_ids,
-        "application_roots": roots,
-        "bundles": bundles,
-        "components": classified.as_value(),
-        "unavailable_components": unavailable.all,
-        "symlinks": symlinks,
-        "runtime_families": runtime_families,
-        "bridge_candidates": bridge.candidates,
-        "bridge_candidate_coverage": bridge.coverage,
-        "coverage": {
-            "status": if complete
-                && unavailable.all.is_empty()
-                && bridge.coverage["status"] == "complete"
-            { "complete-within-inventory" } else { "partial" },
-            "inventory_complete": inventory.complete,
-        },
-        "limitations": limitations,
-    });
-    let projection_id = canonical_json::digest(&without_id).map_err(|error| error.to_string())?;
-    without_id["projection_id"] = Value::String(format!("aap_{projection_id}"));
+    let coverage_status = if complete
+        && unavailable.all.is_empty()
+        && bridge.coverage["status"].as_str() == Some("complete")
+    {
+        "complete-within-inventory"
+    } else {
+        "partial"
+    };
+    let mut without_id = Json::from(
+        Obj::new()
+            .with("root_sha256", inventory.root_sha256)
+            .with("root_format", root_format)
+            .with("platforms", strings_json(platforms_of(&bundles)))
+            .with(
+                "source_evidence_ids",
+                strings_json(parsed.source_evidence_ids.clone()),
+            )
+            .with("application_roots", js_strings_json(roots))
+            .with("bundles", bundles_json(bundles))
+            .with("components", classified.as_value())
+            .with("unavailable_components", unavailable.all)
+            .with("symlinks", js_strings_json(symlinks))
+            .with("runtime_families", strings_json(runtime_families))
+            .with("bridge_candidates", bridge.candidates)
+            .with("bridge_candidate_coverage", bridge.coverage)
+            .with(
+                "coverage",
+                Obj::new()
+                    .with("status", coverage_status)
+                    .with("inventory_complete", inventory.complete),
+            )
+            .with("limitations", strings_json(limitations)),
+    );
+    let projection_id = without_id.digest();
+    if let Json::Object(object) = &mut without_id {
+        object.set("projection_id", format!("aap_{projection_id}"));
+    }
     Ok(without_id)
 }
 
@@ -819,11 +858,11 @@ struct Inventory {
     root_artifact_id: String,
     root_sha256: String,
     root_format: String,
-    nodes: BTreeMap<String, Value>,
-    occurrences: Vec<Value>,
-    edges: Vec<Value>,
-    integrity_contradictions: Vec<Value>,
-    coverage: Value,
+    nodes: BTreeMap<String, Json>,
+    occurrences: Vec<Json>,
+    edges: Vec<Json>,
+    integrity_contradictions: Vec<Json>,
+    coverage: Json,
     complete: bool,
     limitations: Vec<String>,
 }
@@ -875,8 +914,8 @@ impl Inventory {
                 "occurrence",
             )?;
             merge_members(&mut edges, &page.result["edges"], "edge_id", "edge")?;
-            if let Some(values) = page.result.get("limitations").and_then(Value::as_array) {
-                limitations.extend(values.iter().filter_map(Value::as_str).map(str::to_owned));
+            if let Some(values) = page.result.get("limitations").and_then(Json::as_array) {
+                limitations.extend(values.iter().filter_map(Json::as_str).map(str::to_owned));
             }
         }
 
@@ -918,11 +957,11 @@ impl Inventory {
         Ok(inventory)
     }
 
-    fn validate_complete(&self, manifest: &Value) -> Result<(), String> {
+    fn validate_complete(&self, manifest: &Json) -> Result<(), String> {
         let root_node = self.nodes.get(&self.root_artifact_id);
         if root_node
             .and_then(|node| node.get("sha256"))
-            .and_then(Value::as_str)
+            .and_then(Json::as_str)
             != Some(self.root_sha256.as_str())
         {
             return Err("Artifact root node does not match its manifest digest".into());
@@ -930,14 +969,14 @@ impl Inventory {
         let root_occurrence = self
             .occurrences
             .iter()
-            .find(|occurrence| occurrence.get("logical_path").and_then(Value::as_str) == Some("."));
+            .find(|occurrence| path_text(occurrence.get("logical_path")) == ".");
         if root_occurrence
             .and_then(|occurrence| occurrence.get("artifact_id"))
-            .and_then(Value::as_str)
+            .and_then(Json::as_str)
             != Some(self.root_artifact_id.as_str())
             || root_occurrence
                 .and_then(|occurrence| occurrence.get("artifact_format"))
-                .and_then(Value::as_str)
+                .and_then(Json::as_str)
                 != Some(self.root_format.as_str())
         {
             return Err(
@@ -949,15 +988,13 @@ impl Inventory {
         let occurrence_ids = self
             .occurrences
             .iter()
-            .filter_map(|occurrence| occurrence.get("occurrence_id").and_then(Value::as_str))
+            .filter_map(|occurrence| occurrence.get("occurrence_id").and_then(Json::as_str))
             .map(str::to_owned)
             .collect::<HashSet<_>>();
         let mut duplicate_ordinal_by_path = HashMap::new();
         for occurrence in &self.occurrences {
-            let path = required_string(occurrence, "logical_path", "inventory occurrence")?;
-            let ordinal = duplicate_ordinal_by_path
-                .entry(path.to_owned())
-                .or_insert(0);
+            let path = required_path(occurrence, "logical_path", "inventory occurrence")?;
+            let ordinal = duplicate_ordinal_by_path.entry(path.clone()).or_insert(0);
             validate_occurrence(
                 occurrence,
                 &self.root_artifact_id,
@@ -983,26 +1020,31 @@ impl Inventory {
         let mut edges = self.edges.clone();
         edges.sort_by_key(|edge| {
             edge.get("edge_id")
-                .and_then(Value::as_str)
+                .and_then(Json::as_str)
                 .unwrap_or_default()
                 .to_owned()
         });
-        let graph_sha256 = canonical_json::digest(&json!({
-            "nodes": nodes,
-            "occurrences": self.occurrences,
-            "edges": edges,
-            "integrity_contradictions": self.integrity_contradictions,
-        }))
-        .map_err(|error| error.to_string())?;
-        if manifest.get("graph_sha256").and_then(Value::as_str) != Some(graph_sha256.as_str()) {
+        let graph_sha256 = Json::from(
+            Obj::new()
+                .with("nodes", nodes)
+                .with("occurrences", self.occurrences.clone())
+                .with("edges", edges)
+                .with(
+                    "integrity_contradictions",
+                    self.integrity_contradictions.clone(),
+                ),
+        )
+        .digest();
+        if manifest.get("graph_sha256").and_then(Json::as_str) != Some(graph_sha256.as_str()) {
             return Err("Artifact graph commitment does not match its members".into());
         }
-        let manifest_id = canonical_json::digest(&json!({
-            "root_artifact_id": self.root_artifact_id,
-            "graph_sha256": graph_sha256,
-        }))
-        .map_err(|error| error.to_string())?;
-        if manifest.get("manifest_id").and_then(Value::as_str)
+        let manifest_id = Json::from(
+            Obj::new()
+                .with("root_artifact_id", self.root_artifact_id.clone())
+                .with("graph_sha256", graph_sha256),
+        )
+        .digest();
+        if manifest.get("manifest_id").and_then(Json::as_str)
             != Some(format!("agm_{manifest_id}").as_str())
         {
             return Err("Artifact manifest ID does not match its commitment".into());
@@ -1013,15 +1055,14 @@ impl Inventory {
     fn entries(&self) -> Result<Vec<Entry>, String> {
         self.occurrences
             .iter()
-            .filter(|occurrence| {
-                occurrence.get("logical_path").and_then(Value::as_str) != Some(".")
-            })
+            .filter(|occurrence| path_text(occurrence.get("logical_path")) != ".")
             .map(|occurrence| self.entry(occurrence))
             .collect()
     }
 
-    fn entry(&self, occurrence: &Value) -> Result<Entry, String> {
-        let path = required_string(occurrence, "logical_path", "inventory occurrence")?.to_owned();
+    fn entry(&self, occurrence: &Json) -> Result<Entry, String> {
+        let path = required_path(occurrence, "logical_path", "inventory occurrence")?;
+        let exact_path = path.clone();
         let kind = required_string(occurrence, "entry_kind", "inventory occurrence")?.to_owned();
         let format =
             required_string(occurrence, "artifact_format", "inventory occurrence")?.to_owned();
@@ -1033,14 +1074,27 @@ impl Inventory {
                 path: path.clone(),
                 kind,
                 component: None,
-                unavailable: Some(json!({
-                    "path": path,
-                    "artifact_id": null,
-                    "sha256": null,
-                    "format": format,
-                    "encrypted": occurrence.get("encrypted").and_then(Value::as_bool).unwrap_or(false),
-                    "limitations": occurrence.get("limitations").cloned().unwrap_or_else(|| json!([])),
-                })),
+                unavailable: Some(Json::from(
+                    Obj::new()
+                        .with("path", exact_path.clone())
+                        .with("artifact_id", Json::Null)
+                        .with("sha256", Json::Null)
+                        .with("format", format.clone())
+                        .with(
+                            "encrypted",
+                            occurrence
+                                .get("encrypted")
+                                .and_then(Json::as_bool)
+                                .unwrap_or(false),
+                        )
+                        .with(
+                            "limitations",
+                            occurrence
+                                .get("limitations")
+                                .cloned()
+                                .unwrap_or_else(|| Json::Array(Vec::new())),
+                        ),
+                )),
             });
         }
 
@@ -1058,20 +1112,21 @@ impl Inventory {
         Ok(Entry {
             path: path.clone(),
             kind,
-            component: Some(json!({
-                "path": path,
-                "artifact_id": id,
-                "sha256": sha256,
-                "format": format,
-            })),
+            component: Some(Json::from(
+                Obj::new()
+                    .with("path", exact_path)
+                    .with("artifact_id", id)
+                    .with("sha256", sha256)
+                    .with("format", format),
+            )),
             unavailable: None,
         })
     }
 }
 
 fn merge_members(
-    output: &mut BTreeMap<String, Value>,
-    values: &Value,
+    output: &mut BTreeMap<String, Json>,
+    values: &Json,
     identity_field: &str,
     member_name: &str,
 ) -> Result<(), String> {
@@ -1093,13 +1148,10 @@ fn merge_members(
     Ok(())
 }
 
-fn order_occurrences(occurrences: &mut [Value], root_artifact_id: &str) {
-    let mut grouped: BTreeMap<&str, Vec<&Value>> = BTreeMap::new();
+fn order_occurrences(occurrences: &mut [Json], root_artifact_id: &str) {
+    let mut grouped: BTreeMap<JsString, Vec<&Json>> = BTreeMap::new();
     for occurrence in occurrences.iter() {
-        let path = occurrence
-            .get("logical_path")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let path = path_text(occurrence.get("logical_path"));
         grouped.entry(path).or_default().push(occurrence);
     }
     let mut ranks = HashMap::new();
@@ -1107,31 +1159,25 @@ fn order_occurrences(occurrences: &mut [Value], root_artifact_id: &str) {
         let kind = group
             .first()
             .and_then(|occurrence| occurrence.get("entry_kind"))
-            .and_then(Value::as_str)
+            .and_then(Json::as_str)
             .unwrap_or_default();
         for (ordinal, _) in group.iter().enumerate() {
-            let id = occurrence_id_for_location(root_artifact_id, path, kind, ordinal);
+            let id = occurrence_id_for_location(root_artifact_id, &path, kind, ordinal);
             ranks.insert(id, ordinal);
         }
     }
 
     occurrences.sort_by(|left, right| {
-        let left_path = left
-            .get("logical_path")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        let right_path = right
-            .get("logical_path")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        left_path.cmp(right_path).then_with(|| {
+        let left_path = path_text(left.get("logical_path"));
+        let right_path = path_text(right.get("logical_path"));
+        left_path.compare_code_points(&right_path).then_with(|| {
             let left_id = left
                 .get("occurrence_id")
-                .and_then(Value::as_str)
+                .and_then(Json::as_str)
                 .unwrap_or_default();
             let right_id = right
                 .get("occurrence_id")
-                .and_then(Value::as_str)
+                .and_then(Json::as_str)
                 .unwrap_or_default();
             ranks
                 .get(left_id)
@@ -1144,26 +1190,26 @@ fn order_occurrences(occurrences: &mut [Value], root_artifact_id: &str) {
 }
 
 fn validate_occurrence(
-    occurrence: &Value,
+    occurrence: &Json,
     root_artifact_id: &str,
     node_ids: &HashSet<String>,
     occurrence_ids: &HashSet<String>,
     ordinal: usize,
 ) -> Result<(), String> {
     let id = required_string(occurrence, "occurrence_id", "inventory occurrence")?;
-    let path = required_string(occurrence, "logical_path", "inventory occurrence")?;
+    let path = required_path(occurrence, "logical_path", "inventory occurrence")?;
     let kind = required_string(occurrence, "entry_kind", "inventory occurrence")?;
-    if occurrence_id_for_location(root_artifact_id, path, kind, ordinal) != id {
+    if occurrence_id_for_location(root_artifact_id, &path, kind, ordinal) != id {
         return Err("Artifact occurrence ID does not match its identity".into());
     }
-    if let Some(artifact_id) = occurrence.get("artifact_id").and_then(Value::as_str)
+    if let Some(artifact_id) = occurrence.get("artifact_id").and_then(Json::as_str)
         && !node_ids.contains(artifact_id)
     {
         return Err("Artifact occurrence references a missing node".into());
     }
     if let Some(parent_id) = occurrence
         .get("parent_occurrence_id")
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         && !occurrence_ids.contains(parent_id)
     {
         return Err("Artifact occurrence references a missing parent".into());
@@ -1172,34 +1218,35 @@ fn validate_occurrence(
 }
 
 fn validate_edge(
-    edge: &Value,
+    edge: &Json,
     root_artifact_id: &str,
     node_ids: &HashSet<String>,
-    occurrences: &[Value],
+    occurrences: &[Json],
 ) -> Result<(), String> {
     let parent_id = required_string(edge, "parent_artifact_id", "inventory edge")?;
     let occurrence_id = required_string(edge, "occurrence_id", "inventory edge")?;
     let occurrence = occurrences
         .iter()
-        .find(|item| item.get("occurrence_id").and_then(Value::as_str) == Some(occurrence_id))
+        .find(|item| item.get("occurrence_id").and_then(Json::as_str) == Some(occurrence_id))
         .ok_or("Artifact edge references a missing occurrence")?;
     let child_id = required_string(occurrence, "artifact_id", "inventory occurrence")?;
-    let path = required_string(occurrence, "logical_path", "inventory occurrence")?;
+    let path = required_path(occurrence, "logical_path", "inventory occurrence")?;
     let relation = required_string(edge, "relation", "inventory edge")?;
     if !node_ids.contains(parent_id) || !node_ids.contains(child_id) {
         return Err("Artifact edge references a missing graph member".into());
     }
     let expected = prefixed_digest(
         "edge",
-        &json!({
-            "parent_artifact_id": parent_id,
-            "child_artifact_id": child_id,
-            "relation": relation,
-            "occurrence_id": occurrence_id,
-            "logical_path": path,
-        }),
+        &Json::from(
+            Obj::new()
+                .with("parent_artifact_id", parent_id)
+                .with("child_artifact_id", child_id)
+                .with("relation", relation)
+                .with("occurrence_id", occurrence_id)
+                .with("logical_path", path),
+        ),
     )?;
-    if edge.get("edge_id").and_then(Value::as_str) != Some(expected.as_str()) {
+    if edge.get("edge_id").and_then(Json::as_str) != Some(expected.as_str()) {
         return Err("Artifact edge ID does not match its identity".into());
     }
     let _ = root_artifact_id;
@@ -1207,7 +1254,7 @@ fn validate_edge(
 }
 
 fn validate_contradiction(
-    contradiction: &Value,
+    contradiction: &Json,
     root_artifact_id: &str,
     node_ids: &HashSet<String>,
     occurrence_ids: &HashSet<String>,
@@ -1218,7 +1265,7 @@ fn validate_contradiction(
         "integrity contradiction",
     )?;
     let occurrence_id = required_string(contradiction, "occurrence_id", "integrity contradiction")?;
-    let path = required_string(contradiction, "logical_path", "integrity contradiction")?;
+    let path = required_path(contradiction, "logical_path", "integrity contradiction")?;
     let declared_sha256 =
         required_string(contradiction, "declared_sha256", "integrity contradiction")?;
     let observed_sha256 =
@@ -1228,84 +1275,97 @@ fn validate_contradiction(
     }
     let expected = prefixed_digest(
         "ic",
-        &json!({
-            "root_artifact_id": root_artifact_id,
-            "logical_path": path,
-            "declared_sha256": declared_sha256,
-            "observed_sha256": observed_sha256,
-        }),
+        &Json::from(
+            Obj::new()
+                .with("root_artifact_id", root_artifact_id)
+                .with("logical_path", path)
+                .with("declared_sha256", declared_sha256)
+                .with("observed_sha256", observed_sha256),
+        ),
     )?;
-    if contradiction
-        .get("contradiction_id")
-        .and_then(Value::as_str)
-        != Some(expected.as_str())
-    {
+    if contradiction.get("contradiction_id").and_then(Json::as_str) != Some(expected.as_str()) {
         return Err("Integrity contradiction ID does not match its identity".into());
     }
     Ok(())
 }
 
 fn artifact_id_for_sha256(sha256: &str) -> Result<String, String> {
-    prefixed_digest("art", &json!({ "sha256": sha256 }))
+    prefixed_digest("art", &Json::from(Obj::new().with("sha256", sha256)))
 }
 
 fn occurrence_id_for_location(
     root_artifact_id: &str,
-    path: &str,
+    path: &JsString,
     kind: &str,
     ordinal: usize,
 ) -> String {
     let identity = if path == "." {
-        json!({"root":root_artifact_id})
+        Json::from(Obj::new().with("root", root_artifact_id))
     } else if ordinal == 0 {
-        json!({
-            "root_artifact_id": root_artifact_id,
-            "logical_path": path,
-            "entry_kind": kind,
-        })
+        Json::from(
+            Obj::new()
+                .with("root_artifact_id", root_artifact_id)
+                .with("logical_path", path)
+                .with("entry_kind", kind),
+        )
     } else {
-        json!({
-            "root_artifact_id": root_artifact_id,
-            "logical_path": path,
-            "entry_kind": kind,
-            "duplicate_ordinal": ordinal,
-        })
+        Json::from(
+            Obj::new()
+                .with("root_artifact_id", root_artifact_id)
+                .with("logical_path", path)
+                .with("entry_kind", kind)
+                .with("duplicate_ordinal", ordinal),
+        )
     };
     prefixed_digest("occ", &identity).unwrap_or_default()
 }
 
-fn prefixed_digest(prefix: &str, identity: &Value) -> Result<String, String> {
-    let digest = canonical_json::digest(identity).map_err(|error| error.to_string())?;
-    Ok(format!("{prefix}_{digest}"))
+fn prefixed_digest(prefix: &str, identity: &Json) -> Result<String, String> {
+    Ok(format!("{prefix}_{}", identity.digest()))
 }
 
-fn required_string<'a>(value: &'a Value, field: &str, owner: &str) -> Result<&'a str, String> {
+fn required_string<'a>(value: &'a Json, field: &str, owner: &str) -> Result<&'a str, String> {
     value
         .get(field)
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         .ok_or_else(|| format!("{owner} has no valid {field}"))
 }
 
-fn required_count(value: &Value, field: &str) -> Result<usize, String> {
+fn required_path(value: &Json, field: &str, owner: &str) -> Result<JsString, String> {
     value
         .get(field)
-        .and_then(Value::as_u64)
+        .and_then(Json::as_js_string)
+        .cloned()
+        .ok_or_else(|| format!("{owner} has no valid {field}"))
+}
+
+fn path_text(value: Option<&Json>) -> JsString {
+    value
+        .and_then(Json::as_js_string)
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn required_count(value: &Json, field: &str) -> Result<usize, String> {
+    value
+        .get(field)
+        .and_then(Json::as_u64)
         .and_then(|count| usize::try_from(count).ok())
         .ok_or_else(|| format!("inventory manifest has no valid {field}"))
 }
 
 #[derive(Clone)]
 struct Entry {
-    path: String,
+    path: JsString,
     kind: String,
-    component: Option<Value>,
-    unavailable: Option<Value>,
+    component: Option<Json>,
+    unavailable: Option<Json>,
 }
 
 #[derive(Default)]
 struct Tree {
-    directories: BTreeMap<String, BTreeSet<String>>,
-    files: BTreeMap<String, BTreeMap<String, Value>>,
+    directories: BTreeMap<JsString, BTreeSet<JsString>>,
+    files: BTreeMap<JsString, BTreeMap<JsString, Json>>,
 }
 
 fn index_tree(entries: &[Entry]) -> Tree {
@@ -1314,21 +1374,21 @@ fn index_tree(entries: &[Entry]) -> Tree {
         if is_sidecar(&entry.path) {
             continue;
         }
-        let segments = entry.path.split('/').collect::<Vec<_>>();
-        let mut parent = String::new();
+        let segments = path_segments(&entry.path);
+        let mut parent = JsString::default();
         for (index, segment) in segments.iter().enumerate() {
             let leaf = index + 1 == segments.len();
             if !leaf || entry.kind == "directory" {
                 tree.directories
                     .entry(parent.clone())
                     .or_default()
-                    .insert((*segment).to_owned());
+                    .insert(segment.clone());
             } else if entry.kind == "file" {
                 if let Some(component) = &entry.component {
                     tree.files
                         .entry(parent.clone())
                         .or_default()
-                        .insert((*segment).to_owned(), component.clone());
+                        .insert(segment.clone(), component.clone());
                 }
             }
             parent = join_path(&parent, segment);
@@ -1337,14 +1397,16 @@ fn index_tree(entries: &[Entry]) -> Tree {
     tree
 }
 
-fn application_roots(tree: &Tree, subject_name: &str, root_format: &str) -> Vec<String> {
-    if root_format == "directory" && ends_ascii_case_insensitive(subject_name, ".app") {
+fn application_roots(tree: &Tree, subject_name: &str, root_format: &str) -> Vec<JsString> {
+    if root_format == "directory"
+        && ends_ascii_case_insensitive(&JsString::from(subject_name), ".app")
+    {
         return vec![".".into()];
     }
 
     let mut found = BTreeSet::new();
     for path in directory_paths(tree) {
-        let segments = path.split('/').collect::<Vec<_>>();
+        let segments = path_segments(&path);
         let payload_app = segments
             .first()
             .is_some_and(|segment| anatomy_name_is(segment, "Payload"))
@@ -1352,21 +1414,22 @@ fn application_roots(tree: &Tree, subject_name: &str, root_format: &str) -> Vec<
                 .get(1)
                 .is_some_and(|segment| ends_ascii_case_insensitive(segment, ".app"));
         if payload_app {
-            found.insert(format!("{}/{}", segments[0], segments[1]));
+            found.insert(join_path(&segments[0], &segments[1]));
             continue;
         }
 
         for index in 0..segments.len().saturating_sub(1) {
-            if ends_ascii_case_insensitive(segments[index], ".app")
-                && anatomy_name_is(segments[index + 1], "Contents")
+            if ends_ascii_case_insensitive(&segments[index], ".app")
+                && anatomy_name_is(&segments[index + 1], "Contents")
             {
-                found.insert(segments[..=index].join("/"));
+                found.insert(JsString::join(segments[..=index].iter().cloned(), "/"));
                 break;
             }
         }
     }
 
-    let candidates = found.into_iter().collect::<Vec<_>>();
+    let mut candidates = found.into_iter().collect::<Vec<_>>();
+    candidates.sort_by(|left, right| left.compare_code_points(right));
     candidates
         .iter()
         .filter(|candidate| {
@@ -1378,16 +1441,18 @@ fn application_roots(tree: &Tree, subject_name: &str, root_format: &str) -> Vec<
         .collect()
 }
 
-fn detect_bundles(tree: &Tree, roots: &[String]) -> Vec<Bundle> {
+fn detect_bundles(tree: &Tree, roots: &[JsString]) -> Vec<Bundle> {
     let mut paths = roots.iter().cloned().collect::<BTreeSet<_>>();
     for path in directory_paths(tree) {
-        let name = path.rsplit('/').next().unwrap_or_default();
-        if is_bundle_name(name) && roots.iter().any(|root| is_within(&path, root)) {
+        let name = path_segments(&path).pop().unwrap_or_default();
+        if is_bundle_name(&name) && roots.iter().any(|root| is_within(&path, root)) {
             paths.insert(path);
         }
     }
 
-    paths
+    let mut ordered_paths = paths.iter().cloned().collect::<Vec<_>>();
+    ordered_paths.sort_by(|left, right| left.compare_code_points(right));
+    ordered_paths
         .iter()
         .map(|path| {
             let layout = bundle_layout(path, tree);
@@ -1411,14 +1476,14 @@ fn detect_bundles(tree: &Tree, roots: &[String]) -> Vec<Bundle> {
 
 #[derive(Clone)]
 struct Bundle {
-    path: String,
-    parent_path: Option<String>,
+    path: JsString,
+    parent_path: Option<JsString>,
     layout: &'static str,
     role: String,
     role_basis: &'static str,
-    info_plist_path: Option<String>,
-    executable_candidates: Vec<String>,
-    signing_paths: Vec<String>,
+    info_plist_path: Option<JsString>,
+    executable_candidates: Vec<JsString>,
+    signing_paths: Vec<JsString>,
 }
 
 impl serde::Serialize for Bundle {
@@ -1440,38 +1505,38 @@ impl serde::Serialize for Bundle {
     }
 }
 
-fn directory_paths(tree: &Tree) -> Vec<String> {
+fn directory_paths(tree: &Tree) -> Vec<JsString> {
     let mut paths = Vec::new();
     for (parent, names) in &tree.directories {
         for name in names {
             paths.push(join_path(parent, name));
         }
     }
-    paths.sort();
+    paths.sort_by(|left, right| left.compare_code_points(right));
     paths
 }
 
-fn bundle_layout(bundle: &str, tree: &Tree) -> &'static str {
+fn bundle_layout(bundle: &JsString, tree: &Tree) -> &'static str {
     let directory = bundle_directory(bundle);
-    if named_directory(tree, directory, "Contents").is_some() {
+    if named_directory(tree, &directory, "Contents").is_some() {
         "macos-deep"
-    } else if named_directory(tree, directory, "Versions").is_some() {
+    } else if named_directory(tree, &directory, "Versions").is_some() {
         "versioned-framework"
     } else {
         "shallow"
     }
 }
 
-fn bundle_role(bundle: &str) -> String {
-    let segments = bundle.split('/').collect::<Vec<_>>();
+fn bundle_role(bundle: &JsString) -> String {
+    let segments = path_segments(bundle);
     let name = segments
         .last()
-        .copied()
+        .cloned()
         .unwrap_or_default()
         .to_ascii_lowercase();
     let container = segments
         .get(segments.len().saturating_sub(2))
-        .copied()
+        .cloned()
         .unwrap_or_default();
     if name.ends_with(".appex") {
         return "app-extension".into();
@@ -1489,10 +1554,10 @@ fn bundle_role(bundle: &str) -> String {
         return "driver-extension".into();
     }
     if name.ends_with(".bundle") {
-        if anatomy_name_is(container, "PlugIns") {
+        if anatomy_name_is(&container, "PlugIns") {
             return "plug-in".into();
         }
-        return if anatomy_name_is(container, "Resources") {
+        return if anatomy_name_is(&container, "Resources") {
             "resource-bundle".into()
         } else {
             "bundle".into()
@@ -1501,20 +1566,20 @@ fn bundle_role(bundle: &str) -> String {
     if !name.ends_with(".app") {
         return "plug-in".into();
     }
-    if anatomy_name_is(container, "LoginItems")
+    if anatomy_name_is(&container, "LoginItems")
         && segments
             .get(segments.len().saturating_sub(3))
             .is_some_and(|segment| anatomy_name_is(segment, "Library"))
     {
         return "login-item".into();
     }
-    if anatomy_name_is(container, "Helpers") {
+    if anatomy_name_is(&container, "Helpers") {
         return "helper-application".into();
     }
     "nested-application".into()
 }
 
-fn info_plist_path(bundle: &str, layout: &str, tree: &Tree) -> Option<String> {
+fn info_plist_path(bundle: &JsString, layout: &str, tree: &Tree) -> Option<JsString> {
     let directories = content_directories(bundle, layout, tree);
     if directories.len() != 1 {
         return None;
@@ -1528,8 +1593,8 @@ fn info_plist_path(bundle: &str, layout: &str, tree: &Tree) -> Option<String> {
     named_file(tree, &parent, "Info.plist")
 }
 
-fn executable_candidates(bundle: &str, layout: &str, tree: &Tree) -> Vec<String> {
-    let mut result = Vec::new();
+fn executable_candidates(bundle: &JsString, layout: &str, tree: &Tree) -> Vec<JsString> {
+    let mut result: Vec<JsString> = Vec::new();
     for directory in content_directories(bundle, layout, tree) {
         let executable_directory = if layout == "macos-deep" {
             named_directory(tree, &directory, "MacOS")
@@ -1544,16 +1609,16 @@ fn executable_candidates(bundle: &str, layout: &str, tree: &Tree) -> Vec<String>
                 files
                     .values()
                     .filter(|file| is_macho(&file["format"]))
-                    .filter_map(|file| file["path"].as_str().map(str::to_owned)),
+                    .filter_map(|file| file["path"].as_js_string().cloned()),
             );
         }
     }
-    result.sort();
+    result.sort_by(|left, right| left.compare_code_points(right));
     result
 }
 
-fn signing_paths(bundle: &str, layout: &str, tree: &Tree) -> Vec<String> {
-    let mut result = Vec::new();
+fn signing_paths(bundle: &JsString, layout: &str, tree: &Tree) -> Vec<JsString> {
+    let mut result: Vec<JsString> = Vec::new();
     for directory in content_directories(bundle, layout, tree) {
         if let Some(signature_directory) = named_directory(tree, &directory, "_CodeSignature")
             && let Some(path) = named_file(tree, &signature_directory, "CodeResources")
@@ -1566,24 +1631,24 @@ fn signing_paths(bundle: &str, layout: &str, tree: &Tree) -> Vec<String> {
             }
         }
     }
-    result.sort();
+    result.sort_by(|left, right| left.compare_code_points(right));
     result
 }
 
-fn content_directories(bundle: &str, layout: &str, tree: &Tree) -> Vec<String> {
+fn content_directories(bundle: &JsString, layout: &str, tree: &Tree) -> Vec<JsString> {
     let directory = bundle_directory(bundle);
     if layout == "macos-deep" {
-        return named_directory(tree, directory, "Contents")
+        return named_directory(tree, &directory, "Contents")
             .into_iter()
             .collect();
     }
     if layout == "shallow" {
         return vec![directory.to_owned()];
     }
-    let Some(versions) = named_directory(tree, directory, "Versions") else {
+    let Some(versions) = named_directory(tree, &directory, "Versions") else {
         return Vec::new();
     };
-    let mut real_versions = tree
+    let mut real_versions: Vec<JsString> = tree
         .directories
         .get(&versions)
         .into_iter()
@@ -1591,50 +1656,51 @@ fn content_directories(bundle: &str, layout: &str, tree: &Tree) -> Vec<String> {
         .filter(|version| !anatomy_name_is(version, "Current"))
         .map(|version| join_path(&versions, version))
         .collect::<Vec<_>>();
-    real_versions.sort();
+    real_versions.sort_by(|left, right| left.compare_code_points(right));
     real_versions
 }
 
-fn named_directory(tree: &Tree, directory: &str, expected: &str) -> Option<String> {
-    let name = anatomy_child(
-        tree.directories.get(directory)?.iter().map(String::as_str),
-        expected,
-    )?;
+fn named_directory(tree: &Tree, directory: &JsString, expected: &str) -> Option<JsString> {
+    let name = anatomy_child(tree.directories.get(directory)?.iter(), expected)?;
     Some(join_path(directory, name))
 }
 
-fn named_file(tree: &Tree, directory: &str, expected: &str) -> Option<String> {
-    let name = anatomy_child(
-        tree.files.get(directory)?.keys().map(String::as_str),
-        expected,
-    )?;
+fn named_file(tree: &Tree, directory: &JsString, expected: &str) -> Option<JsString> {
+    let name = anatomy_child(tree.files.get(directory)?.keys(), expected)?;
     Some(join_path(directory, name))
 }
 
-fn anatomy_child<'a>(names: impl IntoIterator<Item = &'a str>, expected: &str) -> Option<&'a str> {
+fn anatomy_child<'a>(
+    names: impl IntoIterator<Item = &'a JsString>,
+    expected: &str,
+) -> Option<&'a JsString> {
     let mut exact = None;
-    let mut folded: Option<&'a str> = None;
+    let mut folded: Option<&'a JsString> = None;
     for name in names {
         if name == expected {
             exact = Some(name);
-        } else if anatomy_name_is(name, expected) && folded.is_none_or(|current| name < current) {
+        } else if anatomy_name_is(name, expected)
+            && folded.is_none_or(|current| name.compare_code_points(current).is_lt())
+        {
             folded = Some(name);
         }
     }
     exact.or(folded)
 }
 
-fn enclosing_bundle(path: &str, bundles: &BTreeSet<String>) -> Option<String> {
+fn enclosing_bundle(path: &JsString, bundles: &BTreeSet<JsString>) -> Option<JsString> {
     if path != "." {
-        let segments = path.split('/').collect::<Vec<_>>();
+        let segments = path_segments(path);
         for length in (1..segments.len()).rev() {
-            let candidate = segments[..length].join("/");
+            let candidate = JsString::join(segments[..length].iter().cloned(), "/");
             if bundles.contains(&candidate) {
                 return Some(candidate);
             }
         }
     }
-    bundles.contains(".").then(|| ".".into())
+    bundles
+        .contains(&JsString::from("."))
+        .then(|| JsString::from("."))
 }
 
 fn platforms_of(bundles: &[Bundle]) -> Vec<&'static str> {
@@ -1649,14 +1715,59 @@ fn platforms_of(bundles: &[Bundle]) -> Vec<&'static str> {
     platforms.into_iter().collect()
 }
 
+fn strings_json<S: Into<String>>(values: Vec<S>) -> Json {
+    Json::Array(
+        values
+            .into_iter()
+            .map(|value| Json::from(value.into()))
+            .collect(),
+    )
+}
+
+fn js_strings_json(values: impl IntoIterator<Item = JsString>) -> Json {
+    Json::Array(values.into_iter().map(Json::from).collect())
+}
+
+fn bundles_json(bundles: Vec<Bundle>) -> Json {
+    Json::Array(
+        bundles
+            .into_iter()
+            .map(|bundle| {
+                Json::from(
+                    Obj::new()
+                        .with("path", bundle.path)
+                        .with(
+                            "parent_path",
+                            bundle.parent_path.map(Json::from).unwrap_or(Json::Null),
+                        )
+                        .with("layout", bundle.layout)
+                        .with("role", bundle.role)
+                        .with("role_basis", bundle.role_basis)
+                        .with(
+                            "info_plist_path",
+                            bundle.info_plist_path.map(Json::from).unwrap_or(Json::Null),
+                        )
+                        .with(
+                            "executable_candidates",
+                            js_strings_json(bundle.executable_candidates),
+                        )
+                        .with("signing_paths", js_strings_json(bundle.signing_paths)),
+                )
+            })
+            .collect(),
+    )
+}
+
 struct Attributed<T> {
     all: Vec<T>,
     unattributed: usize,
 }
 
-fn attribute_components<T: Clone + PathValue>(
+static EMPTY_PATH: JsString = JsString::new_const();
+
+fn attribute_components<T: Clone + PathJson>(
     values: &[T],
-    roots: &[String],
+    roots: &[JsString],
     root_format: &str,
 ) -> Attributed<T> {
     let visible = values
@@ -1678,49 +1789,52 @@ fn attribute_components<T: Clone + PathValue>(
     Attributed { all, unattributed }
 }
 
-trait PathValue {
-    fn path(&self) -> &str;
+trait PathJson {
+    fn path(&self) -> &JsString;
 }
 
-impl PathValue for Value {
-    fn path(&self) -> &str {
-        self.get("path").and_then(Value::as_str).unwrap_or_default()
+impl PathJson for Json {
+    fn path(&self) -> &JsString {
+        self.get("path")
+            .and_then(Json::as_js_string)
+            .unwrap_or(&EMPTY_PATH)
     }
 }
 
 struct Classified {
-    bundle_metadata: Vec<Value>,
-    executables: Vec<Value>,
-    frameworks: Vec<Value>,
-    native_libraries: Vec<Value>,
-    javascript: Vec<Value>,
-    signing: Vec<Value>,
-    privileged_helpers: Vec<Value>,
-    launchd_plists: Vec<Value>,
-    helpers: Vec<Value>,
+    bundle_metadata: Vec<Json>,
+    executables: Vec<Json>,
+    frameworks: Vec<Json>,
+    native_libraries: Vec<Json>,
+    javascript: Vec<Json>,
+    signing: Vec<Json>,
+    privileged_helpers: Vec<Json>,
+    launchd_plists: Vec<Json>,
+    helpers: Vec<Json>,
 }
 
 impl Classified {
-    fn as_value(&self) -> Value {
-        json!({
-            "bundle_metadata": self.bundle_metadata,
-            "executables": self.executables,
-            "frameworks": self.frameworks,
-            "native_libraries": self.native_libraries,
-            "javascript": self.javascript,
-            "signing": self.signing,
-            "privileged_helpers": self.privileged_helpers,
-            "launchd_plists": self.launchd_plists,
-            "helpers": self.helpers,
-        })
+    fn as_value(&self) -> Json {
+        Json::from(
+            Obj::new()
+                .with("bundle_metadata", self.bundle_metadata.clone())
+                .with("executables", self.executables.clone())
+                .with("frameworks", self.frameworks.clone())
+                .with("native_libraries", self.native_libraries.clone())
+                .with("javascript", self.javascript.clone())
+                .with("signing", self.signing.clone())
+                .with("privileged_helpers", self.privileged_helpers.clone())
+                .with("launchd_plists", self.launchd_plists.clone())
+                .with("helpers", self.helpers.clone()),
+        )
     }
 }
 
-fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Classified {
+fn classify_components(entries: &[Entry], all: &[Json], roots: &[JsString]) -> Classified {
     let bundle_metadata = all
         .iter()
         .filter(|component| {
-            anatomy_name_is(last_path_segment(component_path(component)), "Info.plist")
+            anatomy_name_is(&last_path_segment(component_path(component)), "Info.plist")
         })
         .cloned()
         .collect();
@@ -1735,7 +1849,11 @@ fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Cl
         .collect();
     let frameworks = all
         .iter()
-        .filter(|component| component_path(component).contains(".framework/"))
+        .filter(|component| {
+            path_segments(component_path(component))
+                .windows(2)
+                .any(|segments| segments[0].ends_with(".framework"))
+        })
         .cloned()
         .collect();
     let native_libraries = all
@@ -1745,7 +1863,7 @@ fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Cl
         .collect();
     let javascript = all
         .iter()
-        .filter(|component| component["format"] == "javascript-bundle")
+        .filter(|component| component["format"].as_str() == Some("javascript-bundle"))
         .cloned()
         .collect();
     let signing = all
@@ -1755,10 +1873,10 @@ fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Cl
                 component_path(component),
                 &["_CodeSignature", "CodeResources"],
             ) || anatomy_name_is(
-                last_path_segment(component_path(component)),
+                &last_path_segment(component_path(component)),
                 "embedded.mobileprovision",
             ) || anatomy_name_is(
-                last_path_segment(component_path(component)),
+                &last_path_segment(component_path(component)),
                 "embedded.provisionprofile",
             )
         })
@@ -1771,7 +1889,9 @@ fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Cl
         .into_iter()
         .filter_map(|mut component| {
             let domain = launchd_domain(component_path(&component))?;
-            component["domain"] = Value::String(domain.into());
+            if let Json::Object(object) = &mut component {
+                object.set("domain", domain);
+            }
             Some(component)
         })
         .collect();
@@ -1792,19 +1912,19 @@ fn classify_components(entries: &[Entry], all: &[Value], roots: &[String]) -> Cl
     }
 }
 
-fn last_path_segment(path: &str) -> &str {
-    path.rsplit('/').next().unwrap_or_default()
+fn last_path_segment(path: &JsString) -> JsString {
+    path_segments(path).pop().unwrap_or_default()
 }
 
-fn is_within_roots(path: &str, roots: &[String]) -> bool {
+fn is_within_roots(path: &JsString, roots: &[JsString]) -> bool {
     roots.iter().any(|root| is_within(path, root))
 }
 
 fn matching_components(
     entries: &[Entry],
-    roots: &[String],
-    matches_path: impl Fn(&str) -> bool,
-) -> Vec<Value> {
+    roots: &[JsString],
+    matches_path: impl Fn(&JsString) -> bool,
+) -> Vec<Json> {
     entries
         .iter()
         .filter(|entry| {
@@ -1817,22 +1937,24 @@ fn matching_components(
         .collect()
 }
 
-fn component_path(value: &Value) -> &str {
+fn component_path(value: &Json) -> &JsString {
     value
         .get("path")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
+        .and_then(Json::as_js_string)
+        .unwrap_or(&EMPTY_PATH)
 }
 
-fn deduplicate_components(values: impl IntoIterator<Item = Value>) -> Vec<Value> {
+fn deduplicate_components(values: impl IntoIterator<Item = Json>) -> Vec<Json> {
     let mut by_path = BTreeMap::new();
     for value in values {
-        by_path.insert(component_path(&value).to_owned(), value);
+        by_path.insert(component_path(&value).clone(), value);
     }
-    by_path.into_values().collect()
+    let mut values = by_path.into_values().collect::<Vec<_>>();
+    values.sort_by(|left, right| component_path(left).compare_code_points(component_path(right)));
+    values
 }
 
-fn identify_runtime_families(all: &[Value]) -> Vec<&'static str> {
+fn identify_runtime_families(all: &[Json]) -> Vec<&'static str> {
     let mut families = BTreeSet::new();
     if all.iter().any(|component| is_macho(&component["format"])) {
         families.insert("native");
@@ -1845,7 +1967,7 @@ fn identify_runtime_families(all: &[Value]) -> Vec<&'static str> {
     }
     if all
         .iter()
-        .any(|component| component["format"] == "javascript-bundle")
+        .any(|component| component["format"].as_str() == Some("javascript-bundle"))
     {
         families.insert("javascript");
     }
@@ -1858,24 +1980,19 @@ fn identify_runtime_families(all: &[Value]) -> Vec<&'static str> {
 }
 
 struct BridgeProjection {
-    candidates: Vec<Value>,
-    coverage: Value,
+    candidates: Vec<Json>,
+    coverage: Json,
 }
 
 fn identify_bridge_candidates(
-    scripts: &[Value],
-    native: &[Value],
-    roots: &[String],
+    scripts: &[Json],
+    native: &[Json],
+    roots: &[JsString],
 ) -> BridgeProjection {
-    let owner = |path: &str| {
-        roots
-            .iter()
-            .find(|root| is_within(path, root))
-            .map(String::as_str)
-    };
-    let mut script_groups: Vec<(Option<String>, Vec<&Value>)> = Vec::new();
+    let owner = |path: &JsString| roots.iter().find(|root| is_within(path, root)).cloned();
+    let mut script_groups: Vec<(Option<JsString>, Vec<&Json>)> = Vec::new();
     for script in scripts {
-        let root = owner(component_path(script)).map(str::to_owned);
+        let root = owner(component_path(script));
         if let Some((last_root, group)) = script_groups.last_mut()
             && *last_root == root
         {
@@ -1885,10 +2002,10 @@ fn identify_bridge_candidates(
         }
     }
 
-    let mut native_by_root: BTreeMap<Option<String>, Vec<&Value>> = BTreeMap::new();
+    let mut native_by_root: BTreeMap<Option<JsString>, Vec<&Json>> = BTreeMap::new();
     for component in native {
         native_by_root
-            .entry(owner(component_path(component)).map(str::to_owned))
+            .entry(owner(component_path(component)))
             .or_default()
             .push(component);
     }
@@ -1909,13 +2026,13 @@ fn identify_bridge_candidates(
         for script in group_scripts {
             for component in group_native {
                 let native_path = component_path(component);
-                let candidate = json!({
-                    "source_path": component_path(script),
-                    "native_path": native_path,
-                    "basis": bridge_basis(native_path),
-                });
-                let serialized_size =
-                    serde_json::to_vec(&candidate).map_or(usize::MAX, |bytes| bytes.len());
+                let candidate = Json::from(
+                    Obj::new()
+                        .with("source_path", component_path(script))
+                        .with("native_path", native_path)
+                        .with("basis", bridge_basis(native_path)),
+                );
+                let serialized_size = candidate.stringify().len();
                 let additional =
                     serialized_size.saturating_add(usize::from(!candidates.is_empty()));
                 if estimated_bytes.saturating_add(additional) > MAX_BRIDGE_CANDIDATE_JSON_BYTES {
@@ -1930,16 +2047,24 @@ fn identify_bridge_candidates(
     let emitted = candidates.len();
     BridgeProjection {
         candidates,
-        coverage: json!({
-            "status": if emitted == total { "complete" } else { "partial" },
-            "total_candidates": total,
-            "emitted_candidates": emitted,
-            "omitted_candidates": total.saturating_sub(emitted),
-        }),
+        coverage: Json::from(
+            Obj::new()
+                .with(
+                    "status",
+                    if emitted == total {
+                        "complete"
+                    } else {
+                        "partial"
+                    },
+                )
+                .with("total_candidates", total)
+                .with("emitted_candidates", emitted)
+                .with("omitted_candidates", total.saturating_sub(emitted)),
+        ),
     }
 }
 
-fn bridge_basis(path: &str) -> &'static str {
+fn bridge_basis(path: &JsString) -> &'static str {
     match native_runtime_convention(path) {
         Some("react-native") => "react-native-convention",
         Some("flutter") => "flutter-convention",
@@ -1948,42 +2073,46 @@ fn bridge_basis(path: &str) -> &'static str {
     }
 }
 
-fn native_runtime_convention(path: &str) -> Option<&'static str> {
-    for segment in path.split('/') {
-        let segment = segment.to_lowercase();
+fn native_runtime_convention(path: &JsString) -> Option<&'static str> {
+    for segment in path_segments(path) {
+        let segment = segment.to_ascii_lowercase();
         match segment.as_str() {
-            "react.framework"
-            | "reactnative.framework"
-            | "libreactnative.so"
-            | "libreactnativejni.so"
-            | "libhermes_executor.so"
-            | "libhermes.so"
-            | "hermes.framework" => return Some("react-native"),
-            "libflutter.so" | "flutter.framework" => return Some("flutter"),
-            "libunity.so" | "unityframework.framework" => return Some("unity"),
+            Some(
+                "react.framework"
+                | "reactnative.framework"
+                | "libreactnative.so"
+                | "libreactnativejni.so"
+                | "libhermes_executor.so"
+                | "libhermes.so"
+                | "hermes.framework",
+            ) => return Some("react-native"),
+            Some("libflutter.so" | "flutter.framework") => return Some("flutter"),
+            Some("libunity.so" | "unityframework.framework") => return Some("unity"),
             _ => {}
         }
     }
     None
 }
 
-fn is_swift_runtime_library(path: &str) -> bool {
-    path.split('/').any(|segment| {
-        let segment = segment.to_lowercase();
-        segment.starts_with("libswift") && segment.ends_with(".dylib") && segment.len() > 12
+fn is_swift_runtime_library(path: &JsString) -> bool {
+    path_segments(path).into_iter().any(|segment| {
+        let segment = segment.to_ascii_lowercase();
+        segment.starts_with(&JsString::from("libswift"))
+            && segment.ends_with(".dylib")
+            && segment.len() > 12
     })
 }
 
-fn is_native_library(path: &str) -> bool {
+fn is_native_library(path: &JsString) -> bool {
     let path = path.to_ascii_lowercase();
     path.ends_with(".dylib") || path.ends_with(".so")
 }
 
-fn is_macho(format: &Value) -> bool {
+fn is_macho(format: &Json) -> bool {
     matches!(format.as_str(), Some("mach-o" | "mach-o-universal"))
 }
 
-fn is_bundle_name(name: &str) -> bool {
+fn is_bundle_name(name: &JsString) -> bool {
     [
         ".app",
         ".appex",
@@ -2000,26 +2129,23 @@ fn is_bundle_name(name: &str) -> bool {
     .any(|suffix| ends_ascii_case_insensitive(name, suffix))
 }
 
-fn is_sidecar(path: &str) -> bool {
-    let mut segments = path.split('/').peekable();
-    let mut basename = "";
-    while let Some(segment) = segments.next() {
-        if segments.peek().is_none() {
-            basename = segment;
-        }
-        if segment == "__MACOSX" {
-            return true;
-        }
+fn is_sidecar(path: &JsString) -> bool {
+    let segments = path_segments(path);
+    let basename = segments.last().cloned().unwrap_or_default();
+    if segments.iter().any(|segment| segment == "__MACOSX") {
+        return true;
     }
-    basename.starts_with("._")
+    basename.starts_with(&JsString::from("._"))
 }
 
-fn anatomy_name_is(actual: &str, expected: &str) -> bool {
-    actual.to_lowercase() == expected.to_lowercase()
+fn anatomy_name_is(actual: &JsString, expected: &str) -> bool {
+    actual
+        .as_str()
+        .is_some_and(|actual| actual.eq_ignore_ascii_case(expected))
 }
 
-fn anatomy_tail_matches(path: &str, expected: &[&str]) -> bool {
-    let actual = path.split('/').collect::<Vec<_>>();
+fn anatomy_tail_matches(path: &JsString, expected: &[&str]) -> bool {
+    let actual = path_segments(path);
     if actual.len() < expected.len() {
         return false;
     }
@@ -2027,11 +2153,11 @@ fn anatomy_tail_matches(path: &str, expected: &[&str]) -> bool {
         .iter()
         .zip(expected)
         .all(|(actual, expected)| {
-            *actual != "" && (*expected == "*" || anatomy_name_is(actual, expected))
+            !actual.is_empty() && (*expected == "*" || anatomy_name_is(actual, expected))
         })
 }
 
-fn launchd_domain(path: &str) -> Option<&'static str> {
+fn launchd_domain(path: &JsString) -> Option<&'static str> {
     if anatomy_tail_matches(path, &["Contents", "Library", "LaunchAgents", "*"]) {
         Some("agent")
     } else if anatomy_tail_matches(path, &["Contents", "Library", "LaunchDaemons", "*"]) {
@@ -2041,39 +2167,56 @@ fn launchd_domain(path: &str) -> Option<&'static str> {
     }
 }
 
-fn is_within(path: &str, root: &str) -> bool {
-    root == "." || path == root || path.starts_with(&format!("{root}/"))
+fn is_within(path: &JsString, root: &JsString) -> bool {
+    root == "." || path == root || path.starts_with(&root.concat_str("/"))
 }
 
-fn ends_ascii_case_insensitive(value: &str, suffix: &str) -> bool {
+fn ends_ascii_case_insensitive(value: &JsString, suffix: &str) -> bool {
     value
         .to_ascii_lowercase()
         .ends_with(&suffix.to_ascii_lowercase())
 }
 
-fn bundle_directory(bundle: &str) -> &str {
-    if bundle == "." { "" } else { bundle }
+fn bundle_directory(bundle: &JsString) -> JsString {
+    if bundle == "." {
+        JsString::default()
+    } else {
+        bundle.clone()
+    }
 }
 
-fn join_path(directory: &str, name: &str) -> String {
+fn join_path(directory: &JsString, name: &JsString) -> JsString {
     if directory.is_empty() {
-        name.to_owned()
+        name.clone()
     } else {
-        format!("{directory}/{name}")
+        directory.concat_str("/").concat(name)
     }
+}
+
+fn path_segments(path: &JsString) -> Vec<JsString> {
+    let mut segments = Vec::new();
+    let mut start = 0;
+    for (index, unit) in path.units().iter().enumerate() {
+        if *unit == u16::from(b'/') {
+            segments.push(path.slice_units(start..index));
+            start = index + 1;
+        }
+    }
+    segments.push(path.slice_units(start..path.units().len()));
+    segments
 }
 
 fn projection_limitations(
     inventory: &Inventory,
     inventory_complete: bool,
     uninventoried_image: bool,
-    roots: &[String],
+    roots: &[JsString],
     bundles: &[Bundle],
     has_symlinks: bool,
     has_sidecars: bool,
     unattributed: usize,
     has_unavailable: bool,
-    bridge_coverage: &Value,
+    bridge_coverage: &Json,
 ) -> Vec<String> {
     let mut limitations = inventory.limitations.clone();
     if !inventory_complete {
@@ -2103,7 +2246,7 @@ fn projection_limitations(
     if has_sidecars {
         limitations.push("AppleDouble sidecar entries (._* files and __MACOSX/) describe neighbouring files and are excluded from bundle roles.".into());
     }
-    if bridge_coverage["status"] == "partial" {
+    if bridge_coverage["status"].as_str() == Some("partial") {
         limitations.push(format!("Bridge candidate pairs exceeded the projection safety budget; {} hypotheses are omitted. Component arrays still include every component from the supplied inventory pages.", bridge_coverage["omitted_candidates"]));
     }
     if has_unavailable {
@@ -2120,32 +2263,33 @@ fn projection_limitations(
     limitations
 }
 
-fn projected_subject(carrier: &EvidenceRecord, root_sha256: &Value) -> Result<Value, Failure> {
-    let source: Value = serde_json::from_str(carrier.subject().get())
+fn projected_subject(carrier: &EvidenceRecord, root_sha256: &Json) -> Result<Json, Failure> {
+    let source = json::parse(carrier.subject().get())
         .map_err(|error| protocol_failure(&error.to_string()))?;
     if source.is_null() {
-        return Ok(Value::Null);
+        return Ok(Json::Null);
     }
     let path = source
         .get("local_path")
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         .ok_or_else(|| protocol_failure("authenticated Evidence subject has no local_path"))?;
     let format = source
         .get("format")
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         .ok_or_else(|| protocol_failure("authenticated Evidence subject has no format"))?;
     let name = path
         .rsplit(['/', '\\'])
         .next()
         .filter(|name| !name.is_empty())
         .unwrap_or("artifact");
-    Ok(json!({
-        "name": name,
-        "digest": {"sha256": root_sha256},
-        "format": format,
-        "architecture": null,
-        "local_path": path,
-    }))
+    Ok(Json::from(
+        Obj::new()
+            .with("name", name)
+            .with("digest", Obj::new().with("sha256", root_sha256.clone()))
+            .with("format", format)
+            .with("architecture", Json::Null)
+            .with("local_path", path),
+    ))
 }
 
 #[derive(Debug)]

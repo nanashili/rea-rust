@@ -2,7 +2,7 @@
 //! shared cancellation for one CLI process.
 use rea_core::cancellation::Cancellation;
 use rea_mcp::{Progress, Registry, Session};
-use serde_json::Value;
+use serde_json::{Value, value::RawValue};
 use std::sync::Arc;
 
 pub use rea_mcp::Invocation;
@@ -19,6 +19,19 @@ impl Runner<'_> {
     /// retention, returning its success value or failure projection.
     pub fn invoke(&self, name: &str, input: Value) -> Invocation {
         rea_mcp::invoke(
+            self.registry,
+            self.session,
+            name,
+            input,
+            self.cancellation.clone(),
+            Progress::silent(),
+        )
+    }
+
+    /// Run a tool with its original JSON text when the registry exposes an
+    /// exact-input handler; ordinary tools retain the decoded fallback path.
+    pub fn invoke_raw(&self, name: &str, input: Box<RawValue>) -> Invocation {
+        rea_mcp::invoke_raw(
             self.registry,
             self.session,
             name,

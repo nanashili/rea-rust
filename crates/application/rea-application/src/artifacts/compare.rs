@@ -5,14 +5,14 @@
 //! facts; this workflow only pairs occurrences by their caller-visible logical
 //! paths and preserves the Evidence identifiers that support every row.
 
-use crate::artifacts::inventory_evidence::normalize_result;
 use crate::ledger::artifact_records::ArtifactRecords;
 use rea_core::{
+    artifact_inventory::normalize_result,
     cancellation::Cancellation,
     evidence::record::EvidenceRecord,
     failure::{Detail, Failure},
 };
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const OPERATION: &str = "compare_artifacts";
@@ -150,7 +150,6 @@ fn assemble_inventory(
     let mut edges = BTreeMap::new();
     let contradictions = first["integrity_contradictions"].clone();
     let mut limitations = Vec::new();
-    drop(first);
     for page in pages {
         if page["manifest"] != manifest
             || page["coverage"] != coverage

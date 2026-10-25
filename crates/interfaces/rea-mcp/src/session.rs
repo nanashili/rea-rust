@@ -165,6 +165,14 @@ impl Session {
         serde_json::from_str(raw.get()).ok()
     }
 
+    /// Exact retained Evidence record for producers whose JSON strings contain
+    /// unpaired JavaScript UTF-16 units. Callers that own an exact graph view
+    /// must use this rather than [`Session::evidence`], which is limited to
+    /// the legacy `serde_json::Value` projection contract.
+    pub fn evidence_raw(&self, evidence_id: &str) -> Option<Box<RawValue>> {
+        self.records.find_raw(evidence_id).ok().flatten()
+    }
+
     /// Complete canonical bundle of retained records and unknown histories.
     pub fn export_bundle(&self) -> Result<Value, AnalysisError> {
         let snapshot = self.records.snapshot().map_err(record_error)?;

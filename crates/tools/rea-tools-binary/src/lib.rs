@@ -19,6 +19,18 @@ mod status;
 pub use status::PACKAGE_VERSION;
 mod target;
 
+/// Admit a caller-selected local target without opening a provider session.
+///
+/// This is the shared read-only boundary for readiness diagnostics and other
+/// adapters that need the same target semantics as binary analysis. Provider
+/// selection and lifecycle remain owned by the binary session.
+pub fn inspect_target(
+    path: &str,
+    cancellation: &rea_core::cancellation::Cancellation,
+) -> Result<rea_analysis::BinaryTarget, rea_core::analysis_error::AnalysisError> {
+    target::parse_binary_target(path, &target::TargetOptions::default(), cancellation)
+}
+
 /// The configured deep-analysis providers shared by every binary tool.
 pub(crate) struct Registration {
     providers: Vec<Arc<dyn AnalysisProvider>>,

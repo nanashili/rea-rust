@@ -370,11 +370,6 @@ impl OwnedProcess {
             Err(reason) => StopResult::Incomplete { reason },
         }
     }
-
-    /// Whether verified cleanup has released this owner.
-    pub fn released(&self) -> bool {
-        self.released
-    }
 }
 
 impl Drop for OwnedProcess {

@@ -185,7 +185,13 @@ pub(crate) fn bounded_json_value(
     secrets: &[String],
 ) -> BoundedJson {
     let mut remaining_nodes = MAX_CAPTURE_JSON_NODES;
-    let outcome = visit(input, maximum_bytes as i64, 0, secrets, &mut remaining_nodes);
+    let outcome = visit(
+        input,
+        maximum_bytes as i64,
+        0,
+        secrets,
+        &mut remaining_nodes,
+    );
     let bytes = serialized_len(&outcome.value);
     if bytes > maximum_bytes {
         BoundedJson {
@@ -236,8 +242,7 @@ fn visit(
             truncated: false,
         },
         Value::String(text) => {
-            let bounded =
-                bounded_redacted_string(text, (budget - 2).max(0) as usize, secrets);
+            let bounded = bounded_redacted_string(text, (budget - 2).max(0) as usize, secrets);
             VisitOutcome {
                 value: Value::String(bounded.value),
                 truncated: bounded.truncated,

@@ -1,1 +1,34 @@
-{"name":"inspect_nib_archive","title":"Inspect NIB Archive Bytes","description":"Decode caller-supplied compiled NIBArchive bytes without opening a path or loading Interface Builder classes.","inputSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["path","bytes_base64"],"properties":{"path":{"type":"string","minLength":1},"bytes_base64":{"type":"string","minLength":1},"sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"}}},"outputSchema":{"type":"object"},"annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}}
+{
+  "name": "inspect_nib_archive",
+  "title": "Inspect NIB Archive Bytes",
+  "description": "Decode caller-supplied compiled NIBArchive bytes without opening a path or loading Interface Builder classes.",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "path"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": [
+      "operation",
+      "subject",
+      "parameters",
+      "normalized_result"
+    ]
+  },
+  "annotations": {
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  }
+}

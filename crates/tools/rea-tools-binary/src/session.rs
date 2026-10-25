@@ -348,10 +348,6 @@ impl BinarySession {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn upgrade_session(&self) -> Option<Arc<Session>> {
-        self.session.get().and_then(Weak::upgrade)
-    }
-
     /// The active route, or the router's target-free route.
     pub(crate) fn current_route(&self) -> Arc<Route> {
         let active = self.lock().active.clone();
@@ -359,11 +355,6 @@ impl BinarySession {
             Some(active) => Arc::clone(&active.run.route),
             None => self.router().initial_route(),
         }
-    }
-
-    /// Candidate identities of the bound router.
-    pub(crate) fn router_identities(&self) -> Vec<ProviderIdentity> {
-        self.router().identities()
     }
 
     /// Enter one lifecycle transition after every earlier one settled.

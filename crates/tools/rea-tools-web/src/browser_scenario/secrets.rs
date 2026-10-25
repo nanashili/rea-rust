@@ -53,7 +53,8 @@ fn normalize_percent(value: &str) -> String {
     if !value.contains('%') {
         return value.to_owned();
     }
-    String::from_utf8(normalize_percent_bytes(value.as_bytes())).unwrap_or_else(|_| value.to_owned())
+    String::from_utf8(normalize_percent_bytes(value.as_bytes()))
+        .unwrap_or_else(|_| value.to_owned())
 }
 
 fn is_hex(byte: u8) -> bool {
@@ -64,7 +65,10 @@ fn normalize_percent_bytes(value: &[u8]) -> Vec<u8> {
     let mut normalized = value.to_vec();
     let mut index = 0;
     while index + 2 < normalized.len() {
-        if normalized[index] == b'%' && is_hex(normalized[index + 1]) && is_hex(normalized[index + 2]) {
+        if normalized[index] == b'%'
+            && is_hex(normalized[index + 1])
+            && is_hex(normalized[index + 2])
+        {
             normalized[index + 1] = normalized[index + 1].to_ascii_lowercase();
             normalized[index + 2] = normalized[index + 2].to_ascii_lowercase();
             index += 2;
@@ -115,7 +119,11 @@ fn patterns_for(secret: &str, spellings: Spellings) -> Vec<Pattern> {
             !pattern.text.is_empty()
                 && seen.insert(format!(
                     "{}:{}",
-                    if pattern.percent_insensitive { "percent" } else { "literal" },
+                    if pattern.percent_insensitive {
+                        "percent"
+                    } else {
+                        "literal"
+                    },
                     pattern.text
                 ))
         })
@@ -130,7 +138,11 @@ fn declared_patterns(values: &[(String, String)], spellings: Spellings) -> Vec<P
         .filter(|pattern| {
             seen.insert(format!(
                 "{}:{}",
-                if pattern.percent_insensitive { "percent" } else { "literal" },
+                if pattern.percent_insensitive {
+                    "percent"
+                } else {
+                    "literal"
+                },
                 pattern.text
             ))
         })
@@ -143,7 +155,10 @@ fn replacements_for(values: &[(String, String)], spellings: Spellings) -> Vec<Re
         .flat_map(|(id, secret)| {
             patterns_for(secret, spellings)
                 .into_iter()
-                .map(|pattern| Replacement { id: id.clone(), pattern })
+                .map(|pattern| Replacement {
+                    id: id.clone(),
+                    pattern,
+                })
         })
         .collect();
     // Array.prototype.sort is stable, like `sort_by`.
@@ -156,11 +171,18 @@ fn replacements_for(values: &[(String, String)], spellings: Spellings) -> Vec<Re
 }
 
 fn pattern_matches(value: &str, normalized: &str, pattern: &Pattern) -> bool {
-    if pattern.percent_insensitive { normalized } else { value }.contains(&pattern.search)
+    if pattern.percent_insensitive {
+        normalized
+    } else {
+        value
+    }
+    .contains(&pattern.search)
 }
 
 fn contains_pattern(value: &str, normalized: &str, patterns: &[Pattern]) -> bool {
-    patterns.iter().any(|pattern| pattern_matches(value, normalized, pattern))
+    patterns
+        .iter()
+        .any(|pattern| pattern_matches(value, normalized, pattern))
 }
 
 fn redaction_marker(id: &str, patterns: &[Pattern]) -> String {
@@ -191,7 +213,10 @@ fn find_from(haystack: &[u8], needle: &[u8], offset: usize) -> Option<usize> {
 }
 
 fn replace_literals(value: &str, replacements: &[Replacement], patterns: &[Pattern]) -> String {
-    let normalized = if replacements.iter().any(|item| item.pattern.percent_insensitive) {
+    let normalized = if replacements
+        .iter()
+        .any(|item| item.pattern.percent_insensitive)
+    {
         normalize_percent(value)
     } else {
         value.to_owned()
@@ -222,7 +247,9 @@ fn replace_literals(value: &str, replacements: &[Replacement], patterns: &[Patte
                 }
             }
         }
-        let Some((replacement, index)) = next else { break };
+        let Some((replacement, index)) = next else {
+            break;
+        };
         parts.push_str(&value[offset..index]);
         parts.push_str(&redaction_marker(&replacement.id, patterns));
         replaced = true;
@@ -247,8 +274,15 @@ pub(crate) struct Secrets {
 }
 
 impl Secrets {
+    pub(crate) fn empty() -> Self {
+        Self::new(Vec::new())
+    }
+
     /// `BrowserScenarioSecrets.resolve`: `None` when any declared variable is unset.
-    pub(crate) fn resolve(scenario: &Scenario, environment: &BTreeMap<String, String>) -> Option<Self> {
+    pub(crate) fn resolve(
+        scenario: &Scenario,
+        environment: &BTreeMap<String, String>,
+    ) -> Option<Self> {
         let mut ordered = Vec::new();
         for declaration in &scenario.secrets {
             let value = environment.get(&declaration.environment_variable)?;
@@ -354,14 +388,24 @@ impl Secrets {
             .text_replacements
             .iter()
             .map(|replacement| {
-                let view = if replacement.pattern.percent_insensitive { &normalized[..] } else { value };
+                let view = if replacement.pattern.percent_insensitive {
+                    &normalized[..]
+                } else {
+                    value
+                };
                 let marker = redaction_marker(&replacement.id, &self.text_patterns).into_bytes();
                 let index = find_from(view, replacement.pattern.search.as_bytes(), 0);
                 (replacement, marker, index)
             })
             .collect();
         candidates.sort_by(|left, right| {
-            right.0.pattern.search.len().cmp(&left.0.pattern.search.len()).then_with(|| left.0.id.cmp(&right.0.id))
+            right
+                .0
+                .pattern
+                .search
+                .len()
+                .cmp(&left.0.pattern.search.len())
+                .then_with(|| left.0.id.cmp(&right.0.id))
         });
         let mut parts: Vec<u8> = Vec::new();
         let mut replaced = false;
@@ -372,7 +416,11 @@ impl Secrets {
                 if let Some(index) = candidate.2
                     && index < offset
                 {
-                    let view = if candidate.0.pattern.percent_insensitive { &normalized[..] } else { value };
+                    let view = if candidate.0.pattern.percent_insensitive {
+                        &normalized[..]
+                    } else {
+                        value
+                    };
                     candidate.2 = find_from(view, candidate.0.pattern.search.as_bytes(), offset);
                 }
             }
@@ -411,7 +459,11 @@ impl Secrets {
             parts.clone()
         };
         let leaked = candidates.iter().any(|candidate| {
-            let view = if candidate.0.pattern.percent_insensitive { &normalized_redacted[..] } else { &parts[..] };
+            let view = if candidate.0.pattern.percent_insensitive {
+                &normalized_redacted[..]
+            } else {
+                &parts[..]
+            };
             find_from(view, candidate.0.pattern.search.as_bytes(), 0).is_some()
         });
         if leaked { Vec::new() } else { parts }
@@ -461,7 +513,8 @@ pub(crate) fn sanitized_url_value(value: &str, redacted_by_secret: bool) -> Valu
         return json!({ "url": value, "origin": null, "query_parameter_names": [], "redacted": redacted_by_secret });
     };
     let sanitized = urls::sanitize_browser_url(value);
-    let had_credentials = !parsed.username().is_empty() || parsed.password().is_some_and(|p| !p.is_empty());
+    let had_credentials =
+        !parsed.username().is_empty() || parsed.password().is_some_and(|p| !p.is_empty());
     json!({
         "url": sanitized.url,
         "origin": sanitized.origin,

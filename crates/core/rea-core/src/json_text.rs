@@ -38,6 +38,55 @@ enum Text {
 }
 
 impl JsonText {
+    /// Construct a JSON string from its exact UTF-16 code units.
+    pub fn from_utf16_units(units: &[u16]) -> Result<Self, JsonTextError> {
+        if let Ok(value) = String::from_utf16(units) {
+            return Ok(Self(Text::Unicode(value)));
+        }
+
+        let mut json = String::from("\"");
+        let mut index = 0;
+
+        while index < units.len() {
+            let unit = units[index];
+            if (0xd800..=0xdbff).contains(&unit)
+                && units
+                    .get(index + 1)
+                    .is_some_and(|next| (0xdc00..=0xdfff).contains(next))
+            {
+                let low = units[index + 1];
+                let code_point =
+                    0x1_0000 + ((u32::from(unit) - 0xd800) << 10) + (u32::from(low) - 0xdc00);
+                let character = char::from_u32(code_point)
+                    .ok_or(JsonTextError::InvalidEncoding("invalid surrogate pair"))?;
+                append_escaped(&mut json, &character.to_string())
+                    .map_err(JsonTextError::InvalidEncoding)?;
+                index += 2;
+                continue;
+            }
+
+            if (0xd800..=0xdfff).contains(&unit) {
+                json.push_str(&format!("\\u{unit:04x}"));
+            } else {
+                let character = char::from_u32(u32::from(unit))
+                    .ok_or(JsonTextError::InvalidEncoding("invalid UTF-16 code unit"))?;
+                append_escaped(&mut json, &character.to_string())
+                    .map_err(JsonTextError::InvalidEncoding)?;
+            }
+            index += 1;
+        }
+
+        json.push('"');
+        let raw = RawValue::from_string(json)
+            .map_err(|_| JsonTextError::InvalidEncoding("invalid escaped JSON string"))?;
+        // `RawValue` has already validated the complete JSON string. Keep the
+        // escaped representation directly: deserializing it again asks the
+        // serde JSON reader to materialize surrogate escapes as a Rust string,
+        // which can reject adjacent unpaired units even though the JSON text
+        // is valid and lossless for JavaScript.
+        Ok(Self(Text::Unpaired(raw)))
+    }
+
     /// Unicode text when all code units are paired; otherwise explicitly unknown.
     pub fn as_str(&self) -> Option<&str> {
         match &self.0 {
@@ -51,7 +100,8 @@ impl JsonText {
     /// # Errors
     /// Rejects non-string values and any invalid decoded representation.
     pub fn parse(raw: &RawValue) -> Result<Self, JsonTextError> {
-        serde_json::from_str(raw.get()).map_err(|_| JsonTextError::InvalidString)
+        let units = decode_json_string_units(raw.get())?;
+        Self::from_utf16_units(&units)
     }
 
     /// Exact UTF-16 key ordering used by ECMAScript and REA canonical digests.
@@ -61,20 +111,7 @@ impl JsonText {
     pub fn utf16_units(&self) -> Result<Vec<u16>, JsonTextError> {
         match &self.0 {
             Text::Unicode(text) => Ok(text.encode_utf16().collect()),
-            Text::Unpaired(raw) => {
-                let decoded: Wtf8 =
-                    serde_json::from_str(raw.get()).map_err(|_| JsonTextError::InvalidString)?;
-                let mut units = Vec::new();
-                visit_wtf8(&decoded.0, |part| {
-                    match part {
-                        Part::Unicode(text) => units.extend(text.encode_utf16()),
-                        Part::Surrogate(unit) => units.push(unit),
-                    }
-                    Ok(())
-                })
-                .map_err(JsonTextError::InvalidEncoding)?;
-                Ok(units)
-            }
+            Text::Unpaired(raw) => decode_json_string_units(raw.get()),
         }
     }
 
@@ -103,6 +140,68 @@ impl JsonText {
             }
         }
     }
+}
+
+fn decode_json_string_units(raw: &str) -> Result<Vec<u16>, JsonTextError> {
+    let bytes = raw.as_bytes();
+    if bytes.first() != Some(&b'"') || bytes.last() != Some(&b'"') {
+        return Err(JsonTextError::InvalidString);
+    }
+
+    let mut units = Vec::new();
+    let mut index = 1;
+    while index < bytes.len() - 1 {
+        if bytes[index] == b'\\' {
+            index += 1;
+            let escape = *bytes.get(index).ok_or(JsonTextError::InvalidString)?;
+            if escape == b'u' {
+                let digits = bytes
+                    .get(index + 1..index + 5)
+                    .ok_or(JsonTextError::InvalidString)?;
+                let mut unit = 0u16;
+                for digit in digits {
+                    let nibble = match digit {
+                        b'0'..=b'9' => digit - b'0',
+                        b'a'..=b'f' => digit - b'a' + 10,
+                        b'A'..=b'F' => digit - b'A' + 10,
+                        _ => return Err(JsonTextError::InvalidString),
+                    };
+                    unit = (unit << 4) | u16::from(nibble);
+                }
+                units.push(unit);
+                index += 5;
+                continue;
+            }
+            let character = match escape {
+                b'"' => '"',
+                b'\\' => '\\',
+                b'/' => '/',
+                b'b' => '\u{8}',
+                b'f' => '\u{c}',
+                b'n' => '\n',
+                b'r' => '\r',
+                b't' => '\t',
+                _ => return Err(JsonTextError::InvalidString),
+            };
+            let mut encoded = [0; 2];
+            units.extend(character.encode_utf16(&mut encoded).iter().copied());
+            index += 1;
+            continue;
+        }
+
+        if bytes[index] < 0x20 {
+            return Err(JsonTextError::InvalidString);
+        }
+        let text = &raw[index..raw.len() - 1];
+        let character = text.chars().next().ok_or(JsonTextError::InvalidString)?;
+        if character == '"' {
+            return Err(JsonTextError::InvalidString);
+        }
+        let mut encoded = [0; 2];
+        units.extend(character.encode_utf16(&mut encoded).iter().copied());
+        index += character.len_utf8();
+    }
+    Ok(units)
 }
 
 enum Part<'a> {

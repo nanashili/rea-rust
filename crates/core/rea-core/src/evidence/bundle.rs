@@ -20,8 +20,14 @@ pub struct EvidenceBundle {
 /// Bundle shape, identity, ordering, or manifest validation failed.
 #[derive(Debug)]
 pub enum EvidenceBundleError {
-    /// A contained Evidence record failed validation or authentication.
-    Record(EvidenceRecordError),
+    /// A contained record failed validation or authentication. The index is
+    /// retained so adapters can report the exact bundle schema location.
+    RecordAt {
+        /// Zero-based position in the bundle's records array.
+        index: usize,
+        /// Typed validation or authentication failure from the record owner.
+        error: EvidenceRecordError,
+    },
     /// A contained residual-unknown revision or graph failed validation.
     Unknown(ResidualUnknownError),
     /// The bundle failed a strict shape or canonical invariant.
@@ -35,7 +41,7 @@ pub enum EvidenceBundleError {
 impl fmt::Display for EvidenceBundleError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Record(error) => error.fmt(formatter),
+            Self::RecordAt { error, .. } => error.fmt(formatter),
             Self::Unknown(error) => error.fmt(formatter),
             Self::Invalid(message) => formatter.write_str(message),
             Self::Canonical(error) => error.fmt(formatter),
@@ -47,7 +53,7 @@ impl fmt::Display for EvidenceBundleError {
 impl std::error::Error for EvidenceBundleError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Record(error) => Some(error),
+            Self::RecordAt { error, .. } => Some(error),
             Self::Unknown(error) => Some(error),
             Self::Canonical(error) => Some(error),
             Self::Encoding(error) => Some(error),
@@ -63,8 +69,11 @@ impl EvidenceBundle {
             .map_err(|error| EvidenceBundleError::Invalid(error.to_string()))?;
 
         let mut records = Vec::with_capacity(shape.records.len());
-        for raw in &shape.records {
-            records.push(EvidenceRecord::parse(raw).map_err(EvidenceBundleError::Record)?);
+        for (index, raw) in shape.records.iter().enumerate() {
+            records.push(
+                EvidenceRecord::parse(raw)
+                    .map_err(|error| EvidenceBundleError::RecordAt { index, error })?,
+            );
         }
 
         let mut unknowns = Vec::with_capacity(shape.unknowns.len());

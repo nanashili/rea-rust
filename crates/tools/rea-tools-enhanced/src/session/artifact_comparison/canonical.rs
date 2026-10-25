@@ -3,6 +3,7 @@
 //! Compatibility owners: `comparisonSemantics.canonicalJson` and
 //! `canonicalDigest.digestCanonicalValue`.
 
+use rea_application::javascript::graph::json::Json;
 use rea_core::analysis_error::AnalysisError;
 use rea_core::canonical_json;
 use serde_json::Value;
@@ -25,8 +26,18 @@ pub fn canonical_json(value: &Value, context: &str) -> Result<String, AnalysisEr
     Ok(String::from_utf8(bytes).expect("canonical JSON is valid UTF-8"))
 }
 
+pub fn canonical_graph_json(value: &Json, context: &str) -> Result<String, AnalysisError> {
+    let canonical = value.canonical();
+    if canonical.is_empty() {
+        return Err(type_error(format!("{context} could not canonicalize data")));
+    }
+    Ok(canonical)
+}
+
 /// `digestCanonicalValue(value, context)`.
-pub fn digest_canonical_value(value: &Value, context: &str) -> Result<String, AnalysisError> {
-    canonical_json::digest(value)
-        .map_err(|_| type_error(format!("{context} could not canonicalize data")))
+pub fn digest_canonical_value(value: &Json, context: &str) -> Result<String, AnalysisError> {
+    let canonical = canonical_graph_json(value, context)?;
+    Ok(rea_application::javascript::graph::json::sha256_hex(
+        canonical.as_bytes(),
+    ))
 }

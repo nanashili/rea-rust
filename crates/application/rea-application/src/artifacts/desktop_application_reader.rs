@@ -48,12 +48,12 @@ pub fn inspect(
         .entries(max_entries, cancellation)
         .map_err(|error| directory_failure(path, error.to_string()))?;
     let mut files = Vec::new();
-    let mut omissions: Vec<Value> = Vec::new();
+    let omissions: Vec<Value> = Vec::new();
     let mut bytes_read = 0usize;
     let mut files_probed = 0usize;
     let mut entries_examined = 0usize;
     let mut symlinks = 0usize;
-    let mut special = 0usize;
+    let special = 0usize;
     let mut partial = false;
 
     for entry in entries {

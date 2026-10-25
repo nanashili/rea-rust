@@ -27,7 +27,8 @@ pub fn register(registry: &mut Registry) {
     registry.handle(CLIENT, |context, input| {
         inspect_client(context, &input).into()
     });
-    registry.handle(CAPTURE, |context, input| inspect_capture(context, input));
+    registry
+        .handle_application_validated(CAPTURE, |context, input| inspect_capture(context, input));
 }
 /// Session-owned provider created on first use and closed at shutdown.
 fn provider(context: &ToolContext<'_>) -> std::sync::Arc<PcapProvider> {
@@ -49,6 +50,12 @@ fn inspect_capture(context: &ToolContext<'_>, input: Value) -> rea_mcp::ToolOutp
     if cancellation.reason().is_some() {
         return rea_mcp::ToolOutput::Failure(AnalysisError::cancelled(CAPTURE));
     }
+
+    let input = match rea_mcp::schema::parse_application_input(CAPTURE, &input) {
+        Ok(input) => input,
+        Err(error) => return rea_mcp::ToolOutput::Failure(error),
+    };
+
     // Re-parse refinements the frozen JSON Schema cannot express, then split
     // `detail` from the operation input exactly like the original handler.
     let path = rea_mcp::support::string(&input, "path").to_owned();

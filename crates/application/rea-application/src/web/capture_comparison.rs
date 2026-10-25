@@ -887,11 +887,57 @@ fn compare_network(
     });
 
     let complete = network_complete(before, after, &before_requests, &after_requests, &ambiguous);
-    dimension_from_changes(
+    let (requests_inventory_complete, websocket_inventory_complete) =
+        network_inventory_completeness(before, after);
+    let request_identity_complete = ambiguous.is_empty()
+        && requests_inventory_complete
+        && before_requests
+            .iter()
+            .chain(after_requests.iter())
+            .all(|request| {
+                request
+                    .get("resource_type")
+                    .is_some_and(|value| !value.is_null())
+            });
+    dimension_from_changes_with_inventory(
         changes,
         complete,
+        |change| {
+            let identity = change
+                .get("identity")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if identity.starts_with("net_") {
+                request_identity_complete
+            } else if identity.starts_with("ws_") {
+                websocket_inventory_complete
+            } else {
+                false
+            }
+        },
         "Network capture or selected HTTP/WebSocket payload coverage was limited, unavailable, incomplete, or included dropped events.",
     )
+}
+
+fn network_inventory_completeness(
+    before: &serde_json::Map<String, Value>,
+    after: &serde_json::Map<String, Value>,
+) -> (bool, bool) {
+    let requests_complete = [before, after].iter().all(|inspection| {
+        section_complete(inspection, "network_requests")
+            && inspection
+                .get("completeness")
+                .and_then(|value| value.get("dropped_events"))
+                .and_then(|value| value.get("network_requests"))
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+                == 0
+    });
+    let websocket_complete = [before, after].iter().all(|inspection| {
+        section_complete(inspection, "websocket_connections")
+            && section_complete(inspection, "websocket_frames")
+    });
+    (requests_complete, websocket_complete)
 }
 
 fn network_requests<'a>(inspection: &'a serde_json::Map<String, Value>) -> Vec<&'a Value> {
@@ -1274,6 +1320,37 @@ fn dimension_from_changes(changes: Vec<Value>, complete: bool, reason: &str) -> 
     }
 }
 
+fn dimension_from_changes_with_inventory<F>(
+    changes: Vec<Value>,
+    complete: bool,
+    inventory_complete: F,
+    reason: &str,
+) -> Value
+where
+    F: Fn(&Value) -> bool,
+{
+    let comparable_changes = changes
+        .into_iter()
+        .filter(|change| {
+            change
+                .get("change")
+                .and_then(Value::as_str)
+                .is_some_and(|kind| kind == "modified")
+                || inventory_complete(change)
+        })
+        .collect::<Vec<_>>();
+
+    if !comparable_changes.is_empty() {
+        return changed_dimension(comparable_changes);
+    }
+
+    if complete {
+        unchanged_dimension()
+    } else {
+        unknown_dimension(reason)
+    }
+}
+
 fn changed_dimension(changes: Vec<Value>) -> Value {
     serde_json::json!({"status": "changed", "total_changes": changes.len(), "changes": changes, "reason": null})
 }
@@ -1325,7 +1402,12 @@ fn value_at_path<'a>(object: &'a serde_json::Map<String, Value>, path: &str) -> 
 }
 
 fn section_complete(object: &serde_json::Map<String, Value>, section: &str) -> bool {
-    if !section_evidence_is_present(object, section) {
+    // Shape sections are completeness ledger entries, not top-level fields.
+    // Other sections need their captured representation before absence can be
+    // treated as complete.
+    if !matches!(section, "json_body_shapes" | "websocket_shapes")
+        && !section_evidence_is_present(object, section)
+    {
         return false;
     }
 

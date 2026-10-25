@@ -180,7 +180,8 @@ impl Drop for CancelInner {
     fn drop(&mut self) {
         let raw = self.raw;
         // SAFETY: we own one reference.
-        self.rt.release(move || unsafe { sys::g_object_unref(raw.get().cast()) });
+        self.rt
+            .release(move || unsafe { sys::g_object_unref(raw.get().cast()) });
     }
 }
 
@@ -273,7 +274,12 @@ fn release_object<T: 'static>(rt: &Runtime, obj: Raw<T>, handler: Option<u64>) {
 ///
 /// SAFETY: owner thread; `cb` must match the signal's C signature with the
 /// boxed `Sender<E>` as last argument.
-unsafe fn connect<E>(instance: *mut c_void, signal: &CStr, cb: *const (), sender: Sender<E>) -> u64 {
+unsafe fn connect<E>(
+    instance: *mut c_void,
+    signal: &CStr,
+    cb: *const (),
+    sender: Sender<E>,
+) -> u64 {
     unsafe extern "C" fn destroy<E>(data: *mut c_void, _: *mut sys::GClosure) {
         // SAFETY: data is the Box leaked below; GLib calls this exactly once.
         drop(unsafe { Box::from_raw(data.cast::<Sender<E>>()) });
@@ -320,11 +326,17 @@ impl DeviceManager {
     pub(crate) fn new(rt: &Arc<Runtime>) -> FfiResult<Self> {
         // SAFETY: owner thread, no preconditions.
         let raw = rt.run(|| Raw(unsafe { sys::frida_device_manager_new() }))?;
-        Ok(Self { raw, rt: Arc::clone(rt) })
+        Ok(Self {
+            raw,
+            rt: Arc::clone(rt),
+        })
     }
 
     fn device(&self, raw: *mut sys::FridaDevice) -> Device {
-        Device { raw: Raw(raw), rt: Arc::clone(&self.rt) }
+        Device {
+            raw: Raw(raw),
+            rt: Arc::clone(&self.rt),
+        }
     }
 
     pub(crate) fn enumerate_devices(&self, cancel: &Cancel) -> FfiResult<Vec<Device>> {
@@ -336,7 +348,9 @@ impl DeviceManager {
                 return Vec::new();
             }
             let n = sys::frida_device_list_size(list);
-            let v = (0..n).map(|i| Raw(sys::frida_device_list_get(list, i))).collect::<Vec<_>>();
+            let v = (0..n)
+                .map(|i| Raw(sys::frida_device_list_get(list, i)))
+                .collect::<Vec<_>>();
             sys::g_object_unref(list.cast());
             v
         })?;
@@ -344,24 +358,52 @@ impl DeviceManager {
     }
 
     /// `timeout_ms`: frida semantics (`-1` waits indefinitely, `0` no wait).
-    pub(crate) fn get_device_by_id(&self, id: &str, timeout_ms: i32, cancel: &Cancel) -> FfiResult<Device> {
+    pub(crate) fn get_device_by_id(
+        &self,
+        id: &str,
+        timeout_ms: i32,
+        cancel: &Cancel,
+    ) -> FfiResult<Device> {
         let id = cstring("device id", id)?;
         let m = self.raw;
         // SAFETY: owner thread; returns a transfer-full ref or sets error.
         let r = call(&self.rt, cancel, move |c, e| {
-            Raw(unsafe { sys::frida_device_manager_get_device_by_id_sync(m.get(), id.as_ptr(), timeout_ms, c, e) })
+            Raw(unsafe {
+                sys::frida_device_manager_get_device_by_id_sync(
+                    m.get(),
+                    id.as_ptr(),
+                    timeout_ms,
+                    c,
+                    e,
+                )
+            })
         })?;
         Ok(self.device(r.get()))
     }
 
-    pub(crate) fn add_remote_device(&self, address: &str, opts: &RemoteOptions, cancel: &Cancel) -> FfiResult<Device> {
+    pub(crate) fn add_remote_device(
+        &self,
+        address: &str,
+        opts: &RemoteOptions,
+        cancel: &Cancel,
+    ) -> FfiResult<Device> {
         let address = cstring("address", address)?;
-        let token = opts.token.as_deref().map(|t| cstring("token", t)).transpose()?;
-        let origin = opts.origin.as_deref().map(|o| cstring("origin", o)).transpose()?;
+        let token = opts
+            .token
+            .as_deref()
+            .map(|t| cstring("token", t))
+            .transpose()?;
+        let origin = opts
+            .origin
+            .as_deref()
+            .map(|o| cstring("origin", o))
+            .transpose()?;
         let cert = match &opts.certificate {
             None => None,
             Some(Certificate::Pem(p)) => Some((true, cstring("certificate", p)?)),
-            Some(Certificate::File(f)) => Some((false, cstring("certificate path", &f.to_string_lossy())?)),
+            Some(Certificate::File(f)) => {
+                Some((false, cstring("certificate path", &f.to_string_lossy())?))
+            }
         };
         let keepalive = opts.keepalive_interval;
         let m = self.raw;
@@ -378,7 +420,8 @@ impl DeviceManager {
                 };
                 if tls.is_null() {
                     sys::g_object_unref(o.cast());
-                    return take_error(err, &keep).and(Err(FfiError::InvalidArgument("certificate".into())));
+                    return take_error(err, &keep)
+                        .and(Err(FfiError::InvalidArgument("certificate".into())));
                 }
                 sys::frida_remote_device_options_set_certificate(o, tls);
                 sys::g_object_unref(tls.cast());
@@ -392,7 +435,13 @@ impl DeviceManager {
             if let Some(k) = keepalive {
                 sys::frida_remote_device_options_set_keepalive_interval(o, k);
             }
-            let d = sys::frida_device_manager_add_remote_device_sync(m.get(), address.as_ptr(), o, keep.0.raw.get(), &mut err);
+            let d = sys::frida_device_manager_add_remote_device_sync(
+                m.get(),
+                address.as_ptr(),
+                o,
+                keep.0.raw.get(),
+                &mut err,
+            );
             sys::g_object_unref(o.cast());
             take_error(err, &keep).map(|()| Raw(d))
         })??;
@@ -440,7 +489,12 @@ pub(crate) struct Device {
 
 /// SAFETY: owner thread; `p` is a live FridaProcess.
 unsafe fn process_info(p: *mut sys::FridaProcess) -> ProcessInfo {
-    unsafe { ProcessInfo { pid: sys::frida_process_get_pid(p), name: cstr(sys::frida_process_get_name(p)) } }
+    unsafe {
+        ProcessInfo {
+            pid: sys::frida_process_get_pid(p),
+            name: cstr(sys::frida_process_get_name(p)),
+        }
+    }
 }
 
 impl Device {
@@ -452,7 +506,10 @@ impl Device {
             (
                 cstr(sys::frida_device_get_id(d.get())),
                 cstr(sys::frida_device_get_name(d.get())),
-                enum_nick(sys::frida_device_type_get_type(), sys::frida_device_get_dtype(d.get()) as i32),
+                enum_nick(
+                    sys::frida_device_type_get_type(),
+                    sys::frida_device_get_dtype(d.get()) as i32,
+                ),
             )
         })
     }
@@ -491,17 +548,32 @@ impl Device {
             sys::g_object_unref(p.cast());
             Some(info)
         })?
-        .ok_or(FfiError::Frida { code: -1, message: format!("process {pid} not found") })
+        .ok_or(FfiError::Frida {
+            code: -1,
+            message: format!("process {pid} not found"),
+        })
     }
 
     /// Spawn `program` suspended. `argv` is the full vector (including argv[0]);
     /// `None` keeps frida's default.
-    pub(crate) fn spawn(&self, program: &str, argv: Option<&[String]>, cancel: &Cancel) -> FfiResult<u32> {
+    pub(crate) fn spawn(
+        &self,
+        program: &str,
+        argv: Option<&[String]>,
+        cancel: &Cancel,
+    ) -> FfiResult<u32> {
         let program = cstring("program", program)?;
         let argv = argv
-            .map(|a| a.iter().map(|s| cstring("argv", s)).collect::<FfiResult<Vec<_>>>())
+            .map(|a| {
+                a.iter()
+                    .map(|s| cstring("argv", s))
+                    .collect::<FfiResult<Vec<_>>>()
+            })
             .transpose()?;
-        let len = argv.as_ref().map(|a| i32::try_from(a.len())).transpose()
+        let len = argv
+            .as_ref()
+            .map(|a| i32::try_from(a.len()))
+            .transpose()
             .map_err(|_| FfiError::InvalidArgument("argv too long".into()))?;
         let d = self.raw;
         call(&self.rt, cancel, move |c, e| unsafe {
@@ -521,7 +593,9 @@ impl Device {
     pub(crate) fn resume(&self, pid: u32, cancel: &Cancel) -> FfiResult<()> {
         let d = self.raw;
         // SAFETY: owner thread.
-        call(&self.rt, cancel, move |c, e| unsafe { sys::frida_device_resume_sync(d.get(), pid, c, e) })
+        call(&self.rt, cancel, move |c, e| unsafe {
+            sys::frida_device_resume_sync(d.get(), pid, c, e)
+        })
     }
 
     pub(crate) fn attach(&self, pid: u32, cancel: &Cancel) -> FfiResult<Session> {
@@ -536,7 +610,12 @@ impl Device {
             let h = connect(s.cast(), c"detached", on_detached as *const (), tx);
             (Raw(s), h)
         })?;
-        Ok(Session { raw, handler, detached: rx, rt: Arc::clone(&self.rt) })
+        Ok(Session {
+            raw,
+            handler,
+            detached: rx,
+            rt: Arc::clone(&self.rt),
+        })
     }
 }
 
@@ -565,7 +644,10 @@ unsafe extern "C" fn on_detached(
     // SAFETY: data is the Sender boxed by `connect`; reason is a valid enum.
     let tx = unsafe { &*data.cast::<Sender<DetachedEvent>>() };
     let reason = unsafe { enum_nick(sys::frida_session_detach_reason_get_type(), reason as i32) };
-    let _ = tx.send(DetachedEvent { reason, crashed: !crash.is_null() });
+    let _ = tx.send(DetachedEvent {
+        reason,
+        crashed: !crash.is_null(),
+    });
 }
 
 pub(crate) struct Session {
@@ -579,14 +661,20 @@ impl Session {
     pub(crate) fn is_detached(&self) -> FfiResult<bool> {
         let s = self.raw;
         // SAFETY: owner thread.
-        self.rt.run(move || unsafe { sys::frida_session_is_detached(s.get()) != 0 })
+        self.rt
+            .run(move || unsafe { sys::frida_session_is_detached(s.get()) != 0 })
     }
 
     pub(crate) fn detached_events(&self) -> &Receiver<DetachedEvent> {
         &self.detached
     }
 
-    pub(crate) fn create_script(&self, name: Option<&str>, source: &str, cancel: &Cancel) -> FfiResult<Script> {
+    pub(crate) fn create_script(
+        &self,
+        name: Option<&str>,
+        source: &str,
+        cancel: &Cancel,
+    ) -> FfiResult<Script> {
         let name = name.map(|n| cstring("script name", n)).transpose()?;
         let source = cstring("script source", source)?;
         let s = self.raw;
@@ -605,13 +693,20 @@ impl Session {
             let h = connect(sc.cast(), c"message", on_message as *const (), tx);
             (Raw(sc), h)
         })?;
-        Ok(Script { raw, handler, messages: rx, rt: Arc::clone(&self.rt) })
+        Ok(Script {
+            raw,
+            handler,
+            messages: rx,
+            rt: Arc::clone(&self.rt),
+        })
     }
 
     pub(crate) fn detach(&self, cancel: &Cancel) -> FfiResult<()> {
         let s = self.raw;
         // SAFETY: owner thread.
-        call(&self.rt, cancel, move |c, e| unsafe { sys::frida_session_detach_sync(s.get(), c, e) })
+        call(&self.rt, cancel, move |c, e| unsafe {
+            sys::frida_session_detach_sync(s.get(), c, e)
+        })
     }
 }
 
@@ -649,7 +744,10 @@ unsafe extern "C" fn on_message(
             std::slice::from_raw_parts(p.cast::<u8>(), n as usize).to_vec()
         }
     });
-    let _ = tx.send(ScriptMessage { json: cstr(message), data: payload });
+    let _ = tx.send(ScriptMessage {
+        json: cstr(message),
+        data: payload,
+    });
 }
 
 pub(crate) struct Script {
@@ -663,19 +761,24 @@ impl Script {
     pub(crate) fn load(&self, cancel: &Cancel) -> FfiResult<()> {
         let s = self.raw;
         // SAFETY: owner thread.
-        call(&self.rt, cancel, move |c, e| unsafe { sys::frida_script_load_sync(s.get(), c, e) })
+        call(&self.rt, cancel, move |c, e| unsafe {
+            sys::frida_script_load_sync(s.get(), c, e)
+        })
     }
 
     pub(crate) fn unload(&self, cancel: &Cancel) -> FfiResult<()> {
         let s = self.raw;
         // SAFETY: owner thread.
-        call(&self.rt, cancel, move |c, e| unsafe { sys::frida_script_unload_sync(s.get(), c, e) })
+        call(&self.rt, cancel, move |c, e| unsafe {
+            sys::frida_script_unload_sync(s.get(), c, e)
+        })
     }
 
     pub(crate) fn is_destroyed(&self) -> FfiResult<bool> {
         let s = self.raw;
         // SAFETY: owner thread.
-        self.rt.run(move || unsafe { sys::frida_script_is_destroyed(s.get()) != 0 })
+        self.rt
+            .run(move || unsafe { sys::frida_script_is_destroyed(s.get()) != 0 })
     }
 
     pub(crate) fn messages(&self) -> &Receiver<ScriptMessage> {
@@ -698,7 +801,10 @@ mod tests {
 
     #[test]
     fn invalid_arguments_are_rejected_before_crossing() {
-        assert!(matches!(cstring("x", "a\0b"), Err(FfiError::InvalidArgument(_))));
+        assert!(matches!(
+            cstring("x", "a\0b"),
+            Err(FfiError::InvalidArgument(_))
+        ));
     }
 
     #[test]
@@ -720,7 +826,12 @@ mod tests {
         )
         .unwrap();
         let out = dir.join("t");
-        let st = std::process::Command::new("cc").arg(&src).arg("-o").arg(&out).status().unwrap();
+        let st = std::process::Command::new("cc")
+            .arg(&src)
+            .arg("-o")
+            .arg(&out)
+            .status()
+            .unwrap();
         assert!(st.success());
         out
     }
@@ -738,15 +849,25 @@ mod tests {
         let dm = DeviceManager::new(&rt).unwrap();
 
         let devices = dm.enumerate_devices(&c).unwrap();
-        let described = devices.iter().map(|d| d.describe().unwrap()).collect::<Vec<_>>();
-        assert!(described.iter().any(|(id, _, t)| id == "local" && t == "local"), "{described:?}");
+        let described = devices
+            .iter()
+            .map(|d| d.describe().unwrap())
+            .collect::<Vec<_>>();
+        assert!(
+            described
+                .iter()
+                .any(|(id, _, t)| id == "local" && t == "local"),
+            "{described:?}"
+        );
         let dev = dm.get_device_by_id("local", 1_000, &c).unwrap();
         assert!(!dev.enumerate_processes(&c).unwrap().is_empty());
 
         let dir = tempfile::tempdir().unwrap();
         let target = build_target(dir.path());
         let program = target.to_string_lossy().into_owned();
-        let pid = dev.spawn(&program, Some(&[program.clone(), "x".into()]), &c).unwrap();
+        let pid = dev
+            .spawn(&program, Some(&[program.clone(), "x".into()]), &c)
+            .unwrap();
         assert_eq!(dev.get_process_by_pid(pid, &c).unwrap().pid, pid);
 
         let session = dev.attach(pid, &c).unwrap();

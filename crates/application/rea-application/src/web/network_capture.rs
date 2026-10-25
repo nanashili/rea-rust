@@ -26,7 +26,7 @@ pub fn validate_input(input: &Value) -> Result<(), Failure> {
     for key in object.keys() {
         if !matches!(
             key.as_str(),
-            "capture_path" | "format" | "record_ordinals" | "sensitive_values"
+            "capture_path" | "format" | "record_ordinals" | "sensitive_values" | "detail"
         ) {
             return Err(invalid(
                 "web network capture input contains an unknown field",
@@ -129,6 +129,11 @@ fn inspect_saz(
                     "SAZ contains an unrecognized raw session member",
                 ));
             }
+        } else if entry.path.starts_with("raw/") {
+            return Err(unsupported(
+                "saz",
+                "SAZ contains an unrecognized raw session member",
+            ));
         }
     }
     if groups.is_empty() {
@@ -148,9 +153,11 @@ fn inspect_saz(
         let group = groups
             .get(session)
             .expect("group order is derived from groups");
+        let mut request_url_had_credentials = false;
         for entry in group {
             let member = inflate_saz_entry(bytes, entry)?;
             let value = if entry.path.ends_with("_c.txt") {
+                request_url_had_credentials = saz_request_url_has_credentials(&member);
                 let mut parsed = parse_saz_http(&member, true)?;
                 parsed["member"] = Value::String(entry.path.clone());
                 parsed
@@ -187,6 +194,20 @@ fn inspect_saz(
             &mut redaction_rows,
             0,
         )?;
+        let url_is_explicitly_sensitive = source
+            .get("request")
+            .and_then(|request| request.get("url"))
+            .and_then(Value::as_str)
+            .is_some_and(|url| sensitive.iter().any(|literal| url.contains(literal)));
+        if request_url_had_credentials && !url_is_explicitly_sensitive {
+            redaction_rows.insert(
+                0,
+                serde_json::json!({
+                    "pointer": "/request/url",
+                    "reason": "transport-credential",
+                }),
+            );
+        }
         records.push(serde_json::json!({
             "ordinal": ordinal,
             "location": {"kind":"archive-members","members":group.iter().map(|e| e.path.clone()).collect::<Vec<_>>()},
@@ -212,7 +233,7 @@ fn inspect_saz(
         "format":"saz",
         "artifact":{"path":path,"sha256":digest,"bytes":bytes.len()},
         "runtime_attribution":"unknown",
-        "decoder":{"id":"rea-saz-rust","name":"REA bounded SAZ capture decoder","version":"1"},
+        "decoder":{"id":"fiddler-saz","name":"REA Fiddler SAZ capture adapter","version":"1;zip.js@2.15.0;xmldom@0.9.12"},
         "container":{"reported":container_reported,"numeric_literals":[],"redactions":container_redactions,"records_pointer":Value::Null},
         "total_records":records.len(),"records":records,
         "limitations":["Historical inspection is offline and does not contact recorded destinations.","SAZ HTTP fields preserve Latin-1 text and stored body bytes; transfer/content decoding is not performed.","XML is projected as an ordered node tree; WebSocket and gRPC members remain opaque bytes."]
@@ -354,7 +375,7 @@ fn parse_saz_http(bytes: &[u8], request: bool) -> Result<Value, Failure> {
             return Err(invalid("SAZ HTTP request start line is malformed"));
         }
         result.insert("method".into(), Value::String(fields[0].into()));
-        result.insert("url".into(), Value::String(fields[1].into()));
+        result.insert("url".into(), Value::String(sanitize_saz_url(fields[1])));
         result.insert("http_version".into(), Value::String(fields[2].into()));
     } else {
         let mut fields = first.splitn(3, ' ');
@@ -382,6 +403,7 @@ fn parse_saz_http(bytes: &[u8], request: bool) -> Result<Value, Failure> {
                     .and_then(|value| value.as_str())
                     .unwrap_or("")
                     .to_owned()
+                    + if separator == 4 { "\r\n" } else { "\n" }
                     + line;
                 last["value"] = Value::String(value);
                 continue;
@@ -397,6 +419,30 @@ fn parse_saz_http(bytes: &[u8], request: bool) -> Result<Value, Failure> {
             return Err(invalid("SAZ HTTP header is malformed"));
         };
         if index == 0 {
+            return Err(invalid("SAZ HTTP header name is malformed"));
+        }
+        let name = &line[..index];
+        if !name.bytes().enumerate().all(|(position, byte)| {
+            (position == 0 && byte == b':')
+                || byte.is_ascii_alphanumeric()
+                || matches!(
+                    byte,
+                    b'!' | b'#'
+                        | b'$'
+                        | b'%'
+                        | b'&'
+                        | b'\''
+                        | b'*'
+                        | b'+'
+                        | b'.'
+                        | b'^'
+                        | b'_'
+                        | b'`'
+                        | b'|'
+                        | b'~'
+                        | b'-'
+                )
+        }) {
             return Err(invalid("SAZ HTTP header name is malformed"));
         }
         headers.push(serde_json::json!({"name":&line[..index],"value":&line[index+1..]}));
@@ -477,6 +523,14 @@ fn project_saz_json(
                     redactions.push(serde_json::json!({"pointer":pointer,"reason":"explicit-sensitive-value","scope":"property-name"}));
                     continue;
                 }
+                if key == "value" && saz_credential_field(values) {
+                    redactions.push(serde_json::json!({
+                        "pointer": format!("{pointer}/value"),
+                        "reason": "transport-credential",
+                    }));
+                    output.insert(key.clone(), Value::Null);
+                    continue;
+                }
                 output.insert(
                     key.clone(),
                     project_saz_json(
@@ -493,6 +547,58 @@ fn project_saz_json(
         }
         _ => Ok(value.clone()),
     }
+}
+
+fn saz_credential_field(object: &Map<String, Value>) -> bool {
+    let Some(name) = object.get("name").and_then(Value::as_str) else {
+        return false;
+    };
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        "authorization" | "proxy-authorization" | "cookie" | "set-cookie"
+    )
+}
+
+fn sanitize_saz_url(url: &str) -> String {
+    let Some(scheme_end) = url.find("://") else {
+        return url.to_owned();
+    };
+    let authority_start = scheme_end + 3;
+    let authority_end = url[authority_start..]
+        .find(['/', '?', '#'])
+        .map(|offset| authority_start + offset)
+        .unwrap_or(url.len());
+    let authority = &url[authority_start..authority_end];
+    let Some(at) = authority.rfind('@') else {
+        return url.to_owned();
+    };
+    format!(
+        "{}{}{}",
+        &url[..authority_start],
+        &authority[at + 1..],
+        &url[authority_end..]
+    )
+}
+
+fn saz_request_url_has_credentials(bytes: &[u8]) -> bool {
+    let line_end = bytes
+        .windows(2)
+        .position(|window| window == b"\r\n")
+        .or_else(|| bytes.iter().position(|byte| *byte == b'\n'))
+        .unwrap_or(bytes.len());
+    let first_line = String::from_utf8_lossy(&bytes[..line_end]);
+    let Some(url) = first_line.split_whitespace().nth(1) else {
+        return false;
+    };
+    let Some(scheme_end) = url.find("://") else {
+        return false;
+    };
+    let authority_start = scheme_end + 3;
+    let authority_end = url[authority_start..]
+        .find(['/', '?', '#'])
+        .map(|offset| authority_start + offset)
+        .unwrap_or(url.len());
+    url[authority_start..authority_end].contains('@')
 }
 
 fn parse_saz_xml(bytes: &[u8]) -> Result<Value, Failure> {
@@ -727,18 +833,20 @@ pub fn inspect(input: &Value) -> Result<Value, Failure> {
     {
         return Err(unsupported(format, "only JSON qlog 0.3 is supported"));
     }
+    if format == "qlog" {
+        validate_qlog(&source)?;
+    }
 
     let projected = Projector::new(&sensitive).value(&source, "", 0)?;
     let records_source = records_for(format, &source)?;
     let mut records = Vec::with_capacity(records_source.len());
-    for (ordinal, record) in records_source.iter().enumerate() {
-        let pointer = if format == "har" {
-            format!("/log/entries/{ordinal}")
-        } else {
-            format!("/traces/{}/events/{}", 0, ordinal)
-        };
+    for (ordinal, (pointer, record)) in records_source.iter().enumerate() {
         let projected_record = Projector::new(&sensitive).value(record, &pointer, 0)?;
-        let record_numbers = numeric_literals(record, &pointer, &sensitive);
+        let record_numbers = if format == "qlog" {
+            qlog_numeric_literals(record, &sensitive)
+        } else {
+            numeric_literals(record, &pointer, &sensitive)
+        };
         let record_redactions = redactions(record, &pointer, &sensitive);
         records.push(serde_json::json!({
             "ordinal": ordinal,
@@ -747,27 +855,44 @@ pub fn inspect(input: &Value) -> Result<Value, Failure> {
             "binary_fields": [],
             "numeric_literals": record_numbers,
             "redactions": record_redactions,
-            "limitations": ["Native JSON projection preserves observed source structure; producer-specific binary and transport semantics remain unavailable."]
+            "limitations": [if format == "qlog" { "Record ordinal is derived from trace/event source traversal, not global time order. Qlog lengths and FIN do not expose original HTTP body bytes or establish network completeness." } else { "Native JSON projection preserves observed source structure; producer-specific binary and transport semantics remain unavailable." }]
         }));
     }
     // Selection is validated here but applied by the shared Evidence service,
     // which must retain the complete producer sequence for later views.
     let _selected = selected_ordinals(object.get("record_ordinals"), records.len())?;
-    let container_numbers = numeric_literals(&source, "", &sensitive);
+    let container_numbers = if format == "qlog" {
+        Vec::new()
+    } else {
+        numeric_literals(&source, "", &sensitive)
+    };
     let container_redactions = redactions(&source, "", &sensitive);
-    let container = projected;
+    let mut container = projected;
+    if format == "qlog" {
+        if let Some(traces) = container.get_mut("traces").and_then(Value::as_array_mut) {
+            for trace in traces {
+                if let Some(object) = trace.as_object_mut() {
+                    object.insert("events".to_owned(), Value::Null);
+                }
+            }
+        }
+    }
     let mut result = serde_json::json!({
         "format": format,
         "artifact": {"path": path, "sha256": digest, "bytes": bytes.len()},
         "runtime_attribution": "unknown",
-        "decoder": {"id":"rea-native-json", "name":"REA bounded JSON capture decoder", "version":"1"},
+        "decoder": if format == "qlog" {
+            serde_json::json!({"id":"aioquic-qlog-json","name":"REA aioquic qlog capture adapter","version":"aioquic-profile@1.5.0;qlog@0.3;jsonc-parser@3.3.1;lossless-json@4.3.1"})
+        } else {
+            serde_json::json!({"id":"har-schema/lossless-json","name":"REA HAR capture adapter","version":"har-schema@2.0.0;jsonc-parser@3.3.1;lossless-json@4.3.1"})
+        },
         "container": {"reported":container,"numeric_literals":container_numbers,"redactions":container_redactions,"records_pointer": if format == "har" {Value::String("/log/entries".into())} else {Value::Null}},
         "total_records": records.len(),
         "records": records,
         "limitations": ["Historical inspection is offline and does not contact recorded destinations.", "Runtime attribution and original producer binary bytes are unknown in this native JSON projection."]
     });
     if format == "qlog" {
-        result["qlog"] = qlog_facts(&source, records.len());
+        result["qlog"] = qlog_facts(&source, records.len(), &sensitive);
     }
     if serde_json::to_vec(&result)
         .map_err(|_| provider_failure("unable to serialize capture result".into()))?
@@ -779,13 +904,19 @@ pub fn inspect(input: &Value) -> Result<Value, Failure> {
     Ok(result)
 }
 
-fn records_for<'a>(format: &str, source: &'a Value) -> Result<Vec<&'a Value>, Failure> {
+fn records_for<'a>(format: &str, source: &'a Value) -> Result<Vec<(String, &'a Value)>, Failure> {
     match format {
         "har" => source
             .get("log")
             .and_then(|log| log.get("entries"))
             .and_then(Value::as_array)
-            .map(|values| values.iter().collect())
+            .map(|values| {
+                values
+                    .iter()
+                    .enumerate()
+                    .map(|(index, value)| (format!("/log/entries/{index}"), value))
+                    .collect()
+            })
             .ok_or_else(|| invalid("HAR must contain log.entries")),
         "qlog" => source
             .get("traces")
@@ -793,12 +924,17 @@ fn records_for<'a>(format: &str, source: &'a Value) -> Result<Vec<&'a Value>, Fa
             .map(|traces| {
                 traces
                     .iter()
-                    .flat_map(|trace| {
+                    .enumerate()
+                    .flat_map(|(trace_index, trace)| {
                         trace
                             .get("events")
                             .and_then(Value::as_array)
                             .into_iter()
                             .flatten()
+                            .enumerate()
+                            .map(move |(event_index, event)| {
+                                (format!("/traces/{trace_index}/events/{event_index}"), event)
+                            })
                     })
                     .collect()
             })
@@ -840,6 +976,16 @@ fn numeric_literals(value: &Value, pointer: &str, sensitive: &[String]) -> Vec<V
     let mut literals = Vec::new();
     collect_numeric_literals(value, pointer, sensitive, &mut literals);
     literals
+}
+
+fn qlog_numeric_literals(value: &Value, sensitive: &[String]) -> Vec<Value> {
+    numeric_literals(value, "", sensitive)
+        .into_iter()
+        .map(|mut literal| {
+            literal["producer_type"] = Value::String("json-number".to_owned());
+            literal
+        })
+        .collect()
 }
 
 fn collect_numeric_literals(
@@ -953,6 +1099,10 @@ impl<'a> Projector<'a> {
                     if self.sensitive.iter().any(|literal| key.contains(literal)) {
                         continue;
                     }
+                    if key == "value" && qlog_credential_field(pointer, values) {
+                        output.insert(key.clone(), Value::Null);
+                        continue;
+                    }
                     output.insert(
                         key.clone(),
                         self.value(
@@ -969,7 +1119,343 @@ impl<'a> Projector<'a> {
     }
 }
 
-fn qlog_facts(source: &Value, records: usize) -> Value {
+fn qlog_credential_field(pointer: &str, object: &Map<String, Value>) -> bool {
+    let Some(name) = object.get("name").and_then(Value::as_str) else {
+        return false;
+    };
+    let header_pointer = pointer.starts_with("/traces/")
+        && pointer.contains("/data/frame/headers/")
+        && pointer.ends_with("/value");
+    header_pointer
+        && matches!(
+            name.to_ascii_lowercase().as_str(),
+            "authorization" | "proxy-authorization" | "cookie" | "set-cookie"
+        )
+}
+
+fn validate_qlog(source: &Value) -> Result<(), Failure> {
+    let traces = source
+        .get("traces")
+        .and_then(Value::as_array)
+        .ok_or_else(|| invalid("qlog must contain a traces array"))?;
+    for (trace_index, trace) in traces.iter().enumerate() {
+        let events = trace
+            .get("events")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                invalid(&format!(
+                    "qlog trace {trace_index} must contain an events array"
+                ))
+            })?;
+        for (event_index, event) in events.iter().enumerate() {
+            let pointer = format!("/traces/{trace_index}/events/{event_index}");
+            let object = event
+                .as_object()
+                .ok_or_else(|| invalid("qlog events must be objects"))?;
+            if object.get("name").and_then(Value::as_str).is_none()
+                || object
+                    .get("time")
+                    .and_then(Value::as_f64)
+                    .is_none_or(|time| !time.is_finite())
+                || !object.get("data").is_some_and(Value::is_object)
+            {
+                return Err(invalid(&format!(
+                    "qlog event at {pointer} must have a name, finite numeric time and object data"
+                )));
+            }
+            let name = object
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let data = object
+                .get("data")
+                .and_then(Value::as_object)
+                .expect("validated data");
+            if name == "recovery:packet_lost" {
+                validate_qlog_unsigned(
+                    data.get("packet_number"),
+                    &format!("{pointer}/data/packet_number"),
+                )?;
+            }
+            if matches!(name, "transport:packet_sent" | "transport:packet_received") {
+                if let Some(frames) = data.get("frames") {
+                    let frames = frames
+                        .as_array()
+                        .ok_or_else(|| invalid("qlog event frames must be an array"))?;
+                    for (frame_index, frame) in frames.iter().enumerate() {
+                        if frame.get("frame_type").and_then(Value::as_str) == Some("stream") {
+                            validate_qlog_stream_frame(
+                                frame,
+                                &format!("{pointer}/data/frames/{frame_index}"),
+                            )?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_qlog_stream_frame(frame: &Value, pointer: &str) -> Result<(), Failure> {
+    let stream_id =
+        validate_qlog_unsigned(frame.get("stream_id"), &format!("{pointer}/stream_id"))?;
+    let offset = validate_qlog_unsigned(frame.get("offset"), &format!("{pointer}/offset"))?;
+    let length = validate_qlog_unsigned(frame.get("length"), &format!("{pointer}/length"))?;
+    if let (Some(offset), Some(length)) = (offset, length) {
+        if offset
+            .checked_add(length)
+            .is_none_or(|value| value > ((1u64 << 62) - 1))
+        {
+            return Err(invalid(
+                "qlog stream final offset exceeds the QUIC varint range",
+            ));
+        }
+    }
+    if let Some(fin) = frame.get("fin") {
+        if !fin.is_null() && !fin.is_boolean() {
+            return Err(invalid("qlog STREAM fin must be boolean when reported"));
+        }
+    }
+    let _ = stream_id;
+    Ok(())
+}
+
+fn validate_qlog_unsigned(value: Option<&Value>, _pointer: &str) -> Result<Option<u64>, Failure> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    if value.is_null() {
+        return Ok(None);
+    }
+    let Some(number) = value.as_u64() else {
+        return Err(invalid(
+            "qlog QUIC integer must be a non-negative integer within the 62-bit range",
+        ));
+    };
+    if number > ((1u64 << 62) - 1) {
+        return Err(invalid("qlog QUIC integer exceeds the 62-bit range"));
+    }
+    Ok(Some(number))
+}
+
+struct QlogTraceFact {
+    event_count: usize,
+    odcid: Option<String>,
+    vantage_point: Option<String>,
+    incomplete: Vec<usize>,
+    losses: Vec<Value>,
+    streams_in_order: Vec<QlogStreamFact>,
+    streams: Vec<Value>,
+}
+
+struct QlogStreamFact {
+    stream_id: String,
+    direction: String,
+    contributions: Vec<Value>,
+}
+
+impl QlogTraceFact {
+    fn new(index: usize, event_count: usize, trace: &Value, sensitive: &[String]) -> Self {
+        let common = trace.get("common_fields").and_then(Value::as_object);
+        let vantage = trace
+            .get("vantage_point")
+            .and_then(Value::as_object)
+            .and_then(|value| value.get("type"))
+            .and_then(Value::as_str)
+            .filter(|value| matches!(*value, "client" | "server"))
+            .map(str::to_owned);
+        let _ = index;
+        Self {
+            event_count,
+            odcid: common
+                .and_then(|value| value.get("ODCID"))
+                .and_then(Value::as_str)
+                .filter(|value| !sensitive.iter().any(|literal| value.contains(literal)))
+                .map(str::to_owned),
+            vantage_point: vantage,
+            incomplete: Vec::new(),
+            losses: Vec::new(),
+            streams_in_order: Vec::new(),
+            streams: Vec::new(),
+        }
+    }
+
+    fn consume(&mut self, event: &Value, ordinal: usize) {
+        let Some(object) = event.as_object() else {
+            self.incomplete.push(ordinal);
+            return;
+        };
+        let Some(name) = object.get("name").and_then(Value::as_str) else {
+            self.incomplete.push(ordinal);
+            return;
+        };
+        let Some(data) = object.get("data").and_then(Value::as_object) else {
+            self.incomplete.push(ordinal);
+            return;
+        };
+        if name == "recovery:packet_lost" {
+            let packet_number = data
+                .get("packet_number")
+                .and_then(Value::as_u64)
+                .map(|value| value.to_string());
+            let packet_type = data.get("type").and_then(Value::as_str);
+            self.losses.push(serde_json::json!({
+                "record_ordinal": ordinal,
+                "confidence": "observed",
+                "packet_number": packet_number.map_or_else(
+                    || serde_json::json!({"state":"unknown","reason":"omitted-null-or-redacted"}),
+                    |value| serde_json::json!({"state":"reported","value":value}),
+                ),
+                "packet_type": packet_type,
+                "packet_number_space": match packet_type {
+                    Some("initial") => "initial",
+                    Some("handshake") => "handshake",
+                    Some("0RTT") | Some("1RTT") => "application",
+                    _ => "unknown",
+                },
+            }));
+        }
+        if !matches!(name, "transport:packet_sent" | "transport:packet_received") {
+            return;
+        }
+        let Some(frames) = data.get("frames").and_then(Value::as_array) else {
+            self.incomplete.push(ordinal);
+            return;
+        };
+        let direction = if name == "transport:packet_sent" {
+            "sent"
+        } else {
+            "received"
+        };
+        for (frame_index, frame) in frames.iter().enumerate() {
+            let Some(frame_object) = frame.as_object() else {
+                self.incomplete.push(ordinal);
+                continue;
+            };
+            if frame_object.get("frame_type").and_then(Value::as_str) != Some("stream") {
+                continue;
+            }
+            let Some(stream_id) = frame_object.get("stream_id").and_then(Value::as_u64) else {
+                self.incomplete.push(ordinal);
+                continue;
+            };
+            let Some(offset) = frame_object.get("offset").and_then(Value::as_u64) else {
+                self.incomplete.push(ordinal);
+                continue;
+            };
+            let Some(length) = frame_object.get("length").and_then(Value::as_u64) else {
+                self.incomplete.push(ordinal);
+                continue;
+            };
+            let stream_index = self.streams_in_order.iter().position(|stream| {
+                stream.direction == direction && stream.stream_id == stream_id.to_string()
+            });
+            let stream = if let Some(index) = stream_index {
+                &mut self.streams_in_order[index]
+            } else {
+                self.streams_in_order.push(QlogStreamFact {
+                    stream_id: stream_id.to_string(),
+                    direction: direction.to_owned(),
+                    contributions: Vec::new(),
+                });
+                self.streams_in_order
+                    .last_mut()
+                    .expect("just inserted stream")
+            };
+            stream.contributions.push(serde_json::json!({
+                "record_ordinal": ordinal,
+                "frame_index": frame_index,
+                "offset": offset.to_string(),
+                "length": length.to_string(),
+                "fin": frame_object.get("fin").and_then(Value::as_bool),
+            }));
+        }
+    }
+
+    fn finish(&mut self) {
+        self.incomplete.sort_unstable();
+        self.incomplete.dedup();
+        for stream in &mut self.streams_in_order {
+            let mut ranges: Vec<(u64, u64)> = stream
+                .contributions
+                .iter()
+                .filter_map(|value| {
+                    Some((
+                        value.get("offset")?.as_str()?.parse::<u64>().ok()?,
+                        value
+                            .get("offset")?
+                            .as_str()?
+                            .parse::<u64>()
+                            .ok()?
+                            .checked_add(value.get("length")?.as_str()?.parse::<u64>().ok()?)?,
+                    ))
+                })
+                .filter(|(start, end)| start < end)
+                .collect();
+            ranges.sort_unstable();
+            let mut merged: Vec<(u64, u64)> = Vec::new();
+            for (start, end) in ranges {
+                if let Some(last) = merged.last_mut() {
+                    if start <= last.1 {
+                        last.1 = last.1.max(end);
+                        continue;
+                    }
+                }
+                merged.push((start, end));
+            }
+            let frame_length_sum: u64 = stream
+                .contributions
+                .iter()
+                .filter_map(|value| value.get("length")?.as_str()?.parse::<u64>().ok())
+                .sum();
+            let unique_bytes: u64 = merged.iter().map(|(start, end)| end - start).sum();
+            let reported_final_sizes: Vec<String> = stream
+                .contributions
+                .iter()
+                .filter(|value| value.get("fin").and_then(Value::as_bool) == Some(true))
+                .filter_map(|value| {
+                    let offset = value.get("offset")?.as_str()?.parse::<u64>().ok()?;
+                    let length = value.get("length")?.as_str()?.parse::<u64>().ok()?;
+                    Some(offset.checked_add(length)?.to_string())
+                })
+                .collect();
+            let mut final_sizes = reported_final_sizes;
+            final_sizes.sort();
+            final_sizes.dedup();
+            stream_summary_replace(stream, merged, frame_length_sum, unique_bytes, final_sizes);
+        }
+        self.streams = self
+            .streams_in_order
+            .iter()
+            .flat_map(|stream| stream.contributions.iter().cloned())
+            .collect();
+    }
+}
+
+fn stream_summary_replace(
+    stream: &mut QlogStreamFact,
+    ranges: Vec<(u64, u64)>,
+    frame_length_sum: u64,
+    unique_bytes: u64,
+    final_sizes: Vec<String>,
+) {
+    let contributions = std::mem::take(&mut stream.contributions);
+    stream.contributions = vec![serde_json::json!({
+        "stream_id": stream.stream_id,
+        "direction": stream.direction,
+        "confidence": "derived",
+        "scope": "observed-stream-frame-ranges",
+        "contributions": contributions,
+        "covered_ranges": ranges.into_iter().map(|(start,end)| serde_json::json!({"start":start.to_string(),"end":end.to_string()})).collect::<Vec<_>>(),
+        "unique_bytes": unique_bytes.to_string(),
+        "frame_length_sum": frame_length_sum.to_string(),
+        "repeated_bytes": frame_length_sum.saturating_sub(unique_bytes).to_string(),
+        "reported_final_sizes": final_sizes,
+    })];
+}
+
+fn qlog_facts(source: &Value, records: usize, sensitive: &[String]) -> Value {
     let traces = source
         .get("traces")
         .and_then(Value::as_array)
@@ -978,21 +1464,38 @@ fn qlog_facts(source: &Value, records: usize) -> Value {
                 .iter()
                 .enumerate()
                 .map(|(index, trace)| {
+                    let events = trace
+                        .get("events")
+                        .and_then(Value::as_array)
+                        .cloned()
+                        .unwrap_or_default();
+                    let mut fact = QlogTraceFact::new(index, events.len(), trace, sensitive);
+                    let base_ordinal = traces
+                        .iter()
+                        .take(index)
+                        .map(|previous| {
+                            previous
+                                .get("events")
+                                .and_then(Value::as_array)
+                                .map_or(0, Vec::len)
+                        })
+                        .sum::<usize>();
+                    for (ordinal, event) in events.iter().enumerate() {
+                        fact.consume(event, base_ordinal + ordinal);
+                    }
+                    fact.finish();
                     serde_json::json!({
                         "trace_index": index,
                         "location": {
                             "kind": "json-pointer",
                             "pointer": format!("/traces/{index}"),
                         },
-                        "event_count": trace
-                            .get("events")
-                            .and_then(Value::as_array)
-                            .map_or(0, Vec::len),
-                        "odcid": null,
-                        "vantage_point": null,
-                        "incomplete_fact_records": [],
-                        "loss_declarations": [],
-                        "streams": [],
+                        "event_count": fact.event_count,
+                        "odcid": fact.odcid,
+                        "vantage_point": fact.vantage_point,
+                        "incomplete_fact_records": fact.incomplete,
+                        "loss_declarations": fact.losses,
+                        "streams": fact.streams,
                     })
                 })
                 .collect::<Vec<_>>()

@@ -169,6 +169,8 @@ pub(crate) mod unix {
             if !self.child_reaped {
                 verify_group_owner(self.process_group_id, &self.process_identity)?;
             }
+            // SAFETY: ownership was re-verified above; a negative pid targets
+            // that owned process group and does not dereference a Rust pointer.
             let result = unsafe { libc::kill(-self.process_group_id, signal) };
             if result == 0 {
                 return Ok(());
@@ -445,6 +447,8 @@ pub(crate) mod unix {
     }
 
     fn configure_owned_process_group(command: &mut Command) -> Result<(), ProcessLaunchError> {
+        // SAFETY: the closure uses only the async-signal-safe setpgid call and
+        // is registered on this still-owned Command before it is spawned.
         unsafe {
             command.pre_exec(|| {
                 if libc::setpgid(0, 0) == 0 {
@@ -507,6 +511,8 @@ pub(crate) mod unix {
         if !child_reaped {
             verify_group_owner(process_group_id, process_identity)?;
         }
+        // SAFETY: ownership was re-verified above when the child was live; the
+        // negative pid addresses that process group only.
         let result = unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
         if result == 0 {
             return Ok(());
@@ -526,6 +532,8 @@ pub(crate) mod unix {
     ) -> Result<(), ProcessLaunchError> {
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
+            // SAFETY: kill with signal zero only probes the verified process
+            // group and does not dereference memory.
             let result = unsafe { libc::kill(-process_group_id, 0) };
             let mut last_error = None;
             if result != 0 {
@@ -621,6 +629,15 @@ pub struct OwnedChildProcess(unix::UnixChildProcess);
 impl OwnedChildProcess {
     pub fn launch(spec: ChildLaunchSpec) -> Result<Self, ProcessLaunchError> {
         unix::UnixChildProcess::launch(spec).map(Self)
+    }
+
+    /// Launch with inherited environment and an explicit per-stream capture bound.
+    pub fn launch_with_capture_limit(
+        spec: ChildLaunchSpec,
+        max_capture_bytes: usize,
+    ) -> Result<Self, ProcessLaunchError> {
+        unix::UnixChildProcess::launch_bounded(spec, None, false, max_capture_bytes)
+            .map(|(child, _)| Self(child))
     }
 
     /// Launch a long-lived protocol child with a complete explicit
@@ -779,6 +796,7 @@ mod windows {
         stdout: OwnedHandle,
         stderr: OwnedHandle,
         job: WindowsOwnedResources,
+        max_capture_bytes: usize,
         settled: bool,
         cleanup_failure: Option<ProcessLaunchError>,
     }
@@ -799,7 +817,10 @@ mod windows {
     }
 
     impl WindowsChildProcess {
-        fn launch(spec: ChildLaunchSpec) -> Result<Self, ProcessLaunchError> {
+        fn launch_with_capture_limit(
+            spec: ChildLaunchSpec,
+            max_capture_bytes: usize,
+        ) -> Result<Self, ProcessLaunchError> {
             validate_executable_path(&spec.executable)?;
 
             let job = WindowsOwnedResources::create_from_job_limits(spec.limits)
@@ -928,6 +949,7 @@ mod windows {
                 stdout,
                 stderr,
                 job,
+                max_capture_bytes,
                 settled: false,
                 cleanup_failure: None,
             })
@@ -977,14 +999,14 @@ mod windows {
         }
 
         fn read_output(&self) -> Result<ChildOutput, ProcessLaunchError> {
-            let stdout = read_pipe(self.stdout.raw())?;
-            let stderr = read_pipe(self.stderr.raw())?;
+            let stdout = read_pipe(self.stdout.raw(), self.max_capture_bytes)?;
+            let stderr = read_pipe(self.stderr.raw(), self.max_capture_bytes)?;
             Ok(ChildOutput {
                 stdout: stdout.bytes,
                 stderr: stderr.bytes,
                 stdout_closed: stdout.closed,
                 stderr_closed: stderr.closed,
-                output_incomplete: false,
+                output_incomplete: stdout.truncated || stderr.truncated,
                 cancellation_observed: false,
             })
         }
@@ -1040,11 +1062,14 @@ mod windows {
             let mut output = ChildOutput::default();
             while std::time::Instant::now() < deadline {
                 let chunk = self.read_output()?;
-                output.stdout.extend(chunk.stdout);
-                output.stderr.extend(chunk.stderr);
+                let stdout_truncated =
+                    append_with_limit(&mut output.stdout, chunk.stdout, self.max_capture_bytes);
+                let stderr_truncated =
+                    append_with_limit(&mut output.stderr, chunk.stderr, self.max_capture_bytes);
                 output.stdout_closed |= chunk.stdout_closed;
                 output.stderr_closed |= chunk.stderr_closed;
-                output.output_incomplete |= chunk.output_incomplete;
+                output.output_incomplete |=
+                    chunk.output_incomplete || stdout_truncated || stderr_truncated;
                 if cancelled() {
                     output.cancellation_observed = true;
                     output.output_incomplete = !(output.stdout_closed && output.stderr_closed);
@@ -1463,6 +1488,7 @@ mod windows {
     struct PipeRead {
         bytes: Vec<u8>,
         closed: bool,
+        truncated: bool,
     }
 
     fn requested_read_size(available: u32, already_read: usize) -> u32 {
@@ -1470,8 +1496,16 @@ mod windows {
         (available as usize).min(READ_CHUNK_SIZE).min(remaining) as u32
     }
 
-    fn read_pipe(handle: HANDLE) -> Result<PipeRead, ProcessLaunchError> {
+    fn read_pipe(handle: HANDLE, max_capture_bytes: usize) -> Result<PipeRead, ProcessLaunchError> {
         let mut output = Vec::new();
+        let capture_limit = max_capture_bytes;
+        if capture_limit == 0 {
+            return Ok(PipeRead {
+                bytes: output,
+                closed: false,
+                truncated: true,
+            });
+        }
         loop {
             let mut available = 0;
             if unsafe {
@@ -1490,6 +1524,7 @@ mod windows {
                     return Ok(PipeRead {
                         bytes: output,
                         closed: true,
+                        truncated: false,
                     });
                 }
                 return Err(ProcessLaunchError::operation(
@@ -1497,10 +1532,11 @@ mod windows {
                     format!("PeekNamedPipe failed: {error}"),
                 ));
             }
-            if available == 0 || output.len() >= MAX_READ_PER_POLL {
+            if available == 0 || output.len() >= capture_limit {
                 break;
             }
-            let requested = requested_read_size(available, output.len());
+            let requested = requested_read_size(available, output.len())
+                .min(capture_limit.saturating_sub(output.len()) as u32);
             let mut chunk = vec![0; requested as usize];
             let mut count = 0;
             if unsafe {
@@ -1518,6 +1554,7 @@ mod windows {
                     return Ok(PipeRead {
                         bytes: output,
                         closed: true,
+                        truncated: false,
                     });
                 }
                 return Err(ProcessLaunchError::operation(
@@ -1527,10 +1564,19 @@ mod windows {
             }
             output.extend_from_slice(&chunk[..count as usize]);
         }
+        let truncated = output.len() >= capture_limit;
         Ok(PipeRead {
             bytes: output,
             closed: false,
+            truncated,
         })
+    }
+
+    fn append_with_limit(target: &mut Vec<u8>, bytes: Vec<u8>, limit: usize) -> bool {
+        let available = limit.saturating_sub(target.len());
+        let retained = bytes.len().min(available);
+        target.extend_from_slice(&bytes[..retained]);
+        retained < bytes.len()
     }
 
     fn close_unowned_thread(thread: HANDLE) {
@@ -1587,7 +1633,14 @@ mod windows {
     }
 
     pub(super) fn launch(spec: ChildLaunchSpec) -> Result<WindowsChildProcess, ProcessLaunchError> {
-        WindowsChildProcess::launch(spec)
+        launch_with_capture_limit(spec, 8 * 1024 * 1024)
+    }
+
+    pub(super) fn launch_with_capture_limit(
+        spec: ChildLaunchSpec,
+        max_capture_bytes: usize,
+    ) -> Result<WindowsChildProcess, ProcessLaunchError> {
+        WindowsChildProcess::launch_with_capture_limit(spec, max_capture_bytes)
     }
 
     pub(super) fn wait(process: &mut WindowsChildProcess) -> Result<ChildExit, ProcessLaunchError> {
@@ -1771,6 +1824,14 @@ impl OwnedChildProcess {
     #[cfg(windows)]
     pub fn launch(spec: ChildLaunchSpec) -> Result<Self, ProcessLaunchError> {
         windows::launch(spec).map(Self)
+    }
+
+    #[cfg(windows)]
+    pub fn launch_with_capture_limit(
+        spec: ChildLaunchSpec,
+        max_capture_bytes: usize,
+    ) -> Result<Self, ProcessLaunchError> {
+        windows::launch_with_capture_limit(spec, max_capture_bytes).map(Self)
     }
 
     #[cfg(windows)]

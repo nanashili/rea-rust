@@ -8,13 +8,16 @@
 //! `list_browser_targets` is bound here; `capture` binds the target-session
 //! observations (`capture_web_screenshot`, `observe_web_session`,
 //! `discover_webmcp_tools`, and `inspect_web_page` in `capture::page`).
-//! `analyze_web_bundle` remains unbound until its bundle-analysis owner is
-//! ported.
+//! `analyze_web_bundle` is registered by `capture::page` and consumes the
+//! caller-authorized script capture from that same browser owner.
 use crate::cdp::discovery::{self, Discovery};
 use crate::cdp::{self, Refinement};
+use rea_application::javascript::graph::json::{Json as GraphJson, Obj};
 use rea_core::analysis_error::AnalysisError;
 use rea_core::evidence::envelope::{Evidence, EvidenceProvider, Observation};
+use rea_core::evidence::record::EvidenceRecord;
 use rea_mcp::{Registry, ToolContext, ToolOutput};
+use serde_json::value::RawValue;
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 
@@ -131,15 +134,17 @@ fn browser_observation_evidence(
     result: Value,
 ) -> Result<Evidence, AnalysisError> {
     let browser = &result["browser"];
-    let environment = json!({
-        "id": format!(
-            "{}@{}",
-            browser["product"].as_str().unwrap_or_default(),
-            browser["revision"].as_str().unwrap_or_default()
-        ),
-        "platform": "unknown",
-        "architecture": "unknown",
-        "isolation": "none",
+    let environment = browser.is_object().then(|| {
+        json!({
+            "id": format!(
+                "{}@{}",
+                browser["product"].as_str().unwrap_or_default(),
+                browser["revision"].as_str().unwrap_or_default()
+            ),
+            "platform": "unknown",
+            "architecture": "unknown",
+            "isolation": "none",
+        })
     });
     let mut limitations: Vec<String> = result["limitations"]
         .as_array()
@@ -148,12 +153,14 @@ fn browser_observation_evidence(
         .filter_map(Value::as_str)
         .map(str::to_owned)
         .collect();
-    limitations.push("Browser host platform and architecture were not observed.".to_owned());
+    if environment.is_some() {
+        limitations.push("Browser host platform and architecture were not observed.".to_owned());
+    }
     let mut observation = Observation::new(operation, parameters, result);
     observation.predicate_type = Some(predicate.to_owned());
     observation.confidence = Some("observed".to_owned());
     observation.authority = Some("external-service".to_owned());
-    observation.environment = Some(environment);
+    observation.environment = environment;
     observation.limitations = limitations;
     Evidence::create(None, &provider(), observation).map_err(|_| {
         AnalysisError::output(
@@ -161,6 +168,71 @@ fn browser_observation_evidence(
             "Browser provider returned non-JSON observation data.",
         )
     })
+}
+
+pub(crate) fn browser_observation_raw_evidence(
+    operation: &str,
+    predicate: &str,
+    parameters: GraphJson,
+    result: GraphJson,
+) -> Result<EvidenceRecord, AnalysisError> {
+    let browser = result.get("browser");
+    let environment = browser.filter(|value| value.is_object()).map(|browser| {
+        GraphJson::Object(
+            Obj::new()
+                .with(
+                    "id",
+                    format!("{}@{}", browser["product"].str(), browser["revision"].str()),
+                )
+                .with("platform", "unknown")
+                .with("architecture", "unknown")
+                .with("isolation", "none"),
+        )
+    });
+    let mut limitations = vec!["Artifact identity is unavailable for this observation.".to_owned()];
+    limitations.extend(
+        result["limitations"]
+            .arr()
+            .iter()
+            .map(|value| value.text().to_string()),
+    );
+    if environment.is_some() {
+        limitations.push("Browser host platform and architecture were not observed.".to_owned());
+    }
+    let provider = provider();
+    let record = GraphJson::Object(
+        Obj::new()
+            .with("subject", GraphJson::Null)
+            .with(
+                "provider",
+                GraphJson::Object(
+                    Obj::new()
+                        .with("id", provider.id)
+                        .with("name", provider.name)
+                        .with("version", provider.version),
+                ),
+            )
+            .with("analysis_profile", GraphJson::Null)
+            .with("predicate_type", predicate)
+            .with("operation", operation)
+            .with("parameters", parameters)
+            .with("raw_result", GraphJson::Null)
+            .with("normalized_result", result)
+            .with("confidence", "observed")
+            .with("authority", "external-service")
+            .with("environment", environment)
+            .with(
+                "limitations",
+                GraphJson::Array(limitations.into_iter().map(GraphJson::from).collect()),
+            )
+            .with("relationship_coverage", GraphJson::Null)
+            .with("locations", GraphJson::Array(Vec::new()))
+            .with("evidence_links", GraphJson::Array(Vec::new())),
+    );
+    let raw = RawValue::from_string(record.stringify())
+        .map_err(|error| AnalysisError::output(operation, error.to_string()))?;
+    EvidenceRecord::create_unsigned(&raw)
+        .map_err(|error| AnalysisError::output(operation, error.to_string()))
 }
 
 struct Selection {

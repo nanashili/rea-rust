@@ -33,6 +33,7 @@ use rea_application::flutter;
 use rea_application::interface_builder;
 #[cfg(unix)]
 use rea_application::interface_builder::nib_archive::NibArchiveInspection;
+use rea_application::javascript::graph::json as graph_json;
 #[cfg(unix)]
 use rea_application::ledger::bundle_comparison_command;
 #[cfg(unix)]
@@ -279,7 +280,7 @@ MCP: inspect_rust_binary, inspect_go_binary, inspect_pe_resources, evaluate_reco
             &arguments,
             android::application_graph::OPERATION,
             "Usage: rea-native project-android-application-graph INPUT --format json",
-            android::application_graph::project_evidence,
+            project_android_application_graph,
         );
     }
     if arguments
@@ -299,7 +300,7 @@ MCP: inspect_rust_binary, inspect_go_binary, inspect_pe_resources, evaluate_reco
             &arguments,
             harmony::application_graph::OPERATION,
             "Usage: rea-native project-harmony-application-graph INPUT --format json",
-            harmony::application_graph::project_evidence,
+            project_harmony_application_graph,
         );
     }
     if arguments
@@ -319,7 +320,7 @@ MCP: inspect_rust_binary, inspect_go_binary, inspect_pe_resources, evaluate_reco
             &arguments,
             apple_application_graph::OPERATION,
             "Usage: rea-native project-apple-application-graph INPUT --format json",
-            apple_application_graph::project_evidence,
+            project_apple_application_graph,
         );
     }
     #[cfg(unix)]
@@ -1699,6 +1700,33 @@ MCP: inspect_rust_binary, inspect_go_binary, inspect_pe_resources, evaluate_reco
 }
 
 #[cfg(unix)]
+fn project_harmony_application_graph(
+    input: &serde_json::Value,
+) -> Result<Box<serde_json::value::RawValue>, rea_core::failure::Failure> {
+    let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated HarmonyOS inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?)
+    .map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated HarmonyOS inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?;
+    harmony::application_graph::project_evidence(&graph_input)
+}
+
+#[cfg(unix)]
 fn offline_cli_operation(command: Option<&str>) -> Option<&'static str> {
     let command = command?;
 
@@ -2576,6 +2604,58 @@ fn emit_offline_failure(
 }
 
 #[cfg(unix)]
+fn project_android_application_graph(
+    input: &serde_json::Value,
+) -> Result<Box<serde_json::value::RawValue>, rea_core::failure::Failure> {
+    let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated Android inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?)
+    .map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated Android inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?;
+    rea_application::android::application_graph::project_evidence(&graph_input)
+}
+
+fn project_apple_application_graph(
+    input: &serde_json::Value,
+) -> Result<Box<serde_json::value::RawValue>, rea_core::failure::Failure> {
+    let graph_input = graph_json::parse(&serde_json::to_string(input).map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated Apple inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?)
+    .map_err(|error| {
+        rea_core::failure::Failure::new(
+            "invalid_request",
+            "invalid_input",
+            error.to_string(),
+            false,
+            "Provide authenticated Apple inventory Evidence.".into(),
+            std::collections::BTreeMap::new(),
+        )
+    })?;
+    apple_application_graph::project_evidence(&graph_input)
+}
+
 #[derive(serde::Serialize)]
 struct OfflineCliFailure<'a> {
     error: &'static str,

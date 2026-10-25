@@ -4,12 +4,15 @@ use crate::binary::rust::Completion;
 use crate::ledger::artifact_records::{ArtifactRecords, ImportReceipt, RecordError};
 use rea_core::{
     cancellation::Cancellation,
-    evidence::bundle::EvidenceBundle,
+    evidence::{
+        bundle::{EvidenceBundle, EvidenceBundleError},
+        record::EvidenceRecordError,
+    },
     failure::{Detail, Failure},
 };
 use rea_host::fs::stable_file::{self, FileAccess, IoKind, ReadFailure, ReadIssue};
 use serde::Serialize;
-use serde_json::value::RawValue;
+use serde_json::{Value, value::RawValue};
 use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 pub const OPERATION: &str = "import_evidence_bundle";
@@ -174,8 +177,10 @@ impl<F: FileAccess> BundleImporter<F> {
                 format!("Evidence bundle is not valid JSON: {error}"),
             )
         })?;
-        let bundle = EvidenceBundle::parse(&raw)
-            .map_err(|error| integrity_failure(operation, error.to_string()))?;
+        let bundle = EvidenceBundle::parse(&raw).map_err(|error| {
+            let (reason, schema_path) = bundle_validation_details(&error);
+            integrity_failure_with_path(operation, reason, schema_path)
+        })?;
 
         if let Some(reason) = cancellation.reason() {
             return Err(cancelled(operation, Some(reason)));
@@ -432,6 +437,14 @@ fn attach_cleanup_retry(
 }
 
 fn integrity_failure(operation: &'static str, reason: String) -> Failure {
+    integrity_failure_with_path(operation, reason, None)
+}
+
+fn integrity_failure_with_path(
+    operation: &'static str,
+    reason: String,
+    schema_path: Option<String>,
+) -> Failure {
     let message = match operation {
         OPERATION => "Evidence bundle validation failed. No records were imported.".to_owned(),
         "compare_bundles" => comparison_integrity_message(&reason),
@@ -448,17 +461,44 @@ fn integrity_failure(operation: &'static str, reason: String) -> Failure {
         message,
         false,
         action,
-        BTreeMap::from([
-            ("operation", Detail::Text(operation.into())),
-            (
-                "reason",
-                Detail::Text(if operation == "compare_bundles" {
-                    "Evidence bundle validation failed".into()
-                } else {
-                    reason
-                }),
-            ),
-        ]),
+        {
+            let mut details = BTreeMap::from([
+                ("operation", Detail::Text(operation.into())),
+                (
+                    "reason",
+                    Detail::Text(if operation == "compare_bundles" {
+                        "Evidence bundle validation failed".into()
+                    } else {
+                        reason.clone()
+                    }),
+                ),
+            ]);
+            if operation != "compare_bundles" {
+                details.insert("validation_reason", Detail::Text(reason));
+            }
+            if let Some(path) = schema_path {
+                details.insert("schema_path", Detail::Text(path));
+            }
+            details
+        },
+    )
+}
+
+fn bundle_validation_details(error: &EvidenceBundleError) -> (String, Option<String>) {
+    let EvidenceBundleError::RecordAt { index, error } = error else {
+        return (error.to_string(), None);
+    };
+    let field_path = match error {
+        EvidenceRecordError::Shape(issues) => issues.first().and_then(|issue| {
+            let fields = issue.path.iter().map(Value::to_string).collect::<Vec<_>>();
+            (!fields.is_empty()).then(|| fields.join("."))
+        }),
+        EvidenceRecordError::SemanticIdMismatch => Some("evidence_id".to_owned()),
+        _ => None,
+    };
+    (
+        error.to_string(),
+        field_path.map(|field| format!("records.{index}.{field}")),
     )
 }
 

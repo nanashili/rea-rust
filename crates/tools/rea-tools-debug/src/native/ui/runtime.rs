@@ -15,7 +15,7 @@
 //! the private root (`main.swift` and `NativeUIChildren.swift`) instead of
 //! symlinking `main.swift` to a repo path. The compile argv, `TMPDIR`
 //! override, timeouts and stop signals are otherwise identical.
-use super::budget::{NATIVE_UI_DEADLINE_MS, NATIVE_UI_HELPER_MAX_BUFFER};
+use super::budget::NATIVE_UI_HELPER_MAX_BUFFER;
 use super::exec::{ExecFailure, ExecFailureCode, ExecOptions, exec_file_output};
 use rea_core::cancellation::Cancellation;
 use serde_json::Value;

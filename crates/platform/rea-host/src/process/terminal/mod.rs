@@ -120,8 +120,10 @@ impl TerminalScreen {
 
     /// xterm `resize` (same size is a no-op; xterm's minimum is 2x1).
     pub fn resize(&mut self, size: TerminalSize) {
-        self.core
-            .resize(usize::from(size.columns.get()), usize::from(size.rows.get()));
+        self.core.resize(
+            usize::from(size.columns.get()),
+            usize::from(size.rows.get()),
+        );
     }
 
     pub fn snapshot(&self) -> ScreenSnapshot {

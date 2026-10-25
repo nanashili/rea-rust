@@ -51,25 +51,3 @@ pub fn array(value: &Value) -> &[Value] {
 pub fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or_default()
 }
-
-/// JavaScript `String(number)` for JSON numbers.
-pub fn number_string(value: &Value) -> String {
-    match value {
-        Value::Number(number) => {
-            if let Some(integer) = number.as_i64() {
-                return integer.to_string();
-            }
-            if let Some(integer) = number.as_u64() {
-                return integer.to_string();
-            }
-            let float = number.as_f64().unwrap_or(f64::NAN);
-            if float.fract() == 0.0 && float.abs() < 1e21 {
-                format!("{float:.0}")
-            } else {
-                float.to_string()
-            }
-        }
-        Value::String(text) => text.clone(),
-        other => other.to_string(),
-    }
-}

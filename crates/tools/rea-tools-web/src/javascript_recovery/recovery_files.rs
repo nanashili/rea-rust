@@ -27,7 +27,6 @@ pub(crate) struct FileFingerprint {
 /// A file exceeded the byte bound its caller selected.
 pub(crate) struct RecoveryFileSizeError {
     pub reason: String,
-    pub maximum: u64,
 }
 
 impl From<RecoveryFileSizeError> for AnalysisError {
@@ -67,7 +66,6 @@ fn scan_recovery_file(
     if metadata.len() > maximum {
         return Err(ScanError::Size(RecoveryFileSizeError {
             reason: format!("Expected a regular file no larger than {maximum} bytes: {path}"),
-            maximum,
         }));
     }
     let mut file = File::open(path).map_err(ScanError::io)?;
@@ -83,7 +81,6 @@ fn scan_recovery_file(
         if total > maximum {
             return Err(ScanError::Size(RecoveryFileSizeError {
                 reason: format!("File exceeds {maximum} bytes: {path}"),
-                maximum,
             }));
         }
         hash.update(&buffer[..read]);
@@ -130,7 +127,6 @@ pub(crate) struct RecoveryInputSnapshot {
 /// One staging inventory entry.
 pub(crate) struct StagedFile {
     pub relative_path: String,
-    pub path: String,
     #[allow(dead_code)]
     pub bytes: u64,
 }
@@ -197,7 +193,6 @@ fn visit(
             }
             files.push(StagedFile {
                 relative_path,
-                path: path.to_string_lossy().into_owned(),
                 bytes: info.len(),
             });
         }

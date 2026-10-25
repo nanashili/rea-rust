@@ -14,11 +14,8 @@ mod inventory;
 mod server_identity;
 pub use server_identity::PACKAGE_VERSION;
 
-pub(crate) use availability_policy::{
-    AvailabilityPolicy, JebAvailability, OptionalProviderLoadFailure, OptionalProviderLoadFailures,
-    ProbeAvailability, production_availability_policy,
-};
+pub(crate) use availability_policy::production_availability_policy;
 pub(crate) use capability_sets::provider_capability_sets;
-pub(crate) use client_features::{ClientFeatures, client_features_from_capabilities};
+pub(crate) use client_features::ClientFeatures;
 pub(crate) use inventory::tool_availability;
 pub(crate) use server_identity::{ServerIdentityInput, server_identity};

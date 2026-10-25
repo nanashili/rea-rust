@@ -5,7 +5,7 @@ use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tempfile::Builder;
 
 pub const OPERATION: &str = "export_web_scripts";
@@ -494,7 +494,7 @@ fn plan_script(
     };
     let (relative_path, layout, reason) = match (candidate, layout_reason) {
         (Some(path), None) => (path, "url-path", Value::Null),
-        (path, reason) => (
+        (_, reason) => (
             isolated_path(&script.source, index),
             "isolated",
             Value::String(

@@ -33,14 +33,38 @@ pub(crate) enum Locator {
 
 #[derive(Clone, Debug)]
 pub(crate) enum ActionKind {
-    Goto { destination: ScenarioUrl, wait_until: String },
-    Click { locator: Locator, button: String, click_count: u64 },
-    Fill { locator: Locator, value: ScenarioValue },
-    Press { locator: Locator, key: String },
-    SelectOption { locator: Locator, value: ScenarioValue },
-    Check { locator: Locator, checked: bool },
-    WaitFor { locator: Locator, state: String },
-    WaitForTimeout { duration_ms: u64 },
+    Goto {
+        destination: ScenarioUrl,
+        wait_until: String,
+    },
+    Click {
+        locator: Locator,
+        button: String,
+        click_count: u64,
+    },
+    Fill {
+        locator: Locator,
+        value: ScenarioValue,
+    },
+    Press {
+        locator: Locator,
+        key: String,
+    },
+    SelectOption {
+        locator: Locator,
+        value: ScenarioValue,
+    },
+    Check {
+        locator: Locator,
+        checked: bool,
+    },
+    WaitFor {
+        locator: Locator,
+        state: String,
+    },
+    WaitForTimeout {
+        duration_ms: u64,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -53,8 +77,14 @@ pub(crate) struct Action {
 
 #[derive(Clone, Debug)]
 pub(crate) enum BrowserSelection {
-    Launch { executable_path: String, headless: bool },
-    Connect { endpoint: String, target_id: String },
+    Launch {
+        executable_path: String,
+        headless: bool,
+    },
+    Connect {
+        endpoint: String,
+        target_id: String,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -110,6 +140,21 @@ pub(crate) struct Limits {
     pub max_network_metadata_allocation_bytes: u64,
 }
 
+impl Limits {
+    pub(crate) fn resolver_defaults() -> Self {
+        Self {
+            max_events: 1024,
+            max_event_allocation_bytes: 4 * 1024 * 1024,
+            max_total_event_allocation_bytes: 16 * 1024 * 1024,
+            max_network_transactions: 64,
+            max_network_body_bytes: 4 * 1024 * 1024,
+            max_network_body_allocation_bytes: 4 * 1024 * 1024,
+            max_network_header_allocation_bytes: 1024 * 1024,
+            max_network_metadata_allocation_bytes: 1024 * 1024,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Capture {
     pub after_each_step: Vec<String>,
@@ -141,7 +186,11 @@ fn path(parts: &[Value]) -> Vec<Value> {
 }
 
 fn string(value: &Value, key: &str) -> String {
-    value.get(key).and_then(Value::as_str).unwrap_or_default().to_owned()
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn number(value: &Value, key: &str) -> u64 {
@@ -176,7 +225,10 @@ fn base_url(value: &mut Value, at: Vec<Value>, issues: &mut Vec<Refinement>) -> 
                 || !url.username().is_empty()
                 || url.password().is_some_and(|password| !password.is_empty()) =>
         {
-            issues.push(Refinement::new(at, "Browser URLs must be HTTP(S) and omit credentials"));
+            issues.push(Refinement::new(
+                at,
+                "Browser URLs must be HTTP(S) and omit credentials",
+            ));
             raw
         }
         Some(url) => {
@@ -207,7 +259,12 @@ fn scenario_url(value: &mut Value, at: &[Value], issues: &mut Vec<Refinement>) -
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .map(|entry| (string(entry, "name"), scenario_value(entry.get("value").unwrap_or(&Value::Null))))
+        .map(|entry| {
+            (
+                string(entry, "name"),
+                scenario_value(entry.get("value").unwrap_or(&Value::Null)),
+            )
+        })
         .collect();
     ScenarioUrl { url, query }
 }
@@ -234,9 +291,15 @@ fn action(value: &mut Value, index: usize, issues: &mut Vec<Refinement>) -> Acti
             let wait_until = string(value, "wait_until");
             let destination = match value.get_mut("destination") {
                 Some(destination) => scenario_url(destination, &at, issues),
-                None => ScenarioUrl { url: String::new(), query: Vec::new() },
+                None => ScenarioUrl {
+                    url: String::new(),
+                    query: Vec::new(),
+                },
             };
-            ActionKind::Goto { destination, wait_until }
+            ActionKind::Goto {
+                destination,
+                wait_until,
+            }
         }
         "click" => ActionKind::Click {
             locator: locate(),
@@ -247,23 +310,35 @@ fn action(value: &mut Value, index: usize, issues: &mut Vec<Refinement>) -> Acti
             locator: locate(),
             value: scenario_value(value.get("value").unwrap_or(&Value::Null)),
         },
-        "press" => ActionKind::Press { locator: locate(), key: string(value, "key") },
+        "press" => ActionKind::Press {
+            locator: locate(),
+            key: string(value, "key"),
+        },
         "select_option" => ActionKind::SelectOption {
             locator: locate(),
             value: scenario_value(value.get("value").unwrap_or(&Value::Null)),
         },
-        "check" | "uncheck" => ActionKind::Check { locator: locate(), checked: name == "check" },
-        "wait_for" => ActionKind::WaitFor { locator: locate(), state: string(value, "state") },
-        _ => ActionKind::WaitForTimeout { duration_ms: number(value, "duration_ms") },
+        "check" | "uncheck" => ActionKind::Check {
+            locator: locate(),
+            checked: name == "check",
+        },
+        "wait_for" => ActionKind::WaitFor {
+            locator: locate(),
+            state: string(value, "state"),
+        },
+        _ => ActionKind::WaitForTimeout {
+            duration_ms: number(value, "duration_ms"),
+        },
     };
-    Action { step_id, name, timeout_ms, kind }
+    Action {
+        step_id,
+        name,
+        timeout_ms,
+        kind,
+    }
 }
 
-fn storage_seeds(
-    storage: &mut Value,
-    key: &str,
-    issues: &mut Vec<Refinement>,
-) -> Vec<StorageSeed> {
+fn storage_seeds(storage: &mut Value, key: &str, issues: &mut Vec<Refinement>) -> Vec<StorageSeed> {
     let Some(items) = storage.get_mut(key).and_then(Value::as_array_mut) else {
         return Vec::new();
     };
@@ -288,7 +363,12 @@ fn storage_seeds(
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
-            .map(|entry| (string(entry, "name"), scenario_value(entry.get("value").unwrap_or(&Value::Null))))
+            .map(|entry| {
+                (
+                    string(entry, "name"),
+                    scenario_value(entry.get("value").unwrap_or(&Value::Null)),
+                )
+            })
             .collect();
         seeds.push(StorageSeed { origin, entries });
     }
@@ -304,7 +384,10 @@ fn limits(value: &Value) -> Limits {
         max_network_body_bytes: number(value, "max_network_body_bytes"),
         max_network_body_allocation_bytes: number(value, "max_network_body_allocation_bytes"),
         max_network_header_allocation_bytes: number(value, "max_network_header_allocation_bytes"),
-        max_network_metadata_allocation_bytes: number(value, "max_network_metadata_allocation_bytes"),
+        max_network_metadata_allocation_bytes: number(
+            value,
+            "max_network_metadata_allocation_bytes",
+        ),
     }
 }
 
@@ -346,7 +429,10 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
                 endpoint.url
             }
             Err(message) => {
-                issues.push(Refinement::new(path(&[json!("browser"), json!("cdp_endpoint")]), message));
+                issues.push(Refinement::new(
+                    path(&[json!("browser"), json!("cdp_endpoint")]),
+                    message,
+                ));
                 raw
             }
         };
@@ -359,7 +445,10 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
         } else {
             canonical["browser"]["target_id"] = Value::String(target_id.clone());
         }
-        BrowserSelection::Connect { endpoint, target_id }
+        BrowserSelection::Connect {
+            endpoint,
+            target_id,
+        }
     } else {
         let executable_path = string(&browser_value, "executable_path");
         if !is_absolute(&executable_path) {
@@ -370,21 +459,33 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
         }
         BrowserSelection::Launch {
             executable_path,
-            headless: browser_value.get("headless").and_then(Value::as_bool).unwrap_or(true),
+            headless: browser_value
+                .get("headless")
+                .and_then(Value::as_bool)
+                .unwrap_or(true),
         }
     };
 
     let start_url = match canonical.get_mut("start_url") {
         Some(start) => scenario_url(start, &[json!("start_url")], &mut issues),
-        None => ScenarioUrl { url: String::new(), query: Vec::new() },
+        None => ScenarioUrl {
+            url: String::new(),
+            query: Vec::new(),
+        },
     };
 
     let environment_value = canonical.get("environment").cloned().unwrap_or(Value::Null);
-    let viewport = environment_value.get("viewport").cloned().unwrap_or(Value::Null);
+    let viewport = environment_value
+        .get("viewport")
+        .cloned()
+        .unwrap_or(Value::Null);
     let environment = Environment {
         width: number(&viewport, "width"),
         height: number(&viewport, "height"),
-        device_scale_factor: viewport.get("device_scale_factor").and_then(Value::as_f64).unwrap_or(1.0),
+        device_scale_factor: viewport
+            .get("device_scale_factor")
+            .and_then(Value::as_f64)
+            .unwrap_or(1.0),
         locale: string(&environment_value, "locale"),
         timezone: string(&environment_value, "timezone"),
         color_scheme: string(&environment_value, "color_scheme"),
@@ -405,10 +506,18 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
     if let Some(storage) = canonical.get_mut("storage") {
         if let Some(items) = storage.get_mut("cookies").and_then(Value::as_array_mut) {
             for (index, item) in items.iter_mut().enumerate() {
-                let at = [json!("storage"), json!("cookies"), json!(index), json!("destination")];
+                let at = [
+                    json!("storage"),
+                    json!("cookies"),
+                    json!(index),
+                    json!("destination"),
+                ];
                 let destination = match item.get_mut("destination") {
                     Some(destination) => scenario_url(destination, &at, &mut issues),
-                    None => ScenarioUrl { url: String::new(), query: Vec::new() },
+                    None => ScenarioUrl {
+                        url: String::new(),
+                        query: Vec::new(),
+                    },
                 };
                 cookies.push(Cookie {
                     name: string(item, "name"),
@@ -434,7 +543,11 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
         let environment_variable = string(item, "environment_variable");
         if environment_variable.contains('=') || environment_variable.contains('\0') {
             issues.push(Refinement::new(
-                path(&[json!("secrets"), json!(index), json!("environment_variable")]),
+                path(&[
+                    json!("secrets"),
+                    json!(index),
+                    json!("environment_variable"),
+                ]),
                 "Environment variable names cannot contain '=' or NUL",
             ));
         }
@@ -445,9 +558,9 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
     }
 
     let capture_value = canonical.get("capture").cloned().unwrap_or(Value::Null);
-    let network_value = capture_value.get("network").cloned().unwrap_or_else(|| {
-        json!({ "request_body": false, "response_body": false, "header_values": false })
-    });
+    let network_value = capture_value.get("network").cloned().unwrap_or_else(
+        || json!({ "request_body": false, "response_body": false, "header_values": false }),
+    );
     let limits_value = capture_value.get("limits").cloned().unwrap_or(Value::Null);
     let capture = Capture {
         after_each_step: strings(&capture_value, "after_each_step"),
@@ -479,7 +592,11 @@ pub(crate) fn parse(input: &Value) -> Result<Scenario, Rejection> {
         canonical,
     };
     let refinements = super_refine(&scenario);
-    if refinements.is_empty() { Ok(scenario) } else { Err(Rejection::Scenario(refinements)) }
+    if refinements.is_empty() {
+        Ok(scenario)
+    } else {
+        Err(Rejection::Scenario(refinements))
+    }
 }
 
 fn value_references(value: &ScenarioValue) -> Vec<String> {
@@ -490,7 +607,10 @@ fn value_references(value: &ScenarioValue) -> Vec<String> {
 }
 
 fn url_references(url: &ScenarioUrl) -> Vec<String> {
-    url.query.iter().flat_map(|(_, value)| value_references(value)).collect()
+    url.query
+        .iter()
+        .flat_map(|(_, value)| value_references(value))
+        .collect()
 }
 
 /// `validateBrowserScenario`.
@@ -499,23 +619,38 @@ fn super_refine(scenario: &Scenario) -> Vec<Refinement> {
     let unique = |values: Vec<&str>, key: &str, label: &str, issues: &mut Vec<Refinement>| {
         let distinct: BTreeSet<&str> = values.iter().copied().collect();
         if distinct.len() != values.len() {
-            issues.push(Refinement::new(vec![json!(key)], format!("{label} must be unique")));
+            issues.push(Refinement::new(
+                vec![json!(key)],
+                format!("{label} must be unique"),
+            ));
         }
     };
     unique(
-        scenario.actions.iter().map(|action| action.step_id.as_str()).collect(),
+        scenario
+            .actions
+            .iter()
+            .map(|action| action.step_id.as_str())
+            .collect(),
         "actions",
         "Action step IDs",
         &mut issues,
     );
     unique(
-        scenario.secrets.iter().map(|secret| secret.secret_id.as_str()).collect(),
+        scenario
+            .secrets
+            .iter()
+            .map(|secret| secret.secret_id.as_str())
+            .collect(),
         "secrets",
         "Secret IDs",
         &mut issues,
     );
     unique(
-        scenario.secrets.iter().map(|secret| secret.environment_variable.as_str()).collect(),
+        scenario
+            .secrets
+            .iter()
+            .map(|secret| secret.environment_variable.as_str())
+            .collect(),
         "secrets",
         "Secret environment variables",
         &mut issues,
@@ -535,12 +670,20 @@ fn super_refine(scenario: &Scenario) -> Vec<Refinement> {
         references.extend(value_references(&cookie.value));
         references.extend(url_references(&cookie.destination));
     }
-    for seed in scenario.local_storage.iter().chain(&scenario.session_storage) {
+    for seed in scenario
+        .local_storage
+        .iter()
+        .chain(&scenario.session_storage)
+    {
         for (_, value) in &seed.entries {
             references.extend(value_references(value));
         }
     }
-    let declared: BTreeSet<&str> = scenario.secrets.iter().map(|secret| secret.secret_id.as_str()).collect();
+    let declared: BTreeSet<&str> = scenario
+        .secrets
+        .iter()
+        .map(|secret| secret.secret_id.as_str())
+        .collect();
     for reference in references {
         if !declared.contains(reference.as_str()) {
             issues.push(Refinement::new(

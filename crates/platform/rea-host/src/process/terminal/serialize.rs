@@ -95,12 +95,22 @@ fn diff_style(cell: &Attr, old: &Attr) -> Vec<i64> {
     if fg_changed {
         let color = cell.fg_color();
         if cell.is_fg_rgb() {
-            sgr.extend([38, 2, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]);
+            sgr.extend([
+                38,
+                2,
+                (color >> 16) & 0xFF,
+                (color >> 8) & 0xFF,
+                color & 0xFF,
+            ]);
         } else if cell.is_fg_palette() {
             if color >= 16 {
                 sgr.extend([38, 5, color]);
             } else {
-                sgr.push(if color & 8 != 0 { 90 + (color & 7) } else { 30 + (color & 7) });
+                sgr.push(if color & 8 != 0 {
+                    90 + (color & 7)
+                } else {
+                    30 + (color & 7)
+                });
             }
         } else {
             sgr.push(39);
@@ -109,12 +119,22 @@ fn diff_style(cell: &Attr, old: &Attr) -> Vec<i64> {
     if bg_changed {
         let color = cell.bg_color();
         if cell.is_bg_rgb() {
-            sgr.extend([48, 2, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]);
+            sgr.extend([
+                48,
+                2,
+                (color >> 16) & 0xFF,
+                (color >> 8) & 0xFF,
+                color & 0xFF,
+            ]);
         } else if cell.is_bg_palette() {
             if color >= 16 {
                 sgr.extend([48, 5, color]);
             } else {
-                sgr.push(if color & 8 != 0 { 100 + (color & 7) } else { 40 + (color & 7) });
+                sgr.push(if color & 8 != 0 {
+                    100 + (color & 7)
+                } else {
+                    40 + (color & 7)
+                });
             }
         } else {
             sgr.push(49);
@@ -191,7 +211,11 @@ fn serialize_buffer(buffer: &Buffer, input: &SerializeInput<'_>) -> String {
     let end_row = max_rows - 1;
     for row in 0..=end_row {
         if let Some(line) = buffer.lines.get(row) {
-            let end_col = if row == end_row { input.cols } else { line.len() };
+            let end_col = if row == end_row {
+                input.cols
+            } else {
+                line.len()
+            };
             for col in 0..end_col {
                 if let Some(cell) = line.api_cell(col) {
                     handler.next_cell(&cell, row, col);
@@ -205,7 +229,10 @@ fn serialize_buffer(buffer: &Buffer, input: &SerializeInput<'_>) -> String {
 
 impl Handler<'_> {
     fn line_cell(&self, row: usize, col: usize) -> Option<Cell> {
-        self.buffer.lines.get(row).and_then(|line| line.api_cell(col))
+        self.buffer
+            .lines
+            .get(row)
+            .and_then(|line| line.api_cell(col))
     }
 
     fn row_end(&mut self, row: usize, is_last: bool) {

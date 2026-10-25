@@ -44,7 +44,6 @@ pub struct Publication {
     pub manifest_path: String,
     pub manifest_sha256: String,
     pub manifest_bytes: usize,
-    pub output_root: String,
 }
 
 /// `publishWebScripts`.
@@ -163,7 +162,6 @@ fn publish_into(
         manifest_path: node::join(&tree.output_root, "manifest.json"),
         manifest_sha256: digest,
         manifest_bytes: bytes.len(),
-        output_root: tree.output_root.clone(),
     })
 }
 

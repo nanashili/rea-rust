@@ -16,6 +16,9 @@ const START_USEC: usize = 8;
 const P_FLAG: usize = 32;
 const P_STAT: usize = 36;
 const P_PID: usize = 40;
+/// `p_comm[MAXCOMLEN + 1]`: the short name `ps` prints as `(comm)`.
+const P_COMM: usize = 243;
+const P_COMM_LEN: usize = 17;
 const E_UID: usize = 420;
 const E_PPID: usize = 560;
 const E_PGID: usize = 564;
@@ -33,6 +36,8 @@ pub struct KernelProcess {
     pub identity: String,
     pub zombie: bool,
     pub pointer_size: usize,
+    /// Kernel short name (`p_comm`); still present for zombies and exiting processes.
+    pub command_name: String,
 }
 
 fn i32_at(record: &[u8], offset: usize) -> i32 {
@@ -49,7 +54,19 @@ fn parse(record: &[u8]) -> Option<KernelProcess> {
         uid: i32_at(record, E_UID) as u32,
         identity: format!("{seconds}:{}", i32_at(record, START_USEC)),
         zombie: record[P_STAT] == SZOMB,
-        pointer_size: if i32_at(record, P_FLAG) & P_LP64 != 0 { 8 } else { 4 },
+        pointer_size: if i32_at(record, P_FLAG) & P_LP64 != 0 {
+            8
+        } else {
+            4
+        },
+        command_name: {
+            let name = &record[P_COMM..P_COMM + P_COMM_LEN];
+            let end = name
+                .iter()
+                .position(|byte| *byte == 0)
+                .unwrap_or(name.len());
+            String::from_utf8_lossy(&name[..end]).into_owned()
+        },
     })
 }
 
@@ -62,14 +79,34 @@ fn query(mib: &mut [libc::c_int]) -> Result<Vec<u8>, String> {
     for _ in 0..3 {
         let mut size: libc::size_t = 0;
         // SAFETY: a null output buffer only queries the required size.
-        if unsafe { libc::sysctl(mib.as_mut_ptr(), mib.len() as u32, std::ptr::null_mut(), &mut size, std::ptr::null_mut(), 0) } != 0 {
+        if unsafe {
+            libc::sysctl(
+                mib.as_mut_ptr(),
+                mib.len() as u32,
+                std::ptr::null_mut(),
+                &mut size,
+                std::ptr::null_mut(),
+                0,
+            )
+        } != 0
+        {
             return Err(format!("process_table_failed_{}", errno()));
         }
         // Headroom for processes started between the two calls.
         size += 64 * KINFO_PROC_SIZE;
         let mut bytes = vec![0_u8; size];
         // SAFETY: the owned buffer has exactly `size` bytes.
-        if unsafe { libc::sysctl(mib.as_mut_ptr(), mib.len() as u32, bytes.as_mut_ptr().cast(), &mut size, std::ptr::null_mut(), 0) } != 0 {
+        if unsafe {
+            libc::sysctl(
+                mib.as_mut_ptr(),
+                mib.len() as u32,
+                bytes.as_mut_ptr().cast(),
+                &mut size,
+                std::ptr::null_mut(),
+                0,
+            )
+        } != 0
+        {
             let error = errno();
             if error == libc::ENOMEM {
                 continue;
@@ -88,11 +125,25 @@ fn query(mib: &mut [libc::c_int]) -> Result<Vec<u8>, String> {
 /// Check the hard-coded layout against this process's own record.
 fn verify_layout() -> Result<(), String> {
     // SAFETY: getpid/getppid/getpgrp/geteuid have no preconditions.
-    let (pid, parent, group, uid) = unsafe { (libc::getpid(), libc::getppid(), libc::getpgrp(), libc::geteuid()) };
+    let (pid, parent, group, uid) = unsafe {
+        (
+            libc::getpid(),
+            libc::getppid(),
+            libc::getpgrp(),
+            libc::geteuid(),
+        )
+    };
     let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PID, pid];
     let bytes = query(&mut mib)?;
     match bytes.chunks_exact(KINFO_PROC_SIZE).next().and_then(parse) {
-        Some(own) if own.pid == pid as u32 && own.parent_pid == parent as u32 && own.process_group_id == group as u32 && own.uid == uid => Ok(()),
+        Some(own)
+            if own.pid == pid as u32
+                && own.parent_pid == parent as u32
+                && own.process_group_id == group as u32
+                && own.uid == uid =>
+        {
+            Ok(())
+        }
         _ => Err("process_table_layout_unverified".to_owned()),
     }
 }
@@ -102,15 +153,27 @@ pub fn snapshot() -> Result<HashMap<u32, KernelProcess>, String> {
     verify_layout()?;
     let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_ALL, 0];
     let bytes = query(&mut mib)?;
-    Ok(bytes.chunks_exact(KINFO_PROC_SIZE).filter_map(parse).map(|process| (process.pid, process)).collect())
+    Ok(bytes
+        .chunks_exact(KINFO_PROC_SIZE)
+        .filter_map(parse)
+        .map(|process| (process.pid, process))
+        .collect())
 }
 
 /// One PID's record; `Ok(None)` when it is not in the table.
 pub fn process(pid: u32) -> Result<Option<KernelProcess>, String> {
     verify_layout()?;
-    let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PID, pid as libc::c_int];
+    let mut mib = [
+        libc::CTL_KERN,
+        libc::KERN_PROC,
+        libc::KERN_PROC_PID,
+        pid as libc::c_int,
+    ];
     let bytes = query(&mut mib)?;
-    Ok(bytes.chunks_exact(KINFO_PROC_SIZE).filter_map(parse).find(|process| process.pid == pid))
+    Ok(bytes
+        .chunks_exact(KINFO_PROC_SIZE)
+        .filter_map(parse)
+        .find(|process| process.pid == pid))
 }
 
 #[cfg(test)]
@@ -126,5 +189,37 @@ mod tests {
         assert_eq!(table.get(&1).map(|launchd| launchd.uid), Some(0));
         assert_eq!(process(std::process::id()).unwrap().as_ref(), Some(own));
         assert_eq!(process(i32::MAX as u32).unwrap(), None);
+    }
+
+    #[test]
+    fn command_name_is_the_kernel_short_name_and_survives_exit() {
+        let own = process(std::process::id()).unwrap().unwrap();
+        let mut name = [0_u8; 256];
+        // SAFETY: proc_name writes at most the passed buffer size.
+        let length = unsafe {
+            libc::proc_name(
+                std::process::id() as libc::c_int,
+                name.as_mut_ptr().cast(),
+                name.len() as u32,
+            )
+        };
+        let name = String::from_utf8_lossy(&name[..length.max(0) as usize]).into_owned();
+        // p_comm holds at most MAXCOMLEN (16) bytes of the executable name.
+        assert_eq!(own.command_name, name.chars().take(16).collect::<String>());
+
+        // A zombie keeps its p_comm (what `ps` prints as "(sleep)").
+        let mut child = std::process::Command::new("/bin/sleep")
+            .arg("0")
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        let zombie = loop {
+            match process(pid).unwrap() {
+                Some(entry) if entry.zombie => break entry,
+                _ => std::thread::sleep(std::time::Duration::from_millis(5)),
+            }
+        };
+        assert_eq!(zombie.command_name, "sleep");
+        child.wait().unwrap();
     }
 }

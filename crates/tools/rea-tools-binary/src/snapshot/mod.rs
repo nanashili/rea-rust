@@ -18,8 +18,8 @@ mod model;
 use rea_analysis::CapabilityDescriptor;
 use serde_json::{Map, Value};
 
-pub(crate) use cache::{SNAPSHOT_CACHE_ENTRY_CEILING, SnapshotCache};
-pub(crate) use domain::{analysis_profiles_equal, snapshot_target, target_identity_matches};
+pub(crate) use cache::SnapshotCache;
+pub(crate) use domain::{analysis_profiles_equal, target_identity_matches};
 pub(crate) use evidence::evidence_bundle_for_target;
 pub(crate) use files::{SnapshotFiles, read_analysis_snapshot};
 pub(crate) use model::{AnalysisSnapshot, snapshot_matches_binding};

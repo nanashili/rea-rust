@@ -261,7 +261,6 @@ fn mapping_number(object: &Map<String, Value>, field: &str, index: usize) -> Res
 #[derive(Clone)]
 struct Layout {
     version: u64,
-    record_size: usize,
     pointer_width: usize,
     method_pointer_count_width: usize,
     endianness: Endian,
@@ -396,7 +395,6 @@ impl Layout {
 
         Ok(Self {
             version,
-            record_size,
             pointer_width,
             method_pointer_count_width,
             endianness,

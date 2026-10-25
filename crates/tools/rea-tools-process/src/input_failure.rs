@@ -7,8 +7,14 @@ use rea_mcp::{ToolContext, ToolOutput};
 use serde_json::{Map, json};
 
 /// Project refinement issues exactly like a schema validation failure.
-pub fn refinement_failure(context: &ToolContext<'_>, issues: Vec<(Vec<String>, String)>) -> ToolOutput {
-    let rendered = issues.into_iter().map(|(path, message)| Issue { path, message }).collect::<Vec<_>>();
+pub fn refinement_failure(
+    context: &ToolContext<'_>,
+    issues: Vec<(Vec<String>, String)>,
+) -> ToolOutput {
+    let rendered = issues
+        .into_iter()
+        .map(|(path, message)| Issue { path, message })
+        .collect::<Vec<_>>();
     let mut result = Map::new();
     result.insert(
         "content".into(),

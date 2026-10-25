@@ -614,8 +614,3 @@ pub fn file_subject(path: &str, sha256: &str) -> SubjectTarget {
         architecture: None,
     }
 }
-
-/// UTF-8 byte length of a JavaScript string argument.
-pub fn utf8_length(text: &str) -> usize {
-    text.len()
-}

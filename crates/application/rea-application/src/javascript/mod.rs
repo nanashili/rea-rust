@@ -1,15 +1,32 @@
 //! JavaScript application analysis, runtime boundaries, semantics and comparisons.
 
+pub mod acquisition;
+pub mod analysis;
 pub mod application;
 pub mod application_view;
+pub mod application_view_exact;
+pub mod application_view_validation;
+pub(crate) mod artifact_files;
+pub mod ast;
+pub mod contracts;
+pub mod electron_summary;
 pub mod emitted_source_candidates;
 pub mod export_comparison;
 pub mod facts_view;
 pub mod feature_trace;
 pub mod function_comparison;
+pub mod graph;
+pub mod html;
+pub(crate) mod non_js;
 pub mod parser;
+pub mod reconstruction;
 pub mod recovery;
+pub mod resolution;
 pub mod runtime;
+pub mod semantic;
 pub mod semantics;
 pub mod source_comparison;
+pub mod static_analysis;
 pub mod version_comparison;
+pub mod worker;
+pub mod workflow;

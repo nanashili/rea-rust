@@ -42,7 +42,10 @@ struct CallLog {
 
 impl CallLog {
     fn new(method: &'static str) -> Self {
-        Self { method, lines: Vec::new() }
+        Self {
+            method,
+            lines: Vec::new(),
+        }
     }
 
     fn log(&mut self, line: impl Into<String>) {
@@ -73,15 +76,26 @@ fn describe(locator: &Locator) -> String {
     let quote = |value: &str| format!("'{}'", value.replace('\\', "\\\\").replace('\'', "\\'"));
     match locator {
         Locator::TestId(value) => format!("getByTestId({})", quote(value)),
-        Locator::Role { role, name } => format!("getByRole({}, {{ name: {}, exact: true }})", quote(role), quote(name)),
+        Locator::Role { role, name } => format!(
+            "getByRole({}, {{ name: {}, exact: true }})",
+            quote(role),
+            quote(name)
+        ),
         Locator::Css(selector) => format!("locator({})", quote(selector)),
     }
 }
 
 fn strict_violation(locator: &Locator, count: u64, previews: &[Value]) -> String {
-    let mut message = format!("Error: strict mode violation: {} resolved to {count} elements:\n", describe(locator));
+    let mut message = format!(
+        "Error: strict mode violation: {} resolved to {count} elements:\n",
+        describe(locator)
+    );
     for (index, preview) in previews.iter().enumerate() {
-        message.push_str(&format!("    {}) {}\n", index + 1, preview.as_str().unwrap_or_default()));
+        message.push_str(&format!(
+            "    {}) {}\n",
+            index + 1,
+            preview.as_str().unwrap_or_default()
+        ));
     }
     if count > 10 {
         message.push_str("    ...\n");
@@ -105,10 +119,32 @@ enum Resolution {
 fn playwright_selector_syntax(selector: &str) -> bool {
     let trimmed = selector.trim_start();
     const ENGINES: [&str; 12] = [
-        "text=", "css=", "xpath=", "id=", "data-testid=", "data-test-id=", "data-test=", "nth=", "visible=", "internal:", "role=", "_react=",
+        "text=",
+        "css=",
+        "xpath=",
+        "id=",
+        "data-testid=",
+        "data-test-id=",
+        "data-test=",
+        "nth=",
+        "visible=",
+        "internal:",
+        "role=",
+        "_react=",
     ];
     const PSEUDOS: [&str; 12] = [
-        ":has-text(", ":text(", ":text-is(", ":text-matches(", ":visible", ":nth-match(", ":right-of(", ":left-of(", ":above(", ":below(", ":near(", ":light(",
+        ":has-text(",
+        ":text(",
+        ":text-is(",
+        ":text-matches(",
+        ":visible",
+        ":nth-match(",
+        ":right-of(",
+        ":left-of(",
+        ":above(",
+        ":below(",
+        ":near(",
+        ":light(",
     ];
     ENGINES.iter().any(|engine| trimmed.starts_with(engine))
         || trimmed.starts_with("//")
@@ -118,7 +154,12 @@ fn playwright_selector_syntax(selector: &str) -> bool {
         || PSEUDOS.iter().any(|pseudo| selector.contains(pseudo))
 }
 
-fn resolve(driver: &mut Driver, locator: &Locator, log: &CallLog, scope: &Scope) -> Result<Resolution, ActionError> {
+fn resolve(
+    driver: &mut Driver,
+    locator: &Locator,
+    log: &CallLog,
+    scope: &Scope,
+) -> Result<Resolution, ActionError> {
     if let Locator::Css(selector) = locator
         && playwright_selector_syntax(selector)
     {
@@ -127,14 +168,26 @@ fn resolve(driver: &mut Driver, locator: &Locator, log: &CallLog, scope: &Scope)
         )));
     }
     let expression = format!("__reaScenario.resolve({})", locator_value(locator));
-    let object = driver.evaluate_utility(&expression, false, false, scope).map_err(|error| match error {
-        CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
-        other => other.into(),
-    })?;
+    let object = driver
+        .evaluate_utility(&expression, false, false, scope)
+        .map_err(|error| match error {
+            CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
+            other => other.into(),
+        })?;
     if object.get("subtype").and_then(Value::as_str) == Some("node") {
-        let object_id = object.get("objectId").and_then(Value::as_str).unwrap_or_default().to_owned();
+        let object_id = object
+            .get("objectId")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         let preview = driver
-            .call_on(&object_id, "function() { return __reaScenario.preview(this); }", Vec::new(), false, scope)?
+            .call_on(
+                &object_id,
+                "function() { return __reaScenario.preview(this); }",
+                Vec::new(),
+                false,
+                scope,
+            )?
             .as_str()
             .unwrap_or_default()
             .to_owned();
@@ -144,16 +197,28 @@ fn resolve(driver: &mut Driver, locator: &Locator, log: &CallLog, scope: &Scope)
         Some(id) => driver.call_on(id, "function() { return this; }", Vec::new(), false, scope)?,
         None => object.get("value").cloned().unwrap_or(Value::Null),
     };
-    let count = summary.get("count").and_then(Value::as_u64).unwrap_or_default();
+    let count = summary
+        .get("count")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
     if count > 1 {
-        let previews = summary.get("previews").and_then(Value::as_array).cloned().unwrap_or_default();
+        let previews = summary
+            .get("previews")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         return Err(log.fail(&strict_violation(locator, count, &previews)));
     }
     Ok(Resolution::None)
 }
 
 /// Wait until the locator resolves to exactly one element.
-fn wait_for_element(driver: &mut Driver, locator: &Locator, log: &mut CallLog, scope: &Scope) -> Result<Element, ActionError> {
+fn wait_for_element(
+    driver: &mut Driver,
+    locator: &Locator,
+    log: &mut CallLog,
+    scope: &Scope,
+) -> Result<Element, ActionError> {
     log.log(format!("  - waiting for {}", describe(locator)));
     loop {
         if let Resolution::One(element) = resolve(driver, locator, log, scope)? {
@@ -165,9 +230,21 @@ fn wait_for_element(driver: &mut Driver, locator: &Locator, log: &mut CallLog, s
     }
 }
 
-fn states(driver: &mut Driver, element: &Element, wanted: &[&str], log: &CallLog, scope: &Scope) -> Result<Option<String>, ActionError> {
+fn states(
+    driver: &mut Driver,
+    element: &Element,
+    wanted: &[&str],
+    log: &CallLog,
+    scope: &Scope,
+) -> Result<Option<String>, ActionError> {
     let result = driver
-        .call_on(&element.object_id, "function(states) { return __reaScenario.states(this, states); }", vec![json!(wanted)], true, scope)
+        .call_on(
+            &element.object_id,
+            "function(states) { return __reaScenario.states(this, states); }",
+            vec![json!(wanted)],
+            true,
+            scope,
+        )
         .map_err(|error| match error {
             CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
             other => other.into(),
@@ -175,7 +252,13 @@ fn states(driver: &mut Driver, element: &Element, wanted: &[&str], log: &CallLog
     if result.as_str() == Some("ok") {
         return Ok(None);
     }
-    Ok(Some(result.get("missing").and_then(Value::as_str).unwrap_or("notconnected").to_owned()))
+    Ok(Some(
+        result
+            .get("missing")
+            .and_then(Value::as_str)
+            .unwrap_or("notconnected")
+            .to_owned(),
+    ))
 }
 
 fn button_mask(button: &str) -> u64 {
@@ -210,9 +293,19 @@ fn click_element(
             };
         }
         attempt += 1;
-        log.log(if attempt == 1 { "  - attempting click action".to_owned() } else { "retrying click action".to_owned() });
+        log.log(if attempt == 1 {
+            "  - attempting click action".to_owned()
+        } else {
+            "retrying click action".to_owned()
+        });
         log.log("    - waiting for element to be visible, enabled and stable");
-        match states(driver, &element, &["stable", "visible", "enabled"], log, scope)? {
+        match states(
+            driver,
+            &element,
+            &["stable", "visible", "enabled"],
+            log,
+            scope,
+        )? {
             Some(missing) => {
                 log.log(format!("    - element is not {missing}"));
                 continue;
@@ -220,7 +313,14 @@ fn click_element(
             None => log.log("    - element is visible, enabled and stable"),
         }
         log.log("    - scrolling into view if needed");
-        if driver.main_call("DOM.scrollIntoViewIfNeeded", json!({ "objectId": element.object_id }), scope).is_err() {
+        if driver
+            .main_call(
+                "DOM.scrollIntoViewIfNeeded",
+                json!({ "objectId": element.object_id }),
+                scope,
+            )
+            .is_err()
+        {
             log.log("    - element is not visible");
             continue;
         }
@@ -229,7 +329,13 @@ fn click_element(
             log.log("    - element is not visible");
             continue;
         };
-        let hit = driver.call_on(&element.object_id, "function(x, y) { return __reaScenario.hit(this, x, y); }", vec![json!(x), json!(y)], false, scope)?;
+        let hit = driver.call_on(
+            &element.object_id,
+            "function(x, y) { return __reaScenario.hit(this, x, y); }",
+            vec![json!(x), json!(y)],
+            false,
+            scope,
+        )?;
         if hit.as_str() != Some("done") {
             let description = hit.get("hit").and_then(Value::as_str).unwrap_or_default();
             log.log(format!("    - {description} intercepts pointer events"));
@@ -264,21 +370,52 @@ fn click_element(
 }
 
 /// `_clickablePoint`: the center of the first sizeable content quad.
-fn clickable_point(driver: &mut Driver, element: &Element, scope: &Scope) -> Result<Option<(f64, f64)>, ActionError> {
-    let quads = match driver.main_call("DOM.getContentQuads", json!({ "objectId": element.object_id }), scope) {
+fn clickable_point(
+    driver: &mut Driver,
+    element: &Element,
+    scope: &Scope,
+) -> Result<Option<(f64, f64)>, ActionError> {
+    let quads = match driver.main_call(
+        "DOM.getContentQuads",
+        json!({ "objectId": element.object_id }),
+        scope,
+    ) {
         Ok(quads) => quads,
         Err(CallError::Protocol(_)) => return Ok(None),
         Err(error) => return Err(error.into()),
     };
     let metrics = driver.main_call("Page.getLayoutMetrics", json!({}), scope)?;
-    let width = metrics.pointer("/cssLayoutViewport/clientWidth").and_then(Value::as_f64).unwrap_or(f64::MAX);
-    let height = metrics.pointer("/cssLayoutViewport/clientHeight").and_then(Value::as_f64).unwrap_or(f64::MAX);
-    for quad in quads.get("quads").and_then(Value::as_array).into_iter().flatten() {
-        let points: Vec<f64> = quad.as_array().into_iter().flatten().filter_map(Value::as_f64).collect();
+    let width = metrics
+        .pointer("/cssLayoutViewport/clientWidth")
+        .and_then(Value::as_f64)
+        .unwrap_or(f64::MAX);
+    let height = metrics
+        .pointer("/cssLayoutViewport/clientHeight")
+        .and_then(Value::as_f64)
+        .unwrap_or(f64::MAX);
+    for quad in quads
+        .get("quads")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let points: Vec<f64> = quad
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_f64)
+            .collect();
         if points.len() != 8 {
             continue;
         }
-        let clipped: Vec<(f64, f64)> = (0..4).map(|index| (points[index * 2].clamp(0.0, width), points[index * 2 + 1].clamp(0.0, height))).collect();
+        let clipped: Vec<(f64, f64)> = (0..4)
+            .map(|index| {
+                (
+                    points[index * 2].clamp(0.0, width),
+                    points[index * 2 + 1].clamp(0.0, height),
+                )
+            })
+            .collect();
         let mut area = 0.0;
         for index in 0..4 {
             let (x1, y1) = clipped[index];
@@ -295,14 +432,22 @@ fn clickable_point(driver: &mut Driver, element: &Element, scope: &Scope) -> Res
     Ok(None)
 }
 
-fn wait_for_scheduled_navigations(driver: &mut Driver, requests: u64, commits: u64, log: &mut CallLog, scope: &Scope) -> Result<(), ActionError> {
+fn wait_for_scheduled_navigations(
+    driver: &mut Driver,
+    requests: u64,
+    commits: u64,
+    log: &mut CallLog,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     log.log("    - waiting for scheduled navigations to finish");
     // `inputActionEpilogue`: one main-session round trip flushes the
     // renderer's navigation requests caused by the input.
     let _ = driver.main_call("Page.enable", json!({}), scope);
     if driver.world.navigation_requests > requests {
         driver.world.navigation_failure = None;
-        driver.wait_until(scope, |world| world.commits > commits || world.navigation_failure.is_some() || world.page_closed)?;
+        driver.wait_until(scope, |world| {
+            world.commits > commits || world.navigation_failure.is_some() || world.page_closed
+        })?;
     }
     log.log("    - navigations have finished");
     Ok(())
@@ -333,18 +478,30 @@ fn modifier_mask(pressed: &[String]) -> u64 {
 
 fn smart_modifier(key: &str) -> String {
     if key == "ControlOrMeta" {
-        return if cfg!(target_os = "macos") { "Meta" } else { "Control" }.to_owned();
+        return if cfg!(target_os = "macos") {
+            "Meta"
+        } else {
+            "Control"
+        }
+        .to_owned();
     }
     key.to_owned()
 }
 
 fn describe_key(key: &str, pressed: &[String]) -> Result<Value, String> {
     let key = smart_modifier(key);
-    let Some(mut description) = layout().pointer("/layout").and_then(|layout| layout.get(&key)).cloned() else {
+    let Some(mut description) = layout()
+        .pointer("/layout")
+        .and_then(|layout| layout.get(&key))
+        .cloned()
+    else {
         return Err(format!("Unknown key: \"{key}\""));
     };
     if pressed.iter().any(|modifier| modifier == "Shift")
-        && let Some(shifted) = description.get("shifted").filter(|value| !value.is_null()).cloned()
+        && let Some(shifted) = description
+            .get("shifted")
+            .filter(|value| !value.is_null())
+            .cloned()
     {
         description = shifted;
     }
@@ -359,12 +516,23 @@ fn mac_commands(code: &str, pressed: &[String]) -> Vec<Value> {
     if !cfg!(target_os = "macos") {
         return Vec::new();
     }
-    let mut parts: Vec<String> = ["Shift", "Control", "Alt", "Meta"].iter().filter(|item| pressed.iter().any(|p| p == *item)).map(|item| (*item).to_owned()).collect();
+    let mut parts: Vec<String> = ["Shift", "Control", "Alt", "Meta"]
+        .iter()
+        .filter(|item| pressed.iter().any(|p| p == *item))
+        .map(|item| (*item).to_owned())
+        .collect();
     parts.push(code.to_owned());
     let shortcut = parts.join("+");
-    let commands = match layout().pointer("/mac_commands").and_then(|table| table.get(&shortcut)) {
+    let commands = match layout()
+        .pointer("/mac_commands")
+        .and_then(|table| table.get(&shortcut))
+    {
         Some(Value::String(command)) => vec![command.clone()],
-        Some(Value::Array(commands)) => commands.iter().filter_map(Value::as_str).map(str::to_owned).collect(),
+        Some(Value::Array(commands)) => commands
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_owned)
+            .collect(),
         _ => Vec::new(),
     };
     commands
@@ -388,15 +556,35 @@ fn split_key(key: &str) -> Vec<String> {
     keys
 }
 
-fn key_down(driver: &mut Driver, key: &str, pressed: &mut Vec<String>, scope: &Scope) -> Result<(), ActionError> {
+fn key_down(
+    driver: &mut Driver,
+    key: &str,
+    pressed: &mut Vec<String>,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     let description = describe_key(key, pressed).map_err(ActionError::Message)?;
-    let name = description.get("key").and_then(Value::as_str).unwrap_or_default().to_owned();
+    let name = description
+        .get("key")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
     if MODIFIERS.contains(&name.as_str()) && !pressed.contains(&name) {
         pressed.push(name.clone());
     }
-    let code = description.get("code").and_then(Value::as_str).unwrap_or_default().to_owned();
-    let text = description.get("text").and_then(Value::as_str).unwrap_or_default().to_owned();
-    let location = description.get("location").and_then(Value::as_u64).unwrap_or_default();
+    let code = description
+        .get("code")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let text = description
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let location = description
+        .get("location")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
     driver.main_call(
         "Input.dispatchKeyEvent",
         json!({
@@ -417,9 +605,18 @@ fn key_down(driver: &mut Driver, key: &str, pressed: &mut Vec<String>, scope: &S
     Ok(())
 }
 
-fn key_up(driver: &mut Driver, key: &str, pressed: &mut Vec<String>, scope: &Scope) -> Result<(), ActionError> {
+fn key_up(
+    driver: &mut Driver,
+    key: &str,
+    pressed: &mut Vec<String>,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     let description = describe_key(key, pressed).map_err(ActionError::Message)?;
-    let name = description.get("key").and_then(Value::as_str).unwrap_or_default().to_owned();
+    let name = description
+        .get("key")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
     pressed.retain(|modifier| *modifier != name);
     driver.main_call(
         "Input.dispatchKeyEvent",
@@ -439,7 +636,10 @@ fn key_up(driver: &mut Driver, key: &str, pressed: &mut Vec<String>, scope: &Sco
 /// `keyboard.press`.
 fn press_key(driver: &mut Driver, key: &str, scope: &Scope) -> Result<(), ActionError> {
     let tokens = split_key(key);
-    let (last, modifiers) = tokens.split_last().map(|(last, rest)| (last.clone(), rest.to_vec())).unwrap_or_default();
+    let (last, modifiers) = tokens
+        .split_last()
+        .map(|(last, rest)| (last.clone(), rest.to_vec()))
+        .unwrap_or_default();
     let mut pressed: Vec<String> = Vec::new();
     for modifier in &modifiers {
         key_down(driver, modifier, &mut pressed, scope)?;
@@ -454,7 +654,12 @@ fn press_key(driver: &mut Driver, key: &str, scope: &Scope) -> Result<(), Action
 
 // ---- Actions -------------------------------------------------------------
 
-fn goto(driver: &mut Driver, url: &str, wait_until: &str, scope: &Scope) -> Result<(), ActionError> {
+fn goto(
+    driver: &mut Driver,
+    url: &str,
+    wait_until: &str,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     let log_line = format!("  - navigating to \"{url}\", waiting until \"{wait_until}\"");
     let fail = |message: &str| {
         let mut log = CallLog::new("page.goto");
@@ -464,11 +669,23 @@ fn goto(driver: &mut Driver, url: &str, wait_until: &str, scope: &Scope) -> Resu
     let frame = driver.world.main_frame.clone().unwrap_or_default();
     driver.world.navigation_failure = None;
     let commits = driver.world.commits;
-    let response = driver.main_call("Page.navigate", json!({ "url": url, "frameId": frame, "referrerPolicy": "unsafeUrl" }), scope)?;
-    if let Some(error) = response.get("errorText").and_then(Value::as_str).filter(|text| !text.is_empty()) {
+    let response = driver.main_call(
+        "Page.navigate",
+        json!({ "url": url, "frameId": frame, "referrerPolicy": "unsafeUrl" }),
+        scope,
+    )?;
+    if let Some(error) = response
+        .get("errorText")
+        .and_then(Value::as_str)
+        .filter(|text| !text.is_empty())
+    {
         return Err(fail(&format!("{error} at {url}")));
     }
-    let Some(loader) = response.get("loaderId").and_then(Value::as_str).map(str::to_owned) else {
+    let Some(loader) = response
+        .get("loaderId")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+    else {
         // Same-document navigation commits immediately.
         return Ok(());
     };
@@ -488,7 +705,13 @@ fn goto(driver: &mut Driver, url: &str, wait_until: &str, scope: &Scope) -> Resu
         let committed = world.commits > commits && world.loader.as_deref() == Some(loader.as_str());
         match event {
             None => committed,
-            Some(name) => committed && world.lifecycle.get(&loader).is_some_and(|events| events.contains(name)),
+            Some(name) => {
+                committed
+                    && world
+                        .lifecycle
+                        .get(&loader)
+                        .is_some_and(|events| events.contains(name))
+            }
         }
     })?;
     if let Some(text) = failure {
@@ -498,10 +721,22 @@ fn goto(driver: &mut Driver, url: &str, wait_until: &str, scope: &Scope) -> Resu
 }
 
 /// Execute one admitted declarative action.
-pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, scope: &Scope) -> Result<(), ActionError> {
+pub(crate) fn perform(
+    driver: &mut Driver,
+    action: &Action,
+    secrets: &Secrets,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     match &action.kind {
-        ActionKind::Goto { destination, wait_until } => goto(driver, &secrets.url(destination), wait_until, scope),
-        ActionKind::Click { locator, button, click_count } => {
+        ActionKind::Goto {
+            destination,
+            wait_until,
+        } => goto(driver, &secrets.url(destination), wait_until, scope),
+        ActionKind::Click {
+            locator,
+            button,
+            click_count,
+        } => {
             let mut log = CallLog::new("locator.click");
             click_element(driver, locator, button, *click_count, &mut log, scope)
         }
@@ -509,23 +744,43 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
             let value = secrets.value(value);
             let mut log = CallLog::new("locator.fill");
             let mut element = wait_for_element(driver, locator, &mut log, scope)?;
-            log.log(format!("    - fill({})", serde_json::to_string(&value).unwrap_or_default()));
+            log.log(format!(
+                "    - fill({})",
+                serde_json::to_string(&value).unwrap_or_default()
+            ));
             log.log("  - attempting fill action");
             let mut attempt = 0usize;
             loop {
                 if attempt > 0 {
-                    driver.sleep(Duration::from_millis(RETRY_WAITS[attempt.min(RETRY_WAITS.len() - 1)]), scope)?;
+                    driver.sleep(
+                        Duration::from_millis(RETRY_WAITS[attempt.min(RETRY_WAITS.len() - 1)]),
+                        scope,
+                    )?;
                     if let Resolution::One(next) = resolve(driver, locator, &log, scope)? {
                         element = next;
                     }
                 }
                 attempt += 1;
                 log.log("    - waiting for element to be visible, enabled and editable");
-                if states(driver, &element, &["visible", "enabled", "editable"], &log, scope)?.is_some() {
+                if states(
+                    driver,
+                    &element,
+                    &["visible", "enabled", "editable"],
+                    &log,
+                    scope,
+                )?
+                .is_some()
+                {
                     continue;
                 }
                 let filled = driver
-                    .call_on(&element.object_id, "function(value) { return __reaScenario.fill(this, value); }", vec![json!(value)], false, scope)
+                    .call_on(
+                        &element.object_id,
+                        "function(value) { return __reaScenario.fill(this, value); }",
+                        vec![json!(value)],
+                        false,
+                        scope,
+                    )
                     .map_err(|error| match error {
                         CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
                         other => other.into(),
@@ -536,7 +791,11 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
                         if value.is_empty() {
                             press_key(driver, "Delete", scope)?;
                         } else {
-                            driver.main_call("Input.insertText", json!({ "text": value }), scope)?;
+                            driver.main_call(
+                                "Input.insertText",
+                                json!({ "text": value }),
+                                scope,
+                            )?;
                         }
                     }
                     _ => {}
@@ -548,14 +807,25 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
         ActionKind::Press { locator, key } => {
             let mut log = CallLog::new("locator.press");
             let element = wait_for_element(driver, locator, &mut log, scope)?;
-            log.log(format!("  - elementHandle.press({})", serde_json::to_string(key).unwrap_or_default()));
-            driver.call_on(&element.object_id, "function() { return __reaScenario.focus(this); }", Vec::new(), false, scope)?;
+            log.log(format!(
+                "  - elementHandle.press({})",
+                serde_json::to_string(key).unwrap_or_default()
+            ));
+            driver.call_on(
+                &element.object_id,
+                "function() { return __reaScenario.focus(this); }",
+                Vec::new(),
+                false,
+                scope,
+            )?;
             let requests = driver.world.navigation_requests;
             let commits = driver.world.commits;
-            if let Err(ActionError::Message(message)) = press_key(driver, key, scope).map_err(|error| match error {
-                ActionError::Message(message) => ActionError::Message(message),
-                other => other,
-            }) {
+            if let Err(ActionError::Message(message)) =
+                press_key(driver, key, scope).map_err(|error| match error {
+                    ActionError::Message(message) => ActionError::Message(message),
+                    other => other,
+                })
+            {
                 return Err(log.fail(&message));
             }
             wait_for_scheduled_navigations(driver, requests, commits, &mut log, scope)?;
@@ -571,7 +841,13 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
                 log.log("    - waiting for element to be visible and enabled");
                 if states(driver, &element, &["visible", "enabled"], &log, scope)?.is_none() {
                     let selected = driver
-                        .call_on(&element.object_id, "function(value) { return __reaScenario.select(this, value); }", vec![json!(value)], false, scope)
+                        .call_on(
+                            &element.object_id,
+                            "function(value) { return __reaScenario.select(this, value); }",
+                            vec![json!(value)],
+                            false,
+                            scope,
+                        )
                         .map_err(|error| match error {
                             CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
                             other => other.into(),
@@ -591,17 +867,39 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
             }
         }
         ActionKind::Check { locator, checked } => {
-            let method = if *checked { "locator.check" } else { "locator.uncheck" };
+            let method = if *checked {
+                "locator.check"
+            } else {
+                "locator.uncheck"
+            };
             let mut log = CallLog::new(method);
             let element = wait_for_element(driver, locator, &mut log, scope)?;
-            let state = |driver: &mut Driver, element: &Element, log: &CallLog| -> Result<(bool, bool), ActionError> {
+            let state = |driver: &mut Driver,
+                         element: &Element,
+                         log: &CallLog|
+             -> Result<(bool, bool), ActionError> {
                 let result = driver
-                    .call_on(&element.object_id, "function() { return __reaScenario.checked(this); }", Vec::new(), false, scope)
+                    .call_on(
+                        &element.object_id,
+                        "function() { return __reaScenario.checked(this); }",
+                        Vec::new(),
+                        false,
+                        scope,
+                    )
                     .map_err(|error| match error {
                         CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
                         other => other.into(),
                     })?;
-                Ok((result.get("checked").and_then(Value::as_bool).unwrap_or(false), result.get("radio").and_then(Value::as_bool).unwrap_or(false)))
+                Ok((
+                    result
+                        .get("checked")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
+                    result
+                        .get("radio")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
+                ))
             };
             let (current, radio) = state(driver, &element, &log)?;
             if current == *checked {
@@ -612,13 +910,19 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
             }
             // The click resolves the element again, logging as Playwright does.
             let mut click_log = CallLog::new(method);
-            click_element(driver, locator, "left", 1, &mut click_log, scope).map_err(|error| match error {
-                ActionError::Message(message) => ActionError::Message(message.replacen("locator.click", method, 1)),
-                other => other,
+            click_element(driver, locator, "left", 1, &mut click_log, scope).map_err(|error| {
+                match error {
+                    ActionError::Message(message) => {
+                        ActionError::Message(message.replacen("locator.click", method, 1))
+                    }
+                    other => other,
+                }
             })?;
             let element = match resolve(driver, locator, &click_log, scope)? {
                 Resolution::One(element) => element,
-                Resolution::None => return Err(click_log.fail("Element is not attached to the DOM")),
+                Resolution::None => {
+                    return Err(click_log.fail("Element is not attached to the DOM"));
+                }
             };
             let (after, _) = state(driver, &element, &click_log)?;
             if after != *checked {
@@ -629,21 +933,39 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
         }
         ActionKind::WaitFor { locator, state } => {
             let mut log = CallLog::new("locator.waitFor");
-            log.log(format!("  - waiting for {} to be {state}", describe(locator)));
+            log.log(format!(
+                "  - waiting for {} to be {state}",
+                describe(locator)
+            ));
             loop {
                 let summary = driver
-                    .evaluate_utility(&format!("__reaScenario.count({})", locator_value(locator)), true, false, scope)
+                    .evaluate_utility(
+                        &format!("__reaScenario.count({})", locator_value(locator)),
+                        true,
+                        false,
+                        scope,
+                    )
                     .map_err(|error| match error {
                         CallError::Protocol(message) => log.fail(&format!("Error: {message}")),
                         other => other.into(),
                     })?;
                 let summary = summary.get("value").cloned().unwrap_or(Value::Null);
-                let count = summary.get("count").and_then(Value::as_u64).unwrap_or_default();
+                let count = summary
+                    .get("count")
+                    .and_then(Value::as_u64)
+                    .unwrap_or_default();
                 if count > 1 {
-                    let previews = summary.get("previews").and_then(Value::as_array).cloned().unwrap_or_default();
+                    let previews = summary
+                        .get("previews")
+                        .and_then(Value::as_array)
+                        .cloned()
+                        .unwrap_or_default();
                     return Err(log.fail(&strict_violation(locator, count, &previews)));
                 }
-                let visible = summary.get("visible").and_then(Value::as_bool).unwrap_or(false);
+                let visible = summary
+                    .get("visible")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
                 let done = match state.as_str() {
                     "attached" => count == 1,
                     "detached" => count == 0,
@@ -664,6 +986,10 @@ pub(crate) fn perform(driver: &mut Driver, action: &Action, secrets: &Secrets, s
 }
 
 /// `page.goto(start_url, { waitUntil: "load" })` for the initial navigation.
-pub(crate) fn navigate_start(driver: &mut Driver, url: &str, scope: &Scope) -> Result<(), ActionError> {
+pub(crate) fn navigate_start(
+    driver: &mut Driver,
+    url: &str,
+    scope: &Scope,
+) -> Result<(), ActionError> {
     goto(driver, url, "load", scope)
 }

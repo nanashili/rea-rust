@@ -8,6 +8,7 @@
 
 use rea_application::android;
 use rea_application::android::package as android_package_application;
+use rea_application::javascript::graph::json;
 use rea_core::{
     evidence::record::EvidenceRecord,
     failure::{Detail, Failure},
@@ -167,7 +168,12 @@ fn package_projection<T: serde::Serialize>(artifact: Value, projection: T) -> Va
 
 /// Project authenticated inventory Evidence without decoding or executing it.
 fn project_graph(input: &Value) -> Result<Value, Failure> {
-    android::application_graph::project_evidence(input)
+    let graph_input = json::parse(
+        &serde_json::to_string(input)
+            .map_err(|error| invalid(android::application_graph::OPERATION, error.to_string()))?,
+    )
+    .map_err(|error| invalid(android::application_graph::OPERATION, error.to_string()))?;
+    android::application_graph::project_evidence(&graph_input)
         .map(|raw| serde_json::from_str(raw.get()).expect("Evidence is valid JSON"))
         .map_err(|error| invalid(android::application_graph::OPERATION, error.to_string()))
 }

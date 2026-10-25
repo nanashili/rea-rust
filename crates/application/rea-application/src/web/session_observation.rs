@@ -232,7 +232,11 @@ fn valid_loopback_authority(authority: &str) -> bool {
             Some(end) => end,
             None => return false,
         };
-        (&rest[..end], &rest[end + 1..])
+        let port = match rest[end + 1..].strip_prefix(':') {
+            Some(port) => port,
+            None => return false,
+        };
+        (&rest[..end], port)
     } else {
         match authority.rsplit_once(':') {
             Some(parts) => parts,
@@ -240,9 +244,8 @@ fn valid_loopback_authority(authority: &str) -> bool {
         }
     };
     let loopback = host == "127.0.0.1" || host == "::1";
-    let explicit_port = port.strip_prefix(':').is_some_and(|port| {
-        !port.is_empty() && port.chars().all(|character| character.is_ascii_digit())
-    });
+    let explicit_port =
+        !port.is_empty() && port.chars().all(|character| character.is_ascii_digit());
     loopback && explicit_port
 }
 
@@ -640,6 +643,14 @@ mod tests {
     fn accepts_bounded_session_window() {
         validate_input(&input()).expect("valid web session input");
         assert!(retain_result(&input(), serde_json::json!({"timeline": []})).is_ok());
+    }
+
+    #[test]
+    fn accepts_loopback_ipv6_session_endpoint() {
+        let mut request = input();
+        request["cdp_endpoint"] = serde_json::json!("http://[::1]:9222");
+
+        validate_input(&request).expect("valid IPv6 loopback web session input");
     }
 
     #[test]

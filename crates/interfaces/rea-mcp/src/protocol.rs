@@ -7,13 +7,13 @@
 use super::catalog::catalog;
 use super::delivery::Delivery;
 use super::prompts::{self, CompletionProvider};
-use super::registry::{Progress, Registry, ToolContext, ToolOutput};
+use super::registry::{InputValidation, Progress, Registry, ToolContext, ToolOutput};
 use super::schema;
 use super::session::Session;
 use rea_core::analysis_error::AnalysisError;
 use rea_core::cancellation::Cancellation;
-use serde_json::{Map, Value, json};
-use std::collections::HashMap;
+use serde_json::{Map, Value, json, value::RawValue};
+use std::collections::{BTreeMap, HashMap};
 use std::io::{BufRead, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -29,7 +29,7 @@ pub const SUPPORTED_PROTOCOL_VERSIONS: [&str; 5] = [
 ];
 
 /// Outbound message sink (one complete JSON-RPC message per call).
-pub type Sink = Arc<dyn Fn(&Value) + Send + Sync>;
+pub type Sink = Arc<dyn Fn(&RawValue) + Send + Sync>;
 
 /// Runtime presentation profile selected from the environment.
 #[derive(Clone, Copy, Debug)]
@@ -42,6 +42,17 @@ pub struct Profile {
 struct Inflight {
     cancellation: Cancellation,
     suppressed: Arc<AtomicBool>,
+}
+
+enum ToolArguments {
+    Decoded(Value),
+    Raw(Box<RawValue>),
+}
+
+struct RawCallParams {
+    name: Option<String>,
+    arguments: Option<Box<RawValue>>,
+    meta: Option<Value>,
 }
 
 /// One connected MCP server instance.
@@ -66,6 +77,51 @@ fn error_response(id: &Value, code: i64, message: impl Into<String>) -> Value {
 
 fn result_response(id: &Value, result: Value) -> Value {
     json!({ "result": result, "jsonrpc": "2.0", "id": id })
+}
+
+fn raw_result_response(id: &Value, result: &RawValue) -> Box<RawValue> {
+    let id = serde_json::to_string(id).unwrap_or_else(|_| "null".into());
+    RawValue::from_string(format!(
+        "{{\"result\":{},\"jsonrpc\":\"2.0\",\"id\":{id}}}",
+        result.get()
+    ))
+    .expect("JSON-RPC response assembled from validated raw JSON")
+}
+
+enum WireResult {
+    Value(Value),
+    Raw(Box<RawValue>),
+}
+
+fn raw_evidence_result(
+    evidence: &rea_core::evidence::record::EvidenceRecord,
+    contract: &super::catalog::ToolContract,
+    recorded: Result<(), AnalysisError>,
+) -> Box<RawValue> {
+    if let Err(error) = recorded {
+        let value = Delivery::new(None).error(&error, contract.returns_target_content);
+        return RawValue::from_string(
+            serde_json::to_string(&value).expect("delivery error is valid JSON"),
+        )
+        .expect("delivery error JSON is valid");
+    }
+
+    // The typed delivery path uses the serialized Evidence as its text
+    // content. Serialize the raw record itself here as well; keeping this
+    // text projection raw is what preserves unpaired JavaScript UTF-16 units
+    // through the MCP transport.
+    let content =
+        serde_json::to_string(evidence.raw().get()).expect("Evidence JSON text is valid JSON");
+    let target_meta = if contract.returns_target_content {
+        ",\"_meta\":{\"provenance\":{\"untrusted_content\":true,\"source\":\"analysis_target\"}}"
+    } else {
+        ""
+    };
+    RawValue::from_string(format!(
+        "{{\"content\":[{{\"type\":\"text\",\"text\":{content}}}],\"structuredContent\":{}{target_meta}}}",
+        evidence.raw().get()
+    ))
+    .expect("raw Evidence delivery is valid JSON")
 }
 
 impl Server {
@@ -94,6 +150,31 @@ impl Server {
     }
 
     fn send(&self, message: &Value) {
+        match serde_json::value::to_raw_value(message) {
+            Ok(raw) => self.send_raw(&raw),
+            Err(error) => {
+                eprintln!("REA MCP response encoding failed: {error}");
+            }
+        }
+    }
+
+    fn send_tool_result(&self, id: &Value, result: Value) {
+        let response = result_response(id, result);
+        match serde_json::value::to_raw_value(&response) {
+            Ok(raw) => {
+                self.send_raw(&raw);
+            }
+            Err(_error) => {
+                let fallback =
+                    error_response(id, -32603, "Tool result could not be encoded as JSON");
+                let raw = serde_json::value::to_raw_value(&fallback)
+                    .expect("static MCP encoding failure response is valid JSON");
+                self.send_raw(&raw);
+            }
+        }
+    }
+
+    fn send_raw(&self, message: &RawValue) {
         (self.sink)(message);
     }
 
@@ -110,6 +191,51 @@ impl Server {
             (Some(method), None) => self.notification(method, object.get("params")),
             _ => {}
         }
+    }
+
+    /// Dispatch a request whose arguments must remain raw JSON.
+    ///
+    /// Returning `false` leaves the message to the ordinary decoded request
+    /// path. This keeps protocol behavior unchanged for every operation that
+    /// has no exact-input capability.
+    fn handle_raw_if_supported(self: &Arc<Self>, text: &str) -> bool {
+        let Ok(mut request) = serde_json::from_str::<BTreeMap<String, Box<RawValue>>>(text) else {
+            return false;
+        };
+        let method = request
+            .remove("method")
+            .and_then(|raw| serde_json::from_str::<String>(raw.get()).ok());
+        if method.as_deref() != Some("tools/call") {
+            return false;
+        }
+        let Some(id) = request
+            .remove("id")
+            .and_then(|raw| serde_json::from_str::<Value>(raw.get()).ok())
+        else {
+            return false;
+        };
+        let Some(params) = request.remove("params") else {
+            return false;
+        };
+        let Ok(mut params) = serde_json::from_str::<BTreeMap<String, Box<RawValue>>>(params.get())
+        else {
+            return false;
+        };
+        let name = params
+            .remove("name")
+            .and_then(|raw| serde_json::from_str::<String>(raw.get()).ok());
+        let arguments = params.remove("arguments");
+        let meta = params
+            .remove("_meta")
+            .and_then(|raw| serde_json::from_str::<Value>(raw.get()).ok());
+        self.call_tool_raw(
+            id,
+            RawCallParams {
+                name,
+                arguments,
+                meta,
+            },
+        )
     }
 
     fn notification(&self, method: &str, params: Option<&Value>) {
@@ -209,6 +335,58 @@ impl Server {
 
     fn call_tool(self: &Arc<Self>, id: Value, params: Value) {
         let name = params["name"].as_str().unwrap_or_default().to_owned();
+        if catalog().tool(&name).is_none() {
+            self.send(&error_response(
+                &id,
+                -32602,
+                format!("Tool {name} not found"),
+            ));
+            return;
+        }
+        let arguments = params
+            .get("arguments")
+            .cloned()
+            .unwrap_or_else(|| Value::Object(Map::new()));
+        self.spawn_tool(
+            id,
+            name,
+            ToolArguments::Decoded(arguments),
+            params.get("_meta"),
+        );
+    }
+
+    fn call_tool_raw(self: &Arc<Self>, id: Value, params: RawCallParams) -> bool {
+        let name = params.name.unwrap_or_default();
+        let Some(contract) = catalog().tool(&name) else {
+            self.send(&error_response(
+                &id,
+                -32602,
+                format!("Tool {name} not found"),
+            ));
+            return true;
+        };
+        if self.registry.get_raw(&name).is_none() {
+            return false;
+        }
+        let arguments = params.arguments.unwrap_or_else(|| {
+            RawValue::from_string("{}".to_owned()).expect("empty object is valid JSON")
+        });
+        self.spawn_tool(
+            id,
+            contract.name.clone(),
+            ToolArguments::Raw(arguments),
+            params.meta.as_ref(),
+        );
+        true
+    }
+
+    fn spawn_tool(
+        self: &Arc<Self>,
+        id: Value,
+        name: String,
+        arguments: ToolArguments,
+        meta: Option<&Value>,
+    ) {
         let Some(contract) = catalog().tool(&name) else {
             self.send(&error_response(
                 &id,
@@ -229,11 +407,7 @@ impl Server {
                     suppressed: Arc::clone(&suppressed),
                 },
             );
-        let progress = match params
-            .get("_meta")
-            .and_then(|meta| meta.get("progressToken"))
-            .cloned()
-        {
+        let progress = match meta.and_then(|meta| meta.get("progressToken")).cloned() {
             Some(token) => {
                 let sink = Arc::clone(&self.sink);
                 let last = Arc::new(Mutex::new(None::<Instant>));
@@ -243,32 +417,57 @@ impl Server {
                         return;
                     }
                     *last = Some(Instant::now());
-                    sink(&json!({
+                    let notification = json!({
                         "jsonrpc": "2.0",
                         "method": "notifications/progress",
                         "params": { "progressToken": token, "progress": sequence, "message": message }
-                    }));
+                    });
+                    if let Ok(raw) = serde_json::value::to_raw_value(&notification) {
+                        sink(&raw);
+                    }
                 }))
             }
             None => Progress::silent(),
         };
         let server = Arc::clone(self);
-        let arguments = params
-            .get("arguments")
-            .cloned()
-            .unwrap_or_else(|| Value::Object(Map::new()));
         let worker = std::thread::Builder::new()
             .name(format!("rea-tool-{name}"))
             .spawn(move || {
                 let contract = catalog().tool(&name).expect("contract exists");
-                let result = server.execute(contract, arguments, cancellation, progress);
+                let result =
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match arguments {
+                        ToolArguments::Decoded(arguments) => {
+                            server.execute_raw(contract, arguments, cancellation, progress)
+                        }
+                        ToolArguments::Raw(arguments) => {
+                            server.execute_raw_input(contract, arguments, cancellation, progress)
+                        }
+                    }))
+                    .unwrap_or_else(|panic| {
+                        let message = panic
+                            .downcast_ref::<String>()
+                            .cloned()
+                            .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
+                            .unwrap_or_else(|| "Tool delivery failed".into());
+                        WireResult::Value(
+                            server
+                                .delivery
+                                .sdk_error(message, contract.returns_target_content),
+                        )
+                    });
                 server
                     .inflight
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner())
                     .remove(&id_key(&id));
                 if !suppressed.load(Ordering::SeqCst) {
-                    server.send(&result_response(&id, result));
+                    match result {
+                        WireResult::Value(result) => server.send_tool_result(&id, result),
+                        WireResult::Raw(result) => {
+                            let response = raw_result_response(&id, &result);
+                            server.send_raw(&response);
+                        }
+                    }
                 }
             });
         match worker {
@@ -291,6 +490,44 @@ impl Server {
         }
     }
 
+    fn execute_raw_input(
+        &self,
+        contract: &'static super::catalog::ToolContract,
+        arguments: Box<RawValue>,
+        cancellation: Cancellation,
+        progress: Progress,
+    ) -> WireResult {
+        let Some(handler) = self.registry.get_raw(&contract.name) else {
+            return WireResult::Value(self.delivery.sdk_error(
+                format!("Tool {} does not accept raw input.", contract.name),
+                contract.returns_target_content,
+            ));
+        };
+        let context = ToolContext {
+            contract,
+            session: &self.session,
+            cancellation,
+            progress,
+        };
+        let output = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            handler.call_raw(&context, &arguments)
+        }));
+        match output {
+            Ok(output) => self.finish_raw(contract, output),
+            Err(panic) => {
+                let message = panic
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
+                    .unwrap_or_else(|| "Tool handler failed".into());
+                WireResult::Value(
+                    self.delivery
+                        .sdk_error(message, contract.returns_target_content),
+                )
+            }
+        }
+    }
+
     /// Validate, dispatch and deliver one tool call.
     pub fn execute(
         &self,
@@ -299,15 +536,38 @@ impl Server {
         cancellation: Cancellation,
         progress: Progress,
     ) -> Value {
+        match self.execute_raw(contract, arguments, cancellation, progress) {
+            WireResult::Value(value) => value,
+            WireResult::Raw(raw) => serde_json::from_str(raw.get())
+                .expect("raw tool result remains valid JSON for the in-process API"),
+        }
+    }
+
+    fn execute_raw(
+        &self,
+        contract: &'static super::catalog::ToolContract,
+        arguments: Value,
+        cancellation: Cancellation,
+        progress: Progress,
+    ) -> WireResult {
         let target_content = contract.returns_target_content;
-        let input = match schema::validate(contract.input_schema(), &arguments) {
-            Ok(input) => input,
-            Err(issues) => {
-                return self.delivery.sdk_error(
-                    schema::validation_error_text(&contract.name, &issues),
-                    target_content,
-                );
+        let input = match self.registry.validation(&contract.name) {
+            InputValidation::Sdk => {
+                match schema::validate_named_contract(
+                    &contract.name,
+                    contract.input_schema(),
+                    &arguments,
+                ) {
+                    Ok(input) => input,
+                    Err(issues) => {
+                        return WireResult::Value(self.delivery.sdk_error(
+                            schema::validation_error_text(&contract.name, &issues),
+                            target_content,
+                        ));
+                    }
+                }
             }
+            InputValidation::Application => arguments,
         };
         let Some(handler) = self.registry.get(&contract.name) else {
             let error = AnalysisError::capability_unavailable(
@@ -315,7 +575,7 @@ impl Server {
                 contract.name.clone(),
                 "This operation is not available in the native runtime build.",
             );
-            return self.finish(contract, ToolOutput::Failure(error));
+            return WireResult::Value(self.finish(contract, ToolOutput::Failure(error)));
         };
         let context = ToolContext {
             contract,
@@ -327,19 +587,31 @@ impl Server {
             handler.call(&context, input)
         }));
         match output {
-            Ok(output) => self.finish(contract, output),
+            Ok(output) => self.finish_raw(contract, output),
             Err(panic) => {
                 let message = panic
                     .downcast_ref::<String>()
                     .cloned()
                     .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
                     .unwrap_or_else(|| "Tool handler failed".into());
-                self.delivery.sdk_error(message, target_content)
+                WireResult::Value(self.delivery.sdk_error(message, target_content))
             }
         }
     }
 
     fn finish(&self, contract: &super::catalog::ToolContract, output: ToolOutput) -> Value {
+        match self.finish_raw(contract, output) {
+            WireResult::Value(value) => value,
+            WireResult::Raw(raw) => serde_json::from_str(raw.get())
+                .expect("raw tool result remains valid JSON for the in-process API"),
+        }
+    }
+
+    fn finish_raw(
+        &self,
+        contract: &super::catalog::ToolContract,
+        output: ToolOutput,
+    ) -> WireResult {
         let target_content = contract.returns_target_content;
         let result = match output {
             ToolOutput::Evidence(evidence) => {
@@ -348,6 +620,21 @@ impl Server {
             }
             ToolOutput::Value(value) => self.delivery.value(value, contract),
             ToolOutput::Raw(value) => value,
+            ToolOutput::RawJson(value) => return WireResult::Raw(value),
+            ToolOutput::RawEvidence(evidence) => {
+                let recorded = self.session.record_raw(evidence.raw());
+                return WireResult::Raw(raw_evidence_result(&evidence, contract, recorded));
+            }
+            ToolOutput::RawFailure { evidence, error } => {
+                let recorded = self.session.record_raw(evidence.raw());
+                let result = self.delivery.partial_error(
+                    &error,
+                    evidence.evidence_id(),
+                    recorded,
+                    target_content,
+                );
+                result
+            }
             ToolOutput::Failure(error) => {
                 let partial_id = error
                     .partial_observation
@@ -368,12 +655,12 @@ impl Server {
             }
         };
         let session = Arc::clone(&self.session);
-        self.delivery.finalize(
+        WireResult::Value(self.delivery.finalize(
             Some(&contract.name),
             target_content,
             result,
             &move |evidence| session.record(evidence),
-        )
+        ))
     }
 
     /// Cancel every in-flight call, wait for workers, then close the session.
@@ -415,10 +702,8 @@ pub fn serve_stdio(server_factory: impl FnOnce(Sink) -> Arc<Server>) -> i32 {
     let stdout = Arc::new(Mutex::new(std::io::stdout()));
     let sink: Sink = {
         let stdout = Arc::clone(&stdout);
-        Arc::new(move |message: &Value| {
-            let Ok(mut text) = serde_json::to_vec(message) else {
-                return;
-            };
+        Arc::new(move |message: &RawValue| {
+            let mut text = message.get().as_bytes().to_vec();
             text.push(b'\n');
             let mut stdout = stdout
                 .lock()
@@ -443,9 +728,17 @@ pub fn serve_stdio(server_factory: impl FnOnce(Sink) -> Arc<Server>) -> i32 {
         if text.is_empty() {
             continue;
         }
+        if server.handle_raw_if_supported(text) {
+            continue;
+        }
         match serde_json::from_str::<Value>(text) {
             Ok(message) => server.handle(message),
-            Err(_) => sink(&error_response(&Value::Null, -32700, "Parse error")),
+            Err(_) => {
+                let error = error_response(&Value::Null, -32700, "Parse error");
+                if let Ok(raw) = serde_json::value::to_raw_value(&error) {
+                    sink(&raw);
+                }
+            }
         }
     }
     server.shutdown(Duration::from_secs(10));

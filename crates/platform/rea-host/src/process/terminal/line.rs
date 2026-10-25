@@ -8,8 +8,8 @@
 use std::collections::BTreeMap;
 
 use super::attr::{
-    Attr, BG_HAS_EXTENDED, BG_PROTECTED, CODEPOINT_MASK, Cell, ExtendedAttrs,
-    HAS_CONTENT_MASK, IS_COMBINED_MASK, WIDTH_MASK, WIDTH_SHIFT, char_string,
+    Attr, BG_HAS_EXTENDED, BG_PROTECTED, CODEPOINT_MASK, Cell, ExtendedAttrs, HAS_CONTENT_MASK,
+    IS_COMBINED_MASK, WIDTH_MASK, WIDTH_SHIFT, char_string,
 };
 
 const CONTENT: usize = 0;
@@ -43,9 +43,11 @@ impl BufferLine {
         self.data.len() / CELL_SIZE
     }
 
-
     fn word(&self, index: usize, slot: usize) -> u32 {
-        self.data.get(index * CELL_SIZE + slot).copied().unwrap_or(0)
+        self.data
+            .get(index * CELL_SIZE + slot)
+            .copied()
+            .unwrap_or(0)
     }
 
     fn put(&mut self, index: usize, slot: usize, value: u32) {
@@ -286,7 +288,6 @@ impl BufferLine {
         0
     }
 
-
     /// xterm `copyCellsFrom` with a distinct source line.
     pub fn copy_cells_from(
         &mut self,
@@ -306,7 +307,10 @@ impl BufferLine {
                 self.put(dest_col + cell, slot, src.word(src_col + cell, slot));
             }
             if src.word(src_col + cell, BG) & BG_HAS_EXTENDED != 0 {
-                self.copy_extended(dest_col + cell, src.extended.get(&(src_col + cell)).copied());
+                self.copy_extended(
+                    dest_col + cell,
+                    src.extended.get(&(src_col + cell)).copied(),
+                );
             }
         }
         for (key, text) in &src.combined {
@@ -318,7 +322,13 @@ impl BufferLine {
 
     /// xterm `copyCellsFrom` where source and destination are this line.
     /// Reads observe earlier writes, exactly like the aliased JS call.
-    pub fn copy_cells_within(&mut self, src_col: usize, dest_col: usize, length: usize, reverse: bool) {
+    pub fn copy_cells_within(
+        &mut self,
+        src_col: usize,
+        dest_col: usize,
+        length: usize,
+        reverse: bool,
+    ) {
         let order: Box<dyn Iterator<Item = usize>> = if reverse {
             Box::new((0..length).rev())
         } else {
@@ -362,7 +372,12 @@ impl BufferLine {
     }
 
     /// xterm `translateToString(trimRight, startCol, endCol)`.
-    pub fn translate_to_string(&self, trim_right: bool, start: usize, end: Option<usize>) -> String {
+    pub fn translate_to_string(
+        &self,
+        trim_right: bool,
+        start: usize,
+        end: Option<usize>,
+    ) -> String {
         let mut end = end.unwrap_or(self.len());
         if trim_right {
             end = end.min(self.trimmed_length());

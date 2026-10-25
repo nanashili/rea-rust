@@ -21,6 +21,7 @@ pub fn register(registry: &mut Registry) {
 }
 
 fn handle(context: &ToolContext<'_>, input: Value) -> ToolOutput {
+    let input = normalized_input(input);
     let application = match graph_evidence::resolve_evidence_input(context, &input["application"]) {
         Ok(application) => application,
         Err(error) => return ToolOutput::Failure(error),
@@ -30,6 +31,20 @@ fn handle(context: &ToolContext<'_>, input: Value) -> ToolOutput {
     let mut sources = vec![application];
     sources.extend(native);
     support::deliver(context.session, &sources, evidence)
+}
+
+fn normalized_input(mut input: Value) -> Value {
+    let Some(object) = input.as_object_mut() else {
+        return input;
+    };
+
+    object
+        .entry("native_observations")
+        .or_insert_with(|| Value::Array(Vec::new()));
+    object
+        .entry("direction")
+        .or_insert_with(|| Value::String("both".into()));
+    input
 }
 
 /// `validateApplicationTraceIdentities`.

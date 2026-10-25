@@ -15,7 +15,9 @@ use std::io::{self, Read};
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
-const UNAVAILABLE_CODES: [&str; 7] = ["EACCES", "EISDIR", "ELOOP", "ENOTDIR", "ENOENT", "EPERM", "ESTALE"];
+const UNAVAILABLE_CODES: [&str; 7] = [
+    "EACCES", "EISDIR", "ELOOP", "ENOTDIR", "ENOENT", "EPERM", "ESTALE",
+];
 
 /// One snapshot (`ProcessFilesystemSnapshot`).
 #[derive(Clone, Debug, Default)]
@@ -52,7 +54,11 @@ fn unavailable_code(error: &io::Error) -> Option<&'static str> {
 fn same_identity(before: &Metadata, after: &Metadata, directory: bool) -> bool {
     before.dev() == after.dev()
         && before.ino() == after.ino()
-        && if directory { after.is_dir() } else { after.file_type().is_symlink() }
+        && if directory {
+            after.is_dir()
+        } else {
+            after.file_type().is_symlink()
+        }
 }
 
 fn same_file_state(before: &Metadata, after: &Metadata) -> bool {
@@ -68,7 +74,10 @@ fn same_file_state(before: &Metadata, after: &Metadata) -> bool {
 
 enum Hash {
     Hashed(String),
-    Omitted { reason: &'static str, system_code: Option<&'static str> },
+    Omitted {
+        reason: &'static str,
+        system_code: Option<&'static str>,
+    },
 }
 
 fn changed() -> Hash {
@@ -131,7 +140,10 @@ fn hash_file(path: &Path, expected: &Metadata, max_bytes: u64) -> Result<Hash, S
     }
 }
 
-fn lstat_if_present(path: &Path, previously_observed_root: bool) -> Result<Option<Metadata>, String> {
+fn lstat_if_present(
+    path: &Path,
+    previously_observed_root: bool,
+) -> Result<Option<Metadata>, String> {
     match fs::symlink_metadata(path) {
         Ok(stats) => Ok(Some(stats)),
         Err(error) => match system_code(&error) {
@@ -143,11 +155,15 @@ fn lstat_if_present(path: &Path, previously_observed_root: bool) -> Result<Optio
 }
 
 /// A follow-up read that cannot turn observed metadata into absence.
-fn entry_observation<T>(read: io::Result<T>) -> Result<Result<T, (&'static str, Option<&'static str>)>, String> {
+fn entry_observation<T>(
+    read: io::Result<T>,
+) -> Result<Result<T, (&'static str, Option<&'static str>)>, String> {
     match read {
         Ok(value) => Ok(Ok(value)),
         Err(error) => match system_code(&error) {
-            Some(code) if UNAVAILABLE_CODES.contains(&code) || code == "EINVAL" => Ok(Err(("entry_unavailable", Some(code)))),
+            Some(code) if UNAVAILABLE_CODES.contains(&code) || code == "EINVAL" => {
+                Ok(Err(("entry_unavailable", Some(code))))
+            }
             _ => Err(error.to_string()),
         },
     }
@@ -190,14 +206,27 @@ impl Walk<'_> {
         }
     }
 
-    fn omit(&mut self, path: String, reason: &'static str, system_code: Option<&'static str>) -> bool {
+    fn omit(
+        &mut self,
+        path: String,
+        reason: &'static str,
+        system_code: Option<&'static str>,
+    ) -> bool {
         self.truncated = true;
         self.reason(reason);
-        self.enumeration_omissions.push(json!({"path": path, "reason": reason, "system_code": system_code}));
+        self.enumeration_omissions
+            .push(json!({"path": path, "reason": reason, "system_code": system_code}));
         false
     }
 
-    fn entry(&mut self, path: String, kind: &str, stats: &Metadata, sha256: Option<String>, target: Option<String>) {
+    fn entry(
+        &mut self,
+        path: String,
+        kind: &str,
+        stats: &Metadata,
+        sha256: Option<String>,
+        target: Option<String>,
+    ) {
         self.entries.push(json!({
             "path": path, "type": kind, "mode": stats.mode(), "size": stats.size(),
             "sha256": sha256, "symlink_target": target,
@@ -210,7 +239,10 @@ impl Walk<'_> {
                 self.remaining_bytes -= stats.size();
                 Some(sha256)
             }
-            Hash::Omitted { reason, system_code } => {
+            Hash::Omitted {
+                reason,
+                system_code,
+            } => {
                 self.truncated = true;
                 self.hash_omissions.push(json!({
                     "path": path, "size_bytes": stats.size(), "remaining_budget_bytes": self.remaining_bytes,
@@ -222,7 +254,14 @@ impl Walk<'_> {
         self.entry(path, "file", stats, sha256, None);
     }
 
-    fn visit(&mut self, root: &Path, alias: &str, path: &Path, depth: u64, admitted: Option<Metadata>) -> Result<bool, String> {
+    fn visit(
+        &mut self,
+        root: &Path,
+        alias: &str,
+        path: &Path,
+        depth: u64,
+        admitted: Option<Metadata>,
+    ) -> Result<bool, String> {
         let files = self.scenario.files;
         let depth_limit = self.scenario.filesystem_depth;
         if self.entries.len() as u64 >= files || depth > depth_limit {
@@ -242,7 +281,12 @@ impl Walk<'_> {
                 None => return Ok(true),
             },
         };
-        let relative = path.strip_prefix(root).ok().map(|relative| relative.to_string_lossy().into_owned()).filter(|relative| !relative.is_empty()).unwrap_or_else(|| ".".to_owned());
+        let relative = path
+            .strip_prefix(root)
+            .ok()
+            .map(|relative| relative.to_string_lossy().into_owned())
+            .filter(|relative| !relative.is_empty())
+            .unwrap_or_else(|| ".".to_owned());
         let entry_path = format!("{alias}:{relative}");
         if stats.file_type().is_symlink() {
             let target = match entry_observation(fs::read_link(path))? {
@@ -256,12 +300,25 @@ impl Walk<'_> {
             if !same_identity(&stats, &after, false) {
                 return Ok(self.omit(entry_path, "identity_changed", None));
             }
-            self.entry(entry_path, "symlink", &stats, None, Some(target.to_string_lossy().into_owned()));
+            self.entry(
+                entry_path,
+                "symlink",
+                &stats,
+                None,
+                Some(target.to_string_lossy().into_owned()),
+            );
             return Ok(true);
         }
         if stats.is_file() {
             if self.remaining_bytes < stats.size() {
-                self.record_file(entry_path, &stats, Hash::Omitted { reason: "file_bytes_budget", system_code: None });
+                self.record_file(
+                    entry_path,
+                    &stats,
+                    Hash::Omitted {
+                        reason: "file_bytes_budget",
+                        system_code: None,
+                    },
+                );
             } else {
                 let outcome = hash_file(path, &stats, self.remaining_bytes)?;
                 self.record_file(entry_path, &stats, outcome);
@@ -273,7 +330,8 @@ impl Walk<'_> {
         if kind != "directory" {
             return Ok(true);
         }
-        let remaining_entries = files.saturating_sub(self.entries.len() as u64 + self.pending_names);
+        let remaining_entries =
+            files.saturating_sub(self.entries.len() as u64 + self.pending_names);
         let directory = match fs::read_dir(path) {
             Ok(directory) => directory,
             Err(error) => {
@@ -328,11 +386,20 @@ impl Walk<'_> {
 }
 
 /// `snapshotRoots`.
-pub fn snapshot_roots(scenario: &Scenario, previous: Option<&Snapshot>) -> Result<Snapshot, String> {
+pub fn snapshot_roots(
+    scenario: &Scenario,
+    previous: Option<&Snapshot>,
+) -> Result<Snapshot, String> {
     let mut walk = Walk {
         scenario,
         previous: previous
-            .map(|previous| previous.files.iter().filter_map(|file| file["path"].as_str().map(str::to_owned)).collect())
+            .map(|previous| {
+                previous
+                    .files
+                    .iter()
+                    .filter_map(|file| file["path"].as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default(),
         entries: Vec::new(),
         complete_roots: Vec::new(),
@@ -347,7 +414,9 @@ pub fn snapshot_roots(scenario: &Scenario, previous: Option<&Snapshot>) -> Resul
         let alias = format!("root_{index}");
         let root = PathBuf::from(root);
         let previously = walk.previous.contains(&format!("{alias}:."));
-        let Some(admitted) = lstat_if_present(&root, previously).map_err(|error| format!("Process filesystem snapshot failed: {error}"))? else {
+        let Some(admitted) = lstat_if_present(&root, previously)
+            .map_err(|error| format!("Process filesystem snapshot failed: {error}"))?
+        else {
             walk.complete_roots.push(alias);
             continue;
         };
@@ -376,20 +445,38 @@ pub fn snapshot_roots(scenario: &Scenario, previous: Option<&Snapshot>) -> Resul
     })
 }
 
-fn unobserved_absence(path: &str, phase: &str, complete_roots: &BTreeSet<&str>, files: &HashMap<&str, &Value>) -> Option<String> {
+fn unobserved_absence(
+    path: &str,
+    phase: &str,
+    complete_roots: &BTreeSet<&str>,
+    files: &HashMap<&str, &Value>,
+) -> Option<String> {
     let alias = &path[..path.find(':').unwrap_or(0)];
     if !complete_roots.contains(alias) {
-        return Some(format!("The {phase} snapshot did not exhaust path enumeration under {alias}; absence remains unknown."));
+        return Some(format!(
+            "The {phase} snapshot did not exhaust path enumeration under {alias}; absence remains unknown."
+        ));
     }
     let root_path = format!("{alias}:.");
-    if path != root_path && files.get(root_path.as_str()).is_some_and(|file| file["type"] == "symlink") {
-        return Some(format!("The {phase} snapshot did not follow the symbolic link at {root_path}; descendant absence remains unknown."));
+    if path != root_path
+        && files
+            .get(root_path.as_str())
+            .is_some_and(|file| file["type"] == "symlink")
+    {
+        return Some(format!(
+            "The {phase} snapshot did not follow the symbolic link at {root_path}; descendant absence remains unknown."
+        ));
     }
     let mut index = path.rfind('/');
     while let Some(end) = index.filter(|end| *end > 0) {
         let parent = &path[..end];
-        if files.get(parent).is_some_and(|file| file["type"] == "symlink") {
-            return Some(format!("The {phase} snapshot did not follow the symbolic link at {parent}; descendant absence remains unknown."));
+        if files
+            .get(parent)
+            .is_some_and(|file| file["type"] == "symlink")
+        {
+            return Some(format!(
+                "The {phase} snapshot did not follow the symbolic link at {parent}; descendant absence remains unknown."
+            ));
         }
         index = path[..end].rfind('/');
     }
@@ -399,15 +486,31 @@ fn unobserved_absence(path: &str, phase: &str, complete_roots: &BTreeSet<&str>, 
 /// `classifyFilesystemEffects`.
 pub fn classify_effects(before: &Snapshot, after: &Snapshot) -> Vec<Value> {
     let by_path = |snapshot: &Snapshot| -> HashMap<String, Value> {
-        snapshot.files.iter().filter_map(|file| Some((file["path"].as_str()?.to_owned(), file.clone()))).collect()
+        snapshot
+            .files
+            .iter()
+            .filter_map(|file| Some((file["path"].as_str()?.to_owned(), file.clone())))
+            .collect()
     };
     let before_files = by_path(before);
     let after_files = by_path(after);
-    let before_ref: HashMap<&str, &Value> = before_files.iter().map(|(path, file)| (path.as_str(), file)).collect();
-    let after_ref: HashMap<&str, &Value> = after_files.iter().map(|(path, file)| (path.as_str(), file)).collect();
+    let before_ref: HashMap<&str, &Value> = before_files
+        .iter()
+        .map(|(path, file)| (path.as_str(), file))
+        .collect();
+    let after_ref: HashMap<&str, &Value> = after_files
+        .iter()
+        .map(|(path, file)| (path.as_str(), file))
+        .collect();
     let before_roots: BTreeSet<&str> = before.complete_roots.iter().map(String::as_str).collect();
     let after_roots: BTreeSet<&str> = after.complete_roots.iter().map(String::as_str).collect();
-    let mut paths: Vec<&str> = before_ref.keys().chain(after_ref.keys()).copied().collect::<BTreeSet<_>>().into_iter().collect();
+    let mut paths: Vec<&str> = before_ref
+        .keys()
+        .chain(after_ref.keys())
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
     paths.sort_by(|left, right| utf16_cmp(left, right));
     paths
         .into_iter()
@@ -472,11 +575,24 @@ mod tests {
         let after = snapshot_roots(&scenario, Some(&before)).unwrap();
         let effects: Vec<_> = classify_effects(&before, &after)
             .into_iter()
-            .map(|effect| format!("{}={}", effect["path"].as_str().unwrap(), effect["status"].as_str().unwrap()))
+            .map(|effect| {
+                format!(
+                    "{}={}",
+                    effect["path"].as_str().unwrap(),
+                    effect["status"].as_str().unwrap()
+                )
+            })
             .collect();
         assert_eq!(
             effects,
-            ["root_0:.=modified", "root_0:gone.txt=deleted", "root_0:keep.txt=modified", "root_0:link=created", "root_0:sub=created", "root_0:sub/new.txt=created"]
+            [
+                "root_0:.=modified",
+                "root_0:gone.txt=deleted",
+                "root_0:keep.txt=modified",
+                "root_0:link=created",
+                "root_0:sub=created",
+                "root_0:sub/new.txt=created"
+            ]
         );
         assert_eq!(after.coverage["hashed_bytes"], 13);
     }
@@ -490,8 +606,14 @@ mod tests {
         let snapshot = snapshot_roots(&scenario, None).unwrap();
         assert!(snapshot.truncated);
         assert_eq!(snapshot.coverage["enumeration_truncated"], true);
-        assert_eq!(snapshot.coverage["enumeration_reasons"], json!(["files_limit"]));
-        assert_eq!(snapshot.coverage["hash_omissions"][0]["reason"], "file_bytes_budget");
+        assert_eq!(
+            snapshot.coverage["enumeration_reasons"],
+            json!(["files_limit"])
+        );
+        assert_eq!(
+            snapshot.coverage["hash_omissions"][0]["reason"],
+            "file_bytes_budget"
+        );
         let effects = classify_effects(&snapshot, &snapshot);
         assert!(effects.iter().any(|effect| effect["status"] == "unknown"));
     }

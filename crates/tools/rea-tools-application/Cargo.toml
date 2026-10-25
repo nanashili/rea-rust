@@ -13,6 +13,7 @@ rea-host.workspace = true
 rea-application.workspace = true
 rea-rust-analysis.workspace = true
 rea-mcp.workspace = true
+rea-tools-artifacts.workspace = true
 unicode-normalization.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }

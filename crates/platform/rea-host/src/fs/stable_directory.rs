@@ -232,6 +232,24 @@ impl DirectoryReader {
         maximum_entries: usize,
         cancellation: &Cancellation,
     ) -> Result<Vec<DirectoryEntry>, DirectoryError> {
+        self.entries_filtered(maximum_entries, cancellation, |_| true)
+    }
+
+    /// Enumerate entries while deciding whether each admitted directory's
+    /// descendants should be visited. The directory itself is always retained
+    /// in the result, so callers can record an exclusion without pretending
+    /// that the directory was absent. The predicate runs after no-follow
+    /// metadata and identity admission, before any child enumeration.
+    #[cfg(unix)]
+    pub fn entries_filtered<F>(
+        &self,
+        maximum_entries: usize,
+        cancellation: &Cancellation,
+        should_descend: F,
+    ) -> Result<Vec<DirectoryEntry>, DirectoryError>
+    where
+        F: Fn(&DirectoryEntry) -> bool,
+    {
         check_cancelled(cancellation)?;
         self.verify_root_path("enumerating")?;
 
@@ -263,14 +281,20 @@ impl DirectoryReader {
                 };
 
                 let identity = fingerprint_stat(&metadata, kind_fingerprint(kind));
-                entries.push(DirectoryEntry {
+                let entry = DirectoryEntry {
                     path: relative_path,
                     kind,
                     identity,
                     mode: u32::from(metadata.st_mode),
-                });
+                };
+                let descend = should_descend(&entry);
+                // The predicate may perform policy work that observes
+                // cancellation. Do not publish an admitted entry or continue
+                // identity checks after that request has won.
+                check_cancelled(cancellation)?;
+                entries.push(entry);
 
-                if kind == DirectoryEntryKind::Directory {
+                if descend && kind == DirectoryEntryKind::Directory {
                     pending.push((child_path, identity));
                 }
             }
@@ -288,6 +312,21 @@ impl DirectoryReader {
         _maximum_entries: usize,
         _cancellation: &Cancellation,
     ) -> Result<Vec<DirectoryEntry>, DirectoryError> {
+        Err(DirectoryError::Unsupported(
+            "handle-relative traversal is not implemented on this host",
+        ))
+    }
+
+    #[cfg(not(unix))]
+    pub fn entries_filtered<F>(
+        &self,
+        _maximum_entries: usize,
+        _cancellation: &Cancellation,
+        _should_descend: F,
+    ) -> Result<Vec<DirectoryEntry>, DirectoryError>
+    where
+        F: Fn(&DirectoryEntry) -> bool,
+    {
         Err(DirectoryError::Unsupported(
             "handle-relative traversal is not implemented on this host",
         ))
@@ -760,6 +799,9 @@ fn readlink_at(
     })?;
     let buffer_size = maximum_bytes.saturating_add(1);
     let mut target = vec![0u8; buffer_size];
+    // SAFETY: `parent` remains borrowed for the call, `name` is a live
+    // NUL-terminated CString, and `target` owns writable storage of the
+    // length passed to readlinkat.
     let read = unsafe {
         libc::readlinkat(
             parent.as_raw_fd(),
@@ -786,11 +828,15 @@ fn open_at(parent: &fs::File, name: &std::ffi::OsStr, flags: i32) -> io::Result<
 
     let name = CString::new(name.as_bytes())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "path contains NUL"))?;
+    // SAFETY: `parent` remains borrowed for the call and `name` is a live
+    // NUL-terminated CString. On success the returned descriptor is owned by
+    // this function and is transferred exactly once to `File` below.
     let descriptor = unsafe { libc::openat(parent.as_raw_fd(), name.as_ptr(), flags) };
     if descriptor < 0 {
         return Err(io::Error::last_os_error());
     }
 
+    // SAFETY: `descriptor` is a successful, uniquely owned openat result.
     Ok(unsafe { fs::File::from_raw_fd(descriptor) })
 }
 
@@ -809,9 +855,13 @@ fn read_children(directory: &fs::File) -> Result<Vec<OsString>, DirectoryError> 
     .map_err(|source| io_error("opening directory stream handle", source))?;
     let stream_descriptor = stream_handle.into_raw_fd();
 
+    // SAFETY: `stream_descriptor` is the unique descriptor returned by
+    // `open_at`; fdopendir takes ownership of it on success.
     let stream = unsafe { libc::fdopendir(stream_descriptor) };
     if stream.is_null() {
         let primary = io_error("opening directory stream", io::Error::last_os_error());
+        // SAFETY: fdopendir returned null, so ownership of the descriptor was
+        // not transferred and it remains ours to close exactly once.
         return match unsafe { libc::close(stream_descriptor) } {
             0 => Err(primary),
             _ => Err(cleanup_error(
@@ -822,6 +872,8 @@ fn read_children(directory: &fs::File) -> Result<Vec<OsString>, DirectoryError> 
         };
     }
 
+    // SAFETY: the non-null pointer came from a successful fdopendir call and
+    // is now owned by DirectoryStream until close or Drop.
     let stream = unsafe { DirectoryStream::from_raw(stream) };
     let children = collect_children(&stream);
     let close_result = stream.close();
@@ -843,6 +895,9 @@ fn collect_children(stream: &DirectoryStream) -> Result<Vec<OsString>, Directory
     let mut names = Vec::new();
     loop {
         clear_readdir_error()?;
+        // SAFETY: `stream` owns a live DIR pointer and remains alive for the
+        // duration of this call; readdir returns either null or an entry owned
+        // by that stream, which is consumed before the next iteration.
         let entry = unsafe { libc::readdir(stream.as_ptr()) };
         if entry.is_null() {
             match io::Error::last_os_error().raw_os_error() {
@@ -856,6 +911,9 @@ fn collect_children(stream: &DirectoryStream) -> Result<Vec<OsString>, Directory
             }
         }
 
+        // SAFETY: a non-null readdir result points to a dirent owned by the
+        // live stream, and d_name is the NUL-terminated name field provided by
+        // the platform ABI.
         let name = unsafe { CStr::from_ptr((*entry).d_name.as_ptr()) };
         if name.to_bytes() == b"." || name.to_bytes() == b".." {
             continue;
@@ -883,6 +941,8 @@ impl DirectoryStream {
         let Some(stream) = self.0.take() else {
             return Ok(());
         };
+        // SAFETY: `stream` is the unique DIR pointer obtained from fdopendir;
+        // taking it above prevents close and Drop from running twice.
         if unsafe { libc::closedir(stream) } == 0 {
             Ok(())
         } else {
@@ -895,6 +955,8 @@ impl DirectoryStream {
 impl Drop for DirectoryStream {
     fn drop(&mut self) {
         if let Some(stream) = self.0.take() {
+            // SAFETY: the pointer was obtained from fdopendir and is uniquely
+            // owned by this wrapper; taking it prevents a second close.
             unsafe {
                 libc::closedir(stream);
             }
@@ -904,6 +966,8 @@ impl Drop for DirectoryStream {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 fn clear_readdir_error() -> Result<(), DirectoryError> {
+    // SAFETY: libc exposes the calling thread's errno slot through this
+    // accessor, so the returned pointer is valid for one integer write.
     unsafe {
         *libc::__errno_location() = 0;
     }
@@ -919,6 +983,8 @@ fn clear_readdir_error() -> Result<(), DirectoryError> {
     target_os = "dragonfly"
 ))]
 fn clear_readdir_error() -> Result<(), DirectoryError> {
+    // SAFETY: libc exposes the calling thread's errno slot through this
+    // accessor, so the returned pointer is valid for one integer write.
     unsafe {
         *libc::__error() = 0;
     }
@@ -950,6 +1016,8 @@ fn metadata_at(directory: &fs::File, name: &std::ffi::OsStr) -> io::Result<libc:
     let name = CString::new(name.as_bytes())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "path contains NUL"))?;
     let mut metadata = MaybeUninit::<libc::stat>::uninit();
+    // SAFETY: `directory` remains borrowed, `name` is a live CString, and
+    // `metadata` points to writable storage. fstatat initializes it on success.
     let result = unsafe {
         libc::fstatat(
             directory.as_raw_fd(),
@@ -962,6 +1030,7 @@ fn metadata_at(directory: &fs::File, name: &std::ffi::OsStr) -> io::Result<libc:
         return Err(io::Error::last_os_error());
     }
 
+    // SAFETY: the successful fstatat call above initialized every field.
     Ok(unsafe { metadata.assume_init() })
 }
 
@@ -1232,6 +1301,46 @@ mod tests {
         cancellation.cancel("request ended");
         assert!(matches!(
             reader.entries(10, &cancellation),
+            Err(DirectoryError::Cancelled(reason)) if reason == "request ended"
+        ));
+    }
+
+    #[test]
+    fn filtered_entries_admit_excluded_directories_without_enumerating_descendants() {
+        let temporary = tempfile::tempdir().expect("create temporary root");
+        let excluded = temporary.path().join("excluded");
+        let outside = tempfile::tempdir().expect("create external directory");
+        fs::create_dir(&excluded).expect("create excluded directory");
+        fs::write(excluded.join("large-source.js"), b"source").expect("write excluded file");
+        fs::write(outside.path().join("secret"), b"secret").expect("write external file");
+        std::os::unix::fs::symlink(outside.path().join("secret"), excluded.join("secret-link"))
+            .expect("create excluded symlink");
+        fs::write(temporary.path().join("kept.js"), b"kept").expect("write retained file");
+
+        let reader = DirectoryReader::open(temporary.path()).expect("admit root");
+        let cancellation = Cancellation::default();
+        let entries = reader
+            .entries_filtered(100, &cancellation, |entry| entry.path != "excluded")
+            .expect("enumerate with pruning");
+        let paths = entries
+            .iter()
+            .map(|entry| entry.path.as_str())
+            .collect::<BTreeSet<_>>();
+
+        assert!(paths.contains("excluded"));
+        assert!(paths.contains("kept.js"));
+        assert!(!paths.contains("excluded/large-source.js"));
+        assert!(!paths.contains("excluded/secret-link"));
+
+        let cancellation = Cancellation::default();
+        let cancellation_from_predicate = cancellation.clone();
+        fs::write(temporary.path().join("second.js"), b"second").expect("write second file");
+        let reader = DirectoryReader::open(temporary.path()).expect("admit changed root");
+        assert!(matches!(
+            reader.entries_filtered(100, &cancellation, move |_| {
+                cancellation_from_predicate.cancel("request ended");
+                true
+            }),
             Err(DirectoryError::Cancelled(reason)) if reason == "request ended"
         ));
     }

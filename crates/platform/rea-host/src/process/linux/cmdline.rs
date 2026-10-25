@@ -104,6 +104,8 @@ fn observe_platform(pid: u64) -> CommandLineObservation {
     };
     let mut mib = [libc::CTL_KERN, libc::KERN_PROCARGS2, pid];
     let mut size = 0usize;
+    // SAFETY: the MIB is a live three-element array, the null output pointer
+    // requests the required size, and `size` is writable storage for libc.
     let result = unsafe {
         libc::sysctl(
             mib.as_mut_ptr(),
@@ -122,6 +124,8 @@ fn observe_platform(pid: u64) -> CommandLineObservation {
     }
 
     let mut bytes = vec![0_u8; size];
+    // SAFETY: the MIB, output buffer, and size pointer all remain valid for
+    // the duration of this sysctl call; the kernel writes at most `size` bytes.
     let result = unsafe {
         libc::sysctl(
             mib.as_mut_ptr(),

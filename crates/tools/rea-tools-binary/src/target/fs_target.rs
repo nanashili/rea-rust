@@ -356,8 +356,8 @@ pub(crate) fn stat(path: &str) -> Result<StatResult, FsError> {
 
 /// TS `lstat(path)`.
 pub(crate) struct LstatResult {
+    #[cfg(windows)]
     pub is_symlink: bool,
-    pub is_directory: bool,
     pub state: RegularFileState,
 }
 
@@ -365,8 +365,8 @@ pub(crate) fn lstat(path: &str) -> Result<LstatResult, FsError> {
     let metadata =
         std::fs::symlink_metadata(path).map_err(|error| classify(&error, "lstat", path))?;
     Ok(LstatResult {
+        #[cfg(windows)]
         is_symlink: metadata.file_type().is_symlink(),
-        is_directory: metadata.is_dir(),
         state: state_from_metadata(&metadata),
     })
 }

@@ -224,6 +224,7 @@ struct RemoteRef {
     references: usize,
     options_digest: String,
     device: Arc<Device>,
+    redaction_secrets: Vec<String>,
 }
 
 struct Backend {
@@ -231,10 +232,23 @@ struct Backend {
     dm: Arc<DeviceManager>,
 }
 
+/// Resources acquired while session startup is still being rolled back.
+///
+/// This remains in `State` when an individual rollback call fails so a later
+/// shutdown can retry the operation without losing the owner of the resource.
+struct PendingStartup {
+    session: Option<Session>,
+    device: Arc<Device>,
+    spawned_pid: Option<u32>,
+    remote: Option<Remote>,
+    remote_reference_held: bool,
+}
+
 #[derive(Default)]
 struct State {
     backend: Option<Backend>,
     sessions: HashMap<String, ManagedSession>,
+    pending_startups: HashMap<String, PendingStartup>,
     remotes: HashMap<String, RemoteRef>,
     closing: bool,
 }
@@ -343,7 +357,10 @@ impl Manager {
             let device = Self::retain_remote(state, operation, &backend, remote)?;
             return Ok((device, true));
         }
-        let id = selector.device_id.clone().unwrap_or_else(|| "local".to_owned());
+        let id = selector
+            .device_id
+            .clone()
+            .unwrap_or_else(|| "local".to_owned());
         let cancel = backend
             .rt
             .cancellable()
@@ -392,6 +409,7 @@ impl Manager {
                 references: 1,
                 options_digest: digest,
                 device: Arc::clone(&device),
+                redaction_secrets: remote.secrets(),
             },
         );
         Ok(device)
@@ -420,8 +438,31 @@ impl Manager {
             .cancellable()
             .map_err(|error| provider_error(operation, &error, secrets, None))?;
         let result = backend.dm.remove_remote_device(address, &cancel);
-        state.remotes.remove(address);
-        result.map_err(|error| provider_error(operation, &error, secrets, None))
+        match result {
+            Ok(()) => {
+                state.remotes.remove(address);
+                Ok(())
+            }
+            Err(error) => Err(provider_error(operation, &error, secrets, None)),
+        }
+    }
+
+    fn release_held_remote(
+        state: &mut State,
+        operation: &str,
+        remote: Option<&Remote>,
+        held: bool,
+        secrets: &[String],
+    ) -> Option<String> {
+        if !held {
+            return None;
+        }
+        let Some(remote) = remote else {
+            return Some("Frida remote ownership is missing its endpoint".to_owned());
+        };
+        Self::release_remote(state, operation, &remote.address, true, secrets)
+            .err()
+            .map(|cause| cause.message())
     }
 
     // -------------------------------------------------------------------
@@ -440,40 +481,50 @@ impl Manager {
             Self::retain_remote(&mut state, OP, &backend, remote)?;
             remote_held = true;
         }
-        let cancel = backend
-            .rt
-            .cancellable()
-            .map_err(|error| provider_error(OP, &error, &secrets, None))?;
-        let devices = match backend.dm.enumerate_devices(&cancel) {
-            Ok(devices) => devices,
+        let cancel = match backend.rt.cancellable() {
+            Ok(cancel) => cancel,
             Err(error) => {
-                let mut cleanup = None;
-                if remote_held {
-                    if let Some(remote) = &remote {
-                        if let Err(cause) =
-                            Self::release_remote(&mut state, OP, &remote.address, true, &secrets)
-                        {
-                            cleanup = Some(cause.message());
-                        }
-                    }
-                }
+                let cleanup = Self::release_held_remote(
+                    &mut state,
+                    OP,
+                    remote.as_ref(),
+                    remote_held,
+                    &secrets,
+                );
                 return Err(provider_error(OP, &error, &secrets, cleanup));
             }
         };
-        let described: Vec<(String, String, String)> = devices
-            .iter()
-            .map(|device| device.describe().unwrap_or_default())
-            .collect();
-        let mut cleanup_error = None;
-        if remote_held {
-            if let Some(remote) = &remote {
-                if let Err(cause) =
-                    Self::release_remote(&mut state, OP, &remote.address, true, &secrets)
-                {
-                    cleanup_error = Some(cause.message());
+        let devices = match backend.dm.enumerate_devices(&cancel) {
+            Ok(devices) => devices,
+            Err(error) => {
+                let cleanup = Self::release_held_remote(
+                    &mut state,
+                    OP,
+                    remote.as_ref(),
+                    remote_held,
+                    &secrets,
+                );
+                return Err(provider_error(OP, &error, &secrets, cleanup));
+            }
+        };
+        let mut described = Vec::with_capacity(devices.len());
+        for device in &devices {
+            match device.describe() {
+                Ok(description) => described.push(description),
+                Err(error) => {
+                    let cleanup = Self::release_held_remote(
+                        &mut state,
+                        OP,
+                        remote.as_ref(),
+                        remote_held,
+                        &secrets,
+                    );
+                    return Err(provider_error(OP, &error, &secrets, cleanup));
                 }
             }
         }
+        let cleanup_error =
+            Self::release_held_remote(&mut state, OP, remote.as_ref(), remote_held, &secrets);
         Ok((described, cleanup_error))
     }
 
@@ -486,42 +537,77 @@ impl Manager {
     ) -> Result<(String, Vec<(u32, String)>, Option<String>), AnalysisError> {
         const OP: &str = "list_frida_processes";
         let mut state = self.lock();
-        let secrets = selector.remote.as_ref().map(Remote::secrets).unwrap_or_default();
+        let secrets = selector
+            .remote
+            .as_ref()
+            .map(Remote::secrets)
+            .unwrap_or_default();
         let (device, remote_held) = Self::select_device(&mut state, OP, &selector)?;
-        let (device_id, _, _) = device.describe().unwrap_or_default();
+        let device_id = match device.describe() {
+            Ok((device_id, _, _)) => device_id,
+            Err(error) => {
+                let cleanup = Self::release_held_remote(
+                    &mut state,
+                    OP,
+                    selector.remote.as_ref(),
+                    remote_held,
+                    &secrets,
+                );
+                return Err(provider_error(OP, &error, &secrets, cleanup));
+            }
+        };
         let cancel = {
-            let backend = Self::backend(&mut state, OP)?;
-            backend
-                .rt
-                .cancellable()
-                .map_err(|error| provider_error(OP, &error, &secrets, None))?
+            let backend = match Self::backend(&mut state, OP) {
+                Ok(backend) => backend,
+                Err(error) => {
+                    let cleanup = Self::release_held_remote(
+                        &mut state,
+                        OP,
+                        selector.remote.as_ref(),
+                        remote_held,
+                        &secrets,
+                    );
+                    return Err(match cleanup {
+                        Some(reason) => error
+                            .with_cleanup(reason, vec!["Frida remote device reference".to_owned()]),
+                        None => error,
+                    });
+                }
+            };
+            match backend.rt.cancellable() {
+                Ok(cancel) => cancel,
+                Err(error) => {
+                    let cleanup = Self::release_held_remote(
+                        &mut state,
+                        OP,
+                        selector.remote.as_ref(),
+                        remote_held,
+                        &secrets,
+                    );
+                    return Err(provider_error(OP, &error, &secrets, cleanup));
+                }
+            }
         };
         let processes = match device.enumerate_processes(&cancel) {
             Ok(processes) => processes,
             Err(error) => {
-                let mut cleanup = None;
-                if remote_held {
-                    if let Some(remote) = &selector.remote {
-                        if let Err(cause) =
-                            Self::release_remote(&mut state, OP, &remote.address, true, &secrets)
-                        {
-                            cleanup = Some(cause.message());
-                        }
-                    }
-                }
+                let cleanup = Self::release_held_remote(
+                    &mut state,
+                    OP,
+                    selector.remote.as_ref(),
+                    remote_held,
+                    &secrets,
+                );
                 return Err(provider_error(OP, &error, &secrets, cleanup));
             }
         };
-        let mut cleanup_error = None;
-        if remote_held {
-            if let Some(remote) = &selector.remote {
-                if let Err(cause) =
-                    Self::release_remote(&mut state, OP, &remote.address, true, &secrets)
-                {
-                    cleanup_error = Some(cause.message());
-                }
-            }
-        }
+        let cleanup_error = Self::release_held_remote(
+            &mut state,
+            OP,
+            selector.remote.as_ref(),
+            remote_held,
+            &secrets,
+        );
         let processes = processes
             .into_iter()
             .map(|process| (process.pid, process.name))
@@ -538,104 +624,244 @@ impl Manager {
     ) -> Result<SessionObservation, AnalysisError> {
         const OP: &str = "start_frida_session";
         let mut state = self.lock();
-        let secrets = input.selector.remote.as_ref().map(Remote::secrets).unwrap_or_default();
+        let secrets = input
+            .selector
+            .remote
+            .as_ref()
+            .map(Remote::secrets)
+            .unwrap_or_default();
         let backend = Self::backend(&mut state, OP)?;
         let (device, remote_held) = Self::select_device(&mut state, OP, &input.selector)?;
-        let cancel = backend
-            .rt
-            .cancellable()
-            .map_err(|error| provider_error(OP, &error, &secrets, None))?;
+        let pending_id = uuid();
+        let mut pending = PendingStartup {
+            session: None,
+            device: Arc::clone(&device),
+            spawned_pid: None,
+            remote: input.selector.remote.clone(),
+            remote_reference_held: remote_held,
+        };
+        let cancel = match backend.rt.cancellable() {
+            Ok(cancel) => cancel,
+            Err(error) => {
+                state.pending_startups.insert(pending_id.clone(), pending);
+                let failures = self.retry_pending_startup(&mut state, &pending_id, OP, &secrets);
+                let cleanup = (!failures.is_empty()).then(|| failures.join("; "));
+                return Err(provider_error(OP, &error, &secrets, cleanup));
+            }
+        };
 
-        let mut spawned_pid: Option<u32> = None;
-        let result = (|| -> Result<ManagedSession, FfiError> {
-            let (pid, target) = match input.mode {
-                Mode::Attach => {
-                    let pid = input.pid.unwrap_or(0);
-                    let target = match device.get_process_by_pid(pid, &cancel) {
-                        Ok(process) => format!("{} (pid {pid})", process.name),
-                        Err(_) => format!("pid {pid}"),
-                    };
-                    (pid, target)
-                }
-                Mode::Spawn => {
-                    let program = input.program.clone().unwrap_or_default();
-                    let argv = input.argv.as_ref().map(|argv| {
-                        let mut full = Vec::with_capacity(argv.len() + 1);
-                        full.push(program.clone());
-                        full.extend(argv.iter().cloned());
-                        full
-                    });
-                    let pid = device.spawn(&program, argv.as_deref(), &cancel)?;
-                    spawned_pid = Some(pid);
-                    (pid, program)
-                }
-            };
-            let session = device.attach(pid, &cancel)?;
-            let (device_id, _, _) = device.describe().unwrap_or_default();
-            let detached = session.is_detached().unwrap_or(false);
-            Ok(ManagedSession {
-                id: uuid(),
-                device: Arc::clone(&device),
-                device_id,
-                session,
-                target,
-                pid,
-                mode: input.mode,
-                remote: input.selector.remote.clone(),
-                remote_reference_held: remote_held,
-                remote_removal_pending: false,
-                scripts: Vec::new(),
-                script_captures: HashMap::new(),
-                messages: Vec::new(),
-                captured_bytes: 0,
-                detached,
-                target_resume_observed: false,
-                resume_after_detach_pending: false,
-                messages_truncated: false,
-            })
-        })();
-
-        match result {
+        match Self::acquire_session(&mut pending, &input, &cancel) {
             Ok(managed) => {
                 let observation = session_observation(&managed);
                 state.sessions.insert(managed.id.clone(), managed);
                 Ok(observation)
             }
             Err(error) => {
-                // Startup cleanup: detach a partial session, resume a spawned
-                // pid and release the retained remote before reporting.
-                let mut failures: Vec<String> = Vec::new();
-                if spawned_pid.is_some() || remote_held {
-                    if let Some(pid) = spawned_pid {
-                        if let Err(cause) = device.resume(pid, &cancel) {
-                            failures.push(format!(
-                                "Unable to resume spawned target: {}",
-                                sanitize(&cause, &secrets)
-                            ));
-                        }
-                    }
-                    if remote_held {
-                        if let Some(remote) = &input.selector.remote {
-                            if let Err(cause) = Self::release_remote(
-                                &mut state,
-                                OP,
-                                &remote.address,
-                                true,
-                                &secrets,
-                            ) {
-                                failures.push(cause.message());
-                            }
-                        }
-                    }
-                }
-                let cleanup = if failures.is_empty() {
-                    None
-                } else {
-                    Some(failures.join("; "))
-                };
+                state.pending_startups.insert(pending_id.clone(), pending);
+                let failures = self.retry_pending_startup(&mut state, &pending_id, OP, &secrets);
+                let cleanup = (!failures.is_empty()).then(|| failures.join("; "));
                 Err(provider_error(OP, &error, &secrets, cleanup))
             }
         }
+    }
+
+    fn acquire_session(
+        pending: &mut PendingStartup,
+        input: &StartInput,
+        cancel: &super::ffi::Cancel,
+    ) -> Result<ManagedSession, FfiError> {
+        let (pid, target) = match input.mode {
+            Mode::Attach => {
+                let pid = input.pid.unwrap_or(0);
+                let target = match pending.device.get_process_by_pid(pid, cancel) {
+                    Ok(process) => format!("{} (pid {pid})", process.name),
+                    Err(_) => format!("pid {pid}"),
+                };
+                (pid, target)
+            }
+            Mode::Spawn => {
+                let program = input.program.clone().unwrap_or_default();
+                let argv = input.argv.as_ref().map(|argv| {
+                    let mut full = Vec::with_capacity(argv.len() + 1);
+                    full.push(program.clone());
+                    full.extend(argv.iter().cloned());
+                    full
+                });
+                let pid = pending.device.spawn(&program, argv.as_deref(), cancel)?;
+                pending.spawned_pid = Some(pid);
+                (pid, program)
+            }
+        };
+
+        pending.session = Some(pending.device.attach(pid, cancel)?);
+        let (device_id, _, _) = pending.device.describe()?;
+        let detached = pending
+            .session
+            .as_ref()
+            .expect("attached session is retained during startup")
+            .is_detached()?;
+        Ok(ManagedSession {
+            id: uuid(),
+            device: Arc::clone(&pending.device),
+            device_id,
+            session: pending
+                .session
+                .take()
+                .expect("attached session is retained during startup"),
+            target,
+            pid,
+            mode: input.mode,
+            remote: pending.remote.clone(),
+            remote_reference_held: pending.remote_reference_held,
+            remote_removal_pending: false,
+            scripts: Vec::new(),
+            script_captures: HashMap::new(),
+            messages: Vec::new(),
+            captured_bytes: 0,
+            detached,
+            target_resume_observed: false,
+            resume_after_detach_pending: false,
+            messages_truncated: false,
+        })
+    }
+
+    fn retry_pending_startup(
+        &self,
+        state: &mut State,
+        pending_id: &str,
+        operation: &str,
+        secrets: &[String],
+    ) -> Vec<String> {
+        let mut failures = Vec::new();
+        let cancel = match Self::backend(state, operation).and_then(|backend| {
+            backend
+                .rt
+                .cancellable()
+                .map_err(|error| provider_error(operation, &error, secrets, None))
+        }) {
+            Ok(cancel) => Some(cancel),
+            Err(error) => {
+                failures.push(error.message());
+                None
+            }
+        };
+
+        if let Some(cancel) = cancel {
+            let session_present = state
+                .pending_startups
+                .get(pending_id)
+                .and_then(|pending| pending.session.as_ref())
+                .is_some();
+            if session_present {
+                let detached = state
+                    .pending_startups
+                    .get(pending_id)
+                    .and_then(|pending| pending.session.as_ref())
+                    .expect("pending startup session is present")
+                    .is_detached();
+                match &detached {
+                    Ok(true) => {
+                        state
+                            .pending_startups
+                            .get_mut(pending_id)
+                            .expect("pending startup exists")
+                            .session = None;
+                    }
+                    Ok(false) | Err(_) => {
+                        if let Err(error) = state
+                            .pending_startups
+                            .get(pending_id)
+                            .and_then(|pending| pending.session.as_ref())
+                            .expect("pending startup session is present")
+                            .detach(&cancel)
+                        {
+                            failures.push(format!(
+                                "Unable to detach partial Frida session: {}",
+                                sanitize(&error, secrets)
+                            ));
+                        } else {
+                            state
+                                .pending_startups
+                                .get_mut(pending_id)
+                                .expect("pending startup exists")
+                                .session = None;
+                        }
+                    }
+                }
+                if let Err(error) = &detached {
+                    failures.push(format!(
+                        "Unable to query partial Frida session state: {}",
+                        sanitize(&error, secrets)
+                    ));
+                }
+            }
+
+            let spawned_pid = state
+                .pending_startups
+                .get(pending_id)
+                .and_then(|pending| pending.spawned_pid);
+            if let Some(pid) = spawned_pid {
+                let device = Arc::clone(
+                    &state
+                        .pending_startups
+                        .get(pending_id)
+                        .expect("pending startup exists")
+                        .device,
+                );
+                match device.resume(pid, &cancel) {
+                    Ok(()) => {
+                        state
+                            .pending_startups
+                            .get_mut(pending_id)
+                            .expect("pending startup exists")
+                            .spawned_pid = None;
+                    }
+                    Err(error) => failures.push(format!(
+                        "Unable to resume spawned target: {}",
+                        sanitize(&error, secrets)
+                    )),
+                }
+            }
+        }
+
+        let release_remote = state
+            .pending_startups
+            .get(pending_id)
+            .is_some_and(|pending| {
+                pending.session.is_none()
+                    && pending.spawned_pid.is_none()
+                    && pending.remote_reference_held
+            });
+        if release_remote {
+            let remote = state
+                .pending_startups
+                .get(pending_id)
+                .and_then(|pending| pending.remote.clone())
+                .expect("remote reference has an endpoint");
+            match Self::release_remote(state, operation, &remote.address, true, secrets) {
+                Ok(()) => {
+                    state
+                        .pending_startups
+                        .get_mut(pending_id)
+                        .expect("pending startup exists")
+                        .remote_reference_held = false;
+                }
+                Err(error) => failures.push(error.message()),
+            }
+        }
+
+        let complete = state
+            .pending_startups
+            .get(pending_id)
+            .is_some_and(|pending| {
+                pending.session.is_none()
+                    && pending.spawned_pid.is_none()
+                    && !pending.remote_reference_held
+            });
+        if complete {
+            state.pending_startups.remove(pending_id);
+        }
+        failures
     }
 
     // -------------------------------------------------------------------
@@ -652,11 +878,20 @@ impl Manager {
             let backend = Self::backend(&mut state, OP)?;
             backend.rt
         };
+        let secrets = state
+            .sessions
+            .get(session_id)
+            .and_then(|managed| managed.remote.as_ref().map(Remote::secrets))
+            .unwrap_or_default();
         let detached = {
             let Some(managed) = state.sessions.get(session_id) else {
                 return Err(unknown_session(OP, session_id));
             };
-            managed.detached || managed.session.is_detached().unwrap_or(false)
+            managed.detached
+                || managed
+                    .session
+                    .is_detached()
+                    .map_err(|error| provider_error(OP, &error, &secrets, None))?
         };
         if detached {
             return Err(unknown_session(OP, session_id));
@@ -704,10 +939,6 @@ impl Manager {
             },
         };
 
-        let secrets = {
-            let managed = state.sessions.get(session_id).expect("checked above");
-            managed.remote.as_ref().map(Remote::secrets).unwrap_or_default()
-        };
         let script_id = uuid();
         let name = format!("rea-{script_id}");
         let cancel = rt
@@ -716,26 +947,24 @@ impl Manager {
 
         let create = {
             let managed = state.sessions.get(session_id).expect("checked above");
-            managed.session.create_script(Some(&name), &script_source, &cancel)
+            managed
+                .session
+                .create_script(Some(&name), &script_source, &cancel)
         };
         let script = match create {
             Ok(script) => script,
             Err(error) => return Err(provider_error(OP, &error, &secrets, None)),
         };
-        if let Err(error) = script.load(&cancel) {
-            // Drop the handle (disconnects + unloads on the owner thread).
-            drop(script);
-            return Err(provider_error(OP, &error, &secrets, None));
-        }
 
-        // Register the script and settle-drain its startup burst.
+        // Register before loading so a failed load retains the owner handle
+        // and can be retried or explicitly released by close/unload.
         {
             let managed = state.sessions.get_mut(session_id).expect("checked above");
             managed.scripts.push(ManagedScript {
                 id: script_id.clone(),
                 name: name.clone(),
                 script,
-                state: ScriptState::Active,
+                state: ScriptState::CleanupPending,
             });
             managed.script_captures.insert(
                 script_id.clone(),
@@ -745,6 +974,30 @@ impl Manager {
                 },
             );
         }
+
+        let load_result = {
+            let managed = state.sessions.get_mut(session_id).expect("checked above");
+            managed
+                .scripts
+                .last()
+                .expect("script was just registered")
+                .script
+                .load(&cancel)
+        };
+        if let Err(error) = load_result {
+            let cleanup = self.release_script(&mut state, session_id, &script_id, false);
+            return Err(provider_error(OP, &error, &secrets, cleanup));
+        }
+        state
+            .sessions
+            .get_mut(session_id)
+            .expect("checked above")
+            .scripts
+            .last_mut()
+            .expect("script was just registered")
+            .state = ScriptState::Active;
+
+        // Settle-drain the script's startup burst.
         self.drain_session(&mut state, session_id, &script_id, true);
 
         let managed = state.sessions.get(session_id).expect("checked above");
@@ -769,11 +1022,20 @@ impl Manager {
     pub(crate) fn resume_session(&self, session_id: &str) -> Result<(), AnalysisError> {
         const OP: &str = "resume_frida_session";
         let mut state = self.lock();
+        let secrets = state
+            .sessions
+            .get(session_id)
+            .and_then(|managed| managed.remote.as_ref().map(Remote::secrets))
+            .unwrap_or_default();
         let detached = {
             let Some(managed) = state.sessions.get(session_id) else {
                 return Err(unknown_session(OP, session_id));
             };
-            managed.detached || managed.session.is_detached().unwrap_or(false)
+            managed.detached
+                || managed
+                    .session
+                    .is_detached()
+                    .map_err(|error| provider_error(OP, &error, &secrets, None))?
         };
         if detached {
             return Err(unknown_session(OP, session_id));
@@ -786,22 +1048,25 @@ impl Manager {
                 "Only a paused process spawned by this session can be resumed.",
             ));
         }
-        let pending: Vec<String> = managed
-            .scripts
-            .iter()
-            .filter(|entry| {
-                entry.state == ScriptState::CleanupPending
-                    && !entry.script.is_destroyed().unwrap_or(true)
-            })
-            .map(|entry| entry.id.clone())
-            .collect();
+        let mut pending = Vec::new();
+        for entry in &managed.scripts {
+            if entry.state != ScriptState::CleanupPending {
+                continue;
+            }
+
+            let destroyed = entry
+                .script
+                .is_destroyed()
+                .map_err(|error| provider_error(OP, &error, &secrets, None))?;
+            if !destroyed {
+                pending.push(entry.id.clone());
+            }
+        }
         if !pending.is_empty() {
             let reason = "Frida script cleanup is incomplete; unload the retained scripts or close the session before resuming.";
-            return Err(
-                AnalysisError::capability_unavailable("frida", OP, reason).with_cleanup(reason, pending),
-            );
+            return Err(AnalysisError::capability_unavailable("frida", OP, reason)
+                .with_cleanup(reason, pending));
         }
-        let secrets = managed.remote.as_ref().map(Remote::secrets).unwrap_or_default();
         let (pid, device) = (managed.pid, Arc::clone(&managed.device));
         let cancel = {
             let backend = Self::backend(&mut state, OP)?;
@@ -863,9 +1128,16 @@ impl Manager {
     // -------------------------------------------------------------------
     // frida_session_status
 
-    pub(crate) fn status(&self, session_id: &str) -> Option<SessionStatus> {
+    pub(crate) fn status(&self, session_id: &str) -> Result<Option<SessionStatus>, AnalysisError> {
         let mut state = self.lock();
-        state.sessions.get(session_id)?;
+        if !state.sessions.contains_key(session_id) {
+            return Ok(None);
+        }
+        let secrets = state.sessions[session_id]
+            .remote
+            .as_ref()
+            .map(Remote::secrets)
+            .unwrap_or_default();
         // Drain every script before snapshotting observed state.
         let script_ids: Vec<String> = state.sessions[session_id]
             .scripts
@@ -875,10 +1147,13 @@ impl Manager {
         for id in &script_ids {
             self.drain_session(&mut state, session_id, id, false);
         }
-        let managed = state.sessions.get_mut(session_id)?;
-        managed.detached = managed.detached || managed.session.is_detached().unwrap_or(false);
-        let managed = state.sessions.get(session_id)?;
-        Some(SessionStatus {
+        let managed = state.sessions.get_mut(session_id).expect("checked above");
+        managed.detached |= managed
+            .session
+            .is_detached()
+            .map_err(|error| provider_error("frida_session_status", &error, &secrets, None))?;
+        let managed = state.sessions.get(session_id).expect("checked above");
+        Ok(Some(SessionStatus {
             session: session_observation(managed),
             target_resume_observed: managed.target_resume_observed,
             scripts: managed
@@ -886,9 +1161,13 @@ impl Manager {
                 .iter()
                 .map(|entry| (entry.id.clone(), entry.name.clone()))
                 .collect(),
-            messages: managed.messages.iter().map(|m| m.observation.clone()).collect(),
+            messages: managed
+                .messages
+                .iter()
+                .map(|m| m.observation.clone())
+                .collect(),
             messages_truncated: managed.messages_truncated,
-        })
+        }))
     }
 
     // -------------------------------------------------------------------
@@ -914,9 +1193,22 @@ impl Manager {
             .map(Remote::secrets)
             .unwrap_or_default();
 
-        let (mode, remote, mut target_resume_observed, resume_after_detach_pending, resume_observed) = {
+        let mut cleanup_failures: Vec<String> = Vec::new();
+        let (
+            mode,
+            remote,
+            mut target_resume_observed,
+            resume_after_detach_pending,
+            resume_observed,
+        ) = {
             let managed = state.sessions.get_mut(session_id).expect("checked");
-            managed.detached = managed.detached || managed.session.is_detached().unwrap_or(false);
+            match managed.session.is_detached() {
+                Ok(detached) => managed.detached |= detached,
+                Err(error) => cleanup_failures.push(format!(
+                    "Unable to query Frida session state: {}",
+                    sanitize(&error, &secrets)
+                )),
+            }
             (
                 managed.mode,
                 managed.remote.clone(),
@@ -930,8 +1222,6 @@ impl Manager {
             && ((!parent_released && !resume_observed) || resume_after_detach_pending);
 
         let mut script_failures: HashMap<String, String> = HashMap::new();
-        let mut cleanup_failures: Vec<String> = Vec::new();
-
         let script_ids: Vec<String> = state.sessions[session_id]
             .scripts
             .iter()
@@ -946,12 +1236,20 @@ impl Manager {
         // Detach the session.
         {
             let managed = state.sessions.get(session_id).expect("checked");
-            let detached = managed.session.is_detached().unwrap_or(false);
-            let device_rt_cancel = Self::backend(state, OP)
-                .and_then(|b| {
-                    b.rt.cancellable()
-                        .map_err(|e| provider_error(OP, &e, &secrets, None))
-                });
+            let detached = match managed.session.is_detached() {
+                Ok(detached) => detached,
+                Err(error) => {
+                    cleanup_failures.push(format!(
+                        "Unable to query Frida session state: {}",
+                        sanitize(&error, &secrets)
+                    ));
+                    false
+                }
+            };
+            let device_rt_cancel = Self::backend(state, OP).and_then(|b| {
+                b.rt.cancellable()
+                    .map_err(|e| provider_error(OP, &e, &secrets, None))
+            });
             match device_rt_cancel {
                 Ok(cancel) => {
                     let managed = state.sessions.get(session_id).expect("checked");
@@ -972,8 +1270,13 @@ impl Manager {
                                 sanitize(&error, &secrets)
                             ));
                             let managed = state.sessions.get_mut(session_id).expect("checked");
-                            managed.detached =
-                                managed.detached || managed.session.is_detached().unwrap_or(false);
+                            match managed.session.is_detached() {
+                                Ok(detached) => managed.detached |= detached,
+                                Err(cause) => cleanup_failures.push(format!(
+                                    "Unable to query Frida session state after detach failure: {}",
+                                    sanitize(&cause, &secrets)
+                                )),
+                            }
                             parent_released = managed.detached;
                         }
                     }
@@ -1023,7 +1326,10 @@ impl Manager {
                 Err(error) => {
                     let managed = state.sessions.get_mut(session_id).expect("checked");
                     managed.resume_after_detach_pending = true;
-                    cleanup_failures.push(format!("Unable to resume spawned target: {}", error.message()));
+                    cleanup_failures.push(format!(
+                        "Unable to resume spawned target: {}",
+                        error.message()
+                    ));
                 }
             }
         }
@@ -1032,14 +1338,13 @@ impl Manager {
         failures.extend(cleanup_failures);
 
         // Release the retained remote when the session is fully torn down.
-        let release_remote = remote.is_some()
-            && {
-                let managed = state.sessions.get(session_id).expect("checked");
-                (managed.remote_reference_held || managed.remote_removal_pending)
-                    && parent_released
-                    && managed.scripts.is_empty()
-                    && !managed.resume_after_detach_pending
-            };
+        let release_remote = remote.is_some() && {
+            let managed = state.sessions.get(session_id).expect("checked");
+            (managed.remote_reference_held || managed.remote_removal_pending)
+                && parent_released
+                && managed.scripts.is_empty()
+                && !managed.resume_after_detach_pending
+        };
         if release_remote {
             if let Some(remote) = &remote {
                 let release_reference = state.sessions[session_id].remote_reference_held;
@@ -1047,7 +1352,8 @@ impl Manager {
                     let managed = state.sessions.get_mut(session_id).expect("checked");
                     managed.remote_reference_held = false;
                 }
-                match Self::release_remote(state, OP, &remote.address, release_reference, &secrets) {
+                match Self::release_remote(state, OP, &remote.address, release_reference, &secrets)
+                {
                     Ok(()) => {
                         let managed = state.sessions.get_mut(session_id).expect("checked");
                         managed.remote_removal_pending = false;
@@ -1094,10 +1400,10 @@ impl Manager {
             .unwrap_or_default();
         let managed = state.sessions.get_mut(session_id)?;
         let position = managed.scripts.iter().position(|e| e.id == script_id)?;
-        let is_destroyed = managed.scripts[position]
-            .script
-            .is_destroyed()
-            .unwrap_or(true);
+        let is_destroyed = match managed.scripts[position].script.is_destroyed() {
+            Ok(is_destroyed) => is_destroyed,
+            Err(error) => return Some(sanitize(&error, &secrets)),
+        };
         if parent_released || is_destroyed {
             managed.scripts[position].state = ScriptState::Released;
         }
@@ -1114,13 +1420,17 @@ impl Manager {
             let entry = &mut managed.scripts[position];
             match entry.script.unload(&cancel) {
                 Ok(()) => entry.state = ScriptState::Released,
-                Err(error) => {
-                    if entry.script.is_destroyed().unwrap_or(false) {
-                        entry.state = ScriptState::Released;
-                    } else {
-                        return Some(sanitize(&error, &secrets));
+                Err(error) => match entry.script.is_destroyed() {
+                    Ok(true) => entry.state = ScriptState::Released,
+                    Ok(false) => return Some(sanitize(&error, &secrets)),
+                    Err(state_error) => {
+                        return Some(format!(
+                            "{}; unable to query script state: {}",
+                            sanitize(&error, &secrets),
+                            sanitize(&state_error, &secrets)
+                        ));
                     }
-                }
+                },
             }
         }
         // Dropping the ManagedScript disconnects the message handler.
@@ -1143,27 +1453,58 @@ impl Manager {
                 failures.push(error.message());
             }
         }
-        let addresses: Vec<(String, usize)> = state
+        let pending_ids: Vec<String> = state.pending_startups.keys().cloned().collect();
+        for id in pending_ids {
+            let secrets = state
+                .pending_startups
+                .get(&id)
+                .and_then(|pending| pending.remote.as_ref())
+                .map(Remote::secrets)
+                .unwrap_or_default();
+            let pending_failures =
+                self.retry_pending_startup(&mut state, &id, "close_frida_session", &secrets);
+            failures.extend(pending_failures);
+            if state.pending_startups.contains_key(&id) {
+                failures.push("Pending Frida startup cleanup remains owned".to_owned());
+            }
+        }
+        let addresses: Vec<(String, usize, Vec<String>)> = state
             .remotes
             .iter()
-            .map(|(address, reference)| (address.clone(), reference.references))
+            .map(|(address, reference)| {
+                (
+                    address.clone(),
+                    reference.references,
+                    reference.redaction_secrets.clone(),
+                )
+            })
             .collect();
-        for (address, references) in addresses {
+        for (address, references, secrets) in addresses {
             if references != 0 {
                 continue;
             }
-            if let Err(_cause) =
-                Self::release_remote(&mut state, "close_frida_session", &address, false, &[])
+            if let Err(cause) =
+                Self::release_remote(&mut state, "close_frida_session", &address, false, &secrets)
             {
-                failures.push("Unable to close remote Frida connection during shutdown".to_owned());
+                failures.push(format!(
+                    "Unable to close remote Frida connection during shutdown: {}",
+                    cause.message()
+                ));
             }
         }
         if failures.is_empty() {
             Ok(())
         } else {
-            let reason = format!("Frida session cleanup was incomplete: {}", failures.join("; "));
-            Err(AnalysisError::capability_unavailable("frida", "close_frida_session", reason.clone())
-                .with_cleanup(reason, Vec::new()))
+            let reason = format!(
+                "Frida session cleanup was incomplete: {}",
+                failures.join("; ")
+            );
+            Err(AnalysisError::capability_unavailable(
+                "frida",
+                "close_frida_session",
+                reason.clone(),
+            )
+            .with_cleanup(reason, Vec::new()))
         }
     }
 
@@ -1173,13 +1514,7 @@ impl Manager {
     /// Collect a script's pending messages and record them. When `settle` is
     /// set, keep waiting through the startup idle gap; otherwise drain only
     /// what is already queued.
-    fn drain_session(
-        &self,
-        state: &mut State,
-        session_id: &str,
-        script_id: &str,
-        settle: bool,
-    ) {
+    fn drain_session(&self, state: &mut State, session_id: &str, script_id: &str, settle: bool) {
         let raws = {
             let Some(managed) = state.sessions.get(session_id) else {
                 return;
@@ -1205,7 +1540,9 @@ impl Manager {
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
 
@@ -1428,7 +1765,9 @@ fn contains_subslice(haystack: &[u8], needle: &[u8]) -> bool {
     if needle.is_empty() || needle.len() > haystack.len() {
         return false;
     }
-    haystack.windows(needle.len()).any(|window| window == needle)
+    haystack
+        .windows(needle.len())
+        .any(|window| window == needle)
 }
 
 impl rea_mcp::SessionResource for Manager {

@@ -12,15 +12,15 @@
 //! the group is killed so its PID cannot be reused under us. Cleanup failures
 //! are retained and retryable; `Drop` performs best-effort cleanup only.
 
+use std::collections::VecDeque;
 use std::ffi::OsString;
 use std::io::{Read, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::collections::VecDeque;
-use std::os::fd::AsRawFd;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use portable_pty::{MasterPty, PtySize, native_pty_system};
@@ -34,6 +34,11 @@ const READ_CHUNK_SIZE: usize = 64 * 1024;
 /// libuv `uv__read` reads at most this many full buffers per readiness.
 const READS_PER_READINESS: usize = 32;
 const WAIT_POLL: Duration = Duration::from_millis(5);
+const ABANDON_REAP_DEADLINE: Duration = Duration::from_millis(250);
+
+type RetainedChild = Arc<Mutex<Option<Child>>>;
+
+static RETAINED_CHILDREN: OnceLock<Mutex<Vec<RetainedChild>>> = OnceLock::new();
 
 /// One PTY launch. Every input is used exactly as given.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -243,7 +248,7 @@ impl OwnedPtyProcess {
         drop(command);
         drop(slave);
         drop(pair.slave);
-        let mut child = spawned.map_err(|error| failure("create_process", error.to_string()))?;
+        let child = spawned.map_err(|error| failure("create_process", error.to_string()))?;
 
         let process_group_id = match libc::pid_t::try_from(child.id()) {
             Ok(pid) => pid,
@@ -258,8 +263,9 @@ impl OwnedPtyProcess {
         let process_identity = match verify_owned_process_group(process_group_id) {
             Ok(identity) => identity,
             Err(error) => {
-                // SAFETY: kill(2) on our unreaped child's own group.
-                unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
+                // The group identity is unknown here. The direct child handle
+                // remains ours, but a negative-pid signal could target a
+                // reused or foreign group. `abandon` only signals that child.
                 return Err(abandon(child, error));
             }
         };
@@ -270,10 +276,12 @@ impl OwnedPtyProcess {
         let (reader, writer) = match (reader, writer) {
             (Ok(reader), Ok(writer)) => (reader, writer),
             (Err(error), _) | (_, Err(error)) => {
-                // SAFETY: as above; identity was just verified.
-                unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
-                let _ = child.wait();
-                return Err(failure("open_pty_master", error.to_string()));
+                let mut launch_error = failure("open_pty_master", error.to_string());
+                // SAFETY: the verified process group belongs to our unreaped child.
+                if unsafe { libc::kill(-process_group_id, libc::SIGKILL) } != 0 {
+                    launch_error.cleanup = Some(std::io::Error::last_os_error().to_string());
+                }
+                return Err(abandon(child, launch_error));
             }
         };
 
@@ -479,9 +487,9 @@ impl OwnedPtyProcess {
         }
     }
 
-    /// Observe the leader's exit without reaping it (`waitid(WNOWAIT)`):
-    /// the zombie keeps its PID, and so the group ID, from being reused, so
-    /// group signals and session attribution stay proven until `cleanup`.
+    /// Observe the leader's exit while preserving the ownership state needed
+    /// by cleanup. The zombie keeps its PID, and so the group ID, from being
+    /// reused until cleanup reaps it.
     fn observe_exit(&mut self) -> Result<Option<ChildExit>, ProcessLaunchError> {
         if self.exit.is_none() {
             self.exit = peek_exit(self.process_group_id)
@@ -529,9 +537,15 @@ fn peek_exit(pid: libc::pid_t) -> std::io::Result<Option<ChildExit>> {
             return Ok(None);
         }
         return Ok(Some(if info.si_code == libc::CLD_EXITED {
-            ChildExit { code: status as u32, signal: None }
+            ChildExit {
+                code: status as u32,
+                signal: None,
+            }
         } else {
-            ChildExit { code: 0, signal: Some(status) }
+            ChildExit {
+                code: 0,
+                signal: Some(status),
+            }
         }));
     }
 }
@@ -546,15 +560,129 @@ fn poisoned(operation: &'static str) -> ProcessLaunchError {
     failure(operation, "PTY state lock was poisoned")
 }
 
-/// Reap an unverified child before reporting a launch failure.
-fn abandon(mut child: Child, error: ProcessLaunchError) -> ProcessLaunchError {
-    let _ = child.kill();
-    match child.wait() {
-        Ok(_) => error,
-        Err(cleanup) => ProcessLaunchError {
-            cleanup: Some(cleanup.to_string()),
-            ..error
-        },
+/// Give up a launch while retaining ownership until the child is reaped.
+///
+/// Launch failures can occur before a process-group identity is readable, so
+/// this operation may only use the direct `Child` handle. A blocking
+/// `Child::wait` here made a failed PTY launch hang the capture worker when a
+/// platform process did not acknowledge the first cleanup attempt. Poll for a
+/// short deadline and hand the still-owned child to a background reaper.
+fn abandon(mut child: Child, mut error: ProcessLaunchError) -> ProcessLaunchError {
+    let mut cleanup_errors = Vec::new();
+
+    retry_retained_reapers(&mut cleanup_errors);
+
+    if let Err(cleanup) = child.kill() {
+        if cleanup.kind() != std::io::ErrorKind::InvalidInput {
+            cleanup_errors.push(format!("kill child: {cleanup}"));
+        }
+    }
+
+    let deadline = Instant::now() + ABANDON_REAP_DEADLINE;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(WAIT_POLL),
+            Ok(None) => {
+                let pid = child.id();
+                cleanup_errors.push(format!(
+                    "child {pid} remained active after the bounded launch-cleanup deadline"
+                ));
+                schedule_reaping(child, &mut cleanup_errors);
+                break;
+            }
+            Err(cleanup) => {
+                cleanup_errors.push(format!("observe child: {cleanup}"));
+                schedule_reaping(child, &mut cleanup_errors);
+                break;
+            }
+        }
+    }
+
+    if !cleanup_errors.is_empty() {
+        let details = cleanup_errors.join("; ");
+        error.cleanup = Some(match error.cleanup.take() {
+            Some(existing) => format!("{existing}; {details}"),
+            None => details,
+        });
+    }
+    error
+}
+
+fn schedule_reaping(child: Child, cleanup_errors: &mut Vec<String>) {
+    let retained = Arc::new(Mutex::new(Some(child)));
+    if let Err(cleanup) = spawn_reaper(Arc::clone(&retained)) {
+        cleanup_errors.push(format!("retain child reaper: {cleanup}"));
+        retain_for_retry(retained);
+    }
+}
+
+fn reap_until_exit(mut child: Child) {
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) => std::thread::sleep(WAIT_POLL),
+            Err(_) => {
+                // Keep ownership and retry observation rather than dropping
+                // an active child after a transient wait error.
+                std::thread::sleep(WAIT_POLL);
+            }
+        }
+    }
+}
+
+fn spawn_reaper(owner: RetainedChild) -> std::io::Result<std::thread::JoinHandle<()>> {
+    std::thread::Builder::new()
+        .name("rea-pty-abandon-reaper".to_owned())
+        .spawn(move || {
+            if let Some(child) = take_retained_child(&owner) {
+                reap_until_exit(child);
+            }
+        })
+}
+
+fn retained_children() -> &'static Mutex<Vec<RetainedChild>> {
+    RETAINED_CHILDREN.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn retain_for_retry(owner: RetainedChild) {
+    let mut retained = match retained_children().lock() {
+        Ok(retained) => retained,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    retained.push(owner);
+}
+
+fn retry_retained_reapers(cleanup_errors: &mut Vec<String>) {
+    let pending = {
+        let mut retained = match retained_children().lock() {
+            Ok(retained) => retained,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        std::mem::take(&mut *retained)
+    };
+
+    let mut retry = Vec::new();
+    for owner in pending {
+        if let Err(error) = spawn_reaper(Arc::clone(&owner)) {
+            cleanup_errors.push(format!("retry retained child reaper: {error}"));
+            retry.push(owner);
+        }
+    }
+
+    if !retry.is_empty() {
+        let mut retained = match retained_children().lock() {
+            Ok(retained) => retained,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        retained.extend(retry);
+    }
+}
+
+fn take_retained_child(owner: &RetainedChild) -> Option<Child> {
+    match owner.lock() {
+        Ok(mut child) => child.take(),
+        Err(poisoned) => poisoned.into_inner().take(),
     }
 }
 
@@ -574,7 +702,11 @@ fn dup_master(fd: Option<std::os::fd::RawFd>) -> std::io::Result<std::fs::File> 
 /// Wait up to `timeout` for the master to be readable, hung up or failed.
 fn wait_readable(fd: std::os::fd::RawFd, timeout: Duration) -> std::io::Result<bool> {
     let deadline = Instant::now() + timeout;
-    let mut poll = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
+    let mut poll = libc::pollfd {
+        fd,
+        events: libc::POLLIN,
+        revents: 0,
+    };
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         let millis = remaining.as_millis().min(i32::MAX as u128) as i32;
@@ -584,7 +716,17 @@ fn wait_readable(fd: std::os::fd::RawFd, timeout: Duration) -> std::io::Result<b
             if poll.revents & libc::POLLNVAL != 0 {
                 return Err(std::io::Error::from_raw_os_error(libc::EBADF));
             }
-            return Ok(true);
+            if poll.revents & libc::POLLIN != 0 || poll.revents & libc::POLLERR != 0 {
+                return Ok(true);
+            }
+            // A PTY master may report hangup while a descendant still holds
+            // the slave open. Do not enter a blocking read for that status;
+            // the caller will observe the owned leader's exit on its next
+            // lifecycle poll and seal the already-queued output.
+            if poll.revents & libc::POLLHUP != 0 {
+                return Ok(false);
+            }
+            return Ok(false);
         }
         if ready == 0 {
             return Ok(false);
@@ -727,7 +869,9 @@ mod tests {
             std::thread::sleep(Duration::from_millis(100));
             process.write_input(b"hello\n").unwrap();
             let mut chunks = Vec::new();
-            while let Some(PtyEvent::Output { bytes, .. }) = output.next_timeout(Duration::from_millis(100)) {
+            while let Some(PtyEvent::Output { bytes, .. }) =
+                output.next_timeout(Duration::from_millis(100))
+            {
                 chunks.push(String::from_utf8_lossy(&bytes).into_owned());
             }
             eprintln!("{chunks:?}");
@@ -763,7 +907,9 @@ mod tests {
         let (mut process, mut output) = OwnedPtyProcess::launch(spec("exit 0")).unwrap();
         collect_until_closed(&mut output);
         assert!(matches!(
-            process.wait_bounded(Duration::from_secs(5), || false).unwrap(),
+            process
+                .wait_bounded(Duration::from_secs(5), || false)
+                .unwrap(),
             PtyWait::Exited(_)
         ));
         let pid = process.id() as libc::pid_t;
@@ -771,13 +917,23 @@ mod tests {
         let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
         // SAFETY: probe our own child without reaping it.
         let waitable = unsafe {
-            libc::waitid(libc::P_PID, pid as libc::id_t, &mut info, libc::WEXITED | libc::WNOHANG | libc::WNOWAIT)
+            libc::waitid(
+                libc::P_PID,
+                pid as libc::id_t,
+                &mut info,
+                libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+            )
         };
         assert_eq!(waitable, 0, "leader was reaped before cleanup");
         process.cancel().unwrap();
         // SAFETY: as above; after cleanup the child is reaped (ECHILD).
         let reaped = unsafe {
-            libc::waitid(libc::P_PID, pid as libc::id_t, &mut info, libc::WEXITED | libc::WNOHANG | libc::WNOWAIT)
+            libc::waitid(
+                libc::P_PID,
+                pid as libc::id_t,
+                &mut info,
+                libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+            )
         };
         assert_eq!(reaped, -1);
     }

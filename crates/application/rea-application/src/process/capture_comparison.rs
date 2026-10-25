@@ -49,6 +49,16 @@ pub fn validate_input(input: &Value) -> Result<(), Failure> {
     {
         return Err(invalid("max_capture_age_ms must be a nonnegative integer"));
     }
+
+    if let Some(trace_spec) = input.get("trace_spec") {
+        let issues = crate::process::trace::spec::refinements(trace_spec);
+        if let Some((path, message)) = issues.first() {
+            return Err(invalid(&format!(
+                "trace_spec.{}: {message}",
+                path.join(".")
+            )));
+        }
+    }
     Ok(())
 }
 
@@ -91,14 +101,17 @@ pub fn compare(input: &Value) -> Result<Value, Failure> {
         );
     }
 
-    let trace_requested = input.get("trace_spec").is_some();
-    let trace = input.get("trace_spec").map(|spec| json!({
-        "verdict": "unknown",
-        "reason": "Native trace-spec evaluation is not yet routed; the explicit specification is retained for adapter follow-up.",
-        "specification": spec,
-    }));
+    let trace = input.get("trace_spec").map(|spec| {
+        let specification = crate::process::trace::spec::Specification::from_value(spec);
+        crate::process::trace::eval::compare(
+            &Value::Object(left.clone()),
+            &Value::Object(right.clone()),
+            &specification,
+        )
+        .to_value()
+    });
     let first = first_divergence(left, right, &dimensions, same_normalization);
-    let status = derive_status(&dimensions, trace_requested);
+    let status = derive_status(&dimensions, trace.as_ref());
     let mut semantic = json!({
         "status": status,
         "terminal": dimensions["terminal"],
@@ -411,7 +424,7 @@ fn source_truncated(capture: &Map<String, Value>, source: &str) -> bool {
     }
 }
 
-fn derive_status(dimensions: &Map<String, Value>, trace_requested: bool) -> &'static str {
+fn derive_status(dimensions: &Map<String, Value>, trace: Option<&Value>) -> &'static str {
     if DIMENSIONS
         .iter()
         .any(|dimension| dimensions[*dimension] == "truncated")
@@ -426,7 +439,7 @@ fn derive_status(dimensions: &Map<String, Value>, trace_requested: bool) -> &'st
     }) {
         return "changed";
     }
-    if trace_requested
+    if trace.is_some_and(|trace| trace["verdict"] != "equivalent")
         || DIMENSIONS
             .iter()
             .any(|dimension| dimensions[*dimension] == "unknown")

@@ -2314,8 +2314,6 @@ impl MetadataRoot {
                 Some("truncated FieldMarshal row".to_owned())
             } else if parent == Some(0) {
                 Some("FieldMarshal parent coded index is null".to_owned())
-            } else if parent.is_some_and(|value| value & 1 >= 2) {
-                Some("FieldMarshal parent coded index has an invalid tag".to_owned())
             } else if parent.is_some_and(|value| {
                 let table = [4usize, 8][value & 1];
                 let row = value >> 1;
@@ -6457,6 +6455,39 @@ mod tests {
         assert_eq!(marshals[0].native_type_blob_offset, 1);
         assert_eq!(marshals[0].native_type_blob_hex, Some("14".to_owned()));
         assert_eq!(marshals[0].decoded_native_type, Some("lpstr"));
+        assert_eq!(marshals[0].issue, None);
+    }
+
+    #[test]
+    fn accepts_field_marshal_param_parent_tag() {
+        let mut rows = vec![0; 64];
+        rows[4] = 1;
+        rows[8] = 1;
+        rows[13] = 1;
+        let root = MetadataRoot {
+            version: String::new(),
+            stream_names: Vec::new(),
+            row_counts: std::collections::BTreeMap::new(),
+            tables: Some(TableStream {
+                offset: 0,
+                valid: (1u64 << 4) | (1u64 << 8) | (1u64 << 13),
+                rows,
+                heap_sizes: 0,
+            }),
+            strings: Vec::new(),
+            guids: Vec::new(),
+            blobs: vec![0, 1, 0x14],
+            user_strings: Vec::new(),
+        };
+        let source_offset = table_start(root.tables.as_ref().expect("tables"), 13);
+        let mut bytes = vec![0; source_offset + 4];
+        bytes[source_offset..source_offset + 2].copy_from_slice(&3u16.to_le_bytes());
+        bytes[source_offset + 2..source_offset + 4].copy_from_slice(&1u16.to_le_bytes());
+
+        let marshals = root.field_marshals(&bytes);
+
+        assert_eq!(marshals.len(), 1);
+        assert_eq!(marshals[0].parent_token, Some(token(8, 1)));
         assert_eq!(marshals[0].issue, None);
     }
 

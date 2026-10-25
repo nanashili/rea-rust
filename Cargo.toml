@@ -41,6 +41,12 @@ members = [
 # The pre-existing optional provider retains its independently pinned build.
 exclude = ["ghidra-rust-worker"]
 
+[patch.crates-io]
+# REA requires Babel-compatible recovery for Flow `import typeof` and
+# reserved-word bindings. This is a narrow parser-only patch over the pinned
+# Oxc release; the AST and semantic crates remain the upstream 0.133.0 APIs.
+oxc_parser = { path = "vendor/oxc_parser" }
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
@@ -104,6 +110,8 @@ serde = "=1.0.228"
 serde_json = "=1.0.151"
 sha1 = "=0.10.7"
 sha2 = "=0.10.9"
+toml_edit = "=0.25.17"
+yaml-rust2 = "=0.13.0"
 signal-hook = { version = "=0.3.18", default-features = false }
 portable-pty = "=0.9.0"
 tempfile = "=3.27.0"
@@ -111,6 +119,7 @@ tokio = "=1.52.0"
 tokio-util = "=0.7.20"
 tower = "=0.5.3"
 tungstenite = { version = "=0.29.0", default-features = false }
+ureq = { version = "=3.4.2", default-features = false, features = ["rustls"] }
 # Unicode NFC for logical archive and bundle paths (`String.prototype.normalize("NFC")`).
 unicode-normalization = "=0.1.26"
 uuid = "=1.28.0"

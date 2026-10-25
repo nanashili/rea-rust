@@ -216,8 +216,14 @@ pub fn write(raw: &RawValue, mut output: impl Write) -> Result<(), Error> {
                             // canonical form; avoid copying large text values.
                             output.write_all(raw.get().as_bytes()).map_err(Error::Io)?;
                         } else {
-                            let text: JsonText =
-                                serde_json::from_str(raw.get()).map_err(Error::Json)?;
+                            // Decode through the source-aware parser so escaped
+                            // lone UTF-16 surrogates remain lossless.
+                            let text = JsonText::parse(raw).map_err(|error| {
+                                Error::Json(serde_json::Error::io(io::Error::new(
+                                    io::ErrorKind::InvalidData,
+                                    error.to_string(),
+                                )))
+                            })?;
                             serde_json::to_writer(&mut output, &text).map_err(Error::Json)?;
                         }
                     }
@@ -270,4 +276,11 @@ pub fn digest_raw(raw: &RawValue) -> Result<String, Error> {
 pub fn digest<T: Serialize>(value: &T) -> Result<String, Error> {
     let raw = serde_json::value::to_raw_value(value).map_err(Error::Json)?;
     digest_raw(&raw)
+}
+
+/// Compute the lowercase SHA-256 digest of already-decoded bytes.
+pub fn digest_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
 }

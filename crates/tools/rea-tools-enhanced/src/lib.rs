@@ -33,6 +33,10 @@ pub fn register(registry: &mut Registry) {
         "compare_artifacts",
         session::artifact_comparison::compare_artifacts,
     );
+    registry.handle_raw_application_validated(
+        "compare_artifacts",
+        session::artifact_comparison::compare_artifacts_raw,
+    );
     registry.handle("build_call_path", session::call_path::build_call_path);
     registry.handle(
         "get_navigation_context",
@@ -42,7 +46,7 @@ pub fn register(registry: &mut Registry) {
         "inspect_address_context",
         session::context::inspect_address_context,
     );
-    registry.handle(
+    registry.handle_application_validated(
         "find_changed_behavior",
         session::changed_behavior::find_changed_behavior,
     );

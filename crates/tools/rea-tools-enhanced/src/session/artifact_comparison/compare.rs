@@ -2,18 +2,15 @@
 //!
 //! Compatibility owner: `domain/artifactComparison.ts`.
 
-use super::canonical::canonical_json;
 use super::inventory::InventorySet;
-use crate::js::compare_code_points;
+use rea_application::javascript::graph::json::{Json, Obj};
+use rea_core::JsString;
 use rea_core::analysis_error::AnalysisError;
-use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
-
-const OPERATION: &str = "Comparison";
 
 /// A finished comparison: the public payload plus its status.
 pub struct ArtifactComparison {
-    pub value: Value,
+    pub value: Json,
     pub status: String,
 }
 
@@ -30,13 +27,15 @@ pub fn compare_artifacts(
     let root_coverage_complete = same_scope
         && left.complete
         && right.complete
-        && left.coverage["status"] == "complete"
-        && right.coverage["status"] == "complete";
+        && left.coverage["status"].as_str() == Some("complete")
+        && right.coverage["status"].as_str() == Some("complete");
     let entry_coverage_complete =
-        root_coverage_complete && left.coverage["scope"] == "container-entries";
+        root_coverage_complete && left.coverage["scope"].as_str() == Some("container-entries");
 
-    let left_covered = same_scope && left.complete && left.coverage["status"] == "complete";
-    let right_covered = same_scope && right.complete && right.coverage["status"] == "complete";
+    let left_covered =
+        same_scope && left.complete && left.coverage["status"].as_str() == Some("complete");
+    let right_covered =
+        same_scope && right.complete && right.coverage["status"].as_str() == Some("complete");
     let left_occurrence_count = left.manifest["occurrence_count"].as_u64().unwrap_or(0);
     let right_occurrence_count = right.manifest["occurrence_count"].as_u64().unwrap_or(0);
     let fully_covered = left_covered
@@ -81,15 +80,15 @@ pub fn compare_artifacts(
         limitations.push("Artifact inventory scopes differ.".to_owned());
     }
     if same_scope
-        && left.coverage["scope"] == "root"
+        && left.coverage["scope"].as_str() == Some("root")
         && (left_occurrence_count > 1 || right_occurrence_count > 1)
     {
         limitations.push("Container entry coverage is unavailable for child paths.".to_owned());
     }
-    if left.coverage["status"] != "complete" {
+    if left.coverage["status"].as_str() != Some("complete") {
         limitations.push("Left artifact inventory traversal coverage is unknown.".to_owned());
     }
-    if right.coverage["status"] != "complete" {
+    if right.coverage["status"].as_str() != Some("complete") {
         limitations.push("Right artifact inventory traversal coverage is unknown.".to_owned());
     }
     if has_ambiguous {
@@ -107,14 +106,14 @@ pub fn compare_artifacts(
         "truncated"
     } else if changes
         .iter()
-        .any(|change| change["classification"] == "contradiction")
+        .any(|change| change["classification"].as_str() == Some("contradiction"))
     {
         "contradiction"
     } else if !fully_covered {
         "unknown"
     } else if changes
         .iter()
-        .any(|change| change["classification"] == "unknown")
+        .any(|change| change["classification"].as_str() == Some("unknown"))
     {
         "unknown"
     } else if changes.is_empty() {
@@ -126,21 +125,26 @@ pub fn compare_artifacts(
     // limitations: [...new Set(limitations)].sort(compareUnicodeCodePoints).
     let mut seen = std::collections::HashSet::new();
     limitations.retain(|item| seen.insert(item.clone()));
-    limitations.sort_by(|a, b| compare_code_points(a, b));
+    limitations.sort_by(|a, b| {
+        JsString::from(a.as_str()).compare_code_points(&JsString::from(b.as_str()))
+    });
 
     // Each change is re-keyed into `artifactChangeSchema` order, exactly as
     // `artifactComparisonResultSchema.parse` normalizes the result.
-    let changes: Vec<Value> = changes.iter().map(schema_order_change).collect();
+    let changes: Vec<Json> = changes.iter().map(schema_order_change).collect();
 
     // artifactComparisonResultSchema shape order.
-    let value = json!({
-        "status": status,
-        "left_manifest_id": left.manifest["manifest_id"],
-        "right_manifest_id": right.manifest["manifest_id"],
-        "summary": summary,
-        "changes": changes,
-        "limitations": limitations,
-    });
+    let value: Json = Obj::new()
+        .with("status", status)
+        .with("left_manifest_id", left.manifest["manifest_id"].clone())
+        .with("right_manifest_id", right.manifest["manifest_id"].clone())
+        .with("summary", summary)
+        .with("changes", Json::Array(changes))
+        .with(
+            "limitations",
+            rea_application::javascript::graph::json::strings(limitations),
+        )
+        .into();
 
     Ok(ArtifactComparison {
         value,
@@ -149,28 +153,28 @@ pub fn compare_artifacts(
 }
 
 /// Re-key one change into `artifactChangeSchema` property order.
-fn schema_order_change(change: &Value) -> Value {
-    let field = |key: &str| change.get(key).cloned().unwrap_or(Value::Null);
-    json!({
-        "classification": field("classification"),
-        "logical_path": field("logical_path"),
-        "dimensions": field("dimensions"),
-        "left_occurrence_id": field("left_occurrence_id"),
-        "right_occurrence_id": field("right_occurrence_id"),
-        "left_artifact_id": field("left_artifact_id"),
-        "right_artifact_id": field("right_artifact_id"),
-        "evidence_links": field("evidence_links"),
-    })
+fn schema_order_change(change: &Json) -> Json {
+    let field = |key: &str| change.get(key).cloned().unwrap_or(Json::Null);
+    Obj::new()
+        .with("classification", field("classification"))
+        .with("logical_path", field("logical_path"))
+        .with("dimensions", field("dimensions"))
+        .with("left_occurrence_id", field("left_occurrence_id"))
+        .with("right_occurrence_id", field("right_occurrence_id"))
+        .with("left_artifact_id", field("left_artifact_id"))
+        .with("right_artifact_id", field("right_artifact_id"))
+        .with("evidence_links", field("evidence_links"))
+        .into()
 }
 
-fn occurrences_by_path(occurrences: &[Value]) -> BTreeMap<String, Vec<Value>> {
+fn occurrences_by_path(occurrences: &[Json]) -> BTreeMap<JsString, Vec<Json>> {
     // Preserve per-path insertion order; keyed map for stable path iteration.
-    let mut output: BTreeMap<String, Vec<Value>> = BTreeMap::new();
+    let mut output: BTreeMap<JsString, Vec<Json>> = BTreeMap::new();
     for occurrence in occurrences {
         let path = occurrence["logical_path"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+            .as_js_string()
+            .cloned()
+            .unwrap_or_default();
         output.entry(path).or_default().push(occurrence.clone());
     }
     output
@@ -180,28 +184,28 @@ fn occurrences_by_path(occurrences: &[Value]) -> BTreeMap<String, Vec<Value>> {
 fn compare_occurrences(
     left: &InventorySet,
     right: &InventorySet,
-    left_by_path: &BTreeMap<String, Vec<Value>>,
-    right_by_path: &BTreeMap<String, Vec<Value>>,
+    left_by_path: &BTreeMap<JsString, Vec<Json>>,
+    right_by_path: &BTreeMap<JsString, Vec<Json>>,
     evidence_links: &[String],
     root_covered: bool,
     entries_covered: bool,
-) -> Result<(Vec<Value>, bool), AnalysisError> {
+) -> Result<(Vec<Json>, bool), AnalysisError> {
     let left_nodes = nodes_by_id(&left.nodes);
     let right_nodes = nodes_by_id(&right.nodes);
     let left_relations = relations_by_path(left)?;
     let right_relations = relations_by_path(right)?;
 
     // paths = sorted union of keys (BTreeMap keys already code-point ordered).
-    let mut paths: Vec<String> = Vec::new();
+    let mut paths: Vec<JsString> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for key in left_by_path.keys().chain(right_by_path.keys()) {
         if seen.insert(key.clone()) {
             paths.push(key.clone());
         }
     }
-    paths.sort_by(|a, b| compare_code_points(a, b));
+    paths.sort_by(JsString::compare_code_points);
 
-    let empty: Vec<Value> = Vec::new();
+    let empty: Vec<Json> = Vec::new();
     let mut output = Vec::new();
     let mut has_ambiguous = false;
     for path in paths {
@@ -209,16 +213,21 @@ fn compare_occurrences(
         let right_matches = right_by_path.get(&path).unwrap_or(&empty);
         if left_matches.len() > 1 || right_matches.len() > 1 {
             has_ambiguous = true;
-            output.push(json!({
-                "logical_path": path,
-                "classification": "unknown",
-                "dimensions": ["availability"],
-                "left_occurrence_id": Value::Null,
-                "right_occurrence_id": Value::Null,
-                "left_artifact_id": Value::Null,
-                "right_artifact_id": Value::Null,
-                "evidence_links": evidence_links,
-            }));
+            output.push(
+                Obj::new()
+                    .with("logical_path", path.clone())
+                    .with("classification", "unknown")
+                    .with("dimensions", Json::Array(vec![Json::from("availability")]))
+                    .with("left_occurrence_id", Json::Null)
+                    .with("right_occurrence_id", Json::Null)
+                    .with("left_artifact_id", Json::Null)
+                    .with("right_artifact_id", Json::Null)
+                    .with(
+                        "evidence_links",
+                        Json::Array(evidence_links.iter().cloned().map(Json::from).collect()),
+                    )
+                    .into(),
+            );
             continue;
         }
         let left_occurrence = left_matches.first();
@@ -242,7 +251,7 @@ fn compare_occurrences(
     Ok((output, has_ambiguous))
 }
 
-fn nodes_by_id(nodes: &[Value]) -> std::collections::HashMap<String, Value> {
+fn nodes_by_id(nodes: &[Json]) -> std::collections::HashMap<String, Json> {
     nodes
         .iter()
         .filter_map(|node| {
@@ -254,9 +263,9 @@ fn nodes_by_id(nodes: &[Value]) -> std::collections::HashMap<String, Value> {
 }
 
 fn node_for<'a>(
-    occurrence: Option<&Value>,
-    nodes: &'a std::collections::HashMap<String, Value>,
-) -> Option<&'a Value> {
+    occurrence: Option<&Json>,
+    nodes: &'a std::collections::HashMap<String, Json>,
+) -> Option<&'a Json> {
     let occurrence = occurrence?;
     let artifact_id = occurrence.get("artifact_id")?;
     if artifact_id.is_null() {
@@ -266,49 +275,59 @@ fn node_for<'a>(
 }
 
 struct ClassifyPathInput<'a> {
-    path: &'a str,
-    left_occurrence: Option<&'a Value>,
-    right_occurrence: Option<&'a Value>,
-    left_node: Option<&'a Value>,
-    right_node: Option<&'a Value>,
-    left_relations: &'a [Value],
-    right_relations: &'a [Value],
+    path: &'a JsString,
+    left_occurrence: Option<&'a Json>,
+    right_occurrence: Option<&'a Json>,
+    left_node: Option<&'a Json>,
+    right_node: Option<&'a Json>,
+    left_relations: &'a [Json],
+    right_relations: &'a [Json],
     root_covered: bool,
     entries_covered: bool,
     evidence_links: &'a [String],
 }
 
-fn build_change_base(input: &ClassifyPathInput<'_>) -> Map<String, Value> {
-    let mut object = Map::new();
-    object.insert("logical_path".into(), json!(input.path));
-    object.insert(
-        "left_occurrence_id".into(),
+fn build_change_base(input: &ClassifyPathInput<'_>) -> Obj {
+    let mut object = Obj::new();
+    object.set("logical_path", input.path.clone());
+    object.set(
+        "left_occurrence_id",
         optional_field(input.left_occurrence, "occurrence_id"),
     );
-    object.insert(
-        "right_occurrence_id".into(),
+    object.set(
+        "right_occurrence_id",
         optional_field(input.right_occurrence, "occurrence_id"),
     );
-    object.insert(
-        "left_artifact_id".into(),
+    object.set(
+        "left_artifact_id",
         optional_field(input.left_occurrence, "artifact_id"),
     );
-    object.insert(
-        "right_artifact_id".into(),
+    object.set(
+        "right_artifact_id",
         optional_field(input.right_occurrence, "artifact_id"),
     );
-    object.insert("evidence_links".into(), json!(input.evidence_links));
+    object.set(
+        "evidence_links",
+        Json::Array(
+            input
+                .evidence_links
+                .iter()
+                .cloned()
+                .map(Json::from)
+                .collect(),
+        ),
+    );
     object
 }
 
-fn optional_field(occurrence: Option<&Value>, key: &str) -> Value {
+fn optional_field(occurrence: Option<&Json>, key: &str) -> Json {
     match occurrence.and_then(|occurrence| occurrence.get(key)) {
         Some(value) if !value.is_null() => value.clone(),
-        _ => Value::Null,
+        _ => Json::Null,
     }
 }
 
-fn classify_presence(input: &ClassifyPathInput<'_>) -> Option<Value> {
+fn classify_presence(input: &ClassifyPathInput<'_>) -> Option<Json> {
     let covered = if input.path == "." {
         input.root_covered
     } else {
@@ -316,65 +335,67 @@ fn classify_presence(input: &ClassifyPathInput<'_>) -> Option<Value> {
     };
     if input.left_occurrence.is_none() {
         let mut base = build_change_base(input);
-        base.insert(
-            "classification".into(),
-            json!(if covered { "added" } else { "unknown" }),
+        base.set("classification", if covered { "added" } else { "unknown" });
+        base.set(
+            "dimensions",
+            Json::Array(vec![Json::from(if covered {
+                "content"
+            } else {
+                "availability"
+            })]),
         );
-        base.insert(
-            "dimensions".into(),
-            json!([if covered { "content" } else { "availability" }]),
-        );
-        return Some(Value::Object(base));
+        return Some(base.into());
     }
     if input.right_occurrence.is_none() {
         let mut base = build_change_base(input);
-        base.insert(
-            "classification".into(),
-            json!(if covered { "removed" } else { "unknown" }),
+        base.set(
+            "classification",
+            if covered { "removed" } else { "unknown" },
         );
-        base.insert(
-            "dimensions".into(),
-            json!([if covered { "content" } else { "availability" }]),
+        base.set(
+            "dimensions",
+            Json::Array(vec![Json::from(if covered {
+                "content"
+            } else {
+                "availability"
+            })]),
         );
-        return Some(Value::Object(base));
+        return Some(base.into());
     }
     None
 }
 
-fn hash_status(occurrence: Option<&Value>) -> Option<&str> {
+fn hash_status(occurrence: Option<&Json>) -> Option<&str> {
     occurrence.and_then(|occurrence| occurrence["hash_status"].as_str())
 }
 
-fn classify_integrity(input: &ClassifyPathInput<'_>, base: &Map<String, Value>) -> Option<Value> {
+fn classify_integrity(input: &ClassifyPathInput<'_>, base: &Obj) -> Option<Json> {
     if hash_status(input.left_occurrence) == Some("mismatched")
         || hash_status(input.right_occurrence) == Some("mismatched")
     {
         let mut object = base.clone();
-        object.insert("classification".into(), json!("contradiction"));
-        object.insert("dimensions".into(), json!(["integrity"]));
-        return Some(Value::Object(object));
+        object.set("classification", "contradiction");
+        object.set("dimensions", Json::Array(vec![Json::from("integrity")]));
+        return Some(object.into());
     }
     None
 }
 
-fn classify_availability(
-    input: &ClassifyPathInput<'_>,
-    base: &Map<String, Value>,
-) -> Option<Value> {
+fn classify_availability(input: &ClassifyPathInput<'_>, base: &Obj) -> Option<Json> {
     if hash_status(input.left_occurrence) != Some("verified")
         || hash_status(input.right_occurrence) != Some("verified")
         || input.left_node.is_none()
         || input.right_node.is_none()
     {
         let mut object = base.clone();
-        object.insert("classification".into(), json!("unknown"));
-        object.insert("dimensions".into(), json!(["availability"]));
-        return Some(Value::Object(object));
+        object.set("classification", "unknown");
+        object.set("dimensions", Json::Array(vec![Json::from("availability")]));
+        return Some(object.into());
     }
     None
 }
 
-fn classify_path(input: ClassifyPathInput<'_>) -> Option<Value> {
+fn classify_path(input: ClassifyPathInput<'_>) -> Option<Json> {
     if let Some(presence) = classify_presence(&input) {
         return Some(presence);
     }
@@ -390,12 +411,15 @@ fn classify_path(input: ClassifyPathInput<'_>) -> Option<Value> {
         return None;
     }
     let mut object = base;
-    object.insert("classification".into(), json!("changed"));
-    object.insert("dimensions".into(), json!(dimensions));
-    Some(Value::Object(object))
+    object.set("classification", "changed");
+    object.set(
+        "dimensions",
+        Json::Array(dimensions.into_iter().map(Json::from).collect()),
+    );
+    Some(object.into())
 }
 
-fn occurrence_field<'a>(occurrence: Option<&'a Value>, key: &str) -> Option<&'a Value> {
+fn occurrence_field<'a>(occurrence: Option<&'a Json>, key: &str) -> Option<&'a Json> {
     occurrence.and_then(|occurrence| occurrence.get(key))
 }
 
@@ -435,7 +459,7 @@ fn changed_dimensions(input: &ClassifyPathInput<'_>) -> Vec<&'static str> {
     dimensions
 }
 
-fn metadata_changed(input: &ClassifyPathInput<'_>, left: &Value, right: &Value) -> bool {
+fn metadata_changed(input: &ClassifyPathInput<'_>, left: &Json, right: &Json) -> bool {
     left["media_type"] != right["media_type"]
         || left["architecture"] != right["architecture"]
         || left["content_state"] != right["content_state"]
@@ -448,34 +472,34 @@ fn metadata_changed(input: &ClassifyPathInput<'_>, left: &Value, right: &Value) 
             != json_string_value(&optional_value(input.right_occurrence, "limitations"))
 }
 
-fn optional_value(occurrence: Option<&Value>, key: &str) -> Value {
+fn optional_value(occurrence: Option<&Json>, key: &str) -> Json {
     occurrence
         .and_then(|occurrence| occurrence.get(key))
         .cloned()
-        .unwrap_or(Value::Null)
+        .unwrap_or(Json::Null)
 }
 
 /// `JSON.stringify` of a slice of JSON values (preserves key order).
-fn json_string(values: &[Value]) -> String {
-    serde_json::to_string(values).unwrap_or_default()
+fn json_string(values: &[Json]) -> String {
+    Json::Array(values.to_vec()).stringify()
 }
 
 /// `JSON.stringify` of a JSON value. The TS inputs here are always present
 /// arrays (occurrence/node limitations), so null vs. `undefined` never differ.
-fn json_string_value(value: &Value) -> String {
-    serde_json::to_string(value).unwrap_or_default()
+fn json_string_value(value: &Json) -> String {
+    value.stringify()
 }
 
 #[derive(Clone)]
 struct RelationProjection {
-    value: Value,
+    value: Json,
     json: String,
 }
 
 fn relations_by_path(
     inventory: &InventorySet,
-) -> Result<std::collections::HashMap<String, Vec<Value>>, AnalysisError> {
-    let occurrences: std::collections::HashMap<&str, &Value> = inventory
+) -> Result<std::collections::HashMap<JsString, Vec<Json>>, AnalysisError> {
+    let occurrences: std::collections::HashMap<&str, &Json> = inventory
         .occurrences
         .iter()
         .filter_map(|occurrence| {
@@ -484,7 +508,7 @@ fn relations_by_path(
                 .map(|id| (id, occurrence))
         })
         .collect();
-    let mut output: std::collections::HashMap<String, Vec<RelationProjection>> =
+    let mut output: std::collections::HashMap<JsString, Vec<RelationProjection>> =
         std::collections::HashMap::new();
     for edge in &inventory.edges {
         let occurrence = occurrences.get(edge["occurrence_id"].as_str().unwrap_or_default());
@@ -495,11 +519,11 @@ fn relations_by_path(
             continue;
         }
         let path = occurrence["logical_path"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+            .as_js_string()
+            .cloned()
+            .unwrap_or_default();
         let parent_logical_path = if occurrence["parent_occurrence_id"].is_null() {
-            Value::Null
+            Json::Null
         } else {
             occurrences
                 .get(
@@ -508,30 +532,32 @@ fn relations_by_path(
                         .unwrap_or_default(),
                 )
                 .map(|parent| parent["logical_path"].clone())
-                .unwrap_or(Value::Null)
+                .unwrap_or(Json::Null)
         };
-        let projection = json!({
-            "parent_logical_path": parent_logical_path,
-            "child_artifact_id": occurrence["artifact_id"],
-            "relation": edge["relation"],
-            "logical_path": occurrence["logical_path"],
-            "producer": edge["producer"],
-        });
-        let json = canonical_json(&projection, OPERATION)?;
+        let projection = Obj::new()
+            .with("parent_logical_path", parent_logical_path)
+            .with("child_artifact_id", occurrence["artifact_id"].clone())
+            .with("relation", edge["relation"].clone())
+            .with("logical_path", occurrence["logical_path"].clone())
+            .with("producer", edge["producer"].clone());
+        let json = Json::from(projection.clone()).canonical();
         output.entry(path).or_default().push(RelationProjection {
-            value: projection,
+            value: projection.into(),
             json,
         });
     }
     let mut result = std::collections::HashMap::new();
     for (path, mut values) in output {
-        values.sort_by(|left, right| compare_code_points(&left.json, &right.json));
+        values.sort_by(|left, right| {
+            JsString::from(left.json.as_str())
+                .compare_code_points(&JsString::from(right.json.as_str()))
+        });
         result.insert(path, values.into_iter().map(|item| item.value).collect());
     }
     Ok(result)
 }
 
-fn summarize(left: &InventorySet, right: &InventorySet, changes: &[Value], covered: bool) -> Value {
+fn summarize(left: &InventorySet, right: &InventorySet, changes: &[Json], covered: bool) -> Json {
     let mut added = 0u64;
     let mut removed = 0u64;
     let mut changed = 0u64;
@@ -547,16 +573,18 @@ fn summarize(left: &InventorySet, right: &InventorySet, changes: &[Value], cover
             _ => {}
         }
     }
-    let changed_paths: std::collections::HashSet<&str> = changes
+    let changed_paths: std::collections::HashSet<JsString> = changes
         .iter()
-        .filter(|change| change["classification"] != "added")
-        .filter_map(|change| change["logical_path"].as_str())
+        .filter(|change| change["classification"].as_str() != Some("added"))
+        .filter_map(|change| change["logical_path"].as_js_string().cloned())
         .collect();
     let unchanged = if covered {
         left.occurrences
             .iter()
             .filter(|occurrence| {
-                !changed_paths.contains(occurrence["logical_path"].as_str().unwrap_or_default())
+                !occurrence["logical_path"]
+                    .as_js_string()
+                    .is_some_and(|path| changed_paths.contains(path))
             })
             .count() as u64
     } else {
@@ -572,20 +600,20 @@ fn summarize(left: &InventorySet, right: &InventorySet, changes: &[Value], cover
         let remainder = base.saturating_sub(subtracted);
         unknown.max(remainder)
     };
-    json!({
-        "unchanged": unchanged,
-        "added": added,
-        "removed": removed,
-        "changed": changed,
-        "unknown": unknown,
-        "contradiction": contradiction,
-    })
+    Obj::new()
+        .with("unchanged", unchanged as f64)
+        .with("added", added as f64)
+        .with("removed", removed as f64)
+        .with("changed", changed as f64)
+        .with("unknown", unknown as f64)
+        .with("contradiction", contradiction as f64)
+        .into()
 }
 
 fn apply_root_hash_change(
     left: &InventorySet,
     right: &InventorySet,
-    changes: &mut Vec<Value>,
+    changes: &mut Vec<Json>,
     evidence_links: &[String],
 ) -> Result<(), AnalysisError> {
     if left.manifest["root_sha256"] == right.manifest["root_sha256"] {
@@ -593,14 +621,14 @@ fn apply_root_hash_change(
     }
     let index = changes
         .iter()
-        .position(|change| change["logical_path"] == ".");
+        .position(|change| change["logical_path"].as_str() == Some("."));
     if let Some(index) = index {
         let existing = &changes[index];
         let dimensions: Vec<String> = existing["dimensions"]
             .as_array()
             .into_iter()
             .flatten()
-            .filter_map(Value::as_str)
+            .filter_map(Json::as_str)
             .map(str::to_owned)
             .collect();
         let classification = existing["classification"].as_str().unwrap_or_default();
@@ -622,7 +650,7 @@ fn apply_root_hash_change(
             .as_array()
             .into_iter()
             .flatten()
-            .filter_map(Value::as_str)
+            .filter_map(Json::as_str)
             .map(str::to_owned)
             .chain(evidence_links.iter().cloned())
         {
@@ -631,30 +659,53 @@ fn apply_root_hash_change(
             }
         }
         let mut object = existing.as_object().cloned().unwrap_or_default();
-        object.insert("classification".into(), json!("changed"));
-        object.insert("dimensions".into(), json!(new_dimensions));
-        object.insert("evidence_links".into(), json!(links));
-        changes[index] = Value::Object(object);
+        object.set("classification", "changed");
+        object.set(
+            "dimensions",
+            Json::Array(new_dimensions.into_iter().map(Json::from).collect()),
+        );
+        object.set(
+            "evidence_links",
+            Json::Array(links.into_iter().map(Json::from).collect()),
+        );
+        changes[index] = object.into();
         return Ok(());
     }
     let left_root = left
         .occurrences
         .iter()
-        .find(|occurrence| occurrence["logical_path"] == ".");
+        .find(|occurrence| occurrence["logical_path"].as_str() == Some("."));
     let right_root = right
         .occurrences
         .iter()
-        .find(|occurrence| occurrence["logical_path"] == ".");
-    changes.push(json!({
-        "classification": "changed",
-        "logical_path": ".",
-        "dimensions": ["content"],
-        "left_occurrence_id": left_root.map(|occurrence| occurrence["occurrence_id"].clone()).unwrap_or(Value::Null),
-        "right_occurrence_id": right_root.map(|occurrence| occurrence["occurrence_id"].clone()).unwrap_or(Value::Null),
-        "left_artifact_id": left_root.map(|occurrence| occurrence["artifact_id"].clone()).unwrap_or(Value::Null),
-        "right_artifact_id": right_root.map(|occurrence| occurrence["artifact_id"].clone()).unwrap_or(Value::Null),
-        "evidence_links": evidence_links,
-    }));
+        .find(|occurrence| occurrence["logical_path"].as_str() == Some("."));
+    changes.push(
+        Obj::new()
+            .with("classification", "changed")
+            .with("logical_path", ".")
+            .with("dimensions", Json::Array(vec![Json::from("content")]))
+            .with(
+                "left_occurrence_id",
+                left_root.map(|occurrence| occurrence["occurrence_id"].clone()),
+            )
+            .with(
+                "right_occurrence_id",
+                right_root.map(|occurrence| occurrence["occurrence_id"].clone()),
+            )
+            .with(
+                "left_artifact_id",
+                left_root.map(|occurrence| occurrence["artifact_id"].clone()),
+            )
+            .with(
+                "right_artifact_id",
+                right_root.map(|occurrence| occurrence["artifact_id"].clone()),
+            )
+            .with(
+                "evidence_links",
+                Json::Array(evidence_links.iter().cloned().map(Json::from).collect()),
+            )
+            .into(),
+    );
     Ok(())
 }
 

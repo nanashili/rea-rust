@@ -8,7 +8,7 @@ mod common;
 mod directory_reader;
 #[allow(dead_code)]
 mod lipo;
-#[cfg(feature = "family-macos-readers")]
+#[cfg(any(feature = "family-artifacts", feature = "family-macos-readers"))]
 #[allow(dead_code)]
 mod macos_readers;
 mod native_command;
@@ -50,3 +50,13 @@ pub fn register(registry: &mut Registry) {
     apple::register(registry);
     let _ = registry;
 }
+
+#[cfg(feature = "family-artifacts")]
+pub use artifact_graph::{
+    ArtifactInventoryResult, JavaScriptArtifactReaderHandle, inventory_for_javascript,
+    open_javascript_artifact_reader, open_javascript_artifact_reader_for_analysis,
+    translate_javascript_reader_failure,
+};
+
+#[cfg(feature = "family-artifacts")]
+pub use artifact_reader::ReaderFailure;

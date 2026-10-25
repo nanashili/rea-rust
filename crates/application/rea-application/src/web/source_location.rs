@@ -1,14 +1,19 @@
 //! Contract boundary for source-map location tracing in exported web scripts.
 
+use std::collections::BTreeMap;
+
 use rea_core::failure::{Detail, Failure};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+
+use crate::javascript::resolution::source_map_paths;
 
 pub const OPERATION: &str = "trace_web_source_location";
 const MAX_MAP_BYTES: usize = 4 * 1024 * 1024;
 const MAX_ROWS: usize = 262_144;
 const MAX_SEGMENTS: usize = 262_144;
+const MAX_RECORDS: usize = 262_144;
+const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 
 pub fn validate_input(input: &Value) -> Result<(), Failure> {
     let object = input
@@ -73,7 +78,7 @@ pub fn retain_result(input: &Value, result: Value) -> Result<Value, Failure> {
     Ok(result)
 }
 
-/// Trace a selected generated position through a regular version-3 source map.
+/// Trace a selected generated position through a version-3 source map.
 ///
 /// The map text is caller-selected evidence. This function never fetches a
 /// source or executes script content. All segments at the greatest generated
@@ -112,7 +117,7 @@ pub fn trace_web_source_location(input: &Value, source_map_text: &str) -> Result
         .expect("validate_input established generated_position.column")
         as usize;
 
-    let map: Value = serde_json::from_str(source_map_text)
+    let map: Value = serde_json::from_str(source_map_json_text(source_map_text))
         .map_err(|error| invalid(&format!("source map is not valid JSON: {error}")))?;
     let object = map
         .as_object()
@@ -120,45 +125,17 @@ pub fn trace_web_source_location(input: &Value, source_map_text: &str) -> Result
     if object.get("version").and_then(Value::as_u64) != Some(3) {
         return Err(invalid("source map version must be 3"));
     }
-    if object.get("sections").is_some() {
-        return Ok(unknown_report(
-            source_map_text,
-            url,
-            requested_line,
-            requested_column,
-            "indexed source-map sections are not supported by this native producer",
-        ));
-    }
-
-    let sources = object
-        .get("sources")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("source map sources must be an array"))?;
-    let names = object
-        .get("names")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    let mappings = object
-        .get("mappings")
-        .and_then(Value::as_str)
-        .ok_or_else(|| invalid("source map mappings must be a string"))?;
-    let declarations = declarations(
-        sources,
-        object.get("sourcesContent"),
-        object.get("sourceRoot"),
-        object
-            .get("ignoreList")
-            .or_else(|| object.get("x_google_ignoreList")),
-    )?;
-    let segments = decode_mappings(mappings)?;
-    let matched = greatest_position(&segments, requested_line, requested_column);
+    let indexed = object.get("sections").is_some();
+    let mut state = DecodeState::default();
+    decode_map(object, 0, 0, None, &mut Vec::new(), &mut state)?;
+    let matched = greatest_position(&state.segments, requested_line, requested_column);
     let matches = matched
         .map(|(line, column)| {
-            segments
+            state
+                .segments
                 .iter()
                 .filter(|segment| segment.line == line && segment.column == column)
-                .map(|segment| original_match(segment, &declarations, &names, url))
+                .map(|segment| original_match(segment, &state.declarations, url))
                 .collect::<Result<Vec<_>, _>>()
         })
         .transpose()?
@@ -182,7 +159,8 @@ pub fn trace_web_source_location(input: &Value, source_map_text: &str) -> Result
         "source_map_path": map_path,
         "url_context": url,
         "engine": { "id": "rea-native-source-map", "version": "1" },
-        "format": "regular",
+        "runtime": { "id": "rea-native-rust", "version": env!("CARGO_PKG_VERSION") },
+        "format": if indexed { "indexed" } else { "regular" },
         "reported_file": object.get("file").and_then(Value::as_str),
         "lookup": {
             "requested": { "line": requested_line, "column": requested_column },
@@ -204,15 +182,46 @@ struct MappingSegment {
     source: Option<usize>,
     original_line: Option<usize>,
     original_column: Option<usize>,
-    name: Option<usize>,
+    name: Option<String>,
+    section_path: Vec<usize>,
+    flattened_source_index: Option<usize>,
 }
 
 #[derive(Clone, Debug)]
 struct SourceDeclaration {
+    section_path: Vec<usize>,
+    source_index: usize,
+    flattened_source_index: usize,
     source: Option<String>,
     root: Option<String>,
     content: Option<String>,
     ignored: bool,
+}
+
+#[derive(Default)]
+struct DecodeState {
+    declarations: Vec<SourceDeclaration>,
+    segments: Vec<MappingSegment>,
+    decoded_segments: usize,
+    decoded_records: usize,
+}
+
+fn source_map_json_text(text: &str) -> &str {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    let Some(_) = text.strip_prefix(")]}'") else {
+        return text;
+    };
+    text.find(['\r', '\n']).map_or("", |index| &text[index..])
+}
+
+fn consume_records(records: &mut usize, count: usize) -> Result<(), Failure> {
+    if count > MAX_RECORDS.saturating_sub(*records) {
+        return Err(invalid(
+            "source-map structure exceeds the 262144-record decoder budget",
+        ));
+    }
+    *records += count;
+    Ok(())
 }
 
 fn declarations(
@@ -221,7 +230,23 @@ fn declarations(
     root: Option<&Value>,
     ignored_indices: Option<&Value>,
 ) -> Result<Vec<SourceDeclaration>, Failure> {
-    let contents = contents.and_then(Value::as_array);
+    let contents = match contents {
+        None | Some(Value::Null) => None,
+        Some(value) => {
+            let values = value
+                .as_array()
+                .ok_or_else(|| invalid("source map sourcesContent must be an array or null"))?;
+            if values
+                .iter()
+                .any(|value| !value.is_null() && !value.is_string())
+            {
+                return Err(invalid(
+                    "source map sourcesContent must contain strings or null",
+                ));
+            }
+            Some(values)
+        }
+    };
     let root = root.and_then(Value::as_str).map(str::to_owned);
     sources
         .iter()
@@ -244,6 +269,9 @@ fn declarations(
                 })
                 .is_some();
             Ok(SourceDeclaration {
+                section_path: Vec::new(),
+                source_index: index,
+                flattened_source_index: index,
                 source,
                 root: root.clone(),
                 content,
@@ -253,13 +281,292 @@ fn declarations(
         .collect()
 }
 
-fn decode_mappings(mappings: &str) -> Result<Vec<MappingSegment>, Failure> {
+fn decode_map(
+    object: &serde_json::Map<String, Value>,
+    offset_line: usize,
+    offset_column: usize,
+    stop: Option<(usize, usize)>,
+    section_path: &mut Vec<usize>,
+    state: &mut DecodeState,
+) -> Result<(), Failure> {
+    if object.get("version").and_then(Value::as_u64) != Some(3) {
+        return Err(invalid("source map version must be 3"));
+    }
+    if section_path.len() > 64 {
+        return Err(invalid(
+            "indexed source-map nesting exceeds the 64-level decoder stack budget",
+        ));
+    }
+    if object
+        .get("file")
+        .is_some_and(|file| !file.is_null() && !file.is_string())
+    {
+        return Err(invalid("source map file must be a string or null"));
+    }
+    if object.get("sections").is_some() {
+        return decode_sections(
+            object,
+            offset_line,
+            offset_column,
+            stop,
+            section_path,
+            state,
+        );
+    }
+
+    decode_regular_map(
+        object,
+        offset_line,
+        offset_column,
+        stop,
+        section_path,
+        state,
+    )
+}
+
+fn decode_sections(
+    object: &serde_json::Map<String, Value>,
+    offset_line: usize,
+    offset_column: usize,
+    stop: Option<(usize, usize)>,
+    section_path: &mut Vec<usize>,
+    state: &mut DecodeState,
+) -> Result<(), Failure> {
+    let sections = object
+        .get("sections")
+        .and_then(Value::as_array)
+        .ok_or_else(|| invalid("indexed source-map sections must be an array"))?;
+    consume_records(&mut state.decoded_records, sections.len())?;
+    if section_path.len() >= 64 && !sections.is_empty() {
+        return Err(invalid(
+            "indexed source-map nesting exceeds the 64-level decoder stack budget",
+        ));
+    }
+    let offsets = section_offsets(sections)?;
+    for (index, section) in sections.iter().enumerate() {
+        let section = section.as_object().expect("validated section object");
+        if section.get("url").is_some() {
+            return Err(invalid("external source-map section URL is not fetched"));
+        }
+        let child = section
+            .get("map")
+            .and_then(Value::as_object)
+            .ok_or_else(|| invalid("indexed source-map section requires an embedded map"))?;
+        let (local_line, local_column) = offsets[index];
+        let absolute_line = offset_line.checked_add(local_line).ok_or_else(|| {
+            invalid("indexed source-map offset exceeds the generated-row decoder budget")
+        })?;
+        let absolute_column = if local_line == 0 {
+            offset_column.checked_add(local_column).ok_or_else(|| {
+                invalid("indexed source-map offset exceeds the generated-column range")
+            })?
+        } else {
+            local_column
+        };
+        if absolute_line >= MAX_ROWS {
+            return Err(invalid(
+                "indexed source-map offset exceeds the generated-row decoder budget",
+            ));
+        }
+        if stop.is_some_and(|boundary| (absolute_line, absolute_column) >= boundary) {
+            return Err(invalid(
+                "nested source-map section overlaps its enclosing boundary",
+            ));
+        }
+        let next_stop = match offsets.get(index + 1) {
+            None => None,
+            Some((next_line, next_column)) => {
+                let line = offset_line.checked_add(*next_line).ok_or_else(|| {
+                    invalid("indexed source-map offset exceeds the generated-row range")
+                })?;
+                if line >= MAX_ROWS {
+                    return Err(invalid(
+                        "indexed source-map offset exceeds the generated-row decoder budget",
+                    ));
+                }
+                let column = if *next_line == 0 {
+                    offset_column.checked_add(*next_column).ok_or_else(|| {
+                        invalid("indexed source-map offset exceeds the generated-column range")
+                    })?
+                } else {
+                    *next_column
+                };
+                Some((line, column))
+            }
+        };
+        let child_stop = match (stop, next_stop) {
+            (Some(parent), Some(next)) => Some(parent.min(next)),
+            (Some(parent), None) => Some(parent),
+            (None, next) => next,
+        };
+        section_path.push(index);
+        decode_map(
+            child,
+            absolute_line,
+            absolute_column,
+            child_stop,
+            section_path,
+            state,
+        )?;
+        section_path.pop();
+    }
+    Ok(())
+}
+
+fn section_offsets(sections: &[Value]) -> Result<Vec<(usize, usize)>, Failure> {
+    let mut offsets = Vec::with_capacity(sections.len());
+    for section in sections {
+        let section = section
+            .as_object()
+            .ok_or_else(|| invalid("indexed source-map section must be an object"))?;
+        let offset = section
+            .get("offset")
+            .and_then(Value::as_object)
+            .ok_or_else(|| invalid("indexed source-map section offset must be an object"))?;
+        let line = offset
+            .get("line")
+            .and_then(Value::as_u64)
+            .filter(|line| *line <= MAX_SAFE_INTEGER)
+            .ok_or_else(|| {
+                invalid("indexed source-map section line must be a safe non-negative integer")
+            })?;
+        let column = offset
+            .get("column")
+            .and_then(Value::as_u64)
+            .filter(|column| *column <= MAX_SAFE_INTEGER)
+            .ok_or_else(|| {
+                invalid("indexed source-map section column must be a safe non-negative integer")
+            })?;
+        let offset = (
+            usize::try_from(line)
+                .map_err(|_| invalid("indexed source-map section line is too large"))?,
+            usize::try_from(column)
+                .map_err(|_| invalid("indexed source-map section column is too large"))?,
+        );
+        if offsets.last().is_some_and(|previous| offset <= *previous) {
+            return Err(invalid(
+                "indexed source-map section offsets must be strictly increasing",
+            ));
+        }
+        offsets.push(offset);
+    }
+    Ok(offsets)
+}
+
+fn decode_regular_map(
+    object: &serde_json::Map<String, Value>,
+    offset_line: usize,
+    offset_column: usize,
+    stop: Option<(usize, usize)>,
+    section_path: &[usize],
+    state: &mut DecodeState,
+) -> Result<(), Failure> {
+    let sources = object
+        .get("sources")
+        .and_then(Value::as_array)
+        .ok_or_else(|| invalid("source map sources must be an array"))?;
+    let names = match object.get("names") {
+        None => &[][..],
+        Some(value) => value
+            .as_array()
+            .ok_or_else(|| invalid("source map names must be an array"))?,
+    };
+    if names.iter().any(|value| !value.is_string()) {
+        return Err(invalid("source map names must contain strings"));
+    }
+    let mappings = object
+        .get("mappings")
+        .and_then(Value::as_str)
+        .ok_or_else(|| invalid("source map mappings must be a string"))?;
+    let sources_content_count = object
+        .get("sourcesContent")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+    consume_records(
+        &mut state.decoded_records,
+        1usize
+            .saturating_add(sources.len())
+            .saturating_add(names.len())
+            .saturating_add(sources_content_count),
+    )?;
+    if let Some(root) = object.get("sourceRoot")
+        && !root.is_null()
+        && !root.is_string()
+    {
+        return Err(invalid("source map sourceRoot must be a string or null"));
+    }
+    validate_ignore_indices(object.get("ignoreList"), "ignoreList")?;
+    validate_ignore_indices(object.get("x_google_ignoreList"), "x_google_ignoreList")?;
+    let mut declarations = declarations(
+        sources,
+        object.get("sourcesContent"),
+        object.get("sourceRoot"),
+        object
+            .get("ignoreList")
+            .or_else(|| object.get("x_google_ignoreList")),
+    )?;
+    let flattened_start = state.declarations.len();
+    for declaration in &mut declarations {
+        declaration.section_path = section_path.to_vec();
+        declaration.flattened_source_index = flattened_start + declaration.source_index;
+    }
+    state.declarations.extend(declarations);
+    let leaf_segments = decode_mappings(
+        mappings,
+        MappingDecodeContext {
+            offset_line,
+            offset_column,
+            stop,
+            names,
+            section_path,
+            flattened_start,
+            source_count: sources.len(),
+        },
+        &mut state.decoded_segments,
+        &mut state.decoded_records,
+    )?;
+    state.segments.extend(leaf_segments);
+    Ok(())
+}
+
+fn validate_ignore_indices(value: Option<&Value>, field: &str) -> Result<(), Failure> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    let indices = value
+        .as_array()
+        .ok_or_else(|| invalid(&format!("source map {field} must be an array")))?;
+    if indices.iter().any(|index| index.as_u64().is_none()) {
+        return Err(invalid(&format!(
+            "source map {field} must contain non-negative integers"
+        )));
+    }
+    Ok(())
+}
+
+struct MappingDecodeContext<'a> {
+    offset_line: usize,
+    offset_column: usize,
+    stop: Option<(usize, usize)>,
+    names: &'a [Value],
+    section_path: &'a [usize],
+    flattened_start: usize,
+    source_count: usize,
+}
+
+fn decode_mappings(
+    mappings: &str,
+    context: MappingDecodeContext<'_>,
+    decoded_segments: &mut usize,
+    decoded_records: &mut usize,
+) -> Result<Vec<MappingSegment>, Failure> {
     let mut output = Vec::new();
     let mut source = 0i64;
     let mut original_line = 0i64;
     let mut original_column = 0i64;
     let mut name = 0i64;
     for (line_index, row) in mappings.split(';').enumerate() {
+        consume_records(decoded_records, 1)?;
         if line_index + 1 > MAX_ROWS {
             return Err(invalid(
                 "source map exceeds the generated-row decoder budget",
@@ -267,7 +574,9 @@ fn decode_mappings(mappings: &str) -> Result<Vec<MappingSegment>, Failure> {
         }
         let mut generated_column = 0i64;
         for encoded in row.split(',').filter(|value| !value.is_empty()) {
-            if output.len() >= MAX_SEGMENTS {
+            consume_records(decoded_records, 1)?;
+            *decoded_segments = decoded_segments.saturating_add(1);
+            if *decoded_segments > MAX_SEGMENTS {
                 return Err(invalid("source map exceeds the decoded-segment budget"));
             }
             let values = decode_vlq_segment(encoded)?;
@@ -276,39 +585,106 @@ fn decode_mappings(mappings: &str) -> Result<Vec<MappingSegment>, Failure> {
                     "source-map segment must contain one, four, or five values",
                 ));
             }
-            generated_column += values[0];
+            generated_column = generated_column
+                .checked_add(values[0])
+                .ok_or_else(|| invalid("source-map generated column overflowed"))?;
             if generated_column < 0 {
                 return Err(invalid("source-map generated column became negative"));
             }
             let (segment_source, segment_line, segment_column, segment_name) = if values.len() > 1 {
-                source += values[1];
-                original_line += values[2];
-                original_column += values[3];
+                source = source
+                    .checked_add(values[1])
+                    .ok_or_else(|| invalid("source-map source index overflowed"))?;
+                original_line = original_line
+                    .checked_add(values[2])
+                    .ok_or_else(|| invalid("source-map original line overflowed"))?;
+                original_column = original_column
+                    .checked_add(values[3])
+                    .ok_or_else(|| invalid("source-map original column overflowed"))?;
                 if source < 0 || original_line < 0 || original_column < 0 {
                     return Err(invalid("source-map relative location became negative"));
                 }
                 if values.len() == 5 {
-                    name += values[4];
+                    name = name
+                        .checked_add(values[4])
+                        .ok_or_else(|| invalid("source-map name index overflowed"))?;
                     if name < 0 {
                         return Err(invalid("source-map name index became negative"));
                     }
                 }
                 (
-                    Some(source as usize),
-                    Some(original_line as usize),
-                    Some(original_column as usize),
-                    (values.len() == 5).then_some(name as usize),
+                    Some(usize::try_from(source).map_err(|_| {
+                        invalid("source-map source index exceeds the supported range")
+                    })?),
+                    Some(usize::try_from(original_line).map_err(|_| {
+                        invalid("source-map original line exceeds the supported range")
+                    })?),
+                    Some(usize::try_from(original_column).map_err(|_| {
+                        invalid("source-map original column exceeds the supported range")
+                    })?),
+                    (values.len() == 5)
+                        .then(|| usize::try_from(name))
+                        .transpose()
+                        .map_err(|_| {
+                            invalid("source-map name index exceeds the supported range")
+                        })?,
                 )
             } else {
                 (None, None, None, None)
             };
+            if let Some(source_index) = segment_source {
+                if source_index >= context.source_count {
+                    return Err(invalid(
+                        "source-map mapping references an absent source declaration",
+                    ));
+                }
+            }
+            let generated_line = context
+                .offset_line
+                .checked_add(line_index)
+                .ok_or_else(|| invalid("source-map generated row became too large"))?;
+            let generated_column = if line_index == 0 {
+                context
+                    .offset_column
+                    .checked_add(generated_column as usize)
+                    .ok_or_else(|| invalid("source-map generated column became too large"))?
+            } else {
+                usize::try_from(generated_column).map_err(|_| {
+                    invalid("source-map generated column exceeds the supported range")
+                })?
+            };
+            if generated_line >= MAX_ROWS {
+                return Err(invalid(
+                    "source-map exceeds the generated-row decoder budget",
+                ));
+            }
+            if let Some((stop_line, stop_column)) = context.stop {
+                if (generated_line, generated_column) >= (stop_line, stop_column) {
+                    return Err(invalid(
+                        "embedded source-map mappings overlap the following section boundary",
+                    ));
+                }
+            }
+            let name = match segment_name {
+                Some(index) => Some(
+                    context
+                        .names
+                        .get(index)
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| invalid("source-map name index references an absent name"))?
+                        .to_owned(),
+                ),
+                None => None,
+            };
             output.push(MappingSegment {
-                line: line_index + 1,
-                column: generated_column as usize,
+                line: generated_line + 1,
+                column: generated_column,
                 source: segment_source,
                 original_line: segment_line,
                 original_column: segment_column,
-                name: segment_name,
+                name,
+                section_path: context.section_path.to_vec(),
+                flattened_source_index: segment_source.map(|index| context.flattened_start + index),
             });
         }
     }
@@ -322,7 +698,15 @@ fn decode_vlq_segment(encoded: &str) -> Result<Vec<i64>, Failure> {
     for character in encoded.bytes() {
         let digit = vlq_digit(character)
             .ok_or_else(|| invalid("source-map mappings contain an invalid VLQ character"))?;
-        value |= ((digit & 31) as i64) << shift;
+        let payload = digit & 31;
+        if (shift == 30 && payload > 3) || (shift > 30 && payload != 0) {
+            return Err(invalid(
+                "source-map VLQ exceeds the supported 32-bit quantity width",
+            ));
+        }
+        if shift <= 30 {
+            value |= (payload as i64) << shift;
+        }
         if digit & 32 == 0 {
             let negative = value & 1 != 0;
             let magnitude = value >> 1;
@@ -331,11 +715,6 @@ fn decode_vlq_segment(encoded: &str) -> Result<Vec<i64>, Failure> {
             shift = 0;
         } else {
             shift += 5;
-            if shift > 30 {
-                return Err(invalid(
-                    "source-map VLQ exceeds the supported integer width",
-                ));
-            }
         }
     }
     if shift != 0 {
@@ -375,14 +754,16 @@ fn greatest_position(
 fn original_match(
     segment: &MappingSegment,
     declarations: &[SourceDeclaration],
-    names: &[Value],
     base_url: &str,
 ) -> Result<Value, Failure> {
-    let Some(source_index) = segment.source else {
+    let Some(_) = segment.source else {
         return Ok(serde_json::json!({ "state": "generated-only" }));
     };
+    let flattened_source_index = segment
+        .flattened_source_index
+        .ok_or_else(|| invalid("source-map mapped segment has no source declaration"))?;
     let declaration = declarations
-        .get(source_index)
+        .get(flattened_source_index)
         .ok_or_else(|| invalid("source-map mapping references an absent source declaration"))?;
     let line = segment
         .original_line
@@ -417,9 +798,9 @@ fn original_match(
         .map(|source| resolve_source_url(base_url, declaration.root.as_deref(), source));
     Ok(serde_json::json!({
         "state": "mapped",
-        "flattened_source_index": source_index,
-        "section_path": [],
-        "source_index": source_index,
+        "flattened_source_index": declaration.flattened_source_index,
+        "section_path": declaration.section_path.clone(),
+        "source_index": declaration.source_index,
         "reported_source": reported_source,
         "reported_source_root": declaration.root,
         "resolved_url": resolved_url,
@@ -431,7 +812,7 @@ fn original_match(
             "offset": offset,
             "content_position": content_position
         },
-        "name": segment.name.and_then(|index| names.get(index).and_then(Value::as_str))
+        "name": segment.name.clone()
     }))
 }
 
@@ -457,86 +838,7 @@ fn utf16_offset(text: &str, line: usize, column: usize) -> Option<usize> {
 }
 
 fn resolve_source_url(base: &str, root: Option<&str>, source: &str) -> String {
-    let joined = join_source_root(root, source);
-
-    // Source-map URLs follow URL resolution rules.  In particular, an
-    // absolute-path sourceRoot is relative to the selected map origin, while
-    // a protocol-relative source keeps the map's scheme.  Treating every
-    // leading slash as an already-resolved value loses that origin.
-    if has_absolute_url_scheme(&joined) {
-        return joined;
-    }
-    if joined.starts_with("//") {
-        return base
-            .split_once(':')
-            .map(|(scheme, _)| format!("{scheme}:{joined}"))
-            .unwrap_or(joined);
-    }
-
-    let (prefix, base_path) = split_url_prefix(base);
-    let path = if joined.starts_with('/') {
-        joined
-    } else {
-        let directory = base_path
-            .rsplit_once('/')
-            .map(|(directory, _)| directory)
-            .unwrap_or("");
-        format!("{directory}/{joined}")
-    };
-    format!("{prefix}{}", normalize_url_path(&path))
-}
-
-fn join_source_root(root: Option<&str>, source: &str) -> String {
-    match root.filter(|root| !root.is_empty()) {
-        Some(root) if root.ends_with('/') || source.starts_with('/') => {
-            format!("{root}{source}")
-        }
-        Some(root) => format!("{root}/{source}"),
-        None => source.to_owned(),
-    }
-}
-
-fn split_url_prefix(value: &str) -> (String, String) {
-    let Some(scheme_end) = value.find("://") else {
-        return (String::new(), value.to_owned());
-    };
-    let authority_start = scheme_end + 3;
-    let path_start = value[authority_start..]
-        .find('/')
-        .map(|index| authority_start + index)
-        .unwrap_or(value.len());
-    (
-        value[..path_start].to_owned(),
-        value[path_start..].to_owned(),
-    )
-}
-
-fn normalize_url_path(path: &str) -> String {
-    let suffix_start = path.find(['?', '#']).unwrap_or(path.len());
-    let (raw_path, suffix) = path.split_at(suffix_start);
-    let absolute = raw_path.starts_with('/');
-    let mut parts = Vec::new();
-    for part in raw_path.split('/') {
-        match part {
-            "" | "." => {}
-            ".." => {
-                if !parts.is_empty() && parts.last().copied() != Some("..") {
-                    parts.pop();
-                } else if !absolute {
-                    parts.push("..");
-                }
-            }
-            value => parts.push(value),
-        }
-    }
-    let mut normalized = parts.join("/");
-    if absolute {
-        normalized.insert(0, '/');
-    }
-    if raw_path.ends_with('/') && !normalized.ends_with('/') {
-        normalized.push('/');
-    }
-    format!("{normalized}{suffix}")
+    source_map_paths::resolve_source_map_url(Some(source), root, base)
 }
 
 fn hex_digest(bytes: &[u8]) -> String {
@@ -544,26 +846,6 @@ fn hex_digest(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
-}
-
-fn unknown_report(text: &str, url: &str, line: usize, column: usize, reason: &str) -> Value {
-    serde_json::json!({
-        "source_map_sha256": hex_digest(text.as_bytes()),
-        "url_context": url,
-        "engine": { "id": "rea-native-source-map", "version": "1" },
-        "format": "indexed",
-        "reported_file": null,
-        "lookup": {
-            "requested": { "line": line, "column": column },
-            "matched_generated_position": null,
-            "semantics": "greatest generated position <= requested, across lines; all equal-position segments",
-            "location_units": "one-based lines; zero-based UTF-16 columns"
-        },
-        "matches": [],
-        "diagnostics": [reason],
-        "coverage": "partial",
-        "unknowns": [reason]
-    })
 }
 
 fn absolute_path(value: Option<&Value>, field: &str) -> Result<(), Failure> {
@@ -689,6 +971,45 @@ mod tests {
     }
 
     #[test]
+    fn resolves_source_urls_with_trace_map_path_normalization() {
+        let base = "https://host/maps/app.js.map?v=2#map";
+        assert_eq!(
+            resolve_source_url(base, Some("https://cdn.example/src//"), "../q.js"),
+            "https://cdn.example/q.js"
+        );
+        assert_eq!(
+            resolve_source_url(base, Some("https://cdn.example/src/"), "/a.js"),
+            "https://cdn.example/src/a.js"
+        );
+        assert_eq!(
+            resolve_source_url(base, Some("https://cdn.example/src/../source"), "a/../b.js"),
+            "https://cdn.example/source/b.js"
+        );
+        assert_eq!(
+            resolve_source_url(base, None, "//cdn.example/source.js"),
+            "https://cdn.example/source.js"
+        );
+    }
+
+    #[test]
+    fn accepts_bom_and_source_map_transport_prefix() {
+        let map = serde_json::json!({
+            "version": 3,
+            "sources": ["main.ts"],
+            "names": [],
+            "mappings": "AAAA"
+        });
+        let text = format!("\u{feff})]}}'transport prefix\r{map}");
+        let result = trace_web_source_location(&input(), &text).expect("trace prefixed map");
+        assert_eq!(result["matches"][0]["reported_source"], "main.ts");
+    }
+
+    #[test]
+    fn rejects_vlq_payload_beyond_32_bit_quantity_width() {
+        assert!(decode_vlq_segment("ggggggE").is_err());
+    }
+
+    #[test]
     fn retains_generated_only_match_as_explicit_unmapped_outcome() {
         let map = serde_json::json!({
             "version": 3,
@@ -719,5 +1040,77 @@ mod tests {
         .to_string();
         let result = trace_web_source_location(&input(), &map).expect("trace map");
         assert_eq!(result["matches"].as_array().expect("matches").len(), 2);
+    }
+
+    #[test]
+    fn traces_indexed_sections_with_absolute_offsets_and_provenance() {
+        let map = serde_json::json!({
+            "version": 3,
+            "file": "app.js",
+            "sections": [
+                {
+                    "offset": {"line": 0, "column": 0},
+                    "map": {
+                        "version": 3,
+                        "sources": ["first.ts"],
+                        "sourcesContent": ["first"],
+                        "names": [],
+                        "mappings": "AAAA"
+                    }
+                },
+                {
+                    "offset": {"line": 1, "column": 2},
+                    "map": {
+                        "version": 3,
+                        "sources": ["second.ts"],
+                        "sourcesContent": ["second"],
+                        "names": [],
+                        "mappings": "AAAA"
+                    }
+                }
+            ]
+        })
+        .to_string();
+        let mut request = input();
+        request["generated_position"] = serde_json::json!({"line": 2, "column": 2});
+        let result = trace_web_source_location(&request, &map).expect("trace indexed map");
+        assert_eq!(result["format"], "indexed");
+        assert_eq!(
+            result["lookup"]["matched_generated_position"],
+            serde_json::json!({"line": 2, "column": 2})
+        );
+        assert_eq!(result["matches"][0]["section_path"], serde_json::json!([1]));
+        assert_eq!(result["matches"][0]["flattened_source_index"], 1);
+        assert_eq!(result["matches"][0]["source_index"], 0);
+    }
+
+    #[test]
+    fn rejects_indexed_mappings_that_cross_the_next_section_boundary() {
+        let map = serde_json::json!({
+            "version": 3,
+            "sections": [
+                {
+                    "offset": {"line": 0, "column": 0},
+                    "map": {
+                        "version": 3,
+                        "sources": ["first.ts"],
+                        "names": [],
+                        "mappings": "AAAA,UAAA"
+                    }
+                },
+                {
+                    "offset": {"line": 0, "column": 5},
+                    "map": {
+                        "version": 3,
+                        "sources": [],
+                        "names": [],
+                        "mappings": "A"
+                    }
+                }
+            ]
+        })
+        .to_string();
+        let error = trace_web_source_location(&input(), &map).expect_err("overlap must fail");
+        assert!(error.to_string().contains("boundary"));
     }
 }

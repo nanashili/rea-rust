@@ -12,6 +12,8 @@ use super::static_runtime::{
 use crate::derived::{invalid_value, parse_evidence};
 use crate::js::{compare_code_points, composite_key, unique_sorted};
 use rea_core::analysis_error::AnalysisError;
+use rea_core::evidence::record::EvidenceRecordError;
+use rea_core::schema::{Issue, IssueKind};
 use serde_json::{Map, Value, json};
 use std::collections::HashSet;
 
@@ -75,8 +77,16 @@ fn expected_provider(
 
 /// `parseComparisonEvidence(input)`.
 fn parse_comparison_evidence(input: &Value) -> Result<ParsedComparison, AnalysisError> {
-    let evidence =
-        parse_evidence(input).map_err(|error| invalid_value(OPERATION, error.to_string()))?;
+    let evidence = match parse_evidence(input) {
+        Ok(evidence) => evidence,
+        Err(EvidenceRecordError::Shape(issues)) => {
+            return Err(invalid_value(
+                OPERATION,
+                evidence_shape_message(input, &issues),
+            ));
+        }
+        Err(error) => return Err(invalid_value(OPERATION, error.to_string())),
+    };
     let evidence = evidence.value().clone();
     let operation = field_str(&evidence, "operation").to_owned();
     let Some((predicates, provider_id, provider_name)) = expected_provider(&operation) else {
@@ -120,6 +130,97 @@ fn parse_comparison_evidence(input: &Value) -> Result<ParsedComparison, Analysis
         ));
     }
     parse_result(evidence, operation)
+}
+
+fn evidence_shape_message(input: &Value, issues: &[Issue]) -> String {
+    let Some(issue) = issues.first() else {
+        return "Invalid input".to_owned();
+    };
+
+    let path = issue
+        .path
+        .iter()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>()
+        .join(".");
+    let detail = match &issue.kind {
+        IssueKind::InvalidType { expected } => format!(
+            "Invalid input: expected {expected}, received {}",
+            received_type(input, &issue.path)
+        ),
+        IssueKind::InvalidValue { values } => format!(
+            "Invalid option: expected one of {}",
+            values
+                .iter()
+                .map(Value::to_string)
+                .collect::<Vec<_>>()
+                .join("|")
+        ),
+        IssueKind::TooSmall { minimum, exclusive } => format!(
+            "Too small: expected {} to have {}{} items",
+            path,
+            if *exclusive { ">" } else { ">=" },
+            minimum.unwrap_or_default()
+        ),
+        IssueKind::TooBig { maximum, exclusive } => format!(
+            "Too big: expected {} to have {}{} items",
+            path,
+            if *exclusive { "<" } else { "<=" },
+            maximum.unwrap_or_default()
+        ),
+        IssueKind::InvalidFormat { message, .. } | IssueKind::Custom { message } => message.clone(),
+        IssueKind::UnrecognizedKeys { keys } => format!(
+            "Unrecognized key{}: {}",
+            if keys.len() > 1 { "s" } else { "" },
+            keys.iter()
+                .map(|key| format!("\"{key}\""))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        IssueKind::InvalidUnion { options, .. } => options.as_ref().map_or_else(
+            || "Invalid input".to_owned(),
+            |options| {
+                format!(
+                    "Invalid discriminator value. Expected {}",
+                    options
+                        .iter()
+                        .map(|option| format!("'{}'", option.as_str().unwrap_or_default()))
+                        .collect::<Vec<_>>()
+                        .join(" | ")
+                )
+            },
+        ),
+    };
+
+    let detail = if path.is_empty() {
+        detail
+    } else {
+        format!("at {path}: {detail}")
+    };
+    match issues.len() {
+        0 | 1 => detail,
+        count => format!("{detail} ({} more issues)", count - 1),
+    }
+}
+
+fn received_type(input: &Value, path: &[Value]) -> &'static str {
+    let value = path
+        .iter()
+        .try_fold(input, |current, part| match (current, part) {
+            (Value::Object(object), Value::String(key)) => object.get(key),
+            (Value::Array(items), Value::Number(index)) => items.get(index.as_u64()? as usize),
+            _ => None,
+        });
+
+    match value {
+        None => "undefined",
+        Some(Value::Null) => "null",
+        Some(Value::Bool(_)) => "boolean",
+        Some(Value::Number(_)) => "number",
+        Some(Value::String(_)) => "string",
+        Some(Value::Array(_)) => "array",
+        Some(Value::Object(_)) => "object",
+    }
 }
 
 /// `parseResult(evidence, operation)`.
@@ -397,7 +498,7 @@ pub(crate) fn find_changed_behavior(input: &Value) -> Result<FoundChangedBehavio
     if comparisons.is_empty() {
         return Err(invalid_value(
             OPERATION,
-            "at comparisons: Too small: expected array to have more items",
+            "at comparisons: Too small: expected array to have >=1 items",
         ));
     }
     let evidence: Vec<ParsedComparison> = comparisons

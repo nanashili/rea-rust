@@ -9,7 +9,11 @@ fn screen(columns: u16, rows: u16) -> TerminalScreen {
 }
 
 fn trimmed(snapshot: &ScreenSnapshot) -> Vec<&str> {
-    snapshot.lines.iter().map(|line| line.trim_end_matches(' ')).collect()
+    snapshot
+        .lines
+        .iter()
+        .map(|line| line.trim_end_matches(' '))
+        .collect()
 }
 
 #[test]
@@ -17,7 +21,10 @@ fn renders_padded_viewport_cursor_and_serialized_state() {
     let mut terminal = screen(10, 3);
     terminal.write(b"ab\r\n\x1b[31;1mcd");
     let snapshot = terminal.snapshot();
-    assert_eq!(snapshot.lines, vec!["ab        ", "cd        ", "          "]);
+    assert_eq!(
+        snapshot.lines,
+        vec!["ab        ", "cd        ", "          "]
+    );
     assert_eq!((snapshot.cursor_x, snapshot.cursor_y), (2, 1));
     assert_eq!(snapshot.active_buffer, ActiveBuffer::Normal);
     assert_eq!(snapshot.serialized_state, "ab\r\n\x1b[31;1mcd");
@@ -72,6 +79,9 @@ fn resize_changes_reported_dimensions() {
     let mut terminal = screen(5, 2);
     terminal.resize(TerminalSize::new(8, 4).unwrap());
     let snapshot = terminal.snapshot();
-    assert_eq!((snapshot.columns, snapshot.rows, snapshot.lines.len()), (8, 4, 4));
+    assert_eq!(
+        (snapshot.columns, snapshot.rows, snapshot.lines.len()),
+        (8, 4, 4)
+    );
     assert!(TerminalSize::new(0, 4).is_none());
 }

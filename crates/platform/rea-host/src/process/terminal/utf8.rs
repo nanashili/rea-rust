@@ -35,7 +35,8 @@ impl Utf8Decoder {
             self.missing -= found;
             self.buffered += found;
             if self.missing == 0 {
-                prepend = Some(String::from_utf8_lossy(&self.incomplete[..self.buffered]).into_owned());
+                prepend =
+                    Some(String::from_utf8_lossy(&self.incomplete[..self.buffered]).into_owned());
                 self.buffered = 0;
             }
         }

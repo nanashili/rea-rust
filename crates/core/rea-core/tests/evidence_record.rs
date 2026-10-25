@@ -3,6 +3,7 @@ use rea_core::evidence::record::{EvidenceRecord, EvidenceRecordError};
 use rea_core::evidence::{
     Architecture, ArtifactEvidence, Location, NativeFormat, Observation, Provider, Subject,
 };
+use rea_core::schema::IssueKind;
 use serde_json::{Value, value::RawValue};
 
 fn artifact_evidence() -> ArtifactEvidence {
@@ -115,7 +116,7 @@ fn envelope_rejects_unknown_fields() {
 
     assert!(matches!(
         EvidenceRecord::parse(&raw(&changed)),
-        Err(EvidenceRecordError::Invalid(_))
+        Err(EvidenceRecordError::Shape(_))
     ));
 }
 
@@ -147,4 +148,106 @@ fn duplicate_object_keys_follow_json_parse_last_key_wins_semantics() {
 
     assert_eq!(parsed.evidence_id(), evidence.evidence_id());
     assert!(!parsed.raw().get().contains("\"operation\":\"wrong\""));
+}
+
+#[test]
+fn shape_validation_preserves_all_missing_evidence_fields_in_schema_order() {
+    let issues = EvidenceRecord::validate_input_shape(&serde_json::json!({})).unwrap_err();
+    let paths: Vec<&str> = issues
+        .iter()
+        .map(|issue| issue.path[0].as_str().unwrap())
+        .collect();
+
+    assert_eq!(issues.len(), 16);
+    assert_eq!(
+        paths,
+        vec![
+            "evidence_id",
+            "subject",
+            "provider",
+            "analysis_profile",
+            "predicate_type",
+            "operation",
+            "parameters",
+            "raw_result",
+            "normalized_result",
+            "confidence",
+            "authority",
+            "environment",
+            "limitations",
+            "relationship_coverage",
+            "locations",
+            "evidence_links",
+        ]
+    );
+    assert!(
+        issues[..9]
+            .iter()
+            .all(|issue| matches!(issue.kind, IssueKind::InvalidType { .. }))
+    );
+    assert!(issues[9..].iter().all(|issue| matches!(
+        issue.kind,
+        IssueKind::InvalidType { .. } | IssueKind::InvalidValue { .. }
+    )));
+}
+
+#[test]
+fn shape_validation_reports_nested_location_constraints_before_deserialization() {
+    let evidence = artifact_evidence();
+    let mut input: Value = serde_json::from_str(raw(&evidence).get()).unwrap();
+    input["locations"] = serde_json::json!([{
+        "kind": "file-offset",
+        "offset": -1
+    }]);
+
+    let issues = EvidenceRecord::validate_input_shape(&input).unwrap_err();
+
+    assert!(issues.iter().any(|issue| {
+        issue.path
+            == vec![
+                Value::String("locations".into()),
+                Value::from(0),
+                Value::String("offset".into()),
+            ]
+    }));
+}
+
+#[test]
+fn shape_validation_accepts_source_optional_diagnostics_and_empty_local_path() {
+    let evidence = artifact_evidence();
+    let mut input: Value = serde_json::from_str(raw(&evidence).get()).unwrap();
+    input["subject"]["local_path"] = Value::String(String::new());
+    input["relationship_coverage"] = serde_json::json!({"status": "complete"});
+
+    assert!(EvidenceRecord::validate_input_shape(&input).is_ok());
+}
+
+#[test]
+fn shape_validation_keeps_raw_only_architectures_on_the_raw_variant() {
+    let evidence = artifact_evidence();
+    let mut detected: Value = serde_json::from_str(raw(&evidence).get()).unwrap();
+    detected["subject"]["architecture"] = Value::String("6502".into());
+
+    let detected_issues = EvidenceRecord::validate_input_shape(&detected).unwrap_err();
+    assert!(detected_issues.iter().any(|issue| {
+        issue.path
+            == vec![
+                Value::String("subject".into()),
+                Value::String("architecture".into()),
+            ]
+    }));
+
+    detected["subject"]["format"] = Value::String("raw-binary".into());
+    assert!(EvidenceRecord::validate_input_shape(&detected).is_ok());
+}
+
+#[test]
+fn parse_accepts_empty_subject_local_path_when_identity_is_unchanged() {
+    let evidence = artifact_evidence();
+    let mut input: Value = serde_json::from_str(raw(&evidence).get()).unwrap();
+    input["subject"]["local_path"] = Value::String(String::new());
+
+    let parsed = EvidenceRecord::parse(&raw(&input)).unwrap();
+
+    assert_eq!(parsed.evidence_id(), evidence.evidence_id());
 }

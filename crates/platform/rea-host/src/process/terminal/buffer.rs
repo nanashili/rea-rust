@@ -59,17 +59,20 @@ impl Buffer {
         buffer
     }
 
-
     pub fn blank_line(&self, cols: usize, attr: &Attr, is_wrapped: bool) -> BufferLine {
         BufferLine::new(cols, &Cell::null(*attr), is_wrapped)
     }
 
     pub fn line(&self, index: isize) -> Option<&BufferLine> {
-        usize::try_from(index).ok().and_then(|index| self.lines.get(index))
+        usize::try_from(index)
+            .ok()
+            .and_then(|index| self.lines.get(index))
     }
 
     pub fn line_mut(&mut self, index: isize) -> Option<&mut BufferLine> {
-        usize::try_from(index).ok().and_then(|index| self.lines.get_mut(index))
+        usize::try_from(index)
+            .ok()
+            .and_then(|index| self.lines.get_mut(index))
     }
 
     pub fn fill_viewport_rows(&mut self, attr: &Attr) {
@@ -86,7 +89,11 @@ impl Buffer {
         self.ybase = 0;
         self.y = 0;
         self.x = 0;
-        self.lines = CircularList::new(buffer_length(self.has_scrollback, self.scrollback, self.rows));
+        self.lines = CircularList::new(buffer_length(
+            self.has_scrollback,
+            self.scrollback,
+            self.rows,
+        ));
         self.scroll_top = 0;
         self.scroll_bottom = self.rows as isize - 1;
         self.setup_tab_stops(None);
@@ -285,7 +292,12 @@ impl Buffer {
                 continue;
             }
             let last = y as usize;
-            while self.lines.get(y as usize).is_some_and(|line| line.is_wrapped) && y > 0 {
+            while self
+                .lines
+                .get(y as usize)
+                .is_some_and(|line| line.is_wrapped)
+                && y > 0
+            {
                 y -= 1;
             }
             let first = y as usize;
@@ -310,7 +322,13 @@ impl Buffer {
             for _ in 0..added {
                 wrapped.push(BufferLine::new(new_cols, &null, true));
             }
-            reflow::smaller_copy(&mut wrapped, &dest_lengths, last_line_length, old_cols, added);
+            reflow::smaller_copy(
+                &mut wrapped,
+                &dest_lengths,
+                last_line_length,
+                old_cols,
+                added,
+            );
             for (index, line) in wrapped.iter_mut().enumerate() {
                 if let Some(&length) = dest_lengths.get(index)
                     && length < new_cols
@@ -338,7 +356,11 @@ impl Buffer {
                         self.ydisp += 1;
                     }
                 } else {
-                    let limit = self.lines.max_length().min(self.lines.len() + count_to_insert) as isize
+                    let limit = self
+                        .lines
+                        .max_length()
+                        .min(self.lines.len() + count_to_insert)
+                        as isize
                         - new_rows as isize;
                     if self.ybase < limit {
                         if self.ybase == self.ydisp {
@@ -353,13 +375,15 @@ impl Buffer {
         }
         if !to_insert.is_empty() {
             let original_length = self.lines.len();
-            let mut original: Vec<Option<BufferLine>> =
-                (0..original_length).map(|index| self.lines.take(index)).collect();
+            let mut original: Vec<Option<BufferLine>> = (0..original_length)
+                .map(|index| self.lines.take(index))
+                .collect();
             let mut original_index = original_length as isize - 1;
             let mut inserts = to_insert.into_iter();
             let mut next = inserts.next();
             let max = self.lines.max_length();
-            self.lines.set_len(max.min(original_length + count_to_insert));
+            self.lines
+                .set_len(max.min(original_length + count_to_insert));
             let mut inserted = 0usize;
             let mut i = (max as isize - 1).min((original_length + count_to_insert) as isize - 1);
             while i >= 0 {

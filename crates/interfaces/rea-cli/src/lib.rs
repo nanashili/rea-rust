@@ -7,12 +7,22 @@
 //! `--full-output`), and the output envelope. Each command executes by
 //! invoking the shared MCP tool handlers in-process via [`rea_mcp::invoke`].
 mod analysis;
+mod application_commands;
 mod commands;
+mod doctor_commands;
+mod environment_commands;
+mod environment_export_commands;
 mod format;
 mod help;
 mod invoke;
+mod lifecycle;
+mod maintenance;
+mod mcp_http;
+mod mcp_http_session;
+mod mcp_registration_commands;
 mod output;
 mod parse;
+mod update_check;
 mod util;
 
 use format::Format;
@@ -21,7 +31,7 @@ use output::OutputCtx;
 use rea_core::cancellation::Cancellation;
 use rea_mcp::catalog::{catalog, cli_command, cli_command_names};
 use rea_mcp::{Composition, Registry, Session};
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::io::IsTerminal;
 use std::sync::Arc;
@@ -35,6 +45,12 @@ const CLI_DESCRIPTION: &str = "Reverse engineer anything from your terminal or a
 pub fn run(arguments: Vec<String>, composition: &dyn Composition) -> i32 {
     if let Some(code) = handle_mcp_subcommand(&arguments, composition) {
         return code;
+    }
+    if arguments
+        .iter()
+        .any(|argument| argument == "--incur-update-check")
+    {
+        return update_check::run();
     }
     if let Some(message) = configuration_error() {
         eprintln!("{message}");
@@ -152,10 +168,22 @@ pub fn run(arguments: Vec<String>, composition: &dyn Composition) -> i32 {
     let (args_value, mut issues) = validate_part(args_schema, &parsed.args);
     let (options_value, option_issues) = validate_part(options_schema, &parsed.options);
     issues.extend(option_issues);
+    issues.extend(validate_command_refinements(
+        canonical,
+        &args_value,
+        &issues,
+    ));
     if !issues.is_empty() {
         print!(
             "{}",
-            validation_error_output(&issues, args_schema, options_schema, &ctx)
+            validation_error_output(
+                &issues,
+                args_schema,
+                options_schema,
+                &parsed.args,
+                &parsed.options,
+                &ctx,
+            )
         );
         return 1;
     }
@@ -166,12 +194,23 @@ pub fn run(arguments: Vec<String>, composition: &dyn Composition) -> i32 {
     composition.register(&mut registry, &session);
 
     #[cfg(unix)]
-    let interrupts = rea_host::command_interrupts::CommandInterrupts::install().ok();
+    let interrupts = match rea_host::command_interrupts::CommandInterrupts::install() {
+        Ok(interrupts) => interrupts,
+        Err(error) => {
+            print!(
+                "{}",
+                output::deliver_error(
+                    "UNKNOWN",
+                    &format!("Could not supervise command cancellation: {error}"),
+                    None,
+                    &ctx
+                )
+            );
+            return 1;
+        }
+    };
     #[cfg(unix)]
-    let cancellation = interrupts
-        .as_ref()
-        .map(|interrupts| interrupts.cancellation().clone())
-        .unwrap_or_default();
+    let cancellation = interrupts.cancellation().clone();
     #[cfg(not(unix))]
     let cancellation = Cancellation::default();
 
@@ -183,16 +222,14 @@ pub fn run(arguments: Vec<String>, composition: &dyn Composition) -> i32 {
 
     let started = Instant::now();
     let value = commands::run_command(canonical, &args_value, &options_value, &runner);
-    let duration = started.elapsed().as_millis();
     let kind = commands::failure_kind(canonical);
+    let value = lifecycle::finish(value, &session, kind);
+    let duration = started.elapsed().as_millis();
     let (text, mut exit) = output::deliver(&value, canonical, duration, kind, &ctx);
     print!("{text}");
-    let _ = session.close();
 
     #[cfg(unix)]
-    if let Some(interrupts) = interrupts
-        && let Some(signal_exit) = interrupts.finish()
-    {
+    if let Some(signal_exit) = interrupts.finish() {
         exit = signal_exit as i32;
     }
     exit
@@ -540,10 +577,47 @@ fn validate_part(schema: Option<&Value>, value: &Value) -> (Value, Vec<rea_mcp::
     }
 }
 
+/// Apply command-level constraints that cannot be represented in the frozen
+/// JSON Schema catalog. These mirror named Zod refinements from the original
+/// CLI contract; they are deliberately explicit so a new refinement must be
+/// reviewed at its owning command boundary.
+fn validate_command_refinements(
+    command: &str,
+    args: &Value,
+    existing: &[rea_mcp::schema::Issue],
+) -> Vec<rea_mcp::schema::Issue> {
+    match command {
+        "debug-with-rizin" => validate_rizin_command_refinement(args, existing),
+        _ => Vec::new(),
+    }
+}
+
+fn validate_rizin_command_refinement(
+    args: &Value,
+    existing: &[rea_mcp::schema::Issue],
+) -> Vec<rea_mcp::schema::Issue> {
+    let Some(command) = args.get("command").and_then(Value::as_str) else {
+        return Vec::new();
+    };
+    if !command.contains(['\r', '\n'])
+        || existing
+            .iter()
+            .any(|issue| issue.path.len() == 1 && issue.path[0] == "command")
+    {
+        return Vec::new();
+    }
+    vec![rea_mcp::schema::Issue {
+        path: vec!["command".to_owned()],
+        message: "Invalid input".to_owned(),
+    }]
+}
+
 fn validation_error_output(
     issues: &[rea_mcp::schema::Issue],
     args_schema: Option<&Value>,
     options_schema: Option<&Value>,
+    args_value: &Value,
+    options_value: &Value,
     ctx: &OutputCtx,
 ) -> String {
     let message = issues
@@ -570,14 +644,178 @@ fn validation_error_output(
     }
     let fields: Vec<Value> = issues
         .iter()
-        .map(|issue| serde_json::json!({ "path": issue.path.join("."), "message": issue.message }))
+        .map(|issue| validation_field_error(issue, options_schema, args_value, options_value))
         .collect();
+    let details = issues
+        .iter()
+        .map(|issue| validation_issue_detail(issue, args_schema, options_schema))
+        .collect::<Vec<_>>();
+    let message = format!(
+        "{message}\n\nDetails: {}",
+        serde_json::to_string_pretty(&details).unwrap_or_else(|_| "[]".to_owned())
+    );
     output::deliver_error(
         "VALIDATION_ERROR",
         &message,
         Some(Value::Array(fields)),
         ctx,
     )
+}
+
+fn validation_field_error(
+    issue: &rea_mcp::schema::Issue,
+    options_schema: Option<&Value>,
+    args_value: &Value,
+    options_value: &Value,
+) -> Value {
+    let is_option = issue.path.first().is_some_and(|head| {
+        options_schema
+            .and_then(|schema| schema.get("properties"))
+            .and_then(Value::as_object)
+            .is_some_and(|properties| properties.contains_key(head))
+    });
+    let input = if is_option { options_value } else { args_value };
+    let received = value_at_string_path(input, &issue.path);
+    let missing = received.is_none();
+    let (code, expected, received_text) = validation_field_metadata(issue, received);
+    json!({
+        "code": code,
+        "missing": missing,
+        "path": issue.path.join("."),
+        "expected": expected,
+        "received": received_text,
+        "message": issue.message,
+    })
+}
+
+fn validation_issue_detail(
+    issue: &rea_mcp::schema::Issue,
+    args_schema: Option<&Value>,
+    options_schema: Option<&Value>,
+) -> Value {
+    let schema = schema_at_string_path(issue, args_schema, options_schema);
+    let (code, expected, received) = validation_field_metadata(issue, None);
+    let path: Vec<Value> = issue
+        .path
+        .iter()
+        .map(|part| Value::String(part.clone()))
+        .collect();
+    let mut detail = Map::new();
+    if issue.message.starts_with("Too small") {
+        let origin = schema
+            .and_then(|value| value.get("type"))
+            .and_then(Value::as_str)
+            .unwrap_or("string");
+        let minimum = schema
+            .and_then(|value| value.get("minLength").or_else(|| value.get("minimum")))
+            .cloned()
+            .unwrap_or_else(|| Value::Number(0.into()));
+        detail.insert("origin".to_owned(), Value::String(origin.to_owned()));
+        detail.insert("code".to_owned(), Value::String(code.to_owned()));
+        detail.insert("minimum".to_owned(), minimum);
+        detail.insert("inclusive".to_owned(), Value::Bool(true));
+    } else {
+        detail.insert("code".to_owned(), Value::String(code.to_owned()));
+        if !expected.is_empty() {
+            detail.insert("expected".to_owned(), Value::String(expected));
+        }
+        if !received.is_empty() {
+            detail.insert("received".to_owned(), Value::String(received));
+        }
+    }
+    detail.insert("path".to_owned(), Value::Array(path));
+    detail.insert("message".to_owned(), Value::String(issue.message.clone()));
+    Value::Object(detail)
+}
+
+fn validation_field_metadata(
+    issue: &rea_mcp::schema::Issue,
+    received: Option<&Value>,
+) -> (String, String, String) {
+    let message = issue.message.as_str();
+    let code = if message.starts_with("Too small") {
+        "too_small"
+    } else if message.starts_with("Too big") {
+        "too_big"
+    } else if message.starts_with("Unrecognized key") {
+        "unrecognized_keys"
+    } else if message.starts_with("Invalid input: expected") && message.contains(", received") {
+        "invalid_type"
+    } else if message.starts_with("Invalid option")
+        || message.starts_with("Invalid input: expected")
+    {
+        "invalid_value"
+    } else {
+        "custom"
+    };
+    let expected = message
+        .strip_prefix("Invalid input: expected ")
+        .and_then(|rest| {
+            rest.split_once(", received")
+                .map(|(value, _)| value.to_owned())
+        })
+        .unwrap_or_default();
+    let received_text = if code == "invalid_type" {
+        if let Some(value) = received {
+            value_type_name(value).to_owned()
+        } else {
+            message
+                .split_once(", received ")
+                .map(|(_, value)| value.to_owned())
+                .filter(|value| value != "undefined")
+                .unwrap_or_default()
+        }
+    } else {
+        String::new()
+    };
+    (code.to_owned(), expected, received_text)
+}
+
+fn value_type_name(value: &Value) -> &str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
+fn value_at_string_path<'a>(value: &'a Value, path: &[String]) -> Option<&'a Value> {
+    path.iter().try_fold(value, |current, part| match current {
+        Value::Object(object) => object.get(part),
+        Value::Array(items) => part
+            .parse::<usize>()
+            .ok()
+            .and_then(|index| items.get(index)),
+        _ => None,
+    })
+}
+
+fn schema_at_string_path<'a>(
+    issue: &rea_mcp::schema::Issue,
+    args_schema: Option<&'a Value>,
+    options_schema: Option<&'a Value>,
+) -> Option<&'a Value> {
+    let head = issue.path.first()?;
+    let mut schema = if options_schema
+        .and_then(|value| value.get("properties"))
+        .and_then(Value::as_object)
+        .is_some_and(|properties| properties.contains_key(head))
+    {
+        options_schema
+    } else {
+        args_schema
+    }?;
+    for part in &issue.path {
+        schema = schema.get("properties")?.get(part).or_else(|| {
+            schema
+                .get("items")
+                .filter(|_| part.parse::<usize>().is_ok())
+        })?;
+    }
+    Some(schema)
 }
 
 fn target_label(
@@ -701,20 +939,11 @@ fn handle_mcp_subcommand(arguments: &[String], composition: &dyn Composition) ->
         .skip(1)
         .any(|argument| argument == "--http")
     {
-        eprintln!(
-            "MCP over HTTP is not available in this native build. Use `rea mcp` for stdio transport."
-        );
-        return Some(1);
+        return Some(mcp_http::run(&arguments[1..], composition));
     }
     match arguments.get(1).map(String::as_str) {
         Some("doctor") => Some(mcp_doctor(&arguments[2..], composition)),
-        Some("add") => {
-            eprintln!(
-                "Automatic MCP registration is not available in this native build. Register `{}` manually with your agent.",
-                catalog().server_name
-            );
-            Some(1)
-        }
+        Some("add") => Some(mcp_registration_commands::add(&arguments[2..], composition)),
         _ => None,
     }
 }

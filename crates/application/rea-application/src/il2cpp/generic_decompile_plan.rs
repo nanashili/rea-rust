@@ -93,7 +93,6 @@ pub fn project(input: &Value) -> Result<Value, Failure> {
                     None
                 }
             }
-            _ => Some("Generic MethodSpec identity is incomplete."),
         };
 
         if let Some(reason) = reason {

@@ -858,19 +858,53 @@ mod tests {
         let input = serde_json::json!({
             "application": {
                 "evidence_id": "ev_application",
-                "normalized_result": {"graph": {
-                    "graph_id": "jag_graph",
-                    "nodes": [
-                        {"node_id":"jag_route","kind":"endpoint","identity":{"path":"/settings"},"observations":[{"label":"settings","properties":{"path":"/settings"},"evidence":{"evidence_ids":["ev_source"]}}]},
-                        {"node_id":"jag_store","kind":"storage","identity":{"key":"settings"},"observations":[{"label":"store","properties":{},"evidence":{"evidence_ids":["ev_store"]}}]}
-                    ],
-                    "edges": [{"edge_id":"jag_edge","source_node_id":"jag_route","target_node_id":"jag_store","relation":"persists_to","evidence":{"evidence_ids":["ev_edge"]}}],
-                    "coverage":{"status":"complete"},"limitations":[]
-                }}
+                "normalized_result": {
+                    "graph": {
+                        "graph_id": "jag_graph",
+                        "nodes": [
+                            {
+                                "node_id": "jag_route",
+                                "kind": "endpoint",
+                                "identity": {"path": "/settings"},
+                                "observations": [{
+                                    "label": "settings",
+                                    "properties": {
+                                        "endpoint_kind": "route",
+                                        "path": "/settings"
+                                    },
+                                    "evidence": {
+                                        "evidence_ids": ["ev_source"]
+                                    }
+                                }]
+                            },
+                            {
+                                "node_id": "jag_store",
+                                "kind": "storage",
+                                "identity": {"key": "settings"},
+                                "observations": [{
+                                    "label": "store",
+                                    "properties": {},
+                                    "evidence": {
+                                        "evidence_ids": ["ev_store"]
+                                    }
+                                }]
+                            }
+                        ],
+                        "edges": [{
+                            "edge_id": "jag_edge",
+                            "source_node_id": "jag_route",
+                            "target_node_id": "jag_store",
+                            "relation": "persists_to",
+                            "evidence": {"evidence_ids": ["ev_edge"]}
+                        }],
+                        "coverage": {"status": "complete"},
+                        "limitations": []
+                    }
+                }
             },
-            "native_observations": [{"evidence_id":"ev_native"}],
-            "seed":{"kind":"route","value":"/settings","match":"exact"},
-            "direction":"outgoing"
+            "native_observations": [{"evidence_id": "ev_native"}],
+            "seed": {"kind": "route", "value": "/settings", "match": "exact"},
+            "direction": "outgoing"
         });
         let result = trace_result(&input).expect("trace succeeds");
         assert_eq!(result["coverage"]["status"], "complete-within-source");

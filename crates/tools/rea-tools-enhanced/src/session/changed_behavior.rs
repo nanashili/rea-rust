@@ -23,15 +23,15 @@ fn provider() -> EvidenceProvider {
 
 /// Handler for `find_changed_behavior`.
 pub fn find_changed_behavior(context: &ToolContext<'_>, input: Value) -> ToolOutput {
+    let input = match rea_mcp::schema::parse_application_input(context.name(), &input) {
+        Ok(input) => input,
+        Err(error) => return ToolOutput::Failure(error),
+    };
+
     with_session_admission(context, || run(context, &input))
 }
 
 fn run(context: &ToolContext<'_>, input: &Value) -> ToolOutput {
-    // TS registers this tool with `applicationValidatedInputSchema`, which
-    // defers to `findChangedBehavior`'s own Zod parse (reported as
-    // AnalysisInputError through runDerivedOperation). The Rust framework
-    // always validates the frozen inputSchema first; the application parse is
-    // still ported below so its error kinds and messages are preserved.
     let computed = match run_derived_operation(context, context.name(), || {
         domain::find_changed_behavior(input)
     }) {

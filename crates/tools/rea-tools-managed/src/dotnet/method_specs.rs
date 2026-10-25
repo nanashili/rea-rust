@@ -133,26 +133,21 @@ fn read_method_spec(
         Some(arity) => arity,
         None => arities.get(&generic).copied().flatten(),
     };
-    if arity != Some(types.len() as i64) && !(arity.is_none() && types.is_empty() && false) {
-        // Exact TS: `arity !== types.length`. JS compares number to number;
-        // when arity is null it is never equal to a length.
-        if arity != Some(types.len() as i64) {
-            return Err(ReadError::Reader(managed_failure(
-                "invalid-row",
-                scope,
-                match arity {
-                    None => {
-                        "MethodSpec method does not have a decodable method signature".to_string()
-                    }
-                    Some(arity) => format!(
-                        "MethodSpec supplies {} type argument(s), but its method declares {} generic parameter(s)",
-                        types.len(),
-                        arity
-                    ),
-                },
-                Some(cursor.start as u64),
-            )));
-        }
+    // A missing arity never matches an argument count, including zero.
+    if arity != Some(types.len() as i64) {
+        return Err(ReadError::Reader(managed_failure(
+            "invalid-row",
+            scope,
+            match arity {
+                None => "MethodSpec method does not have a decodable method signature".to_string(),
+                Some(arity) => format!(
+                    "MethodSpec supplies {} type argument(s), but its method declares {} generic parameter(s)",
+                    types.len(),
+                    arity
+                ),
+            },
+            Some(cursor.start as u64),
+        )));
     }
     Ok(())
 }

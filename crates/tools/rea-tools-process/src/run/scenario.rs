@@ -81,7 +81,13 @@ fn text(value: &Value, key: &str) -> String {
 fn strings(value: &Value) -> Vec<String> {
     value
         .as_array()
-        .map(|items| items.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -121,8 +127,15 @@ fn ordered(input: &Value) -> Value {
     ] {
         let value = &input[key];
         let value = match key {
-            "terminal" => json!({"columns": value["columns"], "rows": value["rows"], "scrollback": value["scrollback"]}),
-            "events" => Value::Array(value.as_array().map(|events| events.iter().map(event_value).collect()).unwrap_or_default()),
+            "terminal" => {
+                json!({"columns": value["columns"], "rows": value["rows"], "scrollback": value["scrollback"]})
+            }
+            "events" => Value::Array(
+                value
+                    .as_array()
+                    .map(|events| events.iter().map(event_value).collect())
+                    .unwrap_or_default(),
+            ),
             "limits" => json!({
                 "output_bytes": value["output_bytes"], "files": value["files"], "file_bytes": value["file_bytes"],
                 "processes": value["processes"], "filesystem_depth": value["filesystem_depth"],
@@ -179,7 +192,13 @@ impl Scenario {
             working_directory: text(&value, "working_directory"),
             environment: value["environment"]
                 .as_object()
-                .map(|map| map.iter().map(|(key, value)| (key.clone(), value.as_str().unwrap_or_default().to_owned())).collect())
+                .map(|map| {
+                    map.iter()
+                        .map(|(key, value)| {
+                            (key.clone(), value.as_str().unwrap_or_default().to_owned())
+                        })
+                        .collect()
+                })
                 .unwrap_or_default(),
             filesystem_observation_paths: strings(&value["filesystem_observation_paths"]),
             columns: u(terminal, "columns") as u16,
@@ -216,7 +235,12 @@ impl Scenario {
     }
 
     /// The scenario with runtime-resolved paths (`resolveProcessScenarioRuntimePaths`).
-    pub fn with_resolved_paths(&self, executable: String, working_directory: String, observation_paths: Vec<String>) -> Self {
+    pub fn with_resolved_paths(
+        &self,
+        executable: String,
+        working_directory: String,
+        observation_paths: Vec<String>,
+    ) -> Self {
         let mut value = self.value.clone();
         value["executable"] = json!(executable);
         value["working_directory"] = json!(working_directory);
@@ -229,7 +253,15 @@ impl Scenario {
     }
 
     pub fn has_sensitive_input(&self) -> bool {
-        self.events.iter().any(|event| matches!(event.kind, EventKind::Input { sensitive: true, .. }))
+        self.events.iter().any(|event| {
+            matches!(
+                event.kind,
+                EventKind::Input {
+                    sensitive: true,
+                    ..
+                }
+            )
+        })
     }
 
     fn committed_events(&self, include_length: bool) -> Value {
@@ -269,10 +301,16 @@ impl Scenario {
     /// `processComparisonContract`.
     pub fn comparison_contract(&self) -> Value {
         let mut object = Map::new();
-        object.insert("working_directory".into(), self.value["working_directory"].clone());
+        object.insert(
+            "working_directory".into(),
+            self.value["working_directory"].clone(),
+        );
         object.insert("environment".into(), self.value["environment"].clone());
         object.insert("ambient_environment".into(), json!("unknown"));
-        object.insert("filesystem_observation_paths".into(), self.value["filesystem_observation_paths"].clone());
+        object.insert(
+            "filesystem_observation_paths".into(),
+            self.value["filesystem_observation_paths"].clone(),
+        );
         object.insert("terminal".into(), self.value["terminal"].clone());
         object.insert("events".into(), self.committed_events(false));
         object.insert("timeout_ms".into(), json!(self.timeout_ms));
@@ -284,15 +322,27 @@ impl Scenario {
         object.insert("limits".into(), self.value["limits"].clone());
         object.insert("normalization".into(), self.normalization());
         if self.normalize_paths {
-            object.insert("path_normalization_version".into(), json!("longest-original-paths-v1"));
+            object.insert(
+                "path_normalization_version".into(),
+                json!("longest-original-paths-v1"),
+            );
         }
         if self.normalize_ports {
-            object.insert("port_normalization_version".into(), json!("contextual-endpoints-v2"));
+            object.insert(
+                "port_normalization_version".into(),
+                json!("contextual-endpoints-v2"),
+            );
         }
         if !self.patterns.is_empty() {
-            object.insert("pattern_normalization_version".into(), json!("literal-replacements-v1"));
+            object.insert(
+                "pattern_normalization_version".into(),
+                json!("literal-replacements-v1"),
+            );
         }
-        object.insert("rendered_line_format".into(), json!("trailing-spaces-trimmed-v1"));
+        object.insert(
+            "rendered_line_format".into(),
+            json!("trailing-spaces-trimmed-v1"),
+        );
         Value::Object(object)
     }
 }
@@ -310,7 +360,9 @@ pub fn fits_cell_budget(columns: u64, rows: u64, scrollback: u64) -> bool {
 /// The `superRefine` issues, in the original order: (path, message).
 pub fn refinements(scenario: &Scenario) -> Vec<(Vec<String>, String)> {
     let mut issues = Vec::new();
-    let lifecycle = u128::from(scenario.timeout_ms) + u128::from(scenario.finalization_ms) + u128::from(scenario.settle_ms);
+    let lifecycle = u128::from(scenario.timeout_ms)
+        + u128::from(scenario.finalization_ms)
+        + u128::from(scenario.settle_ms);
     if lifecycle > u128::from(MAX_SAFE_INTEGER) {
         issues.push((
             vec!["timeout_ms".to_owned()],
@@ -320,7 +372,11 @@ pub fn refinements(scenario: &Scenario) -> Vec<(Vec<String>, String)> {
         ));
     }
     let scrollback = scenario.scrollback as u64;
-    if !fits_cell_budget(u64::from(scenario.columns), u64::from(scenario.rows), scrollback) {
+    if !fits_cell_budget(
+        u64::from(scenario.columns),
+        u64::from(scenario.rows),
+        scrollback,
+    ) {
         issues.push((
             vec!["terminal".to_owned()],
             format!("terminal columns × (rows + scrollback) must not exceed {TERMINAL_CELL_BUDGET} renderer cells"),
@@ -328,7 +384,10 @@ pub fn refinements(scenario: &Scenario) -> Vec<(Vec<String>, String)> {
     }
     for index in 1..scenario.events.len() {
         if scenario.events[index].at_ms < scenario.events[index - 1].at_ms {
-            issues.push((vec!["events".to_owned(), index.to_string()], "events must be ordered by at_ms".to_owned()));
+            issues.push((
+                vec!["events".to_owned(), index.to_string()],
+                "events must be ordered by at_ms".to_owned(),
+            ));
         }
     }
     for (index, event) in scenario.events.iter().enumerate() {
@@ -344,7 +403,10 @@ pub fn refinements(scenario: &Scenario) -> Vec<(Vec<String>, String)> {
             ));
         }
         if event.at_ms > scenario.timeout_ms {
-            issues.push((vec!["events".to_owned()], "event occurs after the scenario timeout".to_owned()));
+            issues.push((
+                vec!["events".to_owned()],
+                "event occurs after the scenario timeout".to_owned(),
+            ));
         }
     }
     issues
@@ -382,11 +444,19 @@ mod tests {
 
     #[test]
     fn commitments_redact_sensitive_input_and_keep_zero_finalization_out() {
-        let scenario = scenario(json!({"events": [{"at_ms": 0, "type": "input", "data": "secret", "sensitive": true}]}));
+        let scenario = scenario(
+            json!({"events": [{"at_ms": 0, "type": "input", "data": "secret", "sensitive": true}]}),
+        );
         let committed = scenario.commitment(Some("abc"));
         assert_eq!(committed["events"][0]["data"], "<redacted-input:6-bytes>");
         assert!(committed.get("finalization_ms").is_none());
-        assert_eq!(scenario.comparison_contract()["events"][0]["data"], "<redacted-input>");
-        assert_eq!(scenario.comparison_contract()["port_normalization_version"], "contextual-endpoints-v2");
+        assert_eq!(
+            scenario.comparison_contract()["events"][0]["data"],
+            "<redacted-input>"
+        );
+        assert_eq!(
+            scenario.comparison_contract()["port_normalization_version"],
+            "contextual-endpoints-v2"
+        );
     }
 }

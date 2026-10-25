@@ -32,6 +32,14 @@ fn resolved_input(
     fields: &[&str],
 ) -> Result<Value, AnalysisError> {
     let mut object = input.as_object().cloned().unwrap_or_default();
+
+    object
+        .entry("left_native_observations")
+        .or_insert_with(|| Value::Array(Vec::new()));
+    object
+        .entry("right_native_observations")
+        .or_insert_with(|| Value::Array(Vec::new()));
+
     for field in fields {
         object.insert((*field).to_owned(), resolve_field(context, input, field)?);
     }

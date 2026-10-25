@@ -415,7 +415,11 @@ fn collect_field_rows(
                 })
                 .map(|ty| ty.index)
                 .collect();
-            (matches.len() == 1).then_some(matches[0])
+            if matches.len() == 1 {
+                matches.first().copied()
+            } else {
+                None
+            }
         };
         if owners.insert(index, owner).is_some() {
             owners.insert(index, None);

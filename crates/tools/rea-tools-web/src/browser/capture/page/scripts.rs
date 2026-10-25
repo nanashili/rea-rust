@@ -91,7 +91,7 @@ impl SourceBudget {
 
 /// `WebSourceMapRequest`; retained for `analyze_web_bundle`.
 #[allow(dead_code)]
-pub(super) struct SourceMapRequest {
+pub(in crate::browser::capture) struct SourceMapRequest {
     pub script_key: String,
     pub declared_url: String,
     pub fetch_url: String,

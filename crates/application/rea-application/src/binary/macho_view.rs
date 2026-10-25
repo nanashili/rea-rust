@@ -156,7 +156,7 @@ fn summary(report: &Value, shared: Value) -> Result<Value, Failure> {
             }),
         );
     }
-    let mut summary = json!({
+    let summary = json!({
         "format": report.get("format").cloned().unwrap_or_else(|| json!("mach-o")),
         "selected_architecture": report.get("selected_architecture").cloned().unwrap_or(Value::Null),
         "endian": report.get("endian").cloned().unwrap_or(Value::Null),

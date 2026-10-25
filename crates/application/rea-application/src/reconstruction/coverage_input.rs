@@ -71,9 +71,10 @@ fn authenticate_evidence_bundle(coverage: &Map<String, Value>) -> Result<Evidenc
     let raw = serde_json::value::to_raw_value(value)
         .map_err(|error| invalid(&format!("coverage.evidence_bundle is invalid: {error}")))?;
     EvidenceBundle::parse(&raw).map_err(|error| match error {
-        EvidenceBundleError::Record(
-            rea_core::evidence::record::EvidenceRecordError::SemanticIdMismatch,
-        ) => invalid("Evidence bundle contains an unauthenticated Evidence record."),
+        EvidenceBundleError::RecordAt {
+            error: rea_core::evidence::record::EvidenceRecordError::SemanticIdMismatch,
+            ..
+        } => invalid("Evidence bundle contains an unauthenticated Evidence record."),
         _ => invalid(&format!("Evidence bundle is invalid: {error}")),
     })
 }

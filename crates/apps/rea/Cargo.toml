@@ -12,9 +12,16 @@ publish.workspace = true
 name = "rea"
 path = "src/main.rs"
 
+[features]
+# Optional native providers are forwarded explicitly by the package build.
+# Keep Frida out of the default build because it links the externally installed
+# frida-core devkit selected by REA_FRIDA_DEVKIT_DIR.
+frida = ["rea-tools-debug/frida"]
+
 [dependencies]
 rea-core.workspace = true
 rea-analysis.workspace = true
+rea-application.workspace = true
 rea-mcp.workspace = true
 rea-cli.workspace = true
 rea-tools-ledger.workspace = true
@@ -34,5 +41,17 @@ rea-provider-ida.workspace = true
 rea-provider-kuna.workspace = true
 serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 
-[lints]
-workspace = true
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_System_Threading"] }
+
+[lints.rust]
+# The private worker uses one documented process-global allocator boundary.
+# Keep unsafe code denied elsewhere while allowing that isolated module to opt in.
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"

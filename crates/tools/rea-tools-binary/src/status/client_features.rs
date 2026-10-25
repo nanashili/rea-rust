@@ -27,25 +27,3 @@ impl ClientFeatures {
         })
     }
 }
-
-/// `capabilityFeatures` from `src/server/mcpClientMetadata.ts`.
-///
-/// `capabilities` is the raw negotiated client capabilities object (the value
-/// the SDK stores for `CLIENT_CAPABILITIES_META_KEY`). A non-object is treated
-/// as an empty capabilities set, exactly like the TS `isRecord` guard.
-pub(crate) fn client_features_from_capabilities(capabilities: Option<&Value>) -> ClientFeatures {
-    let capabilities = capabilities.and_then(Value::as_object);
-    let elicitation = capabilities
-        .and_then(|capabilities| capabilities.get("elicitation"))
-        .and_then(Value::as_object);
-    ClientFeatures {
-        // A declared capability without modes retains the protocol's form-only
-        // compatibility rule; a missing capability still grants no support.
-        elicitation_form: elicitation.is_some_and(|elicitation| {
-            elicitation.contains_key("form") || !elicitation.contains_key("url")
-        }),
-        elicitation_url: elicitation.is_some_and(|elicitation| elicitation.contains_key("url")),
-        roots: capabilities.is_some_and(|capabilities| capabilities.contains_key("roots")),
-        sampling: capabilities.is_some_and(|capabilities| capabilities.contains_key("sampling")),
-    }
-}

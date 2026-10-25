@@ -7,13 +7,10 @@
 //! The passive branch compares two normalized `inspect_web_page` observations
 //! without treating incomplete absence as proof. All structural reads operate
 //! on the validated JSON so the port tracks the TS field access exactly.
-use super::digest::{compare_unicode_code_points, composite_key, digest_canonical_value};
+use super::digest::{compare_unicode_code_points, digest_canonical_value};
 use rea_core::analysis_error::AnalysisError;
 use serde_json::{Map, Value, json};
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
-
-const OPERATION: &str = "compare_web_captures";
 
 /// Dispatch a validated comparison input and return
 /// `(normalized_result, parameters, limitations)` for Evidence assembly.
@@ -213,7 +210,6 @@ fn compare_dimensions(
 /// `inventoryComplete` is either a flat flag or a per-identity predicate.
 enum InventoryComplete {
     Bool(bool),
-    PerIdentity(Box<dyn Fn(&str) -> bool>),
 }
 
 fn keyed<F>(values: &[Value], identity: F) -> BTreeMap<String, String>
@@ -273,7 +269,6 @@ fn compare_dimension(
             change.change == "modified"
                 || match &inventory_complete {
                     InventoryComplete::Bool(flag) => *flag,
-                    InventoryComplete::PerIdentity(predicate) => predicate(&change.identity),
                 }
         })
         .collect();

@@ -27,7 +27,7 @@ pub fn cli_error(projection: Value) -> Value {
 
 /// Fold a provider cleanup failure into the primary CLI output, mirroring
 /// `directAnalysisCleanupFailure`.
-fn cleanup_failure(output: Value, cleanup: Value) -> Value {
+pub(crate) fn cleanup_failure(output: Value, cleanup: Value) -> Value {
     let cleanup_remediation = cleanup.get("remediation").cloned();
     let cleanup_details = cleanup.get("details").and_then(Value::as_object).cloned();
     if let Some(object) = output.as_object() {
@@ -100,6 +100,7 @@ fn cleanup_failure(output: Value, cleanup: Value) -> Value {
 pub fn outcome(invocation: Invocation) -> Result<Value, Value> {
     match invocation {
         Invocation::Success(value) => Ok(value),
+        Invocation::RawSuccess(raw) => Ok(rea_mcp::raw_cli_value(&raw)),
         Invocation::Failure(projection) => Err(projection),
         Invocation::UnknownTool => Err(crate::util::object([
             ("code", Value::String("execution_failure".to_owned())),

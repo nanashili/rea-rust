@@ -6,6 +6,7 @@
 //! entries no-follow, and fails closed off Unix. Executable marking mirrors
 //! `hostExecutableMarking`.
 use super::reader::{ArtifactEntry, ArtifactReader, ArtifactTraversalOmission, ReaderFailure};
+use rea_core::JsString;
 use rea_core::cancellation::Cancellation;
 use rea_host::fs::stable_directory::{
     DirectoryEntry, DirectoryEntryKind, DirectoryError, DirectoryReader,
@@ -16,15 +17,19 @@ const MAX_DIRECTORY_ENTRIES: usize = 2_000_000;
 
 /// `hostExecutableMarking`.
 #[cfg(unix)]
-fn host_executable_marking(absolute: &std::path::Path) -> bool {
+fn host_executable_marking(absolute: &std::path::Path, _is_file: bool) -> bool {
     use std::os::unix::fs::MetadataExt;
     std::fs::symlink_metadata(absolute)
-        .map(|metadata| metadata.is_file() && (metadata.mode() & 0o111) != 0)
+        .map(|metadata| (metadata.mode() & 0o111) != 0)
         .unwrap_or(false)
 }
 
 #[cfg(not(unix))]
-fn host_executable_marking(absolute: &std::path::Path) -> bool {
+fn host_executable_marking(absolute: &std::path::Path, is_file: bool) -> bool {
+    if !is_file {
+        return false;
+    }
+
     let lower = absolute
         .extension()
         .and_then(|ext| ext.to_str())
@@ -102,14 +107,23 @@ impl ArtifactReader for DirectoryArtifactReader {
                 DirectoryEntryKind::Symlink => "symlink",
             };
             let absolute = canonical.join(&entry.path);
-            let executable = kind == "file" && host_executable_marking(&absolute);
+            let adapter_key = absolute
+                .to_str()
+                .ok_or_else(|| {
+                    ReaderFailure::new(
+                        "path",
+                        format!("Directory entry path is not representable as UTF-8: {absolute:?}"),
+                    )
+                })?
+                .to_owned();
+            let executable = host_executable_marking(&absolute, kind == "file");
             let declared_size = if kind == "file" {
                 Some(entry.identity.bytes)
             } else {
                 None
             };
             out.push(ArtifactEntry {
-                path: entry.path.clone(),
+                path: JsString::from(entry.path.clone()),
                 kind,
                 declared_size,
                 compressed_size: None,
@@ -123,9 +137,9 @@ impl ArtifactReader for DirectoryArtifactReader {
                 } else {
                     Vec::new()
                 },
-                adapter_key: entry.path.clone(),
+                adapter_key: JsString::from(adapter_key.clone()),
             });
-            self.entries.insert(entry.path.clone(), entry);
+            self.entries.insert(adapter_key, entry);
         }
         Ok(out)
     }
@@ -137,7 +151,7 @@ impl ArtifactReader for DirectoryArtifactReader {
     ) -> Result<Vec<u8>, ReaderFailure> {
         let directory_entry = self
             .entries
-            .get(&entry.adapter_key)
+            .get(entry.adapter_key.as_str().unwrap_or_default())
             .cloned()
             .ok_or_else(|| {
                 ReaderFailure::new(

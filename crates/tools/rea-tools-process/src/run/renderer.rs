@@ -38,12 +38,25 @@ impl Renderer {
     }
 
     /// Parse decoded PTY text and capture; returns the frame sequence when retained.
-    pub fn write(&mut self, text: &str, at_ms: u64, normalizer: &Normalizer, root_pid: i64) -> Option<usize> {
+    pub fn write(
+        &mut self,
+        text: &str,
+        at_ms: u64,
+        normalizer: &Normalizer,
+        root_pid: i64,
+    ) -> Option<usize> {
         self.screen.write_text(text);
         self.capture(at_ms, normalizer, root_pid)
     }
 
-    pub fn resize(&mut self, columns: u16, rows: u16, at_ms: u64, normalizer: &Normalizer, root_pid: i64) -> Option<usize> {
+    pub fn resize(
+        &mut self,
+        columns: u16,
+        rows: u16,
+        at_ms: u64,
+        normalizer: &Normalizer,
+        root_pid: i64,
+    ) -> Option<usize> {
         if let Some(size) = TerminalSize::new(columns, rows) {
             self.screen.resize(size);
         }
@@ -58,7 +71,8 @@ impl Renderer {
         let mut lines = Vec::with_capacity(snapshot.lines.len());
         for padded in &snapshot.lines {
             let budget = remaining.saturating_add(trailing_space_bytes(padded));
-            let Bounded::Normalized(normalized) = normalizer.bounded(padded, budget, root_pid) else {
+            let Bounded::Normalized(normalized) = normalizer.bounded(padded, budget, root_pid)
+            else {
                 self.unknown_size_frames += 1;
                 return None;
             };
@@ -72,7 +86,9 @@ impl Renderer {
             bytes += line_bytes;
             lines.push(Value::String(line));
         }
-        let Bounded::Normalized(state) = normalizer.bounded(&snapshot.serialized_state, remaining, root_pid) else {
+        let Bounded::Normalized(state) =
+            normalizer.bounded(&snapshot.serialized_state, remaining, root_pid)
+        else {
             self.unknown_size_frames += 1;
             return None;
         };
@@ -107,7 +123,10 @@ impl Renderer {
         object.insert("observed_frames".into(), json!(self.observed_frames));
         object.insert("retained_frames".into(), json!(self.frames.len()));
         if self.unknown_size_frames > 0 {
-            object.insert("unknown_size_frames".into(), json!(self.unknown_size_frames));
+            object.insert(
+                "unknown_size_frames".into(),
+                json!(self.unknown_size_frames),
+            );
         }
         Value::Object(object)
     }

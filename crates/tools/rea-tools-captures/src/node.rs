@@ -285,8 +285,3 @@ pub fn join(directory: &str, name: &str) -> String {
 pub fn lowercase(text: &str) -> String {
     text.to_lowercase()
 }
-
-/// UTF-16 code-unit length, the JavaScript string length.
-pub fn utf16_length(text: &str) -> usize {
-    text.encode_utf16().count()
-}

@@ -10,7 +10,6 @@ autobenches = false
 [[bin]]
 name = "rea-ghidra-rust-worker"
 path = "src/main.rs"
-test = false
 bench = false
 
 [dependencies]

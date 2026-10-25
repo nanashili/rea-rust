@@ -263,14 +263,7 @@ fn project_interfaces(
         )?;
         let key = (type_index.unwrap_or(u64::MAX), offset);
         *occurrences.entry(key).or_default() += 1;
-        parsed.push((
-            value,
-            object,
-            type_index,
-            type_identity.ambiguous,
-            offset,
-            key,
-        ));
+        parsed.push((value, type_index, type_identity.ambiguous, offset, key));
     }
 
     let mut type_occurrences = BTreeMap::<u64, usize>::new();
@@ -284,7 +277,7 @@ fn project_interfaces(
         }
     }
 
-    for (row, (value, object, type_index, type_identity_ambiguous, offset, key)) in
+    for (row, (value, type_index, type_identity_ambiguous, offset, key)) in
         parsed.into_iter().enumerate()
     {
         let duplicate = occurrences.get(&key).copied().unwrap_or_default() > 1;

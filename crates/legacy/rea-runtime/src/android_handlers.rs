@@ -7,6 +7,7 @@
 
 use crate::android_package_handlers;
 use rea_application::android;
+use rea_application::javascript::graph::json;
 use rea_core::failure::{Detail, Failure};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -78,10 +79,26 @@ pub fn dispatch_typed(operation: AndroidOperation, input: &Value) -> Result<Valu
 }
 
 fn project_application_graph(input: &Value) -> Result<Value, Failure> {
-    android::application_graph::validate_input(input)?;
+    let graph_input = json::parse(&serde_json::to_string(input).map_err(|error| {
+        projection_failure(android::application_graph::OPERATION, error.to_string())
+    })?)
+    .map_err(|error| {
+        projection_failure(android::application_graph::OPERATION, error.to_string())
+    })?;
+    android::application_graph::validate_input(&graph_input)?;
 
-    android::application_graph::project(input)
+    android::application_graph::project(&graph_input)
         .map_err(|reason| projection_failure(android::application_graph::OPERATION, reason))
+        .and_then(|projection| {
+            serde_json::from_str(&projection.stringify()).map_err(|error| {
+                projection_failure(
+                    android::application_graph::OPERATION,
+                    format!(
+                        "canonical projection could not cross the legacy JSON boundary: {error}"
+                    ),
+                )
+            })
+        })
 }
 
 fn unknown_operation(name: &str) -> Failure {

@@ -1152,7 +1152,7 @@ fn row_identity(
         .copied()
         .any(|value| Some(value) != first)
     {
-        if let (Some(metadata_index), Some(index)) = (metadata_index, index) {
+        if metadata_index.is_some() && index.is_some() {
             unresolved.push(format!(
                 "{collection} row has conflicting metadata_index and index identities"
             ));

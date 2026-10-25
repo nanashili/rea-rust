@@ -5,3 +5,4 @@ pub mod cmdline_projection;
 pub mod memory_projection;
 pub mod observation;
 pub mod offline_evidence;
+pub mod trace;

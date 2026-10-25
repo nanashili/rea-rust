@@ -8,27 +8,65 @@
     "additionalProperties": false,
     "oneOf": [
       {
-        "required": ["request", "database"],
+        "required": [
+          "request",
+          "database"
+        ],
         "properties": {
           "request": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "sha256"],
+            "required": [
+              "path",
+              "sha256"
+            ],
             "properties": {
-              "path": { "type": "string", "minLength": 1, "pattern": "^[^\\u0000]*$" },
-              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-              "table": { "type": "string" },
-              "columns": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-              "schema_scope": { "enum": ["inventory", "selected_table", "database"] },
-              "row_limit": { "type": "integer", "minimum": 1 }
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^\\u0000]*$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "table": {
+                "type": "string"
+              },
+              "columns": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "schema_scope": {
+                "enum": [
+                  "inventory",
+                  "selected_table",
+                  "database"
+                ]
+              },
+              "row_limit": {
+                "type": "integer",
+                "minimum": 1
+              }
             }
           },
-          "database": { "type": "object" }
+          "database": {
+            "type": "object"
+          }
         }
       },
       {
-        "required": ["evidence"],
-        "properties": { "evidence": { "type": "object" } }
+        "required": [
+          "evidence"
+        ],
+        "properties": {
+          "evidence": {
+            "type": "object"
+          }
+        }
       }
     ]
   },
@@ -36,19 +74,38 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "additionalProperties": false,
-    "required": ["result", "provenance"],
+    "required": [
+      "result",
+      "provenance"
+    ],
     "properties": {
-      "evidence_id": { "type": "string", "pattern": "^ev_[a-f0-9]{64}$" },
-      "result": { "type": "object" },
+      "evidence_id": {
+        "type": "string",
+        "pattern": "^ev_[a-f0-9]{64}$"
+      },
+      "result": {
+        "type": "object"
+      },
       "provenance": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["source", "execution"],
+        "required": [
+          "source",
+          "execution"
+        ],
         "properties": {
-          "source": { "type": "string" },
-          "execution": { "type": "string" },
-          "source_path": { "type": "string" },
-          "source_sha256": { "type": "string" }
+          "source": {
+            "type": "string"
+          },
+          "execution": {
+            "type": "string"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "source_sha256": {
+            "type": "string"
+          }
         }
       }
     }
@@ -58,5 +115,46 @@
     "idempotentHint": true,
     "openWorldHint": false,
     "readOnlyHint": true
+  },
+  "x-rea-observationResultSchema": {
+    "type": "object",
+    "required": [
+      "artifact",
+      "engine",
+      "database_encoding",
+      "schema",
+      "limitations"
+    ],
+    "properties": {
+      "artifact": {},
+      "engine": {},
+      "database_encoding": {},
+      "schema": {
+        "type": "object",
+        "required": [
+          "tables",
+          "indexes",
+          "foreign_keys",
+          "unique_constraints"
+        ],
+        "properties": {
+          "tables": {
+            "type": "array"
+          },
+          "indexes": {
+            "type": "array"
+          },
+          "foreign_keys": {
+            "type": "array"
+          },
+          "unique_constraints": {
+            "type": "array"
+          }
+        }
+      },
+      "limitations": {
+        "type": "array"
+      }
+    }
   }
 }

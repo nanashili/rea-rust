@@ -68,6 +68,13 @@ impl UpdateInstallation {
             Self::Npm { package_root, .. } | Self::Bun { package_root, .. } => package_root,
         }
     }
+
+    pub fn manager_name(&self) -> &'static str {
+        match self {
+            Self::Npm { .. } => "npm",
+            Self::Bun { .. } => "bun",
+        }
+    }
 }
 
 /// Why a release lookup failed before a version could be compared.
@@ -219,6 +226,24 @@ pub fn update_install_command(installation: &UpdateInstallation, version: &str) 
     }
 }
 
+/// Build the npm registry query used for both npm and Bun installations.
+/// Bun callers may replace the executable and working directory while
+/// retaining the same package metadata contract.
+pub fn npm_latest_command(installation: Option<&UpdateInstallation>) -> Vec<String> {
+    let mut command = vec!["npm".to_owned(), "view".to_owned(), "--global".to_owned()];
+    if let Some(UpdateInstallation::Npm { prefix, .. }) = installation {
+        command.extend(["--prefix".to_owned(), prefix.to_string_lossy().into_owned()]);
+    }
+    command.extend([
+        PACKAGE_NAME.to_owned(),
+        "dist-tags.latest".to_owned(),
+        "--json".to_owned(),
+        "--fetch-retries=0".to_owned(),
+        "--fetch-timeout=10000".to_owned(),
+    ]);
+    command
+}
+
 fn first_nonempty<'a>(environment: &'a BTreeMap<String, String>, key: &str) -> Option<&'a str> {
     environment
         .get(key)
@@ -243,4 +268,67 @@ fn resolve_against(path: PathBuf, cwd: &Path) -> PathBuf {
         }
     }
     resolved
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_supported_npm_metadata_shapes() {
+        assert_eq!(parse_npm_latest_version(r#""1.2.3""#).unwrap(), "1.2.3");
+        assert_eq!(parse_npm_latest_version(r#"["1.2.3"]"#).unwrap(), "1.2.3");
+    }
+
+    #[test]
+    fn rejects_ambiguous_or_non_string_npm_metadata() {
+        for metadata in [
+            r#"[]"#,
+            r#"["1.2.3","1.2.4"]"#,
+            r#"{"version":"1.2.3"}"#,
+            "null",
+        ] {
+            assert!(parse_npm_latest_version(metadata).is_err(), "{metadata}");
+        }
+    }
+
+    #[test]
+    fn resolves_bun_global_directory_precedence_without_ambient_state() {
+        let cwd = Path::new("/workspace");
+        let home = Path::new("/home/tester");
+
+        let mut environment = BTreeMap::new();
+        environment.insert("BUN_INSTALL_GLOBAL_DIR".into(), "relative/global".into());
+        environment.insert("BUN_INSTALL".into(), "/ignored".into());
+        assert_eq!(
+            bun_global_directory(&environment, cwd, home),
+            PathBuf::from("/workspace/relative/global")
+        );
+
+        environment.remove("BUN_INSTALL_GLOBAL_DIR");
+        assert_eq!(
+            bun_global_directory(&environment, cwd, home),
+            PathBuf::from("/ignored/install/global")
+        );
+    }
+
+    #[test]
+    fn npm_install_command_keeps_prefix_and_script_suppression_explicit() {
+        let installation = UpdateInstallation::Npm {
+            prefix: PathBuf::from("/opt/node"),
+            package_root: PathBuf::from("/opt/node/lib/node_modules/rea-agents"),
+        };
+        assert_eq!(
+            update_install_command(&installation, "1.2.3"),
+            vec![
+                "npm",
+                "install",
+                "--global",
+                "--ignore-scripts",
+                "--prefix",
+                "/opt/node",
+                "rea-agents@1.2.3"
+            ]
+        );
+    }
 }

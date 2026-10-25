@@ -8,6 +8,7 @@
 //! `src/domain/javascript/javascriptArtifactFiles.ts` (`isJavaScriptSourcePath`).
 use super::asar::asar_header_matches;
 use super::reader::ReaderFailure;
+use rea_core::JsString;
 
 /// Role of an occurrence: its artifact kind and format.
 #[derive(Clone, Copy)]
@@ -37,7 +38,11 @@ pub fn has_zip_signature(bytes: &[u8]) -> bool {
 
 /// `zipPackageFormatForPath` (extension-only).
 pub fn zip_package_format_for_path(path: &str) -> Option<&'static str> {
-    let lower = path.to_lowercase();
+    zip_package_format_for_js_path(&JsString::from(path))
+}
+
+pub fn zip_package_format_for_js_path(path: &JsString) -> Option<&'static str> {
+    let lower = path.to_ascii_lowercase();
     if lower.ends_with(".zip") {
         Some("zip")
     } else if lower.ends_with(".ipa") {
@@ -68,7 +73,11 @@ pub fn has_binary_plist_signature(bytes: &[u8]) -> bool {
 
 /// `isJavaScriptSourcePath`.
 pub fn is_javascript_source_path(path: &str) -> bool {
-    let lower = path.to_lowercase();
+    is_javascript_source_js_path(&JsString::from(path))
+}
+
+fn is_javascript_source_js_path(path: &JsString) -> bool {
+    let lower = path.to_ascii_lowercase();
     for ext in [".cjs", ".cts", ".mjs", ".mts", ".js", ".jsx", ".ts", ".tsx"] {
         if lower.ends_with(ext) {
             return true;
@@ -79,20 +88,25 @@ pub fn is_javascript_source_path(path: &str) -> bool {
 
 /// `classifyArtifactPath`.
 pub fn classify_artifact_path(path: &str) -> Role {
-    let lower = path.to_lowercase();
+    classify_artifact_js_path(&JsString::from(path))
+}
+
+/// Classify a logical artifact path without requiring a valid UTF-8 view.
+pub fn classify_artifact_js_path(path: &JsString) -> Role {
+    let lower = path.to_ascii_lowercase();
     if lower.ends_with(".map") {
         return Role {
             kind: "source-map",
             format: "source-map",
         };
     }
-    if is_javascript_source_path(path) {
+    if is_javascript_source_js_path(path) {
         return Role {
             kind: "javascript",
             format: "javascript-bundle",
         };
     }
-    if lower.contains(".framework/") || lower.ends_with(".framework") {
+    if contains_ascii(&lower, ".framework/") || lower.ends_with(".framework") {
         return Role {
             kind: "framework",
             format: "file",
@@ -126,6 +140,13 @@ pub fn classify_artifact_path(path: &str) -> Role {
         kind: "resource",
         format: "file",
     }
+}
+
+fn contains_ascii(path: &JsString, needle: &str) -> bool {
+    let needle: Vec<u16> = needle.encode_utf16().collect();
+    path.units()
+        .windows(needle.len())
+        .any(|window| window == needle)
 }
 
 /// `classifyArtifactBytes`.
@@ -181,9 +202,17 @@ pub fn classify_artifact_content(
     prefix: &[u8],
     file_size: u64,
 ) -> Result<Role, ReaderFailure> {
+    classify_artifact_content_js_path(&JsString::from(path), prefix, file_size)
+}
+
+pub fn classify_artifact_content_js_path(
+    path: &JsString,
+    prefix: &[u8],
+    file_size: u64,
+) -> Result<Role, ReaderFailure> {
     let format = classify_artifact_bytes(prefix, file_size);
-    let by_path = classify_artifact_path(path);
-    let lower = path.to_lowercase();
+    let by_path = classify_artifact_js_path(path);
+    let lower = path.to_ascii_lowercase();
     if format == "plist"
         && !has_binary_plist_signature(prefix)
         && (["javascript", "source-map", "entitlements"].contains(&by_path.kind)
@@ -208,7 +237,7 @@ pub fn classify_artifact_content(
             AsarProbe::Rejected => {}
         }
     }
-    Ok(artifact_role_for_format(path, format))
+    Ok(artifact_role_for_format_js_path(path, format))
 }
 
 /// Result of the ASAR header signature probe used during classification.
@@ -218,8 +247,8 @@ pub enum AsarProbe {
     Limit,
 }
 
-fn artifact_role_for_format(path: &str, format: &'static str) -> Role {
-    let by_path = classify_artifact_path(path);
+fn artifact_role_for_format_js_path(path: &JsString, format: &'static str) -> Role {
+    let by_path = classify_artifact_js_path(path);
     if format == "file" || format == by_path.format {
         return by_path;
     }
@@ -232,7 +261,7 @@ fn artifact_role_for_format(path: &str, format: &'static str) -> Role {
     if format == "zip" {
         return Role {
             kind: "container",
-            format: zip_package_format_for_path(path).unwrap_or(format),
+            format: zip_package_format_for_js_path(path).unwrap_or(format),
         };
     }
     if format == "plist" {

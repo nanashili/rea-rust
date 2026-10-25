@@ -4,10 +4,11 @@
 //! validates the public envelope and authenticates semantic identity without
 //! assigning provider-specific meaning to normalized results.
 
+use crate::schema::{Issue, Parser, UnknownKeys};
 use crate::{JsonText, canonical_json, evidence::is_sha256};
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
-use std::{collections::BTreeMap, fmt};
+use serde_json::{Value, json, value::RawValue};
+use std::{collections::BTreeMap, fmt, sync::OnceLock};
 
 /// A validated record retains its complete JSON representation and identity.
 #[derive(Debug)]
@@ -36,6 +37,8 @@ pub enum EvidenceRecordError {
     Canonical(canonical_json::Error),
     /// The input did not satisfy the strict Evidence schema.
     Invalid(String),
+    /// The input failed the typed Evidence shape contract before deserialization.
+    Shape(Vec<Issue>),
     /// The supplied identifier does not commit to the supplied semantic data.
     SemanticIdMismatch,
     /// The normalized or raw payload exceeds the supported JSON representation.
@@ -47,6 +50,7 @@ impl fmt::Display for EvidenceRecordError {
         match self {
             Self::Canonical(error) => error.fmt(formatter),
             Self::Invalid(message) => formatter.write_str(message),
+            Self::Shape(_) => formatter.write_str("Evidence shape validation failed"),
             Self::SemanticIdMismatch => {
                 formatter.write_str("Evidence semantic identifier does not match its record")
             }
@@ -60,12 +64,28 @@ impl std::error::Error for EvidenceRecordError {
         match self {
             Self::Canonical(error) => Some(error),
             Self::Json(error) => Some(error),
-            Self::Invalid(_) | Self::SemanticIdMismatch => None,
+            Self::Invalid(_) | Self::Shape(_) | Self::SemanticIdMismatch => None,
         }
     }
 }
 
 impl EvidenceRecord {
+    /// Validate the public Evidence envelope before typed deserialization.
+    ///
+    /// The application-owned adapters use this collection to preserve all
+    /// independent missing/type issues from the source schema. Authentication
+    /// and semantic validation remain the responsibility of [`Self::parse`].
+    pub fn validate_input_shape(input: &Value) -> Result<(), Vec<Issue>> {
+        match Parser::new(evidence_shape_schema(), UnknownKeys::Reject).parse(input) {
+            Ok(_) => Ok(()),
+            Err(mut issues) => {
+                normalize_missing_nullable_issues(input, &mut issues);
+                issues.sort_by_key(|issue| evidence_field_order(issue.path.first()));
+                Err(issues)
+            }
+        }
+    }
+
     /// Create an authenticated Evidence record from its unsigned JSON object.
     ///
     /// The input must contain every standard Evidence field except
@@ -114,6 +134,7 @@ impl EvidenceRecord {
     /// semantic identifiers are rejected without changing source values.
     pub fn parse(input: &RawValue) -> Result<Self, EvidenceRecordError> {
         let raw = canonicalize(input)?;
+        validate_canonical_shape(&raw)?;
         let shape: RecordShape = decode(&raw)?;
 
         validate_prefixed_digest(&shape.evidence_id, "ev_")?;
@@ -333,6 +354,349 @@ impl EvidenceRecord {
     }
 }
 
+fn normalize_missing_nullable_issues(input: &Value, issues: &mut [Issue]) {
+    for issue in issues {
+        let Some(field) = issue.path.first().and_then(Value::as_str) else {
+            continue;
+        };
+        if !matches!(
+            field,
+            "subject" | "analysis_profile" | "environment" | "relationship_coverage"
+        ) || input.get(field).is_some()
+        {
+            continue;
+        }
+        if matches!(issue.kind, crate::schema::IssueKind::InvalidUnion { .. }) {
+            issue.kind = crate::schema::IssueKind::InvalidType {
+                expected: "object".to_owned(),
+            };
+            issue.aborts = true;
+        }
+    }
+}
+
+fn evidence_field_order(field: Option<&Value>) -> usize {
+    const FIELDS: [&str; 16] = [
+        "evidence_id",
+        "subject",
+        "provider",
+        "analysis_profile",
+        "predicate_type",
+        "operation",
+        "parameters",
+        "raw_result",
+        "normalized_result",
+        "confidence",
+        "authority",
+        "environment",
+        "limitations",
+        "relationship_coverage",
+        "locations",
+        "evidence_links",
+    ];
+
+    field
+        .and_then(Value::as_str)
+        .and_then(|name| FIELDS.iter().position(|field| *field == name))
+        .unwrap_or(FIELDS.len())
+}
+
+fn nonempty_string_schema() -> Value {
+    json!({ "type": "string", "minLength": 1 })
+}
+
+fn json_object_schema() -> Value {
+    json!({ "type": "object" })
+}
+
+fn digest_schema() -> Value {
+    json!({ "type": "string", "pattern": "^[a-f0-9]{64}$" })
+}
+
+fn evidence_digest_schema() -> Value {
+    json!({ "type": "string", "pattern": "^ev_[a-f0-9]{64}$" })
+}
+
+fn provider_schema(committed: bool) -> Value {
+    let version = if committed {
+        nonempty_string_schema()
+    } else {
+        json!({ "type": ["string", "null"] })
+    };
+
+    json!({
+        "type": "object",
+        "properties": {
+            "id": nonempty_string_schema(),
+            "name": nonempty_string_schema(),
+            "version": version
+        },
+        "required": ["id", "name", "version"],
+        "additionalProperties": false
+    })
+}
+
+fn subject_digest_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": { "sha256": digest_schema() },
+        "required": ["sha256"],
+        "additionalProperties": false
+    })
+}
+
+fn subject_variant(format: Value, architecture: Value) -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "name": nonempty_string_schema(),
+            "digest": subject_digest_schema(),
+            "local_path": { "type": "string", "pattern": "^[^\\u0000]*$" },
+            "format": format,
+            "architecture": architecture
+        },
+        "required": ["name", "digest", "local_path", "format", "architecture"],
+        "additionalProperties": false
+    })
+}
+
+fn subject_schema() -> Value {
+    const SUBJECT_FORMATS: [&str; 28] = [
+        "hopper",
+        "analysis-database",
+        "mach-o",
+        "elf",
+        "pe",
+        "dos-mz",
+        "dos-com",
+        "zip",
+        "ipa",
+        "apk",
+        "msix",
+        "appx",
+        "hap",
+        "hsp",
+        "app-pack",
+        "asar",
+        "dmg",
+        "pkg",
+        "plist",
+        "nib",
+        "javascript",
+        "source-map",
+        "directory",
+        "file",
+        "unknown",
+        "mach-o-universal",
+        "javascript-bundle",
+        "entitlements",
+    ];
+    const RAW_ARCHITECTURES: [&str; 10] = [
+        "x86", "x86_64", "arm", "arm64", "mips", "6502", "riscv", "powerpc", "m68k", "hexagon",
+    ];
+    const DETECTED_ARCHITECTURES: [&str; 8] = [
+        "x86", "x86_64", "arm", "arm64", "mips", "riscv", "powerpc", "hexagon",
+    ];
+
+    let binary_architecture = json!({
+        "anyOf": [{ "enum": DETECTED_ARCHITECTURES }, { "type": "null" }]
+    });
+    let raw_architecture = json!({
+        "anyOf": [{ "enum": RAW_ARCHITECTURES }, { "type": "null" }]
+    });
+
+    json!({
+        "oneOf": [
+            subject_variant(json!({ "enum": SUBJECT_FORMATS }), binary_architecture),
+            subject_variant(json!({ "const": "raw-binary" }), raw_architecture)
+        ]
+    })
+}
+
+fn environment_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "id": nonempty_string_schema(),
+            "platform": nonempty_string_schema(),
+            "architecture": nonempty_string_schema(),
+            "isolation": { "enum": ["none", "process", "container", "virtual-machine"] }
+        },
+        "required": ["id", "platform", "architecture", "isolation"],
+        "additionalProperties": false
+    })
+}
+
+fn location_variant(kind: &str, properties: Value, required: &[&str]) -> Value {
+    let mut schema = json!({
+        "type": "object",
+        "properties": properties,
+        "required": required,
+        "additionalProperties": false
+    });
+    schema["properties"]["kind"] = json!({ "const": kind });
+    schema
+}
+
+fn locations_schema() -> Value {
+    let address = location_variant(
+        "address",
+        json!({ "address": nonempty_string_schema() }),
+        &["kind", "address"],
+    );
+    let address_range = location_variant(
+        "address-range",
+        json!({ "start": nonempty_string_schema(), "end": nonempty_string_schema() }),
+        &["kind", "start", "end"],
+    );
+    let artifact_path = location_variant(
+        "artifact-path",
+        json!({ "path": nonempty_string_schema() }),
+        &["kind", "path"],
+    );
+    let file_offset = location_variant(
+        "file-offset",
+        json!({ "offset": { "type": "integer", "minimum": 0 } }),
+        &["kind", "offset"],
+    );
+    let file_offset_range = location_variant(
+        "file-offset-range",
+        json!({
+            "start": { "type": "integer", "minimum": 0 },
+            "end": { "type": "integer", "minimum": 0 }
+        }),
+        &["kind", "start", "end"],
+    );
+
+    json!({
+        "type": "array",
+        "items": {
+            "oneOf": [address, address_range, artifact_path, file_offset, file_offset_range]
+        }
+    })
+}
+
+fn direction_schema(values: &[&str]) -> Value {
+    json!({
+        "type": "array",
+        "prefixItems": values
+            .iter()
+            .map(|value| json!({ "const": value }))
+            .collect::<Vec<_>>(),
+        "minItems": values.len(),
+        "maxItems": values.len()
+    })
+}
+
+fn relationship_coverage_schema() -> Value {
+    let diagnostics = json!({
+        "type": "array",
+        "items": nonempty_string_schema(),
+        "minItems": 1
+    });
+    let directions = json!({
+        "oneOf": [
+            direction_schema(&["callers"]),
+            direction_schema(&["callees"]),
+            direction_schema(&["callers", "callees"])
+        ]
+    });
+    let limitations = json!({
+        "type": "array",
+        "items": nonempty_string_schema(),
+        "minItems": 1
+    });
+
+    json!({
+        "oneOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "status": { "const": "complete" },
+                    "diagnostics": diagnostics.clone()
+                },
+                "required": ["status"],
+                "additionalProperties": false
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "status": { "const": "partial" },
+                    "limitations": limitations,
+                    "limited_directions": directions.clone(),
+                    "diagnostics": diagnostics.clone()
+                },
+                "required": ["status", "limitations"],
+                "additionalProperties": false
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "status": { "const": "unknown" },
+                    "reason": nonempty_string_schema(),
+                    "limited_directions": directions,
+                    "diagnostics": diagnostics
+                },
+                "required": ["status", "reason"],
+                "additionalProperties": false
+            }
+        ]
+    })
+}
+
+fn analysis_profile_schema() -> Value {
+    json!({
+        "anyOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "provider": provider_schema(true),
+                    "parameters": json_object_schema(),
+                    "digest": digest_schema()
+                },
+                "required": ["provider", "parameters", "digest"],
+                "additionalProperties": false
+            },
+            { "type": "null" }
+        ]
+    })
+}
+
+fn evidence_shape_schema() -> &'static Value {
+    static SCHEMA: OnceLock<Value> = OnceLock::new();
+    SCHEMA.get_or_init(build_evidence_shape_schema)
+}
+
+fn build_evidence_shape_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "evidence_id": { "type": "string" },
+            "subject": { "anyOf": [subject_schema(), { "type": "null" }] },
+            "provider": provider_schema(false),
+            "analysis_profile": analysis_profile_schema(),
+            "predicate_type": nonempty_string_schema(),
+            "operation": nonempty_string_schema(),
+            "parameters": json_object_schema(),
+            "raw_result": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+            "normalized_result": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+            "confidence": { "enum": ["observed", "derived", "inferred"] },
+            "authority": { "enum": ["shipped-artifact", "controlled-replay", "historical-reference", "external-service", "analyst-inference"] },
+            "environment": { "anyOf": [environment_schema(), { "type": "null" }] },
+            "limitations": { "type": "array", "items": { "type": "string" } },
+            "relationship_coverage": { "anyOf": [relationship_coverage_schema(), { "type": "null" }] },
+            "locations": locations_schema(),
+            "evidence_links": { "type": "array", "items": evidence_digest_schema() }
+        },
+        "required": [
+            "evidence_id", "subject", "provider", "analysis_profile", "predicate_type", "operation",
+            "parameters", "raw_result", "normalized_result", "confidence", "authority", "environment",
+            "limitations", "relationship_coverage", "locations", "evidence_links"
+        ],
+        "additionalProperties": false
+    })
+}
+
 impl Serialize for EvidenceRecord {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.raw.serialize(serializer)
@@ -434,7 +798,8 @@ impl<'de> Deserialize<'de> for OptionalRaw {
 #[serde(deny_unknown_fields)]
 struct RelationshipCoverageShape {
     status: String,
-    diagnostics: Vec<JsonText>,
+    #[serde(default)]
+    diagnostics: Option<Vec<JsonText>>,
     #[serde(default)]
     limitations: OptionalRaw,
     #[serde(default)]
@@ -506,6 +871,21 @@ struct Semantic<'a> {
     relationship_coverage: &'a RawValue,
     locations: &'a RawValue,
     evidence_links: &'a RawValue,
+}
+
+fn validate_canonical_shape(raw: &RawValue) -> Result<(), EvidenceRecordError> {
+    match serde_json::from_str::<Value>(raw.get()) {
+        Ok(input) => {
+            EvidenceRecord::validate_input_shape(&input).map_err(EvidenceRecordError::Shape)
+        }
+        Err(error) => {
+            // JsonText deliberately preserves escaped UTF-16 source units such
+            // as unpaired surrogates. Value cannot represent those units, so
+            // the raw semantic validators below are the explicit fallback.
+            let _raw_shape_fallback = error;
+            Ok(())
+        }
+    }
 }
 
 fn canonicalize(input: &RawValue) -> Result<Box<RawValue>, EvidenceRecordError> {
@@ -723,7 +1103,9 @@ fn validate_relationship_coverage(raw: &RawValue) -> Result<(), EvidenceRecordEr
         return Ok(());
     }
     let coverage: RelationshipCoverageShape = decode(raw)?;
-    validate_nonempty_texts(&coverage.diagnostics, "relationship_coverage.diagnostics")?;
+    if let Some(diagnostics) = &coverage.diagnostics {
+        validate_nonempty_texts(diagnostics, "relationship_coverage.diagnostics")?;
+    }
 
     match coverage.status.as_str() {
         "complete" => {

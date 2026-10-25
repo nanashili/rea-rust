@@ -641,14 +641,49 @@ fn invalid(reason: &str) -> Failure {
 mod tests {
     use super::*;
     fn input(path: &str, digest: Option<&str>, nodes: Value, state: &str) -> Value {
-        json!({"reference":{"root_sha256":"a".repeat(64),"inventory_state":state,"entries":[{"kind":"file","path":path,"classifications":["source"],"language":"typescript","sha256":digest,"limitations":[]}]},"application":{"evidence_id":"ev_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","normalized_result":{"graph_id":"jag_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","root_artifact_sha256":"b".repeat(64),"nodes":nodes,"coverage":{"status":"complete"},"limitations":[]}}})
+        json!({
+            "reference": {
+                "root_sha256": "a".repeat(64),
+                "inventory_state": state,
+                "entries": [{
+                    "kind": "file",
+                    "path": path,
+                    "classifications": ["source"],
+                    "language": "typescript",
+                    "sha256": digest,
+                    "limitations": []
+                }]
+            },
+            "application": {
+                "evidence_id": "ev_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "normalized_result": {
+                    "graph_id": "jag_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "root_artifact_sha256": "b".repeat(64),
+                    "nodes": nodes,
+                    "coverage": {"status": "complete"},
+                    "limitations": []
+                }
+            }
+        })
     }
+
     #[test]
     fn matches_exact_digest() {
         let digest = "c".repeat(64);
-        let result=compare(&input("src/main.ts",Some(&digest),json!([{"node_id":"jag_node_1","kind":"javascript-module","identity":{"sha256":digest},"observations":[{"properties":{}}]}]),"complete")).unwrap();
+        let nodes = json!([{
+            "node_id": "jag_node_1",
+            "kind": "javascript-module",
+            "identity": {
+                "strategy": "content-digest",
+                "sha256": digest
+            },
+            "observations": [{"properties": {}}]
+        }]);
+        let result = compare(&input("src/main.ts", Some(&digest), nodes, "complete")).unwrap();
+
         assert_eq!(result["items"][0]["status"], "unchanged");
     }
+
     #[test]
     fn missing_source_is_removed_when_complete() {
         let result = compare(&input(
@@ -660,10 +695,31 @@ mod tests {
         .unwrap();
         assert_eq!(result["items"][0]["status"], "removed");
     }
+
     #[test]
     fn ambiguous_paths_are_split() {
-        let nodes = json!([{"node_id":"jag_node_a","kind":"source-module","identity":{"path":"one/src/main.ts"},"observations":[{"properties":{}}]},{"node_id":"jag_node_b","kind":"source-module","identity":{"path":"two/src/main.ts"},"observations":[{"properties":{}}]}]);
+        let nodes = json!([
+            {
+                "node_id": "jag_node_a",
+                "kind": "source-module",
+                "identity": {
+                    "strategy": "canonical-path",
+                    "path": "one/src/main.ts"
+                },
+                "observations": [{"properties": {}}]
+            },
+            {
+                "node_id": "jag_node_b",
+                "kind": "source-module",
+                "identity": {
+                    "strategy": "canonical-path",
+                    "path": "two/src/main.ts"
+                },
+                "observations": [{"properties": {}}]
+            }
+        ]);
         let result = compare(&input("src/main.ts", None, nodes, "complete")).unwrap();
+
         assert_eq!(result["items"][0]["status"], "split");
     }
 }

@@ -8,16 +8,358 @@
 //! are relative to `8 + headerBytes`.
 use super::classify::AsarProbe;
 use super::reader::{ArtifactEntry, ArtifactReader, ArtifactTraversalOmission, ReaderFailure};
+use rea_core::JsString;
 use rea_core::cancellation::Cancellation;
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer};
+use serde_json::Number;
+#[cfg(test)]
 use serde_json::Value;
+use std::fmt;
 
 const MAX_ASAR_HEADER_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_ASAR_HEADER_PROBE_BYTES: u64 = MAX_ASAR_HEADER_BYTES + 8;
 const MAX_LISTING_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+const MAX_ASAR_JSON_DEPTH: usize = 1024;
 
 struct Extents {
     header_bytes: u64,
     json_bytes: u64,
+}
+
+/// Lossless JSON value used only while decoding the ASAR header.
+///
+/// `serde_json::Value` stores object keys and strings as Rust `String`s. That
+/// representation rejects escaped unpaired UTF-16 surrogates, so ASAR header
+/// decoding must retain JavaScript strings until the logical-path boundary.
+#[derive(Debug)]
+enum AsarValue {
+    Null,
+    Bool(bool),
+    Number(Number),
+    String(JsString),
+    Array(Vec<Self>),
+    Object(Vec<(JsString, Self)>),
+}
+
+impl AsarValue {
+    fn parse_json(input: &[u8]) -> Result<Self, String> {
+        let mut parser = JsonParser {
+            input,
+            index: 0,
+            depth: 0,
+        };
+        let value = parser.value()?;
+        parser.whitespace();
+        if parser.index != input.len() {
+            return Err("trailing bytes after ASAR JSON header".to_owned());
+        }
+        Ok(value)
+    }
+}
+
+struct JsonParser<'a> {
+    input: &'a [u8],
+    index: usize,
+    depth: usize,
+}
+
+impl<'a> JsonParser<'a> {
+    fn whitespace(&mut self) {
+        while self
+            .input
+            .get(self.index)
+            .is_some_and(|byte| matches!(byte, b' ' | b'\t' | b'\n' | b'\r'))
+        {
+            self.index += 1;
+        }
+    }
+
+    fn value(&mut self) -> Result<AsarValue, String> {
+        if self.depth >= MAX_ASAR_JSON_DEPTH {
+            return Err(format!(
+                "ASAR JSON nesting exceeds the {MAX_ASAR_JSON_DEPTH}-level decode limit"
+            ));
+        }
+        self.depth += 1;
+        self.whitespace();
+        let result = match self.input.get(self.index).copied() {
+            Some(b'n') => {
+                self.literal(b"null")?;
+                Ok(AsarValue::Null)
+            }
+            Some(b't') => {
+                self.literal(b"true")?;
+                Ok(AsarValue::Bool(true))
+            }
+            Some(b'f') => {
+                self.literal(b"false")?;
+                Ok(AsarValue::Bool(false))
+            }
+            Some(b'"') => Ok(AsarValue::String(self.string()?)),
+            Some(b'[') => self.array(),
+            Some(b'{') => self.object(),
+            Some(b'-' | b'0'..=b'9') => self.number(),
+            _ => Err("invalid JSON value in ASAR header".to_owned()),
+        };
+        self.depth -= 1;
+        result
+    }
+
+    fn literal(&mut self, literal: &[u8]) -> Result<(), String> {
+        if self.input.get(self.index..self.index + literal.len()) == Some(literal) {
+            self.index += literal.len();
+            Ok(())
+        } else {
+            Err("invalid JSON literal in ASAR header".to_owned())
+        }
+    }
+
+    fn string(&mut self) -> Result<JsString, String> {
+        if self.input.get(self.index) != Some(&b'"') {
+            return Err("ASAR JSON string must begin with a quote".to_owned());
+        }
+        self.index += 1;
+        let mut units = Vec::new();
+        while let Some(byte) = self.input.get(self.index).copied() {
+            self.index += 1;
+            match byte {
+                b'"' => return Ok(JsString::from_utf16(units)),
+                b'\\' => self.escape(&mut units)?,
+                0..=0x1f => return Err("control character in ASAR JSON string".to_owned()),
+                _ => {
+                    let start = self.index - 1;
+                    let width = utf8_width(byte)?;
+                    let end = start + width;
+                    let character = std::str::from_utf8(
+                        self.input
+                            .get(start..end)
+                            .ok_or_else(|| "truncated UTF-8 in ASAR JSON string".to_owned())?,
+                    )
+                    .map_err(|_| "invalid UTF-8 in ASAR JSON string".to_owned())?;
+                    units.extend(character.encode_utf16());
+                    self.index = end;
+                }
+            }
+        }
+        Err("unterminated ASAR JSON string".to_owned())
+    }
+
+    fn escape(&mut self, units: &mut Vec<u16>) -> Result<(), String> {
+        let escaped = self
+            .input
+            .get(self.index)
+            .copied()
+            .ok_or_else(|| "truncated escape in ASAR JSON string".to_owned())?;
+        self.index += 1;
+        match escaped {
+            b'"' => units.push(u16::from(b'"')),
+            b'\\' => units.push(u16::from(b'\\')),
+            b'/' => units.push(u16::from(b'/')),
+            b'b' => units.push(8),
+            b'f' => units.push(12),
+            b'n' => units.push(10),
+            b'r' => units.push(13),
+            b't' => units.push(9),
+            b'u' => units.push(self.hex_escape()?),
+            _ => return Err("invalid escape in ASAR JSON string".to_owned()),
+        }
+        Ok(())
+    }
+
+    fn hex_escape(&mut self) -> Result<u16, String> {
+        let digits = self
+            .input
+            .get(self.index..self.index + 4)
+            .ok_or_else(|| "truncated Unicode escape in ASAR JSON string".to_owned())?;
+        self.index += 4;
+        digits.iter().try_fold(0u16, |value, digit| {
+            let nibble = match digit {
+                b'0'..=b'9' => digit - b'0',
+                b'a'..=b'f' => digit - b'a' + 10,
+                b'A'..=b'F' => digit - b'A' + 10,
+                _ => return Err("invalid Unicode escape in ASAR JSON string".to_owned()),
+            };
+            Ok((value << 4) | u16::from(nibble))
+        })
+    }
+
+    fn array(&mut self) -> Result<AsarValue, String> {
+        self.index += 1;
+        let mut values = Vec::new();
+        self.whitespace();
+        if self.input.get(self.index) == Some(&b']') {
+            self.index += 1;
+            return Ok(AsarValue::Array(values));
+        }
+        loop {
+            values.push(self.value()?);
+            self.whitespace();
+            match self.input.get(self.index).copied() {
+                Some(b',') => self.index += 1,
+                Some(b']') => {
+                    self.index += 1;
+                    return Ok(AsarValue::Array(values));
+                }
+                _ => return Err("invalid ASAR JSON array".to_owned()),
+            }
+        }
+    }
+
+    fn object(&mut self) -> Result<AsarValue, String> {
+        self.index += 1;
+        let mut values = Vec::new();
+        self.whitespace();
+        if self.input.get(self.index) == Some(&b'}') {
+            self.index += 1;
+            return Ok(AsarValue::Object(values));
+        }
+        loop {
+            self.whitespace();
+            let key = self.string()?;
+            self.whitespace();
+            if self.input.get(self.index) != Some(&b':') {
+                return Err("invalid ASAR JSON object".to_owned());
+            }
+            self.index += 1;
+            values.push((key, self.value()?));
+            self.whitespace();
+            match self.input.get(self.index).copied() {
+                Some(b',') => self.index += 1,
+                Some(b'}') => {
+                    self.index += 1;
+                    return Ok(AsarValue::Object(values));
+                }
+                _ => return Err("invalid ASAR JSON object".to_owned()),
+            }
+        }
+    }
+
+    fn number(&mut self) -> Result<AsarValue, String> {
+        let start = self.index;
+        while self
+            .input
+            .get(self.index)
+            .is_some_and(|byte| matches!(byte, b'+' | b'-' | b'.' | b'e' | b'E' | b'0'..=b'9'))
+        {
+            self.index += 1;
+        }
+        let text = std::str::from_utf8(&self.input[start..self.index])
+            .map_err(|_| "invalid ASAR JSON number".to_owned())?;
+        let number = serde_json::from_str::<Number>(text)
+            .map_err(|_| "invalid ASAR JSON number".to_owned())?;
+        Ok(AsarValue::Number(number))
+    }
+}
+
+fn utf8_width(first: u8) -> Result<usize, String> {
+    match first {
+        0x00..=0x7f => Ok(1),
+        0xc2..=0xdf => Ok(2),
+        0xe0..=0xef => Ok(3),
+        0xf0..=0xf4 => Ok(4),
+        _ => Err("invalid UTF-8 in ASAR JSON string".to_owned()),
+    }
+}
+
+impl<'de> Deserialize<'de> for AsarValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct AsarValueVisitor;
+
+        impl<'de> Visitor<'de> for AsarValueVisitor {
+            type Value = AsarValue;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a JSON value with lossless UTF-16 strings")
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::Null)
+            }
+
+            fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::Bool(value))
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::Number(Number::from(value)))
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::Number(Number::from(value)))
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Number::from_f64(value)
+                    .map(AsarValue::Number)
+                    .ok_or_else(|| E::custom("non-finite JSON number"))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::String(JsString::from(value)))
+            }
+
+            fn visit_borrowed_str<E>(self, value: &'de str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_str(value)
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(AsarValue::String(JsString::from(value)))
+            }
+
+            fn visit_seq<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut values = Vec::new();
+                while let Some(value) = access.next_element()? {
+                    values.push(value);
+                }
+                Ok(AsarValue::Array(values))
+            }
+
+            fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut values = Vec::new();
+                while let Some((key, value)) = access.next_entry::<JsString, AsarValue>()? {
+                    values.push((key, value));
+                }
+                Ok(AsarValue::Object(values))
+            }
+        }
+
+        deserializer.deserialize_any(AsarValueVisitor)
+    }
 }
 
 /// `parseAsarHeaderExtents` over the fixed 16-byte prefix. `archive_bytes` is
@@ -100,7 +442,7 @@ pub fn asar_header_matches(prefix: &[u8], archive_bytes: u64) -> AsarProbe {
 
 /// One expanded header-tree entry.
 struct ListedEntry {
-    path: String,
+    path: JsString,
     kind: &'static str,
     declared_size: Option<u64>,
     executable: bool,
@@ -109,12 +451,295 @@ struct ListedEntry {
     offset: Option<u64>,
 }
 
-fn node_integrity_sha256(node: &Value) -> Option<String> {
-    let integrity = node.get("integrity")?;
-    if integrity.get("algorithm").and_then(Value::as_str) != Some("SHA256") {
+struct ParsedIntegrity {
+    algorithm: String,
+    hash: String,
+}
+
+struct ParsedNode {
+    files: Option<Vec<(JsString, AsarValue)>>,
+    link: Option<JsString>,
+    size: Option<u64>,
+    offset: Option<JsString>,
+    unpacked: Option<bool>,
+    executable: Option<bool>,
+    integrity: Option<ParsedIntegrity>,
+}
+
+fn javascript_array_index(name: &JsString) -> Option<u32> {
+    let name = name.as_str()?;
+    if name == "0" {
+        return Some(0);
+    }
+    if name.starts_with('0') {
         return None;
     }
-    let hash = integrity.get("hash").and_then(Value::as_str)?;
+
+    if !name.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+
+    name.parse::<u32>()
+        .ok()
+        .filter(|index| *index < u32::MAX && index.to_string() == name)
+}
+
+fn owned_children(map: Vec<(JsString, AsarValue)>) -> std::vec::IntoIter<(JsString, AsarValue)> {
+    let mut children = map;
+    children.sort_by(|(left, _), (right, _)| {
+        match (javascript_array_index(left), javascript_array_index(right)) {
+            (Some(left), Some(right)) => left.cmp(&right),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+    });
+    children.into_iter()
+}
+
+fn remove_field(object: &mut Vec<(JsString, AsarValue)>, field: &str) -> Option<AsarValue> {
+    object
+        .iter()
+        .rposition(|(name, _)| name == field)
+        .map(|index| object.swap_remove(index).1)
+}
+
+fn optional_string(
+    object: &mut Vec<(JsString, AsarValue)>,
+    field: &str,
+) -> Result<Option<JsString>, ReaderFailure> {
+    remove_field(object, field)
+        .map(|value| match value {
+            AsarValue::String(value) => Ok(value),
+            _ => Err(ReaderFailure::new(
+                "format",
+                format!("ASAR entry {field} metadata is not a string"),
+            )),
+        })
+        .transpose()
+}
+
+fn optional_boolean(
+    object: &mut Vec<(JsString, AsarValue)>,
+    field: &str,
+) -> Result<Option<bool>, ReaderFailure> {
+    remove_field(object, field)
+        .map(|value| match value {
+            AsarValue::Bool(value) => Ok(value),
+            _ => Err(ReaderFailure::new(
+                "format",
+                format!("ASAR entry {field} metadata is not a boolean"),
+            )),
+        })
+        .transpose()
+}
+
+fn optional_size(object: &mut Vec<(JsString, AsarValue)>) -> Result<Option<u64>, ReaderFailure> {
+    remove_field(object, "size")
+        .map(|value| {
+            let AsarValue::Number(number) = value else {
+                return Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry size metadata is not a non-negative safe integer",
+                ));
+            };
+            if let Some(size) = number.as_u64() {
+                if size <= MAX_SAFE_INTEGER {
+                    return Ok(size);
+                }
+                return Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry size metadata is not a non-negative safe integer",
+                ));
+            }
+            let size = number.as_f64().ok_or_else(|| {
+                ReaderFailure::new(
+                    "format",
+                    "ASAR entry size metadata is not a non-negative safe integer",
+                )
+            })?;
+            if !size.is_finite()
+                || size < 0.0
+                || size.fract() != 0.0
+                || size > MAX_SAFE_INTEGER as f64
+            {
+                return Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry size metadata is not a non-negative safe integer",
+                ));
+            }
+            Ok(size as u64)
+        })
+        .transpose()
+}
+
+fn optional_integrity(
+    object: &mut Vec<(JsString, AsarValue)>,
+) -> Result<Option<ParsedIntegrity>, ReaderFailure> {
+    remove_field(object, "integrity")
+        .map(|value| {
+            let AsarValue::Object(integrity) = value else {
+                return Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry integrity metadata is not an object",
+                ));
+            };
+            let field = |name: &str| {
+                integrity
+                    .iter()
+                    .rev()
+                    .find(|(key, _)| key == name)
+                    .map(|(_, value)| value)
+            };
+            let algorithm = match field("algorithm") {
+                Some(AsarValue::String(value)) => value.try_to_string().map_err(|_| {
+                    ReaderFailure::new(
+                        "format",
+                        "ASAR entry integrity algorithm contains invalid UTF-16",
+                    )
+                })?,
+                _ => {
+                    return Err(ReaderFailure::new(
+                        "format",
+                        "ASAR entry integrity algorithm is not a string",
+                    ));
+                }
+            };
+            let hash = match field("hash") {
+                Some(AsarValue::String(value)) => value.try_to_string().map_err(|_| {
+                    ReaderFailure::new(
+                        "format",
+                        "ASAR entry integrity hash contains invalid UTF-16",
+                    )
+                })?,
+                _ => {
+                    return Err(ReaderFailure::new(
+                        "format",
+                        "ASAR entry integrity hash is not a string",
+                    ));
+                }
+            };
+            Ok(ParsedIntegrity { algorithm, hash })
+        })
+        .transpose()
+}
+
+impl ParsedNode {
+    fn parse(raw: AsarValue) -> Result<Self, ReaderFailure> {
+        let mut object = match raw {
+            AsarValue::Object(object) => object,
+            _ => {
+                return Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry metadata is not an object",
+                ));
+            }
+        };
+
+        let files = object
+            .iter()
+            .rposition(|(name, _)| name == "files")
+            .map(|index| object.swap_remove(index).1)
+            .map(|value| match value {
+                AsarValue::Object(files) => Ok(files),
+                _ => Err(ReaderFailure::new(
+                    "format",
+                    "ASAR entry files metadata is not an object",
+                )),
+            })
+            .transpose()?;
+        let link = optional_string(&mut object, "link")?;
+        let size = optional_size(&mut object)?;
+        let offset = optional_string(&mut object, "offset")?;
+        let unpacked = optional_boolean(&mut object, "unpacked")?;
+        let executable = optional_boolean(&mut object, "executable")?;
+        let integrity = optional_integrity(&mut object)?;
+
+        Ok(Self {
+            files,
+            link,
+            size,
+            offset,
+            unpacked,
+            executable,
+            integrity,
+        })
+    }
+}
+
+impl ListedEntry {
+    fn artifact_entry(&self) -> ArtifactEntry {
+        ArtifactEntry {
+            path: self.path.clone(),
+            kind: self.kind,
+            declared_size: self.declared_size,
+            compressed_size: None,
+            executable: self.executable,
+            encrypted: false,
+            byte_offset: None,
+            declared_sha256: self.declared_sha256.clone(),
+            unpacked: self.unpacked,
+            limitations: if self.kind == "symlink" {
+                vec!["ASAR symlink target was not followed or disclosed.".to_owned()]
+            } else {
+                Vec::new()
+            },
+            adapter_key: self.path.clone(),
+        }
+    }
+
+    fn packed_range(
+        &self,
+        header_bytes: u64,
+        archive_bytes: usize,
+    ) -> Result<std::ops::Range<usize>, ReaderFailure> {
+        let invalid_range = || {
+            ReaderFailure::new(
+                "format",
+                format!("ASAR entry range is outside its container: {}", self.path),
+            )
+        };
+        let size = self.declared_size.ok_or_else(invalid_range)?;
+        let offset = self.offset.ok_or_else(invalid_range)?;
+        let start = header_bytes
+            .checked_add(8)
+            .and_then(|start| start.checked_add(offset))
+            .filter(|start| *start <= MAX_SAFE_INTEGER)
+            .ok_or_else(invalid_range)?;
+
+        let archive_bytes = archive_bytes as u64;
+        if size > MAX_SAFE_INTEGER || start > archive_bytes || size > archive_bytes - start {
+            return Err(invalid_range());
+        }
+
+        Ok(start as usize..(start + size) as usize)
+    }
+}
+
+/// Offsets use the same canonical decimal and safe-integer rules as Electron's
+/// JavaScript adapter; a Rust integer accepting more values does not expand the
+/// archive format's admitted range.
+fn parse_archive_offset(value: &JsString) -> Option<u64> {
+    let value = value.as_str()?;
+    if value.is_empty()
+        || (value.len() > 1 && value.starts_with('0'))
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+
+    value
+        .parse()
+        .ok()
+        .filter(|offset| *offset <= MAX_SAFE_INTEGER)
+}
+
+fn node_integrity_sha256(integrity: Option<&ParsedIntegrity>) -> Option<String> {
+    let integrity = integrity?;
+    if integrity.algorithm != "SHA256" {
+        return None;
+    }
+    let hash = &integrity.hash;
     if hash.len() == 64
         && hash
             .bytes()
@@ -129,56 +754,58 @@ fn node_integrity_sha256(node: &Value) -> Option<String> {
 /// `readAsarListing`: depth-first expansion with path-component admission and a
 /// bounded representation budget. Returns entries sorted by logical path.
 fn read_listing(
-    header: &Value,
+    header: AsarValue,
     cancellation: &Cancellation,
 ) -> Result<Vec<ListedEntry>, ReaderFailure> {
-    let root_files = header
-        .get("files")
-        .and_then(Value::as_object)
+    let root = ParsedNode::parse(header)?;
+    let root_files = root
+        .files
         .ok_or_else(|| ReaderFailure::new("format", "ASAR root has no files table"))?;
     // Frames own their `(name, node)` pairs so subtrees can be pushed without
     // borrowing the parent map.
     struct Frame {
-        parent: String,
-        children: Vec<(String, Value)>,
-        index: usize,
+        parent: JsString,
+        children: std::vec::IntoIter<(JsString, AsarValue)>,
     }
-    let ordered_children = |map: &serde_json::Map<String, Value>| -> Vec<(String, Value)> {
-        map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
-    };
     let mut entries: Vec<ListedEntry> = Vec::new();
     let mut pending = vec![Frame {
-        parent: String::new(),
-        children: ordered_children(root_files),
-        index: 0,
+        parent: JsString::from(""),
+        children: owned_children(root_files),
     }];
     let mut retained_bytes: u64 = 0;
     let mut examined: u64 = 0;
-    while let Some(frame) = pending.last_mut() {
+    loop {
+        if pending.is_empty() {
+            break;
+        }
+
         if examined % 128 == 0 && cancellation.reason().is_some() {
             return Err(ReaderFailure::new("cancelled", "ASAR operation cancelled"));
         }
         examined += 1;
-        if frame.index >= frame.children.len() {
-            pending.pop();
-            continue;
-        }
-        let (name, raw) = frame.children[frame.index].clone();
-        let parent = frame.parent.clone();
-        frame.index += 1;
+        let (parent, name, raw) = {
+            let frame = pending.last_mut().expect("listing frame exists");
+            let Some((name, raw)) = frame.children.next() else {
+                pending.pop();
+                continue;
+            };
+            (frame.parent.clone(), name, raw)
+        };
         if name.is_empty()
             || name == "."
             || name == ".."
-            || name.contains('/')
-            || name.contains('\0')
+            || name.units().iter().any(|unit| {
+                *unit == u16::from(b'/')
+                    || *unit == 0
+                    || (cfg!(windows) && *unit == u16::from(b'\\'))
+            })
         {
             return Err(ReaderFailure::new(
                 "path",
                 "ASAR header has an unsafe path component",
             ));
         }
-        let units =
-            parent.chars().count() + name.chars().count() + if parent.is_empty() { 0 } else { 1 };
+        let units = parent.len() + name.len() + if parent.is_empty() { 0 } else { 1 };
         retained_bytes += units as u64 * 2 + 256;
         if retained_bytes > MAX_LISTING_BYTES {
             return Err(ReaderFailure::new(
@@ -189,20 +816,18 @@ fn read_listing(
         let path = if parent.is_empty() {
             name.clone()
         } else {
-            format!("{parent}/{name}")
+            parent.concat_str("/").concat(&name)
         };
-        let files = raw.get("files").and_then(Value::as_object).cloned();
-        let link = raw.get("link").and_then(Value::as_str);
-        let size = raw.get("size").and_then(Value::as_u64);
-        if files.is_none() && link.is_none() && size.is_none() {
+        let node = ParsedNode::parse(raw)?;
+        if node.files.is_none() && node.link.is_none() && node.size.is_none() {
             return Err(ReaderFailure::new(
                 "format",
                 "ASAR entry has no directory, link or file metadata",
             ));
         }
-        let kind = if files.is_some() {
+        let kind = if node.files.is_some() {
             "directory"
-        } else if link.is_some() {
+        } else if node.link.is_some() {
             "symlink"
         } else {
             "file"
@@ -210,24 +835,20 @@ fn read_listing(
         entries.push(ListedEntry {
             path: path.clone(),
             kind,
-            declared_size: size,
-            executable: raw.get("executable").and_then(Value::as_bool) == Some(true),
-            declared_sha256: node_integrity_sha256(&raw),
-            unpacked: raw.get("unpacked").and_then(Value::as_bool) == Some(true),
-            offset: raw
-                .get("offset")
-                .and_then(Value::as_str)
-                .and_then(|s| s.parse::<u64>().ok()),
+            declared_size: node.size,
+            executable: node.executable == Some(true),
+            declared_sha256: node_integrity_sha256(node.integrity.as_ref()),
+            unpacked: node.unpacked == Some(true),
+            offset: node.offset.as_ref().and_then(parse_archive_offset),
         });
-        if let Some(files) = files {
+        if let Some(files) = node.files {
             pending.push(Frame {
                 parent: path,
-                children: ordered_children(&files),
-                index: 0,
+                children: owned_children(files),
             });
         }
     }
-    entries.sort_by(|a, b| a.path.cmp(&b.path));
+    entries.sort_by(|a, b| a.path.compare_code_points(&b.path));
     Ok(entries)
 }
 
@@ -250,6 +871,10 @@ impl AsarArtifactReader {
     }
 
     fn prepare(&mut self, cancellation: &Cancellation) -> Result<(), ReaderFailure> {
+        if cancellation.reason().is_some() {
+            return Err(ReaderFailure::new("cancelled", "ASAR operation cancelled"));
+        }
+
         if self.prepared {
             return Ok(());
         }
@@ -270,11 +895,10 @@ impl AsarArtifactReader {
         if json_end > self.bytes.len() {
             return Err(ReaderFailure::new("format", "ASAR header is truncated"));
         }
-        let header: Value =
-            serde_json::from_slice(&self.bytes[json_start..json_end]).map_err(|error| {
-                ReaderFailure::new("format", format!("ASAR header is not valid JSON: {error}"))
-            })?;
-        self.listing = read_listing(&header, cancellation)?;
+        let header = AsarValue::parse_json(&self.bytes[json_start..json_end]).map_err(|error| {
+            ReaderFailure::new("format", format!("ASAR header is not valid JSON: {error}"))
+        })?;
+        self.listing = read_listing(header, cancellation)?;
         self.prepared = true;
         Ok(())
     }
@@ -291,31 +915,11 @@ impl ArtifactReader for AsarArtifactReader {
         _omissions: &mut Vec<ArtifactTraversalOmission>,
     ) -> Result<Vec<ArtifactEntry>, ReaderFailure> {
         self.prepare(cancellation)?;
-        let mut out = Vec::with_capacity(self.listing.len());
-        for listed in &self.listing {
-            out.push(ArtifactEntry {
-                path: listed.path.clone(),
-                kind: listed.kind,
-                declared_size: if listed.kind == "directory" {
-                    None
-                } else {
-                    listed.declared_size
-                },
-                compressed_size: None,
-                executable: listed.executable,
-                encrypted: false,
-                byte_offset: None,
-                declared_sha256: listed.declared_sha256.clone(),
-                unpacked: listed.unpacked,
-                limitations: if listed.kind == "symlink" {
-                    vec!["ASAR symlink target was not followed or disclosed.".to_owned()]
-                } else {
-                    Vec::new()
-                },
-                adapter_key: listed.path.clone(),
-            });
-        }
-        Ok(out)
+        Ok(self
+            .listing
+            .iter()
+            .map(ListedEntry::artifact_entry)
+            .collect())
     }
 
     fn open(
@@ -329,11 +933,25 @@ impl ArtifactReader for AsarArtifactReader {
             .iter()
             .find(|listed| listed.path == entry.adapter_key && listed.kind == "file")
             .ok_or_else(|| {
-                ReaderFailure::new(
-                    "integrity",
-                    format!("ASAR entry was not produced by this reader: {}", entry.path),
-                )
+                if entry.kind != "file" {
+                    ReaderFailure::new("format", "ASAR entry is not a regular file")
+                } else {
+                    ReaderFailure::new(
+                        "integrity",
+                        format!("ASAR entry was not produced by this reader: {}", entry.path),
+                    )
+                }
             })?;
+        if *entry != listed.artifact_entry() {
+            return Err(ReaderFailure::new(
+                "integrity",
+                format!(
+                    "ASAR entry metadata changed since inventory: {}",
+                    listed.path
+                ),
+            ));
+        }
+
         if listed.unpacked {
             return Err(ReaderFailure::new(
                 "unavailable",
@@ -343,27 +961,352 @@ impl ArtifactReader for AsarArtifactReader {
                 ),
             ));
         }
-        let size = listed.declared_size.unwrap_or(0);
-        let offset = listed.offset.ok_or_else(|| {
-            ReaderFailure::new(
-                "format",
-                format!("ASAR entry range is outside its container: {}", entry.path),
-            )
-        })?;
-        let start = 8u64 + self.header_bytes + offset;
-        let archive = self.bytes.len() as u64;
-        if start > archive || size > archive - start {
-            return Err(ReaderFailure::new(
-                "format",
-                format!("ASAR entry range is outside its container: {}", entry.path),
-            ));
-        }
-        Ok(self.bytes[start as usize..(start + size) as usize].to_vec())
+        let range = listed.packed_range(self.header_bytes, self.bytes.len())?;
+        Ok(self.bytes[range].to_vec())
     }
 
     fn close(&mut self) -> Result<(), ReaderFailure> {
         self.bytes = Vec::new();
         self.listing = Vec::new();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn json_parser_matches_json_whitespace_and_exponent_rules() {
+        assert!(AsarValue::parse_json(br#"1e+2"#).is_ok());
+        assert!(AsarValue::parse_json(b"\x0b1").is_err());
+        assert!(AsarValue::parse_json(b"\x0c1").is_err());
+    }
+
+    #[test]
+    fn duplicate_metadata_fields_follow_last_property_wins() {
+        let parsed = ParsedNode::parse(
+            AsarValue::parse_json(br#"{"size":1,"size":2}"#).expect("valid JSON"),
+        )
+        .expect("valid ASAR metadata");
+        assert_eq!(parsed.size, Some(2));
+    }
+
+    #[test]
+    fn json_parser_rejects_excessive_nesting_before_stack_growth() {
+        let mut input = vec![b'['; MAX_ASAR_JSON_DEPTH + 1];
+        input.extend(std::iter::repeat(b']').take(MAX_ASAR_JSON_DEPTH + 1));
+        let failure = AsarValue::parse_json(&input).expect_err("depth limit must apply");
+        assert!(failure.contains("nesting"));
+    }
+
+    fn archive_with_header(header_value: Value, payload: &[u8]) -> AsarArtifactReader {
+        let header = serde_json::to_vec(&header_value).expect("fixture header serializes");
+        archive_with_serialized_header(&header, payload)
+    }
+
+    fn archive_with_serialized_header(header: &[u8], payload: &[u8]) -> AsarArtifactReader {
+        let padded_header_bytes = (header.len() + 3) & !3;
+        let header_bytes = u32::try_from(8 + padded_header_bytes).expect("small fixture header");
+        let mut bytes = Vec::new();
+        for extent in [
+            4,
+            header_bytes,
+            header_bytes - 4,
+            u32::try_from(header.len()).expect("small fixture JSON"),
+        ] {
+            bytes.extend_from_slice(&extent.to_le_bytes());
+        }
+        bytes.extend_from_slice(header);
+        bytes.resize(16 + padded_header_bytes, 0);
+        bytes.extend_from_slice(payload);
+
+        AsarArtifactReader::new(bytes)
+    }
+
+    fn archive_with_file(metadata: Value, payload: &[u8]) -> AsarArtifactReader {
+        archive_with_header(json!({"files": {"main.js": metadata}}), payload)
+    }
+
+    fn file_entry(reader: &mut AsarArtifactReader) -> ArtifactEntry {
+        reader
+            .entries(&Cancellation::default(), &mut Vec::new())
+            .expect("fixture listing is valid")
+            .pop()
+            .expect("fixture has one entry")
+    }
+
+    #[test]
+    fn member_open_rejects_changed_inventory_metadata() {
+        let mut reader = archive_with_file(json!({"size": 3, "offset": "0"}), b"abc");
+        let entry = file_entry(&mut reader);
+        let changes: &[(&str, fn(&mut ArtifactEntry))] = &[
+            ("path", |entry| entry.path = JsString::from("other.js")),
+            ("kind", |entry| entry.kind = "directory"),
+            ("declared_size", |entry| entry.declared_size = Some(2)),
+            ("compressed_size", |entry| entry.compressed_size = Some(3)),
+            ("executable", |entry| entry.executable = true),
+            ("encrypted", |entry| entry.encrypted = true),
+            ("byte_offset", |entry| entry.byte_offset = Some(0)),
+            ("declared_sha256", |entry| {
+                entry.declared_sha256 = Some("0".repeat(64));
+            }),
+            ("unpacked", |entry| entry.unpacked = true),
+            ("limitations", |entry| {
+                entry.limitations.push("changed".to_owned());
+            }),
+        ];
+
+        for (field, change) in changes {
+            let mut changed = entry.clone();
+            change(&mut changed);
+            let failure = reader
+                .open(&changed, &Cancellation::default())
+                .expect_err(field);
+            assert_eq!(failure.reason, "integrity", "{field}");
+        }
+
+        assert_eq!(
+            reader.open(&entry, &Cancellation::default()).unwrap(),
+            b"abc"
+        );
+    }
+
+    #[test]
+    fn member_ranges_reject_noncanonical_and_unrepresentable_offsets() {
+        for offset in [
+            "",
+            "00",
+            "+0",
+            "-1",
+            " 0",
+            "1.0",
+            "9007199254740992",
+            "18446744073709551615",
+            "18446744073709551616",
+        ] {
+            let mut reader = archive_with_file(json!({"size": 1, "offset": offset}), b"x");
+            let entry = file_entry(&mut reader);
+            let failure = reader
+                .open(&entry, &Cancellation::default())
+                .expect_err(offset);
+            assert_eq!(failure.reason, "format", "{offset:?}");
+        }
+    }
+
+    #[test]
+    fn listing_rejects_sizes_outside_the_javascript_integer_contract() {
+        for size in [
+            json!(null),
+            json!("3"),
+            json!(-1),
+            json!(1.25),
+            json!(9_007_199_254_740_992_u64),
+            json!(u64::MAX),
+        ] {
+            let mut reader = archive_with_file(json!({"size": size, "offset": "0"}), b"abc");
+            let failure = reader
+                .entries(&Cancellation::default(), &mut Vec::new())
+                .expect_err("unsafe declared size must fail during listing");
+            assert_eq!(failure.reason, "format", "{size}");
+        }
+
+        let mut reader = archive_with_file(json!({"size": 3.0, "offset": "0"}), b"abc");
+        let entry = file_entry(&mut reader);
+        assert_eq!(entry.declared_size, Some(3));
+        assert_eq!(
+            reader.open(&entry, &Cancellation::default()).unwrap(),
+            b"abc"
+        );
+    }
+
+    #[test]
+    fn listing_preserves_nonfile_metadata_without_allowing_member_reads() {
+        for (kind, metadata) in [
+            ("directory", json!({"files": {}, "size": 7})),
+            ("symlink", json!({"link": "other.js", "size": 7})),
+        ] {
+            let mut reader = archive_with_file(metadata, b"");
+            let entry = file_entry(&mut reader);
+            assert_eq!(entry.kind, kind);
+            assert_eq!(entry.declared_size, Some(7));
+
+            let failure = reader
+                .open(&entry, &Cancellation::default())
+                .expect_err("only regular files supply member bytes");
+            assert_eq!(failure.reason, "format", "{kind}");
+        }
+    }
+
+    #[test]
+    fn listing_rejects_invalid_known_metadata_at_root_and_member_boundaries() {
+        let cases = [
+            (
+                "root executable",
+                json!({"files": {}, "executable": "true"}),
+            ),
+            ("member files", json!({"size": 1, "files": []})),
+            ("member link", json!({"size": 1, "link": 7})),
+            ("member offset", json!({"size": 1, "offset": 0})),
+            ("member unpacked", json!({"size": 1, "unpacked": "true"})),
+            ("member executable", json!({"size": 1, "executable": 1})),
+            (
+                "member integrity object",
+                json!({"size": 1, "integrity": "sha256"}),
+            ),
+            (
+                "member integrity algorithm",
+                json!({
+                    "size": 1,
+                    "integrity": {"algorithm": 256, "hash": "00"}
+                }),
+            ),
+            (
+                "member integrity hash",
+                json!({"size": 1, "integrity": {"algorithm": "SHA256"}}),
+            ),
+        ];
+
+        for (label, metadata) in cases {
+            let header = if label == "root executable" {
+                metadata
+            } else {
+                json!({"files": {"main.js": metadata}})
+            };
+            let mut reader = archive_with_header(header, b"x");
+            let failure = reader
+                .entries(&Cancellation::default(), &mut Vec::new())
+                .expect_err(label);
+            assert_eq!(failure.reason, "format", "{label}");
+        }
+    }
+
+    #[test]
+    fn listing_preserves_loose_schema_admission_for_unknown_metadata() {
+        let header = json!({
+            "files": {
+                "main.js": {
+                    "size": 1,
+                    "offset": "0",
+                    "futureField": {"meaning": "owned by a newer producer"}
+                }
+            },
+            "futureRootField": ["ignored"]
+        });
+        let mut reader = archive_with_header(header, b"x");
+
+        let entry = file_entry(&mut reader);
+        assert_eq!(entry.path, JsString::from("main.js"));
+        assert_eq!(reader.open(&entry, &Cancellation::default()).unwrap(), b"x");
+    }
+
+    #[test]
+    fn listing_preserves_unpaired_surrogate_in_member_name() {
+        let header = br#"{"files":{"x\ud800.js":{"size":1,"offset":"0"}}}"#;
+        let mut reader = archive_with_serialized_header(header, b"x");
+
+        let entry = file_entry(&mut reader);
+        assert_eq!(
+            entry.path,
+            JsString::from_utf16([b'x' as u16, 0xd800, b'.' as u16, b'j' as u16, b's' as u16])
+        );
+        assert_eq!(reader.open(&entry, &Cancellation::default()).unwrap(), b"x");
+    }
+
+    #[test]
+    fn child_iteration_matches_javascript_own_property_order() {
+        let mut files = serde_json::Map::new();
+        files.insert("z".to_owned(), json!({"size": 1}));
+        files.insert("10".to_owned(), json!({"size": 1}));
+        files.insert("2".to_owned(), json!({"size": 1}));
+        files.insert("01".to_owned(), json!({"size": 1}));
+        files.insert("+1".to_owned(), json!({"size": 1}));
+        files.insert(" 3".to_owned(), json!({"size": 1}));
+
+        let files = files
+            .into_iter()
+            .map(|(name, value)| {
+                (
+                    JsString::from(name),
+                    serde_json::from_value(value).expect("fixture value is lossless JSON"),
+                )
+            })
+            .collect();
+        let names: Vec<_> = owned_children(files)
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(
+            names,
+            [
+                JsString::from("2"),
+                JsString::from("10"),
+                JsString::from("z"),
+                JsString::from("01"),
+                JsString::from("+1"),
+                JsString::from(" 3"),
+            ]
+        );
+    }
+
+    #[test]
+    fn listing_admits_numeric_children_before_later_inserted_children() {
+        let header = json!({
+            "files": {
+                "2": {"files": {"bad/name": {"size": 1}}},
+                "10": {"link": 9}
+            }
+        });
+        let mut reader = archive_with_header(header, b"");
+
+        let failure = reader
+            .entries(&Cancellation::default(), &mut Vec::new())
+            .expect_err("the first JavaScript child reaches its nested unsafe path");
+        assert_eq!(failure.reason, "path");
+    }
+
+    #[test]
+    fn packed_members_observe_container_end_including_empty_members() {
+        let mut reader = archive_with_file(json!({"size": 2, "offset": "1"}), b"abc");
+        let entry = file_entry(&mut reader);
+        assert_eq!(
+            reader.open(&entry, &Cancellation::default()).unwrap(),
+            b"bc"
+        );
+
+        let mut reader = archive_with_file(json!({"size": 0, "offset": "3"}), b"abc");
+        let entry = file_entry(&mut reader);
+        assert!(
+            reader
+                .open(&entry, &Cancellation::default())
+                .unwrap()
+                .is_empty()
+        );
+
+        let mut reader = archive_with_file(json!({"size": 2, "offset": "2"}), b"abc");
+        let entry = file_entry(&mut reader);
+        let failure = reader
+            .open(&entry, &Cancellation::default())
+            .expect_err("member extends past captured payload");
+        assert_eq!(failure.reason, "format");
+    }
+
+    #[test]
+    fn cancellation_still_applies_after_the_listing_is_prepared() {
+        let mut reader = archive_with_file(json!({"size": 3, "offset": "0"}), b"abc");
+        let entry = file_entry(&mut reader);
+        let cancellation = Cancellation::default();
+        assert!(cancellation.cancel("caller cancelled after inventory"));
+
+        let failure = reader
+            .open(&entry, &cancellation)
+            .expect_err("prepared bytes do not bypass cancellation");
+        assert_eq!(failure.reason, "cancelled");
+
+        let failure = reader
+            .entries(&cancellation, &mut Vec::new())
+            .expect_err("prepared listing does not bypass cancellation");
+        assert_eq!(failure.reason, "cancelled");
     }
 }

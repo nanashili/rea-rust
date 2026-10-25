@@ -50,7 +50,13 @@ impl Table {
     fn add(&mut self, code: usize, state: u8, action: u8, next: u8) {
         self.0[(usize::from(state) << 8) | code] = (action << 4) | next;
     }
-    fn add_many(&mut self, codes: impl IntoIterator<Item = usize>, state: u8, action: u8, next: u8) {
+    fn add_many(
+        &mut self,
+        codes: impl IntoIterator<Item = usize>,
+        state: u8,
+        action: u8,
+        next: u8,
+    ) {
         for code in codes {
             self.add(code, state, action, next);
         }
@@ -89,18 +95,33 @@ fn build_table() -> Table {
     t.add_many(executables(), CSI_IGNORE, A_EXECUTE, CSI_IGNORE);
     t.add_many(executables(), CSI_INTERMEDIATE, A_EXECUTE, CSI_INTERMEDIATE);
     t.add(0x7f, CSI_INTERMEDIATE, A_IGNORE, CSI_INTERMEDIATE);
-    t.add_many(executables(), ESCAPE_INTERMEDIATE, A_EXECUTE, ESCAPE_INTERMEDIATE);
+    t.add_many(
+        executables(),
+        ESCAPE_INTERMEDIATE,
+        A_EXECUTE,
+        ESCAPE_INTERMEDIATE,
+    );
     t.add(0x7f, ESCAPE_INTERMEDIATE, A_IGNORE, ESCAPE_INTERMEDIATE);
     // osc
     t.add(0x5d, ESCAPE, A_OSC_START, OSC_STRING);
     t.add_many(printables(), OSC_STRING, A_OSC_PUT, OSC_STRING);
     t.add(0x7f, OSC_STRING, A_OSC_PUT, OSC_STRING);
-    t.add_many([0x9c, 0x1b, 0x18, 0x1a, 0x07], OSC_STRING, A_OSC_END, GROUND);
+    t.add_many(
+        [0x9c, 0x1b, 0x18, 0x1a, 0x07],
+        OSC_STRING,
+        A_OSC_END,
+        GROUND,
+    );
     t.add_many(0x1c..0x20, OSC_STRING, A_IGNORE, OSC_STRING);
     // sos/pm/apc
     t.add_many([0x58, 0x5e, 0x5f], ESCAPE, A_IGNORE, SOS_PM_APC_STRING);
     t.add_many(printables(), SOS_PM_APC_STRING, A_IGNORE, SOS_PM_APC_STRING);
-    t.add_many(executables(), SOS_PM_APC_STRING, A_IGNORE, SOS_PM_APC_STRING);
+    t.add_many(
+        executables(),
+        SOS_PM_APC_STRING,
+        A_IGNORE,
+        SOS_PM_APC_STRING,
+    );
     t.add(0x9c, SOS_PM_APC_STRING, A_IGNORE, GROUND);
     t.add(0x7f, SOS_PM_APC_STRING, A_IGNORE, SOS_PM_APC_STRING);
     // csi
@@ -121,7 +142,12 @@ fn build_table() -> Table {
     t.add_many(0x20..0x30, CSI_PARAM, A_COLLECT, CSI_INTERMEDIATE);
     // esc_intermediate
     t.add_many(0x20..0x30, ESCAPE, A_COLLECT, ESCAPE_INTERMEDIATE);
-    t.add_many(0x20..0x30, ESCAPE_INTERMEDIATE, A_COLLECT, ESCAPE_INTERMEDIATE);
+    t.add_many(
+        0x20..0x30,
+        ESCAPE_INTERMEDIATE,
+        A_COLLECT,
+        ESCAPE_INTERMEDIATE,
+    );
     t.add_many(0x30..0x7f, ESCAPE_INTERMEDIATE, A_ESC_DISPATCH, GROUND);
     t.add_many(0x30..0x50, ESCAPE, A_ESC_DISPATCH, GROUND);
     t.add_many(0x51..0x58, ESCAPE, A_ESC_DISPATCH, GROUND);
@@ -155,7 +181,12 @@ fn build_table() -> Table {
     t.add_many(executables(), DCS_PASSTHROUGH, A_DCS_PUT, DCS_PASSTHROUGH);
     t.add_many(printables(), DCS_PASSTHROUGH, A_DCS_PUT, DCS_PASSTHROUGH);
     t.add(0x7f, DCS_PASSTHROUGH, A_IGNORE, DCS_PASSTHROUGH);
-    t.add_many([0x1b, 0x9c, 0x18, 0x1a], DCS_PASSTHROUGH, A_DCS_UNHOOK, GROUND);
+    t.add_many(
+        [0x1b, 0x9c, 0x18, 0x1a],
+        DCS_PASSTHROUGH,
+        A_DCS_UNHOOK,
+        GROUND,
+    );
     // unicode
     let non_ascii = NON_ASCII_PRINTABLE as usize;
     t.add(non_ascii, GROUND, A_PRINT, GROUND);
@@ -218,7 +249,6 @@ impl Default for Parser {
 }
 
 impl Parser {
-
     fn clear_params(&mut self) {
         self.params.reset();
         self.params.add_param(0);
@@ -252,7 +282,10 @@ impl Parser {
                 if self.osc_id == -1 {
                     self.osc_id = 0;
                 }
-                self.osc_id = self.osc_id.saturating_mul(10).saturating_add(i64::from(code - 48));
+                self.osc_id = self
+                    .osc_id
+                    .saturating_mul(10)
+                    .saturating_add(i64::from(code - 48));
             }
         }
         if self.osc_state == OscState::Payload && !data.is_empty() && !self.osc_hit_limit {
@@ -283,7 +316,11 @@ impl Parser {
         let mut i = 0;
         while i < length {
             let mut code = data[i];
-            let column = if code < 0xa0 { code } else { NON_ASCII_PRINTABLE } as usize;
+            let column = if code < 0xa0 {
+                code
+            } else {
+                NON_ASCII_PRINTABLE
+            } as usize;
             let mut transition = table[(usize::from(self.state) << 8) | column];
             match transition >> 4 {
                 A_PRINT => {

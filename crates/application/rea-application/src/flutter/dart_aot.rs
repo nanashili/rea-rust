@@ -319,7 +319,7 @@ fn project_pool(bytes: &[u8]) -> PoolState {
     };
     let mut run = Vec::new();
     let mut overflow = false;
-    let mut consider = |run: &[u8], state: &mut PoolState| {
+    let consider = |run: &[u8], state: &mut PoolState| {
         if run.len() < 5 {
             return;
         }
@@ -500,7 +500,7 @@ fn parse_elf(bytes: &[u8]) -> Elf {
             if !SYMBOLS.contains(&name) {
                 continue;
             }
-            let Some((load_vaddr, load_offset, load_size)) = loads
+            let Some((load_vaddr, load_offset, _load_size)) = loads
                 .iter()
                 .find(|(base, _, size)| value >= *base && value.saturating_sub(*base) < *size)
             else {

@@ -25,6 +25,7 @@
 //! Two surfaces are exposed: a rich entry/file API the desktop reader consumes
 //! directly, and a `crate::artifact_reader::ArtifactReader` adapter for the
 //! artifact graph.
+use rea_core::JsString;
 use rea_core::analysis_error::CleanupObservation;
 use rea_core::cancellation::Cancellation;
 use std::collections::HashMap;
@@ -540,13 +541,13 @@ fn open_file(
     let mut options = std::fs::OpenOptions::new();
     options.read(true);
     options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
-    let path = Path::new(&entry.adapter_key);
+    let path = Path::new(entry.adapter_key.as_str());
     let file = options
         .open(path)
         .map_err(|cause| directory_io_failure("open entry", path, &cause))?;
     let mut owner = DirectoryFile {
         file: Some(file),
-        path: entry.adapter_key.clone(),
+        path: entry.adapter_key.to_string(),
         identity: entry.source_identity.unwrap_or(SourceIdentity {
             device: 0,
             inode: 0,
@@ -814,7 +815,7 @@ impl ArtifactReader for DirectoryArtifactContainer {
             .map_err(to_reader_failure)?;
         for omission in directory_omissions {
             omissions.push(ArtifactTraversalOmission {
-                path: omission.path,
+                path: rea_core::JsString::from(omission.path),
                 kind: omission.kind,
             });
         }
@@ -822,7 +823,7 @@ impl ArtifactReader for DirectoryArtifactContainer {
         let mut out = Vec::with_capacity(listed.len());
         for entry in listed {
             out.push(ArtifactEntry {
-                path: entry.path.clone(),
+                path: JsString::from(entry.path.clone()),
                 kind: entry.kind.label(),
                 declared_size: entry.declared_size,
                 compressed_size: None,
@@ -836,7 +837,7 @@ impl ArtifactReader for DirectoryArtifactContainer {
                 } else {
                     Vec::new()
                 },
-                adapter_key: entry.path.clone(),
+                adapter_key: JsString::from(entry.path.clone()),
             });
             self.entries.insert(entry.path.clone(), entry);
         }
@@ -849,7 +850,7 @@ impl ArtifactReader for DirectoryArtifactContainer {
     ) -> Result<Vec<u8>, ReaderFailure> {
         let directory_entry = self
             .entries
-            .get(&entry.adapter_key)
+            .get(entry.adapter_key.as_str().unwrap_or_default())
             .cloned()
             .ok_or_else(|| {
                 ReaderFailure::new(

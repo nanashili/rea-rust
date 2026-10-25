@@ -8,10 +8,12 @@
 use crate::common::schema;
 use crate::common::view::{OPERATION, Parent, ViewCache, view_error};
 use crate::common::{self, json};
+use rea_application::javascript::graph::json as graph_json;
 use rea_core::analysis_error::AnalysisError;
 use rea_core::evidence::envelope::{Evidence, Observation};
-use rea_mcp::{Registry, Session, ToolContext};
-use serde_json::{Value, json};
+use rea_core::evidence::record::EvidenceRecord;
+use rea_mcp::{Registry, Session, ToolContext, ToolOutput};
+use serde_json::{Value, json, value::RawValue};
 use std::sync::Arc;
 
 mod addressed_inventory;
@@ -40,46 +42,180 @@ mod web_network_capture;
 
 /// Bind the selected-view tool to its exact contract.
 pub fn register(registry: &mut Registry) {
-    registry.handle(OPERATION, |context: &ToolContext<'_>, input: Value| {
-        handle(context, input).into()
+    registry.handle_application_validated(OPERATION, |context: &ToolContext<'_>, input: Value| {
+        match handle(context, input) {
+            Ok(output) => output,
+            Err(error) => ToolOutput::Failure(error),
+        }
+    });
+    registry.handle_raw_application_validated(OPERATION, |context, input| {
+        match handle_raw(context, input) {
+            Ok(output) => output,
+            Err(error) => ToolOutput::Failure(error),
+        }
     });
 }
 
-fn handle(context: &ToolContext<'_>, input: Value) -> Result<Evidence, AnalysisError> {
+fn handle(context: &ToolContext<'_>, input: Value) -> Result<ToolOutput, AnalysisError> {
     context.check_cancelled()?;
-    // The original application owns structured input failures and defaults;
-    // re-parse the selected view with its frozen request contract.
-    let view = parse_view_request(&input)?;
-    let source = input.get("source").cloned().unwrap_or(Value::Null);
-    let evidence = inspect_validated(context.session, &source, &view)?;
+    let parsed = parse_view_request(&input)?;
+    let source = parsed
+        .get("source")
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+    let view = parsed
+        .get("view")
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+
+    let exact_source =
+        graph_json::parse(&serde_json::to_string(source).map_err(|error| {
+            AnalysisError::input_message(OPERATION, error.to_string(), Vec::new())
+        })?)
+        .map_err(|error| AnalysisError::input_message(OPERATION, error.to_string(), Vec::new()))?;
+    let exact_view =
+        graph_json::parse(&serde_json::to_string(view).map_err(|error| {
+            AnalysisError::input_message(OPERATION, error.to_string(), Vec::new())
+        })?)
+        .map_err(|error| AnalysisError::input_message(OPERATION, error.to_string(), Vec::new()))?;
+    if let Some(evidence) = exact_project(context.session, &exact_source, &exact_view)? {
+        context.check_cancelled()?;
+        return Ok(ToolOutput::RawEvidence(evidence));
+    }
+
+    let evidence = inspect_validated(context.session, source, view)?;
     context.check_cancelled()?;
-    Ok(evidence)
+    Ok(ToolOutput::Evidence(evidence))
 }
 
-/// Parse `input.view` with the request schema (Zod defaults applied).
-fn parse_view_request(input: &Value) -> Result<Value, AnalysisError> {
-    let raw_view = input.get("view").cloned().unwrap_or(Value::Null);
-    let Some(root) = schema::view_input_schema() else {
-        return Ok(raw_view);
-    };
-    let Some(view_schema) = root
-        .get("properties")
-        .and_then(|properties| properties.get("view"))
-    else {
-        return Ok(raw_view);
-    };
-    let mut rooted = view_schema.as_object().cloned().unwrap_or_default();
-    if let Some(defs) = root.get("$defs") {
-        rooted.insert("$defs".into(), defs.clone());
+/// Preserve raw JavaScript view selectors through the MCP transport. The
+/// graph parser retains escaped lone UTF-16 units; only non-JavaScript views
+/// fall back to the established application-owned Value path.
+fn handle_raw(context: &ToolContext<'_>, input: &RawValue) -> Result<ToolOutput, AnalysisError> {
+    context.check_cancelled()?;
+
+    // Keep the frozen application schema as the first validator whenever the
+    // request is representable as a Rust value. This preserves defaults and
+    // refinements for the ordinary case.
+    if let Ok(decoded) = serde_json::from_str::<Value>(input.get()) {
+        return handle(context, decoded);
     }
-    let view = schema::parse_strict(&Value::Object(rooted), &raw_view).map_err(|issues| {
-        let issues = schema::prefix_issues(issues, &["view"]);
-        schema::input_error_from_issues(OPERATION, &issues, input, Vec::new())
-    })?;
+
+    let arguments =
+        graph_json::parse(input.get()).map_err(|_| AnalysisError::input(OPERATION, Vec::new()))?;
+    let schema_root = rea_mcp::schema::published_view_input_schema()
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+    let parsed = rea_application::javascript::application_view_validation::parse_input(
+        &arguments,
+        &schema_root,
+    )?;
+    let source = parsed
+        .get("source")
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+    let view = parsed
+        .get("view")
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+
+    if let Some(projected) = exact_project(context.session, source, view)? {
+        context.check_cancelled()?;
+        return Ok(ToolOutput::RawEvidence(projected));
+    }
+    Err(AnalysisError::input(OPERATION, Vec::new()))
+}
+
+fn exact_project(
+    session: &Session,
+    source: &graph_json::Json,
+    view: &graph_json::Json,
+) -> Result<Option<EvidenceRecord>, AnalysisError> {
+    let record = match source.at("kind").as_str() {
+        Some("retained-evidence") => {
+            let Some(evidence_id) = source.at("evidence_id").as_str() else {
+                return Ok(None);
+            };
+            let Some(raw) = session.evidence_raw(evidence_id) else {
+                return Ok(None);
+            };
+            graph_json::parse(raw.get()).map_err(|error| {
+                AnalysisError::evidence_integrity(format!(
+                    "Retained Evidence is not exact JSON: {error}"
+                ))
+            })?
+        }
+        Some("inline") => {
+            let evidence = source
+                .get("evidence")
+                .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+            let raw = RawValue::from_string(evidence.stringify()).map_err(|error| {
+                AnalysisError::input_message(OPERATION, error.to_string(), Vec::new())
+            })?;
+            let authenticated = EvidenceRecord::parse(&raw).map_err(|error| {
+                AnalysisError::input_message(OPERATION, error.to_string(), Vec::new())
+            })?;
+            graph_json::parse(authenticated.raw().get()).map_err(|error| {
+                AnalysisError::evidence_integrity(format!(
+                    "Inline Evidence is not exact JSON: {error}"
+                ))
+            })?
+        }
+        _ => return Ok(None),
+    };
+
+    let operation = record.at("operation").as_str();
+    let projected = match operation {
+        Some("inventory_artifact") | Some("inspect_artifact") => {
+            let raw = rea_application::artifacts::inventory_view::project_raw(&record, view)
+                .map_err(|error| {
+                    AnalysisError::input_message(OPERATION, error.to_string(), Vec::new())
+                })?;
+            EvidenceRecord::parse(&raw).map_err(|error| {
+                AnalysisError::evidence_integrity(format!(
+                    "Projected inventory view is invalid: {error}"
+                ))
+            })?
+        }
+        Some("analyze_javascript_application") => {
+            let projected =
+                rea_application::javascript::application_view_exact::project_raw(&record, view)?;
+            validate_exact_projection(&projected)?;
+            projected
+        }
+        _ => return Ok(None),
+    };
+
+    Ok(Some(projected))
+}
+
+fn validate_exact_projection(projected: &EvidenceRecord) -> Result<(), AnalysisError> {
+    let normalized_result =
+        graph_json::parse(projected.normalized_result().get()).map_err(|error| {
+            AnalysisError::evidence_integrity(format!(
+                "Projected JavaScript analysis view normalized_result is not exact JSON: {error}"
+            ))
+        })?;
+    if let Some(root) = rea_mcp::schema::published_view_result_schema() {
+        rea_application::javascript::application_view_validation::validate(
+            &normalized_result,
+            &root,
+        )?;
+    }
+    Ok(())
+}
+
+/// Parse the complete request with the application schema, applying defaults
+/// before source authentication or view projection.
+fn parse_view_request(input: &Value) -> Result<Value, AnalysisError> {
+    let root = schema::tool_input_schema(OPERATION)
+        .ok_or_else(|| AnalysisError::input(OPERATION, Vec::new()))?;
+    let metadata = rea_core::schema::SchemaMetadata {
+        prefixed_digests: &[rea_core::digests::EVIDENCE_ID],
+        ..rea_core::schema::SchemaMetadata::default()
+    };
+    let parsed = schema::parse_named_strict(&root, input, metadata)
+        .map_err(|issues| schema::input_error_from_issues(OPERATION, &issues, input, Vec::new()))?;
+    let view = parsed.get("view").cloned().unwrap_or(Value::Null);
     if crate::common::view::view_kind(&view) == "environment-manifest" {
         environment_manifest::refine_request(&view)?;
     }
-    Ok(view)
+    Ok(parsed)
 }
 
 /// `inspectAnalysisViewValidated`: authenticate the source, project the view

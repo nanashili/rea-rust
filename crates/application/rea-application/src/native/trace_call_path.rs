@@ -5,7 +5,7 @@
 //! performs the same breadth-first traversal without executing a target.
 
 use rea_core::failure::{Detail, Failure};
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub const OPERATION: &str = "trace_call_path";

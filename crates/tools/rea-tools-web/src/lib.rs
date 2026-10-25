@@ -37,6 +37,8 @@ pub fn register(registry: &mut Registry) {
     browser::register(registry);
     #[cfg(feature = "browser-scenario")]
     browser_scenario::register(registry);
+    #[cfg(all(feature = "electron-scenario", unix))]
+    browser_scenario::electron::register(registry);
     #[cfg(feature = "electron")]
     electron::register(registry);
     #[cfg(feature = "javascript-runtime")]

@@ -76,7 +76,11 @@ pub fn project(input: &Value) -> Result<Value, Failure> {
             .unwrap_or_else(unknown_owner);
         let source_layouts = matching_layouts(&layout_index, &identity);
         let layout_candidates = select_layout_candidates(&source_layouts, field_object);
-        let layout = (layout_candidates.len() == 1).then_some(layout_candidates[0]);
+        let layout = if layout_candidates.len() == 1 {
+            layout_candidates.first().copied()
+        } else {
+            None
+        };
         let identity_ambiguous =
             identity.ambiguous || field_identity_counts.is_duplicate(&identity);
         let resolution = match layout_candidates.as_slice() {

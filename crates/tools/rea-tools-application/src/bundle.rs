@@ -52,7 +52,7 @@ pub fn authenticate(bundle: &Value) -> Result<AuthenticatedBundle, Rejection> {
         .map_err(|error| Rejection::type_error(error.to_string()))?;
     EvidenceBundle::parse(&raw).map_err(|error| match error {
         EvidenceBundleError::Unknown(error) => Rejection::unclassified(error.to_string()),
-        EvidenceBundleError::Invalid(_) | EvidenceBundleError::Record(_) => {
+        EvidenceBundleError::Invalid(_) | EvidenceBundleError::RecordAt { .. } => {
             Rejection::type_error("Evidence bundle manifests are not canonical")
         }
         other => Rejection::type_error(other.to_string()),

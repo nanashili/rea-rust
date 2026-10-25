@@ -75,7 +75,6 @@ impl ProgressUpdate {
 pub struct ProgressBuffer {
     latest: Option<ProgressUpdate>,
     last_sequence: usize,
-    discarded: bool,
 }
 
 impl ProgressBuffer {
@@ -89,10 +88,6 @@ impl ProgressBuffer {
         method: &str,
         progress: WorkerProgress,
     ) -> Result<(), String> {
-        if self.discarded {
-            return Ok(());
-        }
-
         if sequence == 0 || sequence <= self.last_sequence {
             return Err("progress sequence must increase monotonically".into());
         }
@@ -104,43 +99,7 @@ impl ProgressBuffer {
     }
 
     pub fn take_latest(&mut self) -> Option<ProgressUpdate> {
-        if self.discarded {
-            return None;
-        }
         self.latest.take()
-    }
-
-    /// Deliver retained updates through a best-effort sink.
-    ///
-    /// The sink may observe more recent progress while it handles an update.
-    /// Taking each item before invoking the sink keeps the buffer bounded and
-    /// lets the next iteration deliver that newer item.  Sink failures are
-    /// intentionally ignored: progress cannot replace the worker's result.
-    pub fn deliver_pending<S, E>(&mut self, mut sink: S)
-    where
-        S: FnMut(ProgressUpdate) -> Result<(), E>,
-    {
-        if self.discarded {
-            return;
-        }
-
-        while let Some(update) = self.latest.take() {
-            let _ = sink(update);
-
-            if self.discarded {
-                break;
-            }
-        }
-    }
-
-    /// Stop delivery after the request's terminal reply has been received.
-    pub fn discard_pending(&mut self) {
-        self.discarded = true;
-        self.latest = None;
-    }
-
-    pub fn is_discarded(&self) -> bool {
-        self.discarded
     }
 }
 

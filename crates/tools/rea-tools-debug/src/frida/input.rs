@@ -20,9 +20,7 @@ pub(crate) fn is_valid_frida_remote_address(address: &str) -> bool {
     }
     // `/[?@#\s\u0000-\u001f\u007f/]/u`
     if address.chars().any(|c| {
-        matches!(c, '?' | '@' | '#' | '/' | '\u{7f}')
-            || c.is_whitespace()
-            || (c as u32) <= 0x1f
+        matches!(c, '?' | '@' | '#' | '/' | '\u{7f}') || c.is_whitespace() || (c as u32) <= 0x1f
     }) {
         return false;
     }
@@ -108,8 +106,7 @@ pub(crate) fn start_refinement(input: &Value) -> Option<String> {
         && present(input, "pid")
         && !present(input, "program")
         && !present(input, "argv");
-    let spawn_ok =
-        mode == Some("spawn") && present(input, "program") && !present(input, "pid");
+    let spawn_ok = mode == Some("spawn") && present(input, "program") && !present(input, "pid");
     let device_ok = !(present(input, "device_id") && present(input, "remote"));
     if (attach_ok || spawn_ok) && device_ok {
         None
@@ -146,9 +143,7 @@ pub(crate) fn list_processes_refinement(input: &Value) -> Option<String> {
 /// `list_frida_devices` / shared remote-address refinement.
 pub(crate) fn remote_address_refinement(tool: &str, input: &Value) -> Option<String> {
     let address = remote_address(input)?;
-    let valid = address
-        .as_str()
-        .is_some_and(is_valid_frida_remote_address);
+    let valid = address.as_str().is_some_and(is_valid_frida_remote_address);
     if valid {
         None
     } else {
@@ -183,8 +178,7 @@ pub(crate) fn instrument_refinement(input: &Value) -> Option<String> {
         && present(input, "pid")
         && !present(input, "program")
         && !present(input, "argv");
-    let spawn_ok =
-        mode == Some("spawn") && present(input, "program") && !present(input, "pid");
+    let spawn_ok = mode == Some("spawn") && present(input, "program") && !present(input, "pid");
     if device_ok && (attach_ok || spawn_ok) && source_fields_ok(input) {
         None
     } else {
@@ -198,8 +192,7 @@ pub(crate) fn instrument_refinement(input: &Value) -> Option<String> {
 
 fn source_fields_ok(input: &Value) -> bool {
     let kind = field(input, "source_kind").and_then(Value::as_str);
-    let inline_ok =
-        kind == Some("inline") && present(input, "source") && !present(input, "path");
+    let inline_ok = kind == Some("inline") && present(input, "source") && !present(input, "path");
     let file_ok = kind == Some("file") && present(input, "path") && !present(input, "source");
     inline_ok || file_ok
 }

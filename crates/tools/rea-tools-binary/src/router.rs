@@ -641,19 +641,6 @@ impl Router {
         Arc::clone(&self.initial_route)
     }
 
-    /// Configured candidate identities in canonical provider-ID order.
-    pub(crate) fn identities(&self) -> Vec<ProviderIdentity> {
-        self.providers
-            .iter()
-            .map(|provider| provider.identity())
-            .collect()
-    }
-
-    /// The unique deep-operation declarations without probing candidates.
-    pub(crate) fn declared_operations(&self) -> &[String] {
-        &self.declared_operations
-    }
-
     /// Report retained candidate resources without retrying cleanup.
     pub(crate) fn has_pending_owned_resources(&self) -> bool {
         self.in_flight.load(Ordering::SeqCst) > 0

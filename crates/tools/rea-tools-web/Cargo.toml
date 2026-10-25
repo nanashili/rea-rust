@@ -8,10 +8,10 @@ license.workspace = true
 publish.workspace = true
 [features]
 # Every family group is bound by default once verified against the TS oracle.
-    default = ["network-capture", "web-scripts", "comparisons", "javascript-recovery", "electron-fuses", "browser", "javascript-runtime", "electron", "browser-scenario"]
+    default = ["network-capture", "web-scripts", "comparisons", "javascript-recovery", "electron-fuses", "browser", "javascript-runtime", "electron", "browser-scenario", "electron-scenario"]
 network-capture = []
 web-scripts = []
-web-modules = ["cdp"]
+web-modules = ["cdp", "browser-scenario"]
 comparisons = []
 javascript-recovery = []
 electron-fuses = []
@@ -21,6 +21,8 @@ electron = ["cdp", "browser"]
 # Native CDP scenario runners; bound by default only once verified against the TS oracle.
 browser-scenario = ["cdp", "browser", "comparisons"]
 javascript-runtime = ["cdp"]
+# Native capture_electron_scenario (Unix). Default: validation and launch-failure paths verified against the TS oracle; success paths unverified (no local Electron).
+electron-scenario = ["browser-scenario", "electron-fuses"]
 [dependencies]
 rea-core.workspace = true
 rea-host.workspace = true
@@ -38,5 +40,9 @@ tempfile.workspace = true
 url = "=2.5.8"
 
 tungstenite.workspace = true
+ureq.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["fs", "process"] }
 [lints]
 workspace = true

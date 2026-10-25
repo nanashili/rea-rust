@@ -43,11 +43,6 @@ impl Rejection {
         }
     }
 
-    /// A nested validation failure whose Zod path is not reproduced.
-    pub fn nested_root(message: impl Into<String>) -> Self {
-        Self::nested("", &message.into())
-    }
-
     /// `workflowInputError(operation, cause)`.
     pub fn into_input_error(self, operation: &str) -> AnalysisError {
         AnalysisError::input(

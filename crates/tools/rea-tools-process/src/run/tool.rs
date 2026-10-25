@@ -6,7 +6,9 @@
 //! `createProcessCaptureEvidence` (`ProcessEvidence.ts`) and
 //! `ProcessCaptureResourceScope` (`ProcessCaptureLifecycle.ts`).
 
-use super::capture::{self, CaptureFailure, CaptureHost, RetainedResources, report_failure, report_resources};
+use super::capture::{
+    self, CaptureFailure, CaptureHost, RetainedResources, report_failure, report_resources,
+};
 use super::paths::resolve_runtime_paths;
 use super::scenario::{Scenario, refinements};
 use crate::input_failure::refinement_failure;
@@ -34,7 +36,10 @@ pub struct ProcessCaptureResources {
 impl ProcessCaptureResources {
     /// Retry every retained owner; failures stay retained.
     fn retry(&self) -> Result<(), AnalysisError> {
-        let mut pending = self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut pending = self
+            .pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut reasons = Vec::new();
         let mut resources: Vec<String> = Vec::new();
         pending.retain_mut(|owner| match capture::release_retained(owner) {
@@ -64,7 +69,10 @@ impl ProcessCaptureResources {
     }
 
     fn retain(&self, owner: RetainedResources) {
-        self.pending.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push(owner);
+        self.pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(owner);
     }
 }
 
@@ -74,7 +82,13 @@ impl SessionResource for ProcessCaptureResources {
     }
 }
 
-fn process_capture_error(message: String, reason: &str, cancelled: bool, execution_failure: Option<String>, cleanup_report: Option<Value>) -> AnalysisError {
+fn process_capture_error(
+    message: String,
+    reason: &str,
+    cancelled: bool,
+    execution_failure: Option<String>,
+    cleanup_report: Option<Value>,
+) -> AnalysisError {
     let user_message = if cancelled {
         "Process capture was cancelled. Start it again when ready.".to_owned()
     } else {
@@ -94,17 +108,40 @@ fn process_capture_error(message: String, reason: &str, cancelled: bool, executi
 /// `resolveProcessResult` / `withFinalization` projection of a failed run.
 fn failure_error(failure: CaptureFailure) -> AnalysisError {
     let cleanup = failure.cleanup_report.as_ref().and_then(report_failure);
-    let resources = failure.cleanup_report.as_ref().map(report_resources).unwrap_or_default();
+    let resources = failure
+        .cleanup_report
+        .as_ref()
+        .map(report_resources)
+        .unwrap_or_default();
     let mut error = if failure.cancelled {
-        let error = process_capture_error(failure.message, "cancelled", true, failure.execution_failure, failure.cleanup_report);
+        let error = process_capture_error(
+            failure.message,
+            "cancelled",
+            true,
+            failure.execution_failure,
+            failure.cleanup_report,
+        );
         match cleanup {
             Some(reason) => error.with_cleanup(reason, resources),
             None => error,
         }
     } else if let Some(reason) = cleanup {
-        process_capture_error(reason.clone(), "cleanup_incomplete", false, failure.execution_failure, failure.cleanup_report).with_cleanup(reason, resources)
+        process_capture_error(
+            reason.clone(),
+            "cleanup_incomplete",
+            false,
+            failure.execution_failure,
+            failure.cleanup_report,
+        )
+        .with_cleanup(reason, resources)
     } else {
-        process_capture_error(failure.message, "capture_failed", false, failure.execution_failure, failure.cleanup_report)
+        process_capture_error(
+            failure.message,
+            "capture_failed",
+            false,
+            failure.execution_failure,
+            failure.cleanup_report,
+        )
     };
     if let Some(partial) = failure.partial_observation {
         error = error.retain_partial_observation(partial);
@@ -114,7 +151,11 @@ fn failure_error(failure: CaptureFailure) -> AnalysisError {
 
 /// `processEvidenceParameters`.
 fn parameters(input: &Scenario) -> Value {
-    let executable_name = input.executable.rsplit('/').find(|part| !part.is_empty()).unwrap_or_default();
+    let executable_name = input
+        .executable
+        .rsplit('/')
+        .find(|part| !part.is_empty())
+        .unwrap_or_default();
     json!({
         "executable_name": executable_name,
         "argument_count": input.arguments.len(),
@@ -127,7 +168,10 @@ fn parameters(input: &Scenario) -> Value {
 fn evidence(input: &Scenario, capture: Value) -> Result<Evidence, AnalysisError> {
     let manifest = &capture["manifest"];
     let platform = manifest["platform"].as_str().unwrap_or_default().to_owned();
-    let architecture = manifest["architecture"].as_str().unwrap_or_default().to_owned();
+    let architecture = manifest["architecture"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
     let limitations = capture["limitations"]
         .as_array()
         .into_iter()
@@ -146,22 +190,38 @@ fn evidence(input: &Scenario, capture: Value) -> Result<Evidence, AnalysisError>
             "isolation": "process",
         }))
         .limitations(limitations);
-    Evidence::create(None, &provider(), observation).map_err(|error| AnalysisError::output(OPERATION, error.to_string()))
+    Evidence::create(None, &provider(), observation)
+        .map_err(|error| AnalysisError::output(OPERATION, error.to_string()))
 }
 
 /// `recordProcessResidualUnknowns`.
-fn record_residual_unknowns(session: &Arc<Session>, evidence: &Evidence) -> Result<(), AnalysisError> {
+fn record_residual_unknowns(
+    session: &Arc<Session>,
+    evidence: &Evidence,
+) -> Result<(), AnalysisError> {
     let value = evidence.value();
     let environment = value["environment"].clone();
     let subject = match rea_tools_binary::port::active_target(session) {
-        Some(target) => Some(serde_json::value::to_raw_value(&target.subject_json()).map_err(|error| AnalysisError::evidence_integrity(error.to_string()))?),
+        Some(target) => Some(
+            serde_json::value::to_raw_value(&target.subject_json())
+                .map_err(|error| AnalysisError::evidence_integrity(error.to_string()))?,
+        ),
         None => None,
     };
-    let residuals = value["normalized_result"]["residual_unknowns"].as_array().cloned().unwrap_or_default();
+    let residuals = value["normalized_result"]["residual_unknowns"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     for residual in residuals {
         let scope = residual["scope"].as_str().unwrap_or_default();
         let mut input = Map::new();
-        input.insert("question".into(), json!(format!("Was {scope} behavior fully observed during capture? (Evidence {})", evidence.id())));
+        input.insert(
+            "question".into(),
+            json!(format!(
+                "Was {scope} behavior fully observed during capture? (Evidence {})",
+                evidence.id()
+            )),
+        );
         input.insert("severity".into(), json!("medium"));
         input.insert("domain".into(), json!(format!("process-{scope}")));
         input.insert("required_authority".into(), json!("controlled-replay"));
@@ -174,7 +234,8 @@ fn record_residual_unknowns(session: &Arc<Session>, evidence: &Evidence) -> Resu
         input.insert("relationships".into(), json!([]));
         input.insert("supporting_evidence_ids".into(), json!([evidence.id()]));
         input.insert("contradicting_evidence_ids".into(), json!([]));
-        let raw = serde_json::value::to_raw_value(&Value::Object(input)).map_err(|error| AnalysisError::evidence_integrity(error.to_string()))?;
+        let raw = serde_json::value::to_raw_value(&Value::Object(input))
+            .map_err(|error| AnalysisError::evidence_integrity(error.to_string()))?;
         match session.records().record_unknown(&raw, subject.as_deref()) {
             Ok(_) | Err(RecordError::UnknownMutation(UnknownMutationFailure::AlreadyExists)) => {}
             Err(error) => return Err(record_error(error)),
@@ -199,7 +260,10 @@ pub fn capture_process_scenario(context: &ToolContext<'_>, input: Value) -> Tool
 fn run(context: &ToolContext<'_>, input: &Scenario) -> Result<Evidence, AnalysisError> {
     if !cfg!(unix) {
         let reason = "Process capture requires a Linux or macOS host.";
-        return Err(AnalysisError::capability_unavailable("rea-process", OPERATION, reason).with_user_message(reason));
+        return Err(
+            AnalysisError::capability_unavailable("rea-process", OPERATION, reason)
+                .with_user_message(reason),
+        );
     }
     let resources = context.session.state::<ProcessCaptureResources>();
     context.session.own_once(Arc::clone(&resources));

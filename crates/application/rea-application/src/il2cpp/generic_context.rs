@@ -101,7 +101,7 @@ pub fn project(input: &Value) -> Result<Value, Failure> {
                         match parameter_index.get(&parameter_index_value) {
                             Some(rows) => {
                                 for parameter_row in rows {
-                                    attached.push(parameter_row.clone());
+                                    attached.push(*parameter_row);
                                     attached_parameters += 1;
                                 }
                             }

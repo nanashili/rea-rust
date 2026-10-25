@@ -137,7 +137,6 @@ mod tests {
             Err("invalid run token encoding")
         );
     }
-
 }
 
 #[cfg(target_os = "windows")]

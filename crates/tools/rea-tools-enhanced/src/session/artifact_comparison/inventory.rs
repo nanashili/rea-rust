@@ -1,20 +1,20 @@
 //! Parse, merge and validate artifact inventory Evidence pages.
 //!
 //! Compatibility owner: `domain/artifactInventoryEvidence.ts`. Per-page schema
-//! validation reuses `rea_application::artifacts::inventory_evidence::normalize_result`
+//! validation reuses `rea_core::artifact_inventory::normalize_result`
 //! (the native port of `artifactInventoryResultSchema.parse`). Merge ordering,
 //! completeness and graph-identity checks follow the TypeScript owner.
 
-use super::canonical::{canonical_json, type_error};
+use super::canonical::{canonical_graph_json, type_error};
 use super::identity::{
     artifact_contradiction_id, artifact_edge_id, artifact_graph_digest, artifact_id_for_content,
     artifact_manifest_id, occurrence_id_for_location,
 };
-use crate::derived::parse_evidence;
 use crate::js::compare_code_points;
+use rea_application::javascript::graph::json::Json;
+use rea_core::JsString;
 use rea_core::analysis_error::AnalysisError;
-use rea_core::evidence::envelope::Evidence;
-use serde_json::Value;
+use rea_core::evidence::record::EvidenceRecord;
 use std::collections::BTreeMap;
 
 const CONTEXT: &str = "Artifact inventory";
@@ -22,14 +22,14 @@ const COVERAGE_CONTEXT: &str = "Artifact inventory coverage";
 
 /// A merged inventory used by the comparison.
 pub struct InventorySet {
-    pub manifest: Value,
-    pub nodes: Vec<Value>,
-    pub occurrences: Vec<Value>,
-    pub edges: Vec<Value>,
-    pub integrity_contradictions: Value,
+    pub manifest: Json,
+    pub nodes: Vec<Json>,
+    pub occurrences: Vec<Json>,
+    pub edges: Vec<Json>,
+    pub integrity_contradictions: Json,
     pub limitations: Vec<String>,
     pub complete: bool,
-    pub coverage: Value,
+    pub coverage: Json,
 }
 
 /// Evidence records and the assembled inventory.
@@ -38,16 +38,25 @@ pub struct ParsedInventorySet {
     pub inventory: InventorySet,
 }
 
-fn normalize_page(value: &Value) -> Result<Value, AnalysisError> {
-    rea_application::artifacts::inventory_evidence::normalize_result(value.clone())
-        .map_err(|message| type_error(message))
+fn normalize_page(value: &Json) -> Result<Json, AnalysisError> {
+    let raw = serde_json::value::RawValue::from_string(value.stringify())
+        .map_err(|error| type_error(error.to_string()))?;
+    let normalized =
+        rea_core::artifact_inventory::parse_validated_result_text(&raw).map_err(type_error)?;
+    let normalized_text =
+        serde_json::to_string(&normalized).map_err(|error| type_error(error.to_string()))?;
+    rea_application::javascript::graph::json::parse(&normalized_text).map_err(|error| {
+        type_error(format!(
+            "normalized inventory Evidence cannot be projected as JSON values: {error}"
+        ))
+    })
 }
 
 /// Validate one authenticated inventory carrier's subject against its manifest.
-fn validate_inventory_subject(subject: &Value, manifest: &Value) -> Result<(), AnalysisError> {
+fn validate_inventory_subject(subject: &Json, manifest: &Json) -> Result<(), AnalysisError> {
     if subject.is_null()
-        || subject["digest"]["sha256"] != manifest["root_sha256"]
-        || subject["format"] != manifest["root_format"]
+        || subject.at("digest").at("sha256") != manifest.at("root_sha256")
+        || subject.at("format") != manifest.at("root_format")
     {
         return Err(type_error(
             "Artifact inventory Evidence subject does not match its root digest",
@@ -56,28 +65,27 @@ fn validate_inventory_subject(subject: &Value, manifest: &Value) -> Result<(), A
     Ok(())
 }
 
-fn validate_inventory_page(inventory: &Value) -> Result<(), AnalysisError> {
-    assert_unique(inventory["nodes"].as_array(), "artifact_id", "node ID")?;
+fn validate_inventory_page(inventory: &Json) -> Result<(), AnalysisError> {
+    assert_unique(inventory.at("nodes").arr(), "artifact_id", "node ID")?;
     assert_unique(
-        inventory["occurrences"].as_array(),
+        inventory.at("occurrences").arr(),
         "occurrence_id",
         "occurrence ID",
     )?;
-    assert_unique(inventory["edges"].as_array(), "edge_id", "edge ID")?;
-    for node in inventory["nodes"].as_array().into_iter().flatten() {
-        let expected = artifact_id_for_content(node["sha256"].as_str().unwrap_or_default())?;
-        if node["artifact_id"].as_str() != Some(expected.as_str()) {
+    assert_unique(inventory.at("edges").arr(), "edge_id", "edge ID")?;
+    for node in inventory.at("nodes").arr() {
+        let expected = artifact_id_for_content(node.at("sha256").as_str().unwrap_or_default())?;
+        if node.at("artifact_id").as_str() != Some(expected.as_str()) {
             return Err(type_error("Artifact node ID is not content-addressed"));
         }
     }
     Ok(())
 }
 
-fn assert_unique(values: Option<&Vec<Value>>, key: &str, label: &str) -> Result<(), AnalysisError> {
-    let values = values.cloned().unwrap_or_default();
+fn assert_unique(values: &[Json], key: &str, label: &str) -> Result<(), AnalysisError> {
     let mut seen = std::collections::HashSet::new();
-    for value in &values {
-        let id = value[key].as_str().unwrap_or_default().to_owned();
+    for value in values {
+        let id = value.at(key).as_str().unwrap_or_default().to_owned();
         if !seen.insert(id) {
             return Err(type_error(format!(
                 "Artifact inventory contains a duplicate {label}"
@@ -88,7 +96,7 @@ fn assert_unique(values: Option<&Vec<Value>>, key: &str, label: &str) -> Result<
 }
 
 /// Parse an authenticated inventory carrier (`inventory_artifact`) into a page.
-fn parse_inventory_evidence_page(evidence: &Value) -> Result<Value, AnalysisError> {
+fn parse_inventory_evidence_page(evidence: &Json) -> Result<Json, AnalysisError> {
     if evidence["operation"].as_str() != Some("inventory_artifact") {
         return Err(type_error(
             "Artifact inventory page must be inventory_artifact Evidence",
@@ -102,15 +110,15 @@ fn parse_inventory_evidence_page(evidence: &Value) -> Result<Value, AnalysisErro
 
 /// `parseArtifactInventoryEvidence`.
 pub fn parse_artifact_inventory_evidence(
-    carriers: &[Evidence],
+    carriers: &[EvidenceRecord],
 ) -> Result<ParsedInventorySet, AnalysisError> {
-    let mut pages: Vec<Value> = Vec::new();
+    let mut pages: Vec<Json> = Vec::new();
     let mut evidence_ids: Vec<String> = Vec::with_capacity(carriers.len());
     for carrier in carriers {
-        evidence_ids.push(carrier.id().to_owned());
-        let value = carrier.value();
+        evidence_ids.push(carrier.evidence_id().to_owned());
+        let value = evidence_json(carrier)?;
         match value["operation"].as_str() {
-            Some("inventory_artifact") => pages.push(parse_inventory_evidence_page(value)?),
+            Some("inventory_artifact") => pages.push(parse_inventory_evidence_page(&value)?),
             Some("inspect_artifact") => {
                 pages.extend(parse_inspection_inventory_payload(
                     &value["normalized_result"],
@@ -130,65 +138,69 @@ pub fn parse_artifact_inventory_evidence(
     })
 }
 
+fn evidence_json(carrier: &EvidenceRecord) -> Result<Json, AnalysisError> {
+    rea_application::javascript::graph::json::parse(carrier.raw().get())
+        .map_err(|error| type_error(format!("Evidence is not valid graph JSON: {error}")))
+}
+
 /// Shared owner boundary for `inspect_artifact` payloads.
 fn parse_inspection_inventory_payload(
-    input: &Value,
-    subject: &Value,
-) -> Result<Vec<Value>, AnalysisError> {
+    input: &Json,
+    subject: &Json,
+) -> Result<Vec<Json>, AnalysisError> {
     // The full inspection schema is validated by the native inventory-view
     // owner; here we authenticate the substep Evidence and inventory pages and
     // apply the inspection-specific invariants of `parseInspectionInventoryPayload`.
-    let substeps = input["substeps"].as_array();
-    let substeps_completed = input["coverage"]["substeps_completed"].as_u64();
-    let substeps =
-        substeps.ok_or_else(|| type_error("Artifact inspection requires inventory substeps"))?;
+    let substeps = input.at("substeps").arr();
+    let substeps_completed = input.at("coverage").at("substeps_completed").as_f64();
     if substeps.is_empty() {
         return Err(type_error(
             "Artifact inspection requires inventory substeps",
         ));
     }
-    if substeps_completed != Some(substeps.len() as u64) {
+    if substeps_completed != Some(substeps.len() as f64) {
         return Err(type_error(
             "Artifact inspection substep count does not match its coverage declaration",
         ));
     }
     let mut pages = Vec::with_capacity(substeps.len());
     for substep in substeps {
-        let nested_evidence = &substep["evidence"];
-        let evidence = parse_evidence(nested_evidence).map_err(|error| {
-            AnalysisError::evidence_integrity(crate::derived::evidence_failure_message(&error))
-        })?;
-        if substep["evidence_id"].as_str() != Some(evidence.id()) {
+        let nested_evidence = substep.at("evidence");
+        let raw = serde_json::value::RawValue::from_string(nested_evidence.stringify())
+            .map_err(|error| type_error(error.to_string()))?;
+        let record = EvidenceRecord::parse(&raw)
+            .map_err(|error| AnalysisError::evidence_integrity(error.to_string()))?;
+        if substep.at("evidence_id").as_str() != Some(record.evidence_id()) {
             return Err(type_error(
                 "Artifact inspection substep evidence ID does not match nested Evidence",
             ));
         }
-        pages.push(parse_inventory_evidence_page(evidence.value())?);
+        pages.push(parse_inventory_evidence_page(nested_evidence)?);
     }
     // validateInspectionSubject: subject must match the first page manifest.
-    let first_manifest = &pages[0]["manifest"];
+    let first_manifest = pages[0].at("manifest");
     validate_inspection_subject(input, subject, first_manifest)?;
     Ok(pages)
 }
 
 fn validate_inspection_subject(
-    inspection: &Value,
-    subject: &Value,
-    manifest: &Value,
+    inspection: &Json,
+    subject: &Json,
+    manifest: &Json,
 ) -> Result<(), AnalysisError> {
-    let inspection_subject = &inspection["subject"];
-    if inspection_subject["manifest_id"] != manifest["manifest_id"]
-        || inspection_subject["root_artifact_id"] != manifest["root_artifact_id"]
-        || inspection_subject["root_sha256"] != manifest["root_sha256"]
-        || inspection_subject["root_format"] != manifest["root_format"]
+    let inspection_subject = inspection.at("subject");
+    if inspection_subject.at("manifest_id") != manifest.at("manifest_id")
+        || inspection_subject.at("root_artifact_id") != manifest.at("root_artifact_id")
+        || inspection_subject.at("root_sha256") != manifest.at("root_sha256")
+        || inspection_subject.at("root_format") != manifest.at("root_format")
     {
         return Err(type_error(
             "Artifact inspection subject does not match its inventory manifest",
         ));
     }
     if subject.is_null()
-        || subject["digest"]["sha256"] != manifest["root_sha256"]
-        || subject["format"] != manifest["root_format"]
+        || subject.at("digest").at("sha256") != manifest.at("root_sha256")
+        || subject.at("format") != manifest.at("root_format")
     {
         return Err(type_error(
             "Artifact inspection Evidence subject does not match its root manifest",
@@ -198,36 +210,37 @@ fn validate_inspection_subject(
 }
 
 /// `assembleInventoryResults`.
-fn assemble_inventory_results(pages: Vec<Value>) -> Result<InventorySet, AnalysisError> {
+fn assemble_inventory_results(pages: Vec<Json>) -> Result<InventorySet, AnalysisError> {
     let first = pages
         .first()
         .cloned()
         .ok_or_else(|| type_error("Artifact inventory requires Evidence pages"))?;
-    let manifest_json = canonical_json(&first["manifest"], CONTEXT)?;
-    let coverage_json = canonical_json(&first["coverage"], COVERAGE_CONTEXT)?;
-    let contradictions_json = canonical_json(&first["integrity_contradictions"], CONTEXT)?;
+    let manifest_json = canonical_graph_json(&first["manifest"], CONTEXT)?;
+    let coverage_json = canonical_graph_json(&first["coverage"], COVERAGE_CONTEXT)?;
+    let contradictions_json = canonical_graph_json(&first["integrity_contradictions"], CONTEXT)?;
 
-    let mut nodes: BTreeMap<String, Value> = BTreeMap::new();
-    let mut occurrences: BTreeMap<String, Value> = BTreeMap::new();
-    let mut edges: BTreeMap<String, Value> = BTreeMap::new();
+    let mut nodes: BTreeMap<String, Json> = BTreeMap::new();
+    let mut occurrences: BTreeMap<String, Json> = BTreeMap::new();
+    let mut edges: BTreeMap<String, Json> = BTreeMap::new();
 
     for page in &pages {
-        if canonical_json(&page["manifest"], CONTEXT)? != manifest_json {
+        if canonical_graph_json(&page["manifest"], CONTEXT)? != manifest_json {
             return Err(type_error(
                 "Artifact inventory pages do not share one manifest",
             ));
         }
-        if canonical_json(&page["coverage"], COVERAGE_CONTEXT)? != coverage_json {
+        if canonical_graph_json(&page["coverage"], COVERAGE_CONTEXT)? != coverage_json {
             return Err(type_error(
                 "Artifact inventory pages do not share one coverage declaration",
             ));
         }
-        if canonical_json(&page["integrity_contradictions"], CONTEXT)? != contradictions_json {
+        if canonical_graph_json(&page["integrity_contradictions"], CONTEXT)? != contradictions_json
+        {
             return Err(type_error(
                 "Artifact inventory pages do not share integrity contradictions",
             ));
         }
-        for node in page["nodes"].as_array().into_iter().flatten() {
+        for node in page["nodes"].arr() {
             merge_exact(
                 &mut nodes,
                 node["artifact_id"].as_str().unwrap_or_default(),
@@ -235,7 +248,7 @@ fn assemble_inventory_results(pages: Vec<Value>) -> Result<InventorySet, Analysi
                 "node",
             )?;
         }
-        for occurrence in page["occurrences"].as_array().into_iter().flatten() {
+        for occurrence in page["occurrences"].arr() {
             merge_exact(
                 &mut occurrences,
                 occurrence["occurrence_id"].as_str().unwrap_or_default(),
@@ -243,7 +256,7 @@ fn assemble_inventory_results(pages: Vec<Value>) -> Result<InventorySet, Analysi
                 "occurrence",
             )?;
         }
-        for edge in page["edges"].as_array().into_iter().flatten() {
+        for edge in page["edges"].arr() {
             merge_exact(
                 &mut edges,
                 edge["edge_id"].as_str().unwrap_or_default(),
@@ -261,21 +274,21 @@ fn assemble_inventory_results(pages: Vec<Value>) -> Result<InventorySet, Analysi
 }
 
 fn ordered_inventory(
-    first: &Value,
-    pages: &[Value],
-    nodes: BTreeMap<String, Value>,
-    occurrences: BTreeMap<String, Value>,
-    edges: BTreeMap<String, Value>,
+    first: &Json,
+    pages: &[Json],
+    nodes: BTreeMap<String, Json>,
+    occurrences: BTreeMap<String, Json>,
+    edges: BTreeMap<String, Json>,
 ) -> Result<InventorySet, AnalysisError> {
     // nodes/edges sorted by their id via code-point ordering (BTreeMap keys).
-    let mut nodes_vec: Vec<Value> = nodes.into_values().collect();
+    let mut nodes_vec: Vec<Json> = nodes.into_values().collect();
     nodes_vec.sort_by(|a, b| {
         compare_code_points(
             a["artifact_id"].as_str().unwrap_or_default(),
             b["artifact_id"].as_str().unwrap_or_default(),
         )
     });
-    let mut edges_vec: Vec<Value> = edges.into_values().collect();
+    let mut edges_vec: Vec<Json> = edges.into_values().collect();
     edges_vec.sort_by(|a, b| {
         compare_code_points(
             a["edge_id"].as_str().unwrap_or_default(),
@@ -294,12 +307,7 @@ fn ordered_inventory(
     let mut limitations: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for page in pages {
-        for item in page["limitations"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-        {
+        for item in page["limitations"].arr().iter().filter_map(Json::as_str) {
             if seen.insert(item.to_owned()) {
                 limitations.push(item.to_owned());
             }
@@ -328,24 +336,24 @@ fn ordered_inventory(
 
 fn order_occurrences(
     root_artifact_id: &str,
-    occurrences: Vec<Value>,
-) -> Result<Vec<Value>, AnalysisError> {
+    occurrences: Vec<Json>,
+) -> Result<Vec<Json>, AnalysisError> {
     // Group by logical_path preserving JS Map insertion order within a group.
-    let mut order: Vec<String> = Vec::new();
-    let mut groups: std::collections::HashMap<String, Vec<Value>> =
+    let mut order: Vec<JsString> = Vec::new();
+    let mut groups: std::collections::HashMap<JsString, Vec<Json>> =
         std::collections::HashMap::new();
     for occurrence in occurrences {
         let path = occurrence["logical_path"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+            .as_js_string()
+            .cloned()
+            .unwrap_or_default();
         if !groups.contains_key(&path) {
             order.push(path.clone());
         }
         groups.entry(path).or_default().push(occurrence);
     }
     // Sort paths by code points.
-    order.sort_by(|a, b| compare_code_points(a, b));
+    order.sort_by(JsString::compare_code_points);
 
     let mut output = Vec::new();
     for path in order {
@@ -355,9 +363,9 @@ fn order_occurrences(
             continue;
         }
         let entry_kind = group[0]["entry_kind"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+            .as_js_string()
+            .cloned()
+            .unwrap_or_default();
         let mut ordinal_by_id: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
         for ordinal in 0..group.len() {
@@ -416,7 +424,7 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
     let root_occurrence = inventory
         .occurrences
         .iter()
-        .find(|occurrence| occurrence["logical_path"] == ".");
+        .find(|occurrence| occurrence["logical_path"] == Json::from("."));
     match root_occurrence {
         Some(occurrence)
             if occurrence["artifact_id"] == inventory.manifest["root_artifact_id"]
@@ -428,19 +436,19 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
         }
     }
 
-    let mut duplicate_ordinal_by_path: std::collections::HashMap<String, usize> =
+    let mut duplicate_ordinal_by_path: std::collections::HashMap<JsString, usize> =
         std::collections::HashMap::new();
     for occurrence in &inventory.occurrences {
         let path = occurrence["logical_path"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+            .as_js_string()
+            .cloned()
+            .unwrap_or_default();
         let ordinal = *duplicate_ordinal_by_path.get(&path).unwrap_or(&0);
         duplicate_ordinal_by_path.insert(path, ordinal + 1);
         validate_occurrence(occurrence, inventory, &node_ids, &occurrence_ids, ordinal)?;
     }
 
-    let occurrences_by_id: std::collections::HashMap<&str, &Value> = inventory
+    let occurrences_by_id: std::collections::HashMap<&str, &Json> = inventory
         .occurrences
         .iter()
         .filter_map(|occurrence| {
@@ -453,12 +461,7 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
         validate_edge(edge, &node_ids, &occurrences_by_id)?;
     }
 
-    for contradiction in inventory
-        .integrity_contradictions
-        .as_array()
-        .into_iter()
-        .flatten()
-    {
+    for contradiction in inventory.integrity_contradictions.arr() {
         if !node_ids.contains(
             contradiction["parent_artifact_id"]
                 .as_str()
@@ -474,7 +477,9 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
             inventory.manifest["root_artifact_id"]
                 .as_str()
                 .unwrap_or_default(),
-            contradiction["logical_path"].as_str().unwrap_or_default(),
+            contradiction["logical_path"]
+                .as_js_string()
+                .unwrap_or(&JsString::new_const()),
             contradiction["declared_sha256"]
                 .as_str()
                 .unwrap_or_default(),
@@ -489,11 +494,7 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
         }
     }
 
-    let contradictions = inventory
-        .integrity_contradictions
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let contradictions = inventory.integrity_contradictions.arr().to_vec();
     let graph_sha256 = artifact_graph_digest(
         &inventory.nodes,
         &inventory.occurrences,
@@ -520,7 +521,7 @@ fn validate_complete_inventory(inventory: &InventorySet) -> Result<(), AnalysisE
 }
 
 fn validate_occurrence(
-    occurrence: &Value,
+    occurrence: &Json,
     inventory: &InventorySet,
     node_ids: &std::collections::HashSet<&str>,
     occurrence_ids: &std::collections::HashSet<&str>,
@@ -546,8 +547,12 @@ fn validate_occurrence(
         inventory.manifest["root_artifact_id"]
             .as_str()
             .unwrap_or_default(),
-        occurrence["logical_path"].as_str().unwrap_or_default(),
-        occurrence["entry_kind"].as_str().unwrap_or_default(),
+        occurrence["logical_path"]
+            .as_js_string()
+            .unwrap_or(&JsString::new_const()),
+        occurrence["entry_kind"]
+            .as_js_string()
+            .unwrap_or(&JsString::new_const()),
         if duplicate_ordinal == 0 {
             None
         } else {
@@ -563,9 +568,9 @@ fn validate_occurrence(
 }
 
 fn validate_edge(
-    edge: &Value,
+    edge: &Json,
     node_ids: &std::collections::HashSet<&str>,
-    occurrences: &std::collections::HashMap<&str, &Value>,
+    occurrences: &std::collections::HashMap<&str, &Json>,
 ) -> Result<(), AnalysisError> {
     let occurrence = occurrences.get(edge["occurrence_id"].as_str().unwrap_or_default());
     let valid = node_ids.contains(edge["parent_artifact_id"].as_str().unwrap_or_default())
@@ -590,13 +595,13 @@ fn validate_edge(
 }
 
 fn merge_exact(
-    output: &mut BTreeMap<String, Value>,
+    output: &mut BTreeMap<String, Json>,
     key: &str,
-    value: &Value,
+    value: &Json,
     label: &str,
 ) -> Result<(), AnalysisError> {
     if let Some(previous) = output.get(key) {
-        if canonical_json(previous, CONTEXT)? != canonical_json(value, CONTEXT)? {
+        if canonical_graph_json(previous, CONTEXT)? != canonical_graph_json(value, CONTEXT)? {
             return Err(type_error(format!(
                 "Artifact inventory has conflicting {label} pages"
             )));

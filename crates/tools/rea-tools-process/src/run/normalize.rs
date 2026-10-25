@@ -91,7 +91,12 @@ fn is_ip(text: &str) -> bool {
         Some((address, zone)) => (address, Some(zone)),
         None => (text, None),
     };
-    if zone.is_some_and(|zone| zone.is_empty() || !zone.chars().all(|c| c.is_ascii_alphanumeric() || "-.:".contains(c))) {
+    if zone.is_some_and(|zone| {
+        zone.is_empty()
+            || !zone
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "-.:".contains(c))
+    }) {
         return false;
     }
     address.parse::<Ipv6Addr>().is_ok()
@@ -109,7 +114,10 @@ fn url_can_parse(endpoint: &str, port: &str) -> bool {
     let hostport = format!("{authority}:{port}");
     let (host, port_text) = if let Some(bracketed) = hostport.strip_prefix('[') {
         match bracketed.split_once(']') {
-            Some((address, tail)) if address.parse::<Ipv6Addr>().is_ok() => (address.to_owned(), tail.strip_prefix(':').unwrap_or("x").to_owned()),
+            Some((address, tail)) if address.parse::<Ipv6Addr>().is_ok() => (
+                address.to_owned(),
+                tail.strip_prefix(':').unwrap_or("x").to_owned(),
+            ),
             _ => return false,
         }
     } else {
@@ -118,7 +126,9 @@ fn url_can_parse(endpoint: &str, port: &str) -> bool {
             None => return false,
         }
     };
-    let port_ok = port_text.is_empty() || (port_text.bytes().all(|byte| byte.is_ascii_digit()) && port_text.parse::<u32>().is_ok_and(|port| port <= 65_535));
+    let port_ok = port_text.is_empty()
+        || (port_text.bytes().all(|byte| byte.is_ascii_digit())
+            && port_text.parse::<u32>().is_ok_and(|port| port <= 65_535));
     if !port_ok {
         return false;
     }
@@ -126,15 +136,25 @@ fn url_can_parse(endpoint: &str, port: &str) -> bool {
         if scheme == "file" {
             return false;
         }
-        !host.is_empty() && !host.chars().any(|c| " #%/:<>?@[\\]^|".contains(c) || c.is_control())
+        !host.is_empty()
+            && !host
+                .chars()
+                .any(|c| " #%/:<>?@[\\]^|".contains(c) || c.is_control())
     } else {
-        !host.chars().any(|c| " #/:<>?@[\\]^|".contains(c) || c.is_control())
+        !host
+            .chars()
+            .any(|c| " #/:<>?@[\\]^|".contains(c) || c.is_control())
     }
 }
 
 /// Replace every boundary-respecting match; returns the text and whether
 /// any replacement differed from its match.
-fn replace_ports(value: &str, matcher: &Regex, extra: &[char], replace: impl Fn(&str, &str, &str) -> String) -> (String, bool) {
+fn replace_ports(
+    value: &str,
+    matcher: &Regex,
+    extra: &[char],
+    replace: impl Fn(&str, &str, &str) -> String,
+) -> (String, bool) {
     let mut output = String::with_capacity(value.len());
     let mut cursor = 0;
     let mut start = 0;
@@ -147,7 +167,11 @@ fn replace_ports(value: &str, matcher: &Regex, extra: &[char], replace: impl Fn(
         let rest = &value[whole.end()..];
         if !port_boundary(rest, extra) {
             // Resume after the first character of the failed candidate.
-            start = whole.start() + value[whole.start()..].chars().next().map_or(1, char::len_utf8);
+            start = whole.start()
+                + value[whole.start()..]
+                    .chars()
+                    .next()
+                    .map_or(1, char::len_utf8);
             continue;
         }
         let replacement = replace(whole.as_str(), &captures[1], &captures[2]);
@@ -155,7 +179,11 @@ fn replace_ports(value: &str, matcher: &Regex, extra: &[char], replace: impl Fn(
         output.push_str(&value[cursor..whole.start()]);
         output.push_str(&replacement);
         cursor = whole.end();
-        start = if whole.end() == whole.start() { whole.end() + 1 } else { whole.end() };
+        start = if whole.end() == whole.start() {
+            whole.end() + 1
+        } else {
+            whole.end()
+        };
     }
     output.push_str(&value[cursor..]);
     (output, changed)
@@ -168,9 +196,14 @@ fn endpoint_replacement(whole: &str, endpoint: &str, port: &str) -> String {
     let is_endpoint = if endpoint.contains("://") {
         url_can_parse(endpoint, port)
     } else {
-        endpoint.eq_ignore_ascii_case("localhost") || is_ip(endpoint.trim_start_matches('[').trim_end_matches(']'))
+        endpoint.eq_ignore_ascii_case("localhost")
+            || is_ip(endpoint.trim_start_matches('[').trim_end_matches(']'))
     };
-    if is_endpoint { format!("{endpoint}:<port>") } else { whole.to_owned() }
+    if is_endpoint {
+        format!("{endpoint}:<port>")
+    } else {
+        whole.to_owned()
+    }
 }
 
 fn field_replacement(whole: &str, prefix: &str, port: &str) -> String {
@@ -198,7 +231,10 @@ fn replace_pid_tokens(value: &str, tokens: &[String]) -> (String, bool) {
             while index < bytes.len() && bytes[index].is_ascii_digit() {
                 index += 1;
             }
-            if tokens.iter().any(|token| token.as_str() == &value[start..index]) {
+            if tokens
+                .iter()
+                .any(|token| token.as_str() == &value[start..index])
+            {
                 output.push_str(&value[cursor..start]);
                 output.push_str("<pid>");
                 cursor = index;
@@ -213,7 +249,11 @@ fn replace_pid_tokens(value: &str, tokens: &[String]) -> (String, bool) {
 }
 
 fn pid_tokens(identifiers: &[i64]) -> Vec<String> {
-    let mut tokens: Vec<i64> = identifiers.iter().copied().filter(|identifier| *identifier > 0).collect();
+    let mut tokens: Vec<i64> = identifiers
+        .iter()
+        .copied()
+        .filter(|identifier| *identifier > 0)
+        .collect();
     tokens.sort_unstable_by(|left, right| right.cmp(left));
     tokens.dedup();
     tokens.into_iter().map(|token| token.to_string()).collect()
@@ -243,9 +283,17 @@ fn replace_literal(value: &str, pattern: &str, replacement: &str) -> Option<Stri
 fn bounded(result: (String, bool), max_bytes: u64) -> Stage {
     let (value, changed) = result;
     if (value.len() as u64) > max_bytes {
-        return if changed { Stage::OverBudget } else { Stage::Unchanged };
+        return if changed {
+            Stage::OverBudget
+        } else {
+            Stage::Unchanged
+        };
     }
-    if changed { Stage::Bounded(value) } else { Stage::Unchanged }
+    if changed {
+        Stage::Bounded(value)
+    } else {
+        Stage::Unchanged
+    }
 }
 
 impl Normalizer {
@@ -255,7 +303,10 @@ impl Normalizer {
             let mut aliases: Vec<(String, String)> = Vec::new();
             let mut selected = vec![
                 (temporary_root.to_owned(), "<temporary-root>".to_owned()),
-                (scenario.working_directory.clone(), "<working-directory>".to_owned()),
+                (
+                    scenario.working_directory.clone(),
+                    "<working-directory>".to_owned(),
+                ),
                 (scenario.executable.clone(), "<executable>".to_owned()),
             ];
             for (index, root) in scenario.filesystem_observation_paths.iter().enumerate() {
@@ -269,14 +320,25 @@ impl Normalizer {
             // Longest original path first; the sort is stable like Array#sort.
             // JavaScript compares UTF-16 lengths.
             aliases.sort_by_key(|(path, _)| std::cmp::Reverse(path.encode_utf16().count()));
-            let pattern = aliases.iter().map(|(path, _)| regex::escape(path)).collect::<Vec<_>>().join("|");
-            (Regex::new(&pattern).expect("escaped literal alternation"), aliases.into_iter().collect())
+            let pattern = aliases
+                .iter()
+                .map(|(path, _)| regex::escape(path))
+                .collect::<Vec<_>>()
+                .join("|");
+            (
+                Regex::new(&pattern).expect("escaped literal alternation"),
+                aliases.into_iter().collect(),
+            )
         });
         Self {
             paths,
             ports: scenario.normalize_ports,
             pids: scenario.normalize_pids,
-            patterns: scenario.patterns.iter().map(|pattern| (pattern.pattern.clone(), pattern.replacement.clone())).collect(),
+            patterns: scenario
+                .patterns
+                .iter()
+                .map(|pattern| (pattern.pattern.clone(), pattern.replacement.clone()))
+                .collect(),
         }
     }
 
@@ -288,7 +350,10 @@ impl Normalizer {
         let output = matcher
             .replace_all(value, |captures: &regex::Captures<'_>| {
                 let matched = &captures[0];
-                let alias = aliases.get(matched).cloned().unwrap_or_else(|| matched.to_owned());
+                let alias = aliases
+                    .get(matched)
+                    .cloned()
+                    .unwrap_or_else(|| matched.to_owned());
                 changed |= alias != matched;
                 alias
             })
@@ -297,7 +362,8 @@ impl Normalizer {
     }
 
     fn replace_ports_all(value: &str) -> (String, bool) {
-        let (endpoint, first) = replace_ports(value, endpoint_matcher(), &['@', ':'], endpoint_replacement);
+        let (endpoint, first) =
+            replace_ports(value, endpoint_matcher(), &['@', ':'], endpoint_replacement);
         let (field, second) = replace_ports(&endpoint, field_matcher(), &[], field_replacement);
         (field, first || second)
     }
@@ -313,20 +379,40 @@ impl Normalizer {
             }
             Stage::Unchanged => true,
         };
-        if self.paths.is_some() && !apply(bounded(self.replace_paths(&normalized), max_bytes), &mut normalized) {
+        if self.paths.is_some()
+            && !apply(
+                bounded(self.replace_paths(&normalized), max_bytes),
+                &mut normalized,
+            )
+        {
             return Bounded::OverBudget;
         }
         if self.ports {
-            let (endpoint, changed) = replace_ports(&normalized, endpoint_matcher(), &['@', ':'], endpoint_replacement);
+            let (endpoint, changed) = replace_ports(
+                &normalized,
+                endpoint_matcher(),
+                &['@', ':'],
+                endpoint_replacement,
+            );
             if !apply(bounded((endpoint, changed), max_bytes), &mut normalized) {
                 return Bounded::OverBudget;
             }
-            let (field, changed) = replace_ports(&normalized, field_matcher(), &[], field_replacement);
+            let (field, changed) =
+                replace_ports(&normalized, field_matcher(), &[], field_replacement);
             if !apply(bounded((field, changed), max_bytes), &mut normalized) {
                 return Bounded::OverBudget;
             }
         }
-        if self.pids && root_pid > 0 && !apply(bounded(replace_pid_tokens(&normalized, &pid_tokens(&[root_pid])), max_bytes), &mut normalized) {
+        if self.pids
+            && root_pid > 0
+            && !apply(
+                bounded(
+                    replace_pid_tokens(&normalized, &pid_tokens(&[root_pid])),
+                    max_bytes,
+                ),
+                &mut normalized,
+            )
+        {
             return Bounded::OverBudget;
         }
         for (pattern, replacement) in &self.patterns {
@@ -337,7 +423,11 @@ impl Normalizer {
                 normalized = replaced;
             }
         }
-        if normalized.len() as u64 <= max_bytes { Bounded::Normalized(normalized) } else { Bounded::OverBudget }
+        if normalized.len() as u64 <= max_bytes {
+            Bounded::Normalized(normalized)
+        } else {
+            Bounded::OverBudget
+        }
     }
 
     /// Unbounded normalization (`createProcessTextNormalizer`).
@@ -383,7 +473,12 @@ fn js_trim(text: &str) -> &str {
 pub fn normalize_samples(samples: &[RawSample], scenario: &Scenario, root_pid: i64) -> Vec<Value> {
     let mut identifiers = vec![root_pid];
     for sample in samples {
-        identifiers.extend([sample.pid, sample.parent_pid, sample.process_group_id.unwrap_or(0), sample.session_id.unwrap_or(0)]);
+        identifiers.extend([
+            sample.pid,
+            sample.parent_pid,
+            sample.process_group_id.unwrap_or(0),
+            sample.session_id.unwrap_or(0),
+        ]);
     }
     let mut mapping: HashMap<i64, i64> = HashMap::new();
     for identifier in &identifiers {
@@ -395,7 +490,8 @@ pub fn normalize_samples(samples: &[RawSample], scenario: &Scenario, root_pid: i
     let normalizer = Normalizer::new(scenario, "<no-temporary-root>");
     let sample_tokens = pid_tokens(&identifiers);
     let pids = scenario.normalize_pids;
-    let map = |identifier: i64, fallback: i64| mapping.get(&identifier).copied().unwrap_or(fallback);
+    let map =
+        |identifier: i64, fallback: i64| mapping.get(&identifier).copied().unwrap_or(fallback);
     samples
         .iter()
         .map(|sample| {
@@ -432,7 +528,9 @@ mod tests {
 
     #[test]
     fn normalizes_like_the_oracle_capture() {
-        let scenario = scenario(json!({"paths": true, "pids": true, "ports": true, "time_bucket_ms": 10, "patterns": [{"pattern": "SECRET-TOKEN", "replacement": "<tok>"}]}));
+        let scenario = scenario(
+            json!({"paths": true, "pids": true, "ports": true, "time_bucket_ms": 10, "patterns": [{"pattern": "SECRET-TOKEN", "replacement": "<tok>"}]}),
+        );
         let normalizer = Normalizer::new(&scenario, "/var/folders/x/rea-process-1");
         let raw = "pid=53032 port=8080 http://localhost:3000/x 127.0.0.1:22 SECRET-TOKEN\r\n/private/tmp\r\n";
         assert_eq!(
@@ -440,30 +538,52 @@ mod tests {
             Bounded::Normalized("pid=<pid> port=<port> http://localhost:<port>/x 127.0.0.1:<port> <tok>\r\n<working-directory>\r\n".to_owned())
         );
         // The longest selected path wins at one position.
-        assert_eq!(normalizer.text("/private/tmp/data/a", -1), "<filesystem-root-0>/a");
+        assert_eq!(
+            normalizer.text("/private/tmp/data/a", -1),
+            "<filesystem-root-0>/a"
+        );
     }
 
     #[test]
     fn port_boundaries_follow_the_lookahead() {
-        let scenario = scenario(json!({"paths": false, "pids": false, "ports": true, "time_bucket_ms": 10, "patterns": []}));
+        let scenario = scenario(
+            json!({"paths": false, "pids": false, "ports": true, "time_bucket_ms": 10, "patterns": []}),
+        );
         let normalizer = Normalizer::new(&scenario, "");
-        assert_eq!(normalizer.text("v1.2.3.4:80 10.0.0.1:443. 10.0.0.1:443.5 10.0.0.1:443.", -1), "v1.2.3.4:80 10.0.0.1:<port>. 10.0.0.1:443.5 10.0.0.1:443.");
-        assert_eq!(normalizer.text("localhost:80a localhost:80.x localhost:99999", -1), "localhost:80a localhost:80.x localhost:99999");
-        assert_eq!(normalizer.text("[::1]:8080 listen = 22", -1), "[::1]:<port> listen = <port>");
+        assert_eq!(
+            normalizer.text("v1.2.3.4:80 10.0.0.1:443. 10.0.0.1:443.5 10.0.0.1:443.", -1),
+            "v1.2.3.4:80 10.0.0.1:<port>. 10.0.0.1:443.5 10.0.0.1:443."
+        );
+        assert_eq!(
+            normalizer.text("localhost:80a localhost:80.x localhost:99999", -1),
+            "localhost:80a localhost:80.x localhost:99999"
+        );
+        assert_eq!(
+            normalizer.text("[::1]:8080 listen = 22", -1),
+            "[::1]:<port> listen = <port>"
+        );
         assert_eq!(normalizer.text("localhost:80.", -1), "localhost:80.");
     }
 
     #[test]
     fn pid_tokens_match_whole_digit_runs_only() {
-        assert_eq!(replace_pid_tokens("1234 12345 a1234b 91234", &pid_tokens(&[1234])).0, "<pid> 12345 a<pid>b 91234");
+        assert_eq!(
+            replace_pid_tokens("1234 12345 a1234b 91234", &pid_tokens(&[1234])).0,
+            "<pid> 12345 a<pid>b 91234"
+        );
     }
 
     #[test]
     fn bounded_stages_reject_over_budget_intermediates() {
-        let scenario = scenario(json!({"paths": false, "pids": false, "ports": false, "time_bucket_ms": 10, "patterns": [{"pattern": "a", "replacement": "aaaa"}]}));
+        let scenario = scenario(
+            json!({"paths": false, "pids": false, "ports": false, "time_bucket_ms": 10, "patterns": [{"pattern": "a", "replacement": "aaaa"}]}),
+        );
         let normalizer = Normalizer::new(&scenario, "");
         assert_eq!(normalizer.bounded("aa", 5, -1), Bounded::OverBudget);
-        assert_eq!(normalizer.bounded("bb", 2, -1), Bounded::Normalized("bb".to_owned()));
+        assert_eq!(
+            normalizer.bounded("bb", 2, -1),
+            Bounded::Normalized("bb".to_owned())
+        );
         assert_eq!(normalizer.bounded("bbb", 2, -1), Bounded::OverBudget);
     }
 }

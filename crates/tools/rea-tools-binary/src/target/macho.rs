@@ -5,7 +5,7 @@
 //! `fatHostArchitecture`, `fatIdentityError`, `machArchitecture`) and
 //! `src/domain/apple/machoContainer.ts` and `src/domain/apple/jvmClassFile.ts`.
 
-use super::header::{ExecutableExtra, ExecutableMetadata, read_u32, read_u32_be, read_u32_le};
+use super::header::{ExecutableExtra, ExecutableMetadata, read_u32, read_u32_be};
 
 const FAT_MAGIC: u32 = 0xcafebabe;
 const FAT_MAGIC_64: u32 = 0xcafebabf;

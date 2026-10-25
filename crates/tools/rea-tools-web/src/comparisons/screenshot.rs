@@ -467,7 +467,6 @@ fn inflate_png(compressed: &[u8], max_output_length: u128) -> Result<Vec<u8>, Pn
                     return Err(PngError::TypeError("Invalid PNG image data"));
                 }
             }
-            Status::BufError => return Err(PngError::TypeError("Invalid PNG image data")),
         }
     }
     Ok(output)

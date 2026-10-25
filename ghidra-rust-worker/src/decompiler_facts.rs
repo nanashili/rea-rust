@@ -39,11 +39,28 @@ const MAX_STUBS: usize = crate::protocol::MAX_INVENTORY;
 /// the Itanium C++ ABI unwinder and rethrow entry points (`_Unwind_Resume`,
 /// `__cxa_rethrow`), which that ABI defines as non-returning.
 const MACHO_NO_RETURN: &[&str] = &[
-    "exit", "cexit", "c_exit", "abort", "reboot", "longjmp", "siglongjmp", "panic",
-    "stack_chk_fail", "objc_exception_throw", "cxa_throw", "yy_fatal_error",
-    "Unwind_SjLj_Resume", "assert_rtn", "pthread_exit", "errx", "abort_message",
-    "clang_call_terminate", "ZL11unreachablePKc", "ZN5swift10fatalErrorEjPKcz",
-    "ZN5swift24swift_abortRetainUnownedEPKv", "ZN5swift25swift_abortRetainOverflowEv",
+    "exit",
+    "cexit",
+    "c_exit",
+    "abort",
+    "reboot",
+    "longjmp",
+    "siglongjmp",
+    "panic",
+    "stack_chk_fail",
+    "objc_exception_throw",
+    "cxa_throw",
+    "yy_fatal_error",
+    "Unwind_SjLj_Resume",
+    "assert_rtn",
+    "pthread_exit",
+    "errx",
+    "abort_message",
+    "clang_call_terminate",
+    "ZL11unreachablePKc",
+    "ZN5swift10fatalErrorEjPKcz",
+    "ZN5swift24swift_abortRetainUnownedEPKv",
+    "ZN5swift25swift_abortRetainOverflowEv",
     "ZN5swift32swift_abortUnownedRetainOverflowEv",
     "ZN5swift24swift_dynamicCastFailureEPKNS_14TargetMetadataINS_9InProcessEEES4_PKc",
     "T0s18_fatalErrorMessages5NeverOs12StaticStringV_A2E4fileSu4lines6UInt32V5flagstFTf4nnddn_n",
@@ -54,24 +71,62 @@ const MACHO_NO_RETURN: &[&str] = &[
     "ZNKSt3__120__vector_base_commonILb1EE20__throw_length_errorEv",
     "ZNKSt3__121__basic_string_commonILb1EE20__throw_length_errorEv",
     "T0s9_abstracts5NeverOs12StaticStringV4file_Su4linetF",
-    "ZN5swift24swift_dynamicCastFailureEPKvPKcS1_S3_S3_", "ZSt11__terminatePFvvE",
+    "ZN5swift24swift_dynamicCastFailureEPKvPKcS1_S3_S3_",
+    "ZSt11__terminatePFvvE",
     "ZSt12__unexpectedPFvvE",
 ];
 const ELF_NO_RETURN: &[&str] = &[
-    "exit", "cexit", "c_exit", "abort", "reboot", "longjmp", "longjmp_chk", "siglongjmp",
-    "panic", "stack_chk_fail", "cxa_throw", "cxa_bad_cast", "cxa_call_unexpected",
-    "cxa_terminate", "assert_fail", "fortify_fail", "Unwind_Resume", "ZSt9terminatev",
-    "ZN10__cxxabiv111__terminateEPFvvE", "quick_exit", "pthread_exit",
+    "exit",
+    "cexit",
+    "c_exit",
+    "abort",
+    "reboot",
+    "longjmp",
+    "longjmp_chk",
+    "siglongjmp",
+    "panic",
+    "stack_chk_fail",
+    "cxa_throw",
+    "cxa_bad_cast",
+    "cxa_call_unexpected",
+    "cxa_terminate",
+    "assert_fail",
+    "fortify_fail",
+    "Unwind_Resume",
+    "ZSt9terminatev",
+    "ZN10__cxxabiv111__terminateEPFvvE",
+    "quick_exit",
+    "pthread_exit",
 ];
 const PE_NO_RETURN: &[&str] = &[
-    "abort", "CxxThrowException", "CxxThrowException@8", "CxxFrameHandler3",
-    "crtExitProcess", "exit", "c_exit", "cexit", "ExitProcess", "ExitThread",
-    "FreeLibraryAndExitThread", "ExRaiseAccessViolation", "ExRaiseDatatypeMisalignment",
-    "ExRaiseStatus", "invalid_parameter_noinfo_noreturn", "invoke_watson", "KeBugCheck",
-    "KeBugCheckEx", "longjmp", "quick_exit", "raise_securityfailure",
-    "report_rangecheckfailure", "RpcRaiseException", "?terminate@@YAXXZ",
-    "?_Xbad_alloc@std@@YAXXZ", "?_Xlength_error@std@@YAXPBD@Z",
-    "?_Xout_of_range@std@@YAXPBD@Z", "?_Xbad_function_call@std@@YAXXZ",
+    "abort",
+    "CxxThrowException",
+    "CxxThrowException@8",
+    "CxxFrameHandler3",
+    "crtExitProcess",
+    "exit",
+    "c_exit",
+    "cexit",
+    "ExitProcess",
+    "ExitThread",
+    "FreeLibraryAndExitThread",
+    "ExRaiseAccessViolation",
+    "ExRaiseDatatypeMisalignment",
+    "ExRaiseStatus",
+    "invalid_parameter_noinfo_noreturn",
+    "invoke_watson",
+    "KeBugCheck",
+    "KeBugCheckEx",
+    "longjmp",
+    "quick_exit",
+    "raise_securityfailure",
+    "report_rangecheckfailure",
+    "RpcRaiseException",
+    "?terminate@@YAXXZ",
+    "?_Xbad_alloc@std@@YAXXZ",
+    "?_Xlength_error@std@@YAXPBD@Z",
+    "?_Xout_of_range@std@@YAXPBD@Z",
+    "?_Xbad_function_call@std@@YAXXZ",
 ];
 /// Itanium C++ ABI non-returning entry points absent from Ghidra's Mach-O list.
 const ITANIUM_NO_RETURN: &[&str] = &["Unwind_Resume", "cxa_rethrow"];
@@ -84,11 +139,25 @@ const NO_RETURN_EVIDENCE_THRESHOLD: usize = 3;
 /// Longest x86 instruction; byte-aligned languages are searched up to this.
 const MAX_BYTE_ALIGNED_INSTRUCTION: u64 = 15;
 
+/// A Mach-O stub binding retains the loader's imported name even when the
+/// decompiler requires a unique display name for its global symbol table.
+///
+/// Mach-O commonly emits more than one stub for the same imported symbol. The
+/// loader evidence must retain that repeated identity, while the decompiler
+/// engine rejects duplicate global names. Keeping both names here lets the
+/// producer resolve that representation mismatch without discarding evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ImportStub {
+    pub address: u64,
+    pub imported_name: String,
+    pub display_name: String,
+}
+
 /// Facts computed once per admitted target image.
 #[derive(Default)]
 pub struct DecompilerFacts {
-    /// `(stub address, imported symbol)` for every bound symbol stub.
-    pub stubs: Vec<(u64, String)>,
+    /// Every bound symbol stub, including repeated imported names.
+    pub stubs: Vec<ImportStub>,
     format: Option<BinaryFormat>,
     /// Executable section ranges, sorted by start. Instructions are decoded
     /// only inside them: decoding other bytes (for example header padding
@@ -131,7 +200,9 @@ impl DecompilerFacts {
         let Some(end) = address.checked_add(length) else {
             return false;
         };
-        let index = self.code_ranges.partition_point(|range| range.start <= address);
+        let index = self
+            .code_ranges
+            .partition_point(|range| range.start <= address);
         index > 0 && self.code_ranges[index - 1].end >= end
     }
 
@@ -142,29 +213,41 @@ impl DecompilerFacts {
             Some(BinaryFormat::Pe) => &[PE_NO_RETURN],
             _ => &[],
         };
-        list.iter().flat_map(|names| names.iter().copied()).collect()
+        list.iter()
+            .flat_map(|names| names.iter().copied())
+            .collect()
     }
 
     /// Name stubs and mark non-returning functions in a decompiler Program.
     /// `starts` is the sorted frozen inventory. Returns the number of
     /// functions marked non-returning.
     pub fn apply(&self, program: &mut Program, starts: &[u64]) -> Result<usize> {
-        for (address, name) in &self.stubs {
+        for stub in &self.stubs {
             program
-                .set_function_name(*address, name)
+                .set_function_name(stub.address, &stub.display_name)
                 .map_err(|error| anyhow::anyhow!(error.explain().to_string()))
-                .with_context(|| format!("Name the import stub at {address:#x}"))?;
+                .with_context(|| {
+                    format!(
+                        "Name the import stub at {:#x} as {} (imported {})",
+                        stub.address, stub.display_name, stub.imported_name
+                    )
+                })?;
         }
         let names = self.no_return_names();
         let mut entries = BTreeSet::new();
+
+        for stub in &self.stubs {
+            if is_no_return_name(&names, &stub.imported_name) {
+                entries.insert(stub.address);
+            }
+        }
+
         for function in program
             .functions()
             .map_err(|error| anyhow::anyhow!(error.explain().to_string()))?
         {
             let raw = function.symbol.as_deref().unwrap_or(&function.name);
-            if names.contains(raw.trim_start_matches('_'))
-                || names.contains(function.name.trim_start_matches('_'))
-            {
+            if is_no_return_name(&names, raw) || is_no_return_name(&names, &function.name) {
                 entries.insert(function.address);
             }
         }
@@ -177,6 +260,10 @@ impl DecompilerFacts {
         }
         Ok(entries.len())
     }
+}
+
+fn is_no_return_name(names: &BTreeSet<&'static str>, name: &str) -> bool {
+    names.contains(name.trim_start_matches('_'))
 }
 
 /// Java Ghidra's "Non-Returning Functions - Discovered" evidence: a call
@@ -193,7 +280,9 @@ fn discover_no_return(program: &mut Program, starts: &[u64], facts: &DecompilerF
         .architecture()
         .translate
         .as_deref()
-        .map_or(1, |translate| u64::try_from(translate.get_alignment().max(1)).unwrap_or(1));
+        .map_or(1, |translate| {
+            u64::try_from(translate.get_alignment().max(1)).unwrap_or(1)
+        });
     // Fixed-width languages place the preceding instruction exactly one unit
     // back; 2-byte-aligned languages (Thumb, MIPS16) also have 4-byte forms.
     let lengths: Vec<u64> = match alignment {
@@ -210,7 +299,8 @@ fn discover_no_return(program: &mut Program, starts: &[u64], facts: &DecompilerF
             if !facts.is_code(site, length) {
                 continue;
             }
-            let Some(instruction) = program.pcode(site, 1).ok().and_then(|mut list| list.pop()) else {
+            let Some(instruction) = program.pcode(site, 1).ok().and_then(|mut list| list.pop())
+            else {
                 continue;
             };
             if instruction.length as u64 != length {
@@ -223,7 +313,10 @@ fn discover_no_return(program: &mut Program, starts: &[u64], facts: &DecompilerF
                 let Some(target) = operation.inputs.first() else {
                     continue;
                 };
-                if target.space != "const" && target.offset != start && starts.binary_search(&target.offset).is_ok() {
+                if target.space != "const"
+                    && target.offset != start
+                    && starts.binary_search(&target.offset).is_ok()
+                {
                     *votes.entry(target.offset).or_default() += 1;
                 }
             }
@@ -276,7 +369,7 @@ fn mark_no_return(program: &mut Program, entry: u64) -> Result<()> {
 
 /// Mach-O `S_SYMBOL_STUBS` sections: stub `i` binds the symbol at indirect
 /// symbol table index `reserved1 + i`, and each stub is `reserved2` bytes.
-fn macho_stubs<'data, Mach: MachHeader>(file: &MachOFile<'data, Mach>) -> Result<Vec<(u64, String)>> {
+fn macho_stubs<'data, Mach: MachHeader>(file: &MachOFile<'data, Mach>) -> Result<Vec<ImportStub>> {
     let endian = file.endian();
     let data = file.data();
     let mut indirect = None;
@@ -327,7 +420,7 @@ fn macho_stubs<'data, Mach: MachHeader>(file: &MachOFile<'data, Mach>) -> Result
     };
     let symbols = file.macho_symbol_table();
     let strings = symbols.strings();
-    let mut stubs = Vec::new();
+    let mut raw_stubs = Vec::new();
     let mut seen = BTreeSet::new();
     for section in sections {
         {
@@ -352,7 +445,10 @@ fn macho_stubs<'data, Mach: MachHeader>(file: &MachOFile<'data, Mach>) -> Result
                 } else {
                     u32::from_le_bytes(bytes)
                 };
-                if index & (object::macho::INDIRECT_SYMBOL_LOCAL | object::macho::INDIRECT_SYMBOL_ABS) != 0 {
+                if index
+                    & (object::macho::INDIRECT_SYMBOL_LOCAL | object::macho::INDIRECT_SYMBOL_ABS)
+                    != 0
+                {
                     continue;
                 }
                 let Ok(symbol) = symbols.symbol(object::SymbolIndex(index as usize)) else {
@@ -369,11 +465,87 @@ fn macho_stubs<'data, Mach: MachHeader>(file: &MachOFile<'data, Mach>) -> Result
                 }
                 let address = start + ordinal * stub_size;
                 if seen.insert(address) {
-                    ensure!(stubs.len() < MAX_STUBS, "Mach-O stub inventory exceeds the limit");
-                    stubs.push((address, name.to_owned()));
+                    ensure!(
+                        raw_stubs.len() < MAX_STUBS,
+                        "Mach-O stub inventory exceeds the limit"
+                    );
+                    raw_stubs.push((address, name.to_owned()));
                 }
             }
         }
     }
-    Ok(stubs)
+    raw_stubs.sort_unstable_by_key(|(address, _)| *address);
+    Ok(disambiguate_stub_names(raw_stubs))
+}
+
+/// Give duplicate loader names stable decompiler-local names while retaining
+/// the exact imported spelling in [`ImportStub::imported_name`]. The address
+/// suffix is deterministic and makes each symbol useful in pseudocode and
+/// diagnostics without changing the inventory's loader-facing names.
+fn disambiguate_stub_names(raw_stubs: Vec<(u64, String)>) -> Vec<ImportStub> {
+    let imported_names: BTreeSet<String> = raw_stubs
+        .iter()
+        .map(|(_, imported_name)| imported_name.clone())
+        .collect();
+    let mut used = BTreeSet::new();
+    raw_stubs
+        .into_iter()
+        .map(|(address, imported_name)| {
+            let mut display_name = imported_name.clone();
+            if !used.insert(display_name.clone()) {
+                let base = format!("{imported_name}__stub_{address:x}");
+                display_name = base.clone();
+                let mut suffix = 2_u32;
+                while used.contains(&display_name) || imported_names.contains(display_name.as_str())
+                {
+                    display_name = format!("{base}_{suffix}");
+                    suffix += 1;
+                }
+                used.insert(display_name.clone());
+            }
+            ImportStub {
+                address,
+                imported_name,
+                display_name,
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DecompilerFacts, disambiguate_stub_names, is_no_return_name};
+
+    #[test]
+    fn duplicate_no_return_imports_keep_their_original_identity() {
+        let stubs = disambiguate_stub_names(vec![
+            (0x1000, "_exit".to_owned()),
+            (0x1010, "_exit".to_owned()),
+        ]);
+        let names = DecompilerFacts {
+            format: Some(object::BinaryFormat::MachO),
+            ..DecompilerFacts::default()
+        }
+        .no_return_names();
+
+        assert_eq!(stubs[0].imported_name, "_exit");
+        assert_eq!(stubs[1].imported_name, "_exit");
+        assert_ne!(stubs[0].display_name, stubs[1].display_name);
+        assert!(is_no_return_name(&names, &stubs[0].imported_name));
+        assert!(is_no_return_name(&names, &stubs[1].imported_name));
+    }
+
+    #[test]
+    fn generated_stub_name_yields_to_a_natural_import_name_collision() {
+        let stubs = disambiguate_stub_names(vec![
+            (0x1000, "_open".to_owned()),
+            (0x1010, "_open".to_owned()),
+            (0x1020, "_open__stub_1010".to_owned()),
+        ]);
+
+        assert_eq!(stubs[0].display_name, "_open");
+        assert_eq!(stubs[1].display_name, "_open__stub_1010_2");
+        assert_eq!(stubs[2].display_name, "_open__stub_1010");
+        assert_eq!(stubs[2].imported_name, "_open__stub_1010");
+    }
 }

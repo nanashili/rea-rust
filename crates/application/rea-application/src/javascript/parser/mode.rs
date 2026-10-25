@@ -36,9 +36,8 @@ pub enum PathSourceType {
 pub struct ParserMode {
     pub grammar: JavaScriptGrammar,
     pub source_type: PathSourceType,
-    /// Babel `disallowAmbiguousJSXLike` (`.mts`). oxc has no such option; the
-    /// TypeScript grammar without JSX already rejects JSX, so this is recorded
-    /// for the differential report rather than forwarded.
+    /// Babel `disallowAmbiguousJSXLike` (`.mts`, including `.d.mts`). oxc has
+    /// no such option; `options::ambiguous_jsx_like_errors` applies it.
     pub disallow_ambiguous_jsx_like: bool,
 }
 
@@ -49,7 +48,9 @@ fn ends_with_ignore_ascii_case(path: &str, suffix: &str) -> bool {
 }
 
 fn ends_with_any(path: &str, suffixes: &[&str]) -> bool {
-    suffixes.iter().any(|suffix| ends_with_ignore_ascii_case(path, suffix))
+    suffixes
+        .iter()
+        .any(|suffix| ends_with_ignore_ascii_case(path, suffix))
 }
 
 /// `.mjs` and `.mts` explicitly select module mode.
@@ -80,8 +81,10 @@ impl ParserMode {
         Self {
             grammar,
             source_type,
-            disallow_ambiguous_jsx_like: grammar != JavaScriptGrammar::JavaScriptJsx
-                && ends_with_ignore_ascii_case(text, ".mts"),
+            disallow_ambiguous_jsx_like: matches!(
+                grammar,
+                JavaScriptGrammar::TypeScript | JavaScriptGrammar::TypeScriptDeclaration
+            ) && ends_with_ignore_ascii_case(text, ".mts"),
         }
     }
 
@@ -97,6 +100,7 @@ impl ParserMode {
             OxcModuleKind::Module => base.with_module(true),
             OxcModuleKind::Unambiguous => base.with_unambiguous(true),
             OxcModuleKind::CommonJs => base.with_commonjs(true),
+            OxcModuleKind::Script => base.with_script(true),
         }
     }
 }
@@ -107,6 +111,7 @@ pub(super) enum OxcModuleKind {
     Module,
     Unambiguous,
     CommonJs,
+    Script,
 }
 
 #[cfg(test)]
@@ -116,22 +121,71 @@ mod tests {
     #[test]
     fn mirrors_parser_plugins_for_path() {
         let cases = [
-            (None, JavaScriptGrammar::TypeScriptJsx, PathSourceType::Unambiguous),
-            (Some("a.JS"), JavaScriptGrammar::JavaScriptJsx, PathSourceType::Unambiguous),
-            (Some("a.cjs"), JavaScriptGrammar::JavaScriptJsx, PathSourceType::CommonJs),
-            (Some("a.mjs"), JavaScriptGrammar::JavaScriptJsx, PathSourceType::Module),
-            (Some("a.ts"), JavaScriptGrammar::TypeScript, PathSourceType::Unambiguous),
-            (Some("a.cts"), JavaScriptGrammar::TypeScript, PathSourceType::Unambiguous),
-            (Some("a.mts"), JavaScriptGrammar::TypeScript, PathSourceType::Module),
-            (Some("a.d.ts"), JavaScriptGrammar::TypeScriptDeclaration, PathSourceType::Unambiguous),
-            (Some("a.d.mts"), JavaScriptGrammar::TypeScriptDeclaration, PathSourceType::Module),
-            (Some("a.tsx"), JavaScriptGrammar::TypeScriptJsx, PathSourceType::Unambiguous),
-            (Some("bundle.vue"), JavaScriptGrammar::TypeScriptJsx, PathSourceType::Unambiguous),
+            (
+                None,
+                JavaScriptGrammar::TypeScriptJsx,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("a.JS"),
+                JavaScriptGrammar::JavaScriptJsx,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("a.cjs"),
+                JavaScriptGrammar::JavaScriptJsx,
+                PathSourceType::CommonJs,
+            ),
+            (
+                Some("a.mjs"),
+                JavaScriptGrammar::JavaScriptJsx,
+                PathSourceType::Module,
+            ),
+            (
+                Some("a.ts"),
+                JavaScriptGrammar::TypeScript,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("a.cts"),
+                JavaScriptGrammar::TypeScript,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("a.mts"),
+                JavaScriptGrammar::TypeScript,
+                PathSourceType::Module,
+            ),
+            (
+                Some("a.d.ts"),
+                JavaScriptGrammar::TypeScriptDeclaration,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("a.d.mts"),
+                JavaScriptGrammar::TypeScriptDeclaration,
+                PathSourceType::Module,
+            ),
+            (
+                Some("a.tsx"),
+                JavaScriptGrammar::TypeScriptJsx,
+                PathSourceType::Unambiguous,
+            ),
+            (
+                Some("bundle.vue"),
+                JavaScriptGrammar::TypeScriptJsx,
+                PathSourceType::Unambiguous,
+            ),
         ];
         for (path, grammar, source_type) in cases {
             let mode = ParserMode::for_path(path);
-            assert_eq!((mode.grammar, mode.source_type), (grammar, source_type), "{path:?}");
+            assert_eq!(
+                (mode.grammar, mode.source_type),
+                (grammar, source_type),
+                "{path:?}"
+            );
         }
+        assert!(ParserMode::for_path(Some("a.mts")).disallow_ambiguous_jsx_like);
         assert!(ParserMode::for_path(Some("a.d.mts")).disallow_ambiguous_jsx_like);
         assert!(!ParserMode::for_path(Some("a.mjs")).disallow_ambiguous_jsx_like);
     }

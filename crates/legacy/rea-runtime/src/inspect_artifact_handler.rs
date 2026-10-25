@@ -6,9 +6,8 @@
 //! public inspection envelope.  It does not reopen the target or reinterpret
 //! inventory records.
 
-use rea_application::artifacts;
 use rea_core::{
-    canonical_json,
+    artifact_inventory, canonical_json,
     failure::{Detail, Failure},
 };
 use serde_json::{Map, Value, json};
@@ -33,8 +32,8 @@ pub fn handle(input: &Value) -> Result<Value, Failure> {
         .cloned()
         .ok_or_else(|| invalid("inventory is required"))?;
 
-    let inventory = artifacts::inventory_evidence::normalize_result(inventory_input)
-        .map_err(|reason| invalid(&reason))?;
+    let inventory =
+        artifact_inventory::normalize_result(inventory_input).map_err(|reason| invalid(&reason))?;
     validate_root_digest(&inventory, sha256)?;
 
     let provenance = append_projection_provenance(&inventory, path, integrity_policy);

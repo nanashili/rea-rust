@@ -1,15 +1,15 @@
 //! Application boundary for static JavaScript application analysis.
 //!
-//! Artifact acquisition and graph construction remain provider-owned.  This
-//! boundary enforces caller selection and integrity policy before preserving
-//! the provider's complete or summary result.
+//! This boundary enforces caller selection and integrity policy before
+//! preserving a provider's complete or summary result. Reconstruction
+//! assembly is owned by [`super::reconstruction`].
 
 use rea_core::{
     canonical_json,
     failure::{Detail, Failure},
 };
 use serde_json::{Map, Value, json};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 pub const OPERATION: &str = "analyze_javascript_application";
 const MAX_RECORDS: usize = 4_096;
@@ -50,8 +50,8 @@ pub fn validate_input(input: &Value) -> Result<(), Failure> {
         return Err(invalid("input_path must not contain NUL bytes"));
     }
     if let Some(detail) = object.get("detail") {
-        if detail.as_str() != Some("full") && detail.as_str() != Some("summary") {
-            return Err(invalid("detail must be full or summary"));
+        if detail.as_str() != Some("complete") && detail.as_str() != Some("summary") {
+            return Err(invalid("detail must be complete or summary"));
         }
     }
     if let Some(format) = object.get("format") {
@@ -70,15 +70,14 @@ pub fn validate_input(input: &Value) -> Result<(), Failure> {
         let paths = paths
             .as_array()
             .ok_or_else(|| invalid("source_paths must be an array"))?;
-        let mut unique = BTreeSet::new();
+        if paths.is_empty() {
+            return Err(invalid("source_paths must contain at least one path"));
+        }
+
         for path in paths {
-            let path = path
-                .as_str()
+            path.as_str()
                 .filter(|value| !value.is_empty())
                 .ok_or_else(|| invalid("source_paths must contain non-empty strings"))?;
-            if !unique.insert(path) {
-                return Err(invalid("source_paths must not contain duplicates"));
-            }
         }
     }
 
@@ -282,13 +281,22 @@ mod tests {
     }
 
     #[test]
-    fn rejects_duplicate_selected_sources_and_unknown_policy() {
+    fn preserves_repeated_source_selection_and_rejects_empty_selection() {
         let duplicate = serde_json::json!({
             "input_path": "/tmp/app.asar",
             "source_paths": ["main.js", "main.js"]
         });
-        assert!(validate_input(&duplicate).is_err());
+        validate_input(&duplicate).expect("repeated exact paths remain caller selections");
 
+        let empty = serde_json::json!({
+            "input_path": "/tmp/app.asar",
+            "source_paths": []
+        });
+        assert!(validate_input(&empty).is_err());
+    }
+
+    #[test]
+    fn rejects_unknown_integrity_policy() {
         let unknown = serde_json::json!({
             "input_path": "/tmp/app.asar",
             "integrity_policy": "ignore"

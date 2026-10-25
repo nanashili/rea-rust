@@ -11,12 +11,14 @@
 //! The TS listener ingests target-session events as they arrive; here every
 //! command is followed by a drain, so events are applied in arrival order
 //! before the next step, exactly where the TS `await` resumed.
+mod bundle;
 mod documents;
 mod events;
 mod metadata;
 mod ordered;
 mod scripts;
 mod snapshot;
+mod source_maps;
 mod storage;
 
 use super::connection::{self, Connection, Rejection, TargetFacts, foreign};
@@ -35,6 +37,15 @@ const PHASE: &str = "browser_observation";
 
 pub(super) fn register(registry: &mut Registry) {
     registry.handle(OPERATION, |context, input| inspect(context, &input));
+    bundle::register(registry);
+}
+
+/// Completed page capture facts retained for a subsequent bundle-analysis
+/// phase. The source-map requests are kept beside the inspection because they
+/// are derived from the same authorized script identities.
+pub(super) struct CapturedPage {
+    pub(super) inspection: Value,
+    pub(super) source_map_requests: Vec<scripts::SourceMapRequest>,
 }
 
 /// The approved capture switches of `InspectWebPageInput`.
@@ -305,6 +316,17 @@ fn capture_page(
     options: &Options,
     context: &ToolContext<'_>,
 ) -> Result<Value, AnalysisError> {
+    Ok(capture_page_with_sources(conn, facts, options, context)?.inspection)
+}
+
+/// Capture an authorized page while retaining source-map identities for the
+/// caller that owns bundle analysis.
+pub(super) fn capture_page_with_sources(
+    conn: &mut Connection<'_>,
+    facts: &TargetFacts<'_>,
+    options: &Options,
+    context: &ToolContext<'_>,
+) -> Result<CapturedPage, AnalysisError> {
     let mut limitations: Vec<String> = [
         "Observation starts when REA attaches; prior network and console activity is unavailable.",
         "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
@@ -376,7 +398,7 @@ fn capture_page(
     let resources = documents::stable_resources(&raw_resources);
     let dom = capture_page_dom(&mut capture)?;
     let accessibility = accessibility_for_frames(&mut capture, &frames)?;
-    let (scripts, _source_maps) =
+    let (scripts, source_map_requests) =
         scripts::capture_scripts(&mut capture, &raw_resources, &resources, &frame_ids)?;
     let workers = scripts::capture_workers(&mut capture, &frame_ids)?;
     let storage = storage::capture_storage(&mut capture, &attached_url)?;
@@ -474,7 +496,10 @@ fn capture_page(
         "storage": storage.value,
         "limitations": capture.limitations,
     });
-    Ok(values::js_json(&inspection))
+    Ok(CapturedPage {
+        inspection: values::js_json(&inspection),
+        source_map_requests,
+    })
 }
 
 /// `captureJsonResponseBodies`.

@@ -27,7 +27,6 @@ pub(super) struct VersionSource {
 
 #[derive(Clone, Debug)]
 pub(super) struct ApplicationGraph {
-    pub raw: Value,
     pub graph_id: String,
     pub root_node_ids: Vec<String>,
     pub nodes: Vec<ApplicationNode>,
@@ -38,7 +37,6 @@ pub(super) struct ApplicationGraph {
 
 #[derive(Clone, Debug)]
 pub(super) struct ApplicationNode {
-    pub raw: Value,
     pub node_id: String,
     pub kind: String,
     pub identity: Value,
@@ -66,7 +64,6 @@ pub(super) struct ApplicationEdge {
 
 #[derive(Clone, Debug)]
 pub(super) struct GraphCoverage {
-    pub raw: Value,
     pub status: String,
     pub truncated: bool,
     pub omitted_count: Option<u64>,

@@ -512,15 +512,15 @@ mod tests {
     #[test]
     fn classifies_decorated_candidates_as_inferred() {
         let mut managed = managed();
-        managed["normalized_result"]["pinvoke_imports"][0]["call_convention"] =
-            serde_json::Value::String("stdcall".into());
+        managed["normalized_result"]["pinvoke_imports"][0]["char_set"] =
+            serde_json::Value::String("unicode".into());
         let output = verify(&json!({
             "managed_boundaries": managed,
             "native_observations": [{
                 "evidence_id": "ev_native",
                 "operation": "inspect_macho",
                 "subject": {"name": "native.dylib"},
-                "normalized_result": {"exports": {"items": [{"name": "_NativeOpen", "address": "0x1000"}]}}
+                "normalized_result": {"exports": {"items": [{"name": "NativeOpenW", "address": "0x1000"}]}}
             }]
         })).expect("verification");
 

@@ -77,7 +77,12 @@ fn host_architecture() -> &'static str {
 }
 
 /// `createRunManifest`.
-pub fn manifest(scenario: &Scenario, started_at: SystemTime, completed_at: SystemTime, executable: &LaunchedExecutable) -> Value {
+pub fn manifest(
+    scenario: &Scenario,
+    started_at: SystemTime,
+    completed_at: SystemTime,
+    executable: &LaunchedExecutable,
+) -> Value {
     let commitment = scenario.commitment(executable.selected_sha256.as_deref());
     let contract = scenario.comparison_contract();
     json!({
@@ -126,10 +131,18 @@ fn coverage_unknowns(details: &Value) -> Vec<(&'static str, String)> {
             },
         ));
     }
-    for (name, key) in [("before", "filesystem_before"), ("after_settlement", "filesystem_after")] {
+    for (name, key) in [
+        ("before", "filesystem_before"),
+        ("after_settlement", "filesystem_after"),
+    ] {
         let coverage = &details[key];
         if coverage["enumeration_truncated"] == true {
-            let reasons: Vec<&str> = coverage["enumeration_reasons"].as_array().into_iter().flatten().filter_map(Value::as_str).collect();
+            let reasons: Vec<&str> = coverage["enumeration_reasons"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .collect();
             unknowns.push(("filesystem", format!("Filesystem {name} path enumeration was incomplete: {}. See truncation_details.", reasons.join(", "))));
         }
         let omissions = coverage["hash_omissions"].as_array().map_or(0, Vec::len);
@@ -153,8 +166,10 @@ fn coverage_unknowns(details: &Value) -> Vec<(&'static str, String)> {
     unknowns
 }
 
-const SENSITIVE_INPUT_UNKNOWN: &str = "Sensitive scripted input values are redacted from process capture Evidence.";
-const FILESYSTEM_OBSERVATION_UNKNOWN: &str = "No filesystem observation paths were selected; filesystem effects remain unknown.";
+const SENSITIVE_INPUT_UNKNOWN: &str =
+    "Sensitive scripted input values are redacted from process capture Evidence.";
+const FILESYSTEM_OBSERVATION_UNKNOWN: &str =
+    "No filesystem observation paths were selected; filesystem effects remain unknown.";
 const EXECUTABLE_DIGEST_LIMITATION: &str = "The executable digest is a prelaunch file sample; matching path metadata immediately after spawn does not prove an atomic operating-system image binding.";
 const SAMPLED_TREES: &str = "Process trees are sampled and may omit short-lived descendants.";
 
@@ -182,8 +197,11 @@ pub fn pending(facts: CaptureFacts, sampling: &Sampling) -> Value {
     let observations = !scenario.filesystem_observation_paths.is_empty();
     let sensitive = scenario.has_sensitive_input();
     let coverage = coverage_unknowns(&details);
-    let completed_first = super::super::comparison::parse_timestamp_ms(facts.manifest["completed_at"].as_str().unwrap_or_default())
-        < super::super::comparison::parse_timestamp_ms(facts.manifest["started_at"].as_str().unwrap_or_default());
+    let completed_first = super::super::comparison::parse_timestamp_ms(
+        facts.manifest["completed_at"].as_str().unwrap_or_default(),
+    ) < super::super::comparison::parse_timestamp_ms(
+        facts.manifest["started_at"].as_str().unwrap_or_default(),
+    );
     let mut limitations = vec![EXECUTABLE_DIGEST_LIMITATION.to_owned()];
     if completed_first {
         limitations.push("Wall-clock completion time precedes start time; elapsed capture timing is recorded separately and remains monotonic.".to_owned());
@@ -192,8 +210,11 @@ pub fn pending(facts: CaptureFacts, sampling: &Sampling) -> Value {
     if sampling.partial {
         limitations.push("Process-tree sampling ended with an incomplete observation.".to_owned());
     }
-    limitations.push("Filesystem observations are before/after snapshots, not syscall traces.".to_owned());
-    limitations.push("Inherited host environment variables are not recorded and may affect results.".to_owned());
+    limitations
+        .push("Filesystem observations are before/after snapshots, not syscall traces.".to_owned());
+    limitations.push(
+        "Inherited host environment variables are not recorded and may affect results.".to_owned(),
+    );
     if !observations {
         limitations.push(FILESYSTEM_OBSERVATION_UNKNOWN.to_owned());
     }
@@ -211,11 +232,20 @@ pub fn pending(facts: CaptureFacts, sampling: &Sampling) -> Value {
     if !observations {
         residual.push(json!({"scope": "filesystem", "reason": FILESYSTEM_OBSERVATION_UNKNOWN}));
     }
-    residual.extend(filesystem_unknowns.iter().map(|reason| json!({"scope": "filesystem", "reason": reason})));
+    residual.extend(
+        filesystem_unknowns
+            .iter()
+            .map(|reason| json!({"scope": "filesystem", "reason": reason})),
+    );
     if sensitive {
         residual.push(json!({"scope": "interaction", "reason": SENSITIVE_INPUT_UNKNOWN}));
     }
-    residual.extend(coverage.iter().filter(|(scope, _)| *scope != "terminal").map(|(scope, reason)| json!({"scope": scope, "reason": reason})));
+    residual.extend(
+        coverage
+            .iter()
+            .filter(|(scope, _)| *scope != "terminal")
+            .map(|(scope, reason)| json!({"scope": scope, "reason": reason})),
+    );
     json!({
         "manifest": facts.manifest,
         "normalization": scenario.normalization(),
@@ -241,11 +271,14 @@ pub fn pending(facts: CaptureFacts, sampling: &Sampling) -> Value {
 pub fn verified(facts: CaptureFacts, sampling: &Sampling, report: &Value) -> Result<Value, String> {
     let mut capture = pending(facts, sampling);
     let quiesced = capture["settlement"]["state"] == "quiesced";
-    capture["settlement"]["cleanup_outcome"] = json!(if quiesced { "not_required" } else { "cleaned" });
+    capture["settlement"]["cleanup_outcome"] =
+        json!(if quiesced { "not_required" } else { "cleaned" });
     let mut cleanup = json!({"owned_process_group": "verified", "temporary_root": "removed"});
     if let Some(unverified) = report["owned_process_group"]["unverified_processes"].as_array() {
         cleanup["unverified_processes"] = Value::Array(unverified.clone());
-        let residual = capture["residual_unknowns"].as_array_mut().expect("residual unknowns");
+        let residual = capture["residual_unknowns"]
+            .as_array_mut()
+            .expect("residual unknowns");
         for process in unverified {
             residual.push(json!({
                 "scope": "process",
@@ -258,7 +291,8 @@ pub fn verified(facts: CaptureFacts, sampling: &Sampling, report: &Value) -> Res
         }
     }
     capture["cleanup"] = cleanup;
-    capture::parse(&capture).map_err(|error| format!("process capture validation failed: {}", error.describe()))
+    capture::parse(&capture)
+        .map_err(|error| format!("process capture validation failed: {}", error.describe()))
 }
 
 #[cfg(test)]
@@ -269,6 +303,9 @@ mod tests {
     #[test]
     fn formats_iso_timestamps_like_javascript() {
         assert_eq!(iso_timestamp(UNIX_EPOCH), "1970-01-01T00:00:00.000Z");
-        assert_eq!(iso_timestamp(UNIX_EPOCH + Duration::from_millis(1_792_748_155_679)), "2026-10-23T09:35:55.679Z");
+        assert_eq!(
+            iso_timestamp(UNIX_EPOCH + Duration::from_millis(1_792_748_155_679)),
+            "2026-10-23T09:35:55.679Z"
+        );
     }
 }

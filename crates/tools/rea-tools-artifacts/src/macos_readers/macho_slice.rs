@@ -18,6 +18,7 @@ use crate::artifact_reader::{
 };
 use crate::lipo::{LipoArchitecture, parse_lipo_output};
 use crate::native_command::{self, CommandCleanup, FailureReason};
+use rea_core::JsString;
 use rea_core::analysis_error::CleanupObservation;
 use rea_core::cancellation::Cancellation;
 use serde_json::{Value, json};
@@ -262,7 +263,7 @@ impl ArtifactReader for MachOSliceArtifactReader {
             let limitations = slice_limitations(&structural, architecture);
             let adapter_key = format!("{offset}:{slice_size}");
             let entry = ArtifactEntry {
-                path: format!("slices/{}", architecture.name),
+                path: JsString::from(format!("slices/{}", architecture.name)),
                 kind: "slice",
                 declared_size: Some(slice_size),
                 compressed_size: None,
@@ -272,7 +273,7 @@ impl ArtifactReader for MachOSliceArtifactReader {
                 declared_sha256: None,
                 unpacked: false,
                 limitations,
-                adapter_key: adapter_key.clone(),
+                adapter_key: JsString::from(adapter_key.clone()),
             };
             self.entries.insert(adapter_key, entry.clone());
             produced.push(entry);
@@ -292,7 +293,9 @@ impl ArtifactReader for MachOSliceArtifactReader {
                 "Mach-O slice read cancelled",
             ));
         }
-        let produced = self.entries.get(&entry.adapter_key);
+        let produced = self
+            .entries
+            .get(entry.adapter_key.as_str().unwrap_or_default());
         let produced = match produced {
             Some(produced) if same_artifact_entry(entry, produced) => produced.clone(),
             _ => {
@@ -328,7 +331,17 @@ impl ArtifactReader for MachOSliceArtifactReader {
 
         let bytes = {
             let source = self.source.as_ref().expect("source admitted above");
-            source.read_range(offset, size, &entry.path, cancellation)?
+            source.read_range(
+                offset,
+                size,
+                entry.path.as_str().ok_or_else(|| {
+                    ReaderFailure::new(
+                        "path",
+                        "Mach-O slice logical path contains an unpaired UTF-16 surrogate and cannot be used as a physical read label",
+                    )
+                })?,
+                cancellation,
+            )?
         };
 
         // Re-verify source identity after the read, matching the TS stream's
@@ -362,12 +375,11 @@ impl ArtifactReader for MachOSliceArtifactReader {
 
         match (cleanup, source_result) {
             (None, Ok(())) => Ok(()),
-            (Some(cleanup), Ok(())) => Err(ReaderFailure {
-                reason: "unavailable",
-                message: "Native command process cleanup remains incomplete".to_owned(),
-                details: None,
-                cleanup: Some(cleanup),
-            }),
+            (Some(cleanup), Ok(())) => Err(ReaderFailure::new(
+                "unavailable",
+                "Native command process cleanup remains incomplete",
+            )
+            .with_cleanup(cleanup.reason, cleanup.resources)),
             (None, Err(mut failure)) => {
                 failure.reason = "unavailable";
                 Err(failure)
@@ -607,7 +619,6 @@ mod structural {
 mod source {
     use super::structural::StructuralSlices;
     use crate::artifact_reader::ReaderFailure;
-    use rea_core::analysis_error::CleanupObservation;
     use rea_core::cancellation::Cancellation;
     use rea_host::fs::stable_file::{
         CloseOutcome, FileAccess, FileError, Fingerprint, IoKind, Kind,
@@ -789,15 +800,14 @@ mod source {
             // on close even on error, so the descriptor is not retried.
             match file.sync_all() {
                 Ok(()) => Ok(()),
-                Err(error) => Err(ReaderFailure {
-                    reason: "unavailable",
-                    message: format!("Universal Mach-O source descriptor cleanup failed: {error}"),
-                    details: None,
-                    cleanup: Some(CleanupObservation {
-                        reason: error.to_string(),
-                        resources: vec!["Universal Mach-O source descriptor".to_owned()],
-                    }),
-                }),
+                Err(error) => Err(ReaderFailure::new(
+                    "unavailable",
+                    format!("Universal Mach-O source descriptor cleanup failed: {error}"),
+                )
+                .with_cleanup(
+                    error.to_string(),
+                    vec!["Universal Mach-O source descriptor".to_owned()],
+                )),
             }
         }
     }

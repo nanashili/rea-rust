@@ -19,7 +19,9 @@ pub(crate) fn allocation_cost(value: &Value, remaining: i64) -> i64 {
         Value::Object(map) => {
             let mut cost: i64 = 2;
             for (key, item) in map {
-                cost += key.encode_utf16().count() as i64 * 8 + 4 + allocation_cost(item, remaining - cost);
+                cost += key.encode_utf16().count() as i64 * 8
+                    + 4
+                    + allocation_cost(item, remaining - cost);
                 if cost > remaining {
                     break;
                 }
@@ -29,7 +31,9 @@ pub(crate) fn allocation_cost(value: &Value, remaining: i64) -> i64 {
         Value::Array(items) => {
             let mut cost: i64 = 2;
             for (index, item) in items.iter().enumerate() {
-                cost += index.to_string().len() as i64 * 8 + 4 + allocation_cost(item, remaining - cost);
+                cost += index.to_string().len() as i64 * 8
+                    + 4
+                    + allocation_cost(item, remaining - cost);
                 if cost > remaining {
                     break;
                 }
@@ -141,7 +145,10 @@ impl Recorder {
             unindexed.insert((*key).to_owned(), value.clone());
         }
         unindexed.insert("kind".into(), Value::String(kind.to_owned()));
-        let cost = allocation_cost(&Value::Object(unindexed), self.limits.max_event_allocation_bytes as i64) + 128;
+        let cost = allocation_cost(
+            &Value::Object(unindexed),
+            self.limits.max_event_allocation_bytes as i64,
+        ) + 128;
         let reason = self.admission_reason(cost);
         if self.sealed || reason.is_some() {
             let reason = reason.unwrap_or("max-events");
@@ -163,12 +170,20 @@ impl Recorder {
     }
 
     /// `admitText` / `admitProducerText`.
-    pub(crate) fn admit_text(&mut self, secrets: &Secrets, kind: &str, values: &[&str], network_metadata: bool) -> Admission {
+    pub(crate) fn admit_text(
+        &mut self,
+        secrets: &Secrets,
+        kind: &str,
+        values: &[&str],
+        network_metadata: bool,
+    ) -> Admission {
         let mut cost: i64 = 4096;
         for value in values {
             cost += secrets.redaction_cost_of(value) as i64;
         }
-        let reason = if network_metadata && cost > self.limits.max_network_metadata_allocation_bytes as i64 {
+        let reason = if network_metadata
+            && cost > self.limits.max_network_metadata_allocation_bytes as i64
+        {
             Some("max-network-metadata-allocation-bytes")
         } else {
             self.admission_reason(cost)
@@ -218,7 +233,10 @@ impl Recorder {
                 ((length * 8 + 2) as i64).max(secrets.redaction_allocation_cost(length) as i64)
             })
             .unwrap_or(0);
-        let cost = allocation_cost(&probe, self.limits.max_event_allocation_bytes as i64) - 64 + allocation_bytes + media + 128;
+        let cost = allocation_cost(&probe, self.limits.max_event_allocation_bytes as i64) - 64
+            + allocation_bytes
+            + media
+            + 128;
         if let Some(reason) = self.admission_reason(cost) {
             self.sequence += 1;
             self.omit_event("network-content", reason);
@@ -235,7 +253,10 @@ impl Recorder {
     }
 
     pub(crate) fn omit_network(&mut self, transaction_id: &str, kind: &str, reason: &'static str) {
-        let entry = self.omitted_network.entry(transaction_id.to_owned()).or_default();
+        let entry = self
+            .omitted_network
+            .entry(transaction_id.to_owned())
+            .or_default();
         entry.0.insert(kind.to_owned());
         entry.1.insert(reason);
     }

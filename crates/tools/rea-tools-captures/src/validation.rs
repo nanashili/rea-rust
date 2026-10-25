@@ -61,18 +61,6 @@ pub fn json_parse_message(text: &str, error: &serde_json::Error) -> String {
     format!("Unexpected token in JSON at position {position}")
 }
 
-/// Zod's `ZodError.message`: the issue list as two-space-indented JSON.
-pub fn zod_message(code: &str, path: &[Value], message: &str, expected: Option<&str>) -> String {
-    let mut issue = serde_json::Map::new();
-    if let Some(expected) = expected {
-        issue.insert("expected".into(), json!(expected));
-    }
-    issue.insert("code".into(), json!(code));
-    issue.insert("path".into(), Value::Array(path.to_vec()));
-    issue.insert("message".into(), json!(message));
-    zod_issues(vec![Value::Object(issue)])
-}
-
 /// Zod's `ZodError.message` for prebuilt issue objects (v4 key order).
 pub fn zod_issues(issues: Vec<Value>) -> String {
     serde_json::to_string_pretty(&Value::Array(issues)).unwrap_or_default()

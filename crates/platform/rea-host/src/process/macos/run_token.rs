@@ -18,8 +18,12 @@ const MAX_PROCARGS_BYTES: usize = 1024 * 1024;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DarwinRunToken {
     /// The environment was readable; `run_id` is absent when it has no token.
-    Readable { run_id: Option<String> },
-    Unavailable { reason: String },
+    Readable {
+        run_id: Option<String>,
+    },
+    Unavailable {
+        reason: String,
+    },
 }
 
 /// Facts of one PID read through `PROC_PIDTBSDINFO`.
@@ -45,8 +49,12 @@ struct ParsedRunToken {
 }
 
 unsafe extern "C" {
-    fn csops(pid: libc::pid_t, ops: u32, useraddr: *mut libc::c_void, usersize: libc::size_t)
-    -> libc::c_int;
+    fn csops(
+        pid: libc::pid_t,
+        ops: u32,
+        useraddr: *mut libc::c_void,
+        usersize: libc::size_t,
+    ) -> libc::c_int;
 }
 
 fn errno() -> i32 {
@@ -133,7 +141,13 @@ fn read_string<'a>(bytes: &'a [u8], offset: &mut usize, allow_empty: bool) -> Op
 
 fn parse_environment(bytes: &[u8], pointer_size: usize) -> Result<ParsedRunToken, ParseFailure> {
     use ParseFailure::*;
-    let argc = i32::from_le_bytes(bytes.get(..4).ok_or(InvalidBuffer)?.try_into().map_err(|_| InvalidBuffer)?);
+    let argc = i32::from_le_bytes(
+        bytes
+            .get(..4)
+            .ok_or(InvalidBuffer)?
+            .try_into()
+            .map_err(|_| InvalidBuffer)?,
+    );
     if argc < 0 || argc as usize > bytes.len() {
         return Err(InvalidBuffer);
     }
@@ -175,9 +189,14 @@ fn parse_environment(bytes: &[u8], pointer_size: usize) -> Result<ParsedRunToken
     // XNU appends the Apple vector after the environment; libc clears its
     // initial `pfz=` record, leaving a multi-NUL run in its place.
     let intact = entries.iter().rposition(|entry| entry.starts_with(b"pfz="));
-    let prefer_zeroed = zeroed_start.is_some_and(|zeroed| intact.is_none_or(|intact| intact < zeroed));
-    let apple_start = if prefer_zeroed { zeroed_start } else { intact }.ok_or(AppleVectorUnavailable)?;
-    if entries[apple_start..].iter().any(|entry| entry.starts_with(RUN_TOKEN_PREFIX)) {
+    let prefer_zeroed =
+        zeroed_start.is_some_and(|zeroed| intact.is_none_or(|intact| intact < zeroed));
+    let apple_start =
+        if prefer_zeroed { zeroed_start } else { intact }.ok_or(AppleVectorUnavailable)?;
+    if entries[apple_start..]
+        .iter()
+        .any(|entry| entry.starts_with(RUN_TOKEN_PREFIX))
+    {
         return Err(AmbiguousEnvironmentBoundary);
     }
     let environment = &entries[..apple_start];
@@ -202,23 +221,34 @@ fn unavailable(reason: &str) -> DarwinRunToken {
     }
 }
 
-fn classify(parse: Result<ParsedRunToken, ParseFailure>, flags: impl Fn() -> Option<u32>) -> DarwinRunToken {
+fn classify(
+    parse: Result<ParsedRunToken, ParseFailure>,
+    flags: impl Fn() -> Option<u32>,
+) -> DarwinRunToken {
     let withheld = |fallback: &str| match flags() {
-        Some(flags) if flags & CS_PLATFORM_BINARY != 0 => unavailable("platform_binary_environment_withheld"),
-        Some(flags) if flags & CS_RESTRICT != 0 => unavailable("restricted_process_environment_withheld"),
+        Some(flags) if flags & CS_PLATFORM_BINARY != 0 => {
+            unavailable("platform_binary_environment_withheld")
+        }
+        Some(flags) if flags & CS_RESTRICT != 0 => {
+            unavailable("restricted_process_environment_withheld")
+        }
         _ => match fallback {
             "" => DarwinRunToken::Readable { run_id: None },
             reason => unavailable(reason),
         },
     };
     match parse {
-        Ok(parsed) if parsed.run_id.is_some() => DarwinRunToken::Readable { run_id: parsed.run_id },
+        Ok(parsed) if parsed.run_id.is_some() => DarwinRunToken::Readable {
+            run_id: parsed.run_id,
+        },
         // A non-empty environment without the token proves the process is unrelated.
         Ok(parsed) if parsed.environment_entries > 0 => DarwinRunToken::Readable { run_id: None },
         Ok(_) => withheld(""),
         Err(ParseFailure::EnvironmentUnavailable) => withheld("environment_unavailable"),
         Err(ParseFailure::AmbiguousEnvironmentBoundary) => match flags() {
-            Some(flags) if flags & CS_RESTRICT != 0 => unavailable("restricted_process_environment_withheld"),
+            Some(flags) if flags & CS_RESTRICT != 0 => {
+                unavailable("restricted_process_environment_withheld")
+            }
             _ => unavailable("ambiguous_environment_boundary"),
         },
         Err(ParseFailure::DuplicateToken) => unavailable("duplicate_run_token"),
@@ -233,7 +263,9 @@ fn read_one(pid: libc::pid_t, pointer_size: usize) -> DarwinRunToken {
         Ok(bytes) => bytes,
         Err(reason) => return unavailable(&reason),
     };
-    classify(parse_environment(&bytes, pointer_size), || code_signing_flags(pid))
+    classify(parse_environment(&bytes, pointer_size), || {
+        code_signing_flags(pid)
+    })
 }
 
 /// The argument vector from `KERN_PROCARGS2` (what `ps -o command` prints).
@@ -241,7 +273,13 @@ pub fn read_arguments(pid: libc::pid_t) -> Result<Vec<String>, String> {
     let pointer_size = process_facts(pid)?.pointer_size;
     let bytes = read_procargs(pid)?;
     let malformed = || "malformed_procargs".to_owned();
-    let argc = i32::from_le_bytes(bytes.get(..4).ok_or_else(malformed)?.try_into().map_err(|_| malformed())?);
+    let argc = i32::from_le_bytes(
+        bytes
+            .get(..4)
+            .ok_or_else(malformed)?
+            .try_into()
+            .map_err(|_| malformed())?,
+    );
     if argc < 0 {
         return Err(malformed());
     }
@@ -254,7 +292,11 @@ pub fn read_arguments(pid: libc::pid_t) -> Result<Vec<String>, String> {
         offset += 1;
     }
     (0..argc)
-        .map(|_| read_string(&bytes, &mut offset, true).map(|argument| String::from_utf8_lossy(argument).into_owned()).ok_or_else(malformed))
+        .map(|_| {
+            read_string(&bytes, &mut offset, true)
+                .map(|argument| String::from_utf8_lossy(argument).into_owned())
+                .ok_or_else(malformed)
+        })
         .collect()
 }
 
@@ -272,18 +314,22 @@ pub fn read_run_tokens(pids: &[libc::pid_t]) -> Vec<DarwinRunToken> {
     pids.iter()
         .zip(before)
         .zip(observations)
-        .map(|((pid, before), observation)| match (before, process_facts(*pid)) {
-            (Ok(initial), Ok(current)) if initial == current => observation,
-            (Ok(_), Ok(_)) => unavailable("process_identity_changed_during_token_read"),
-            (_, Err(reason)) => unavailable(&reason),
-            (Err(_), Ok(_)) => unavailable("process_not_in_snapshot"),
-        })
+        .map(
+            |((pid, before), observation)| match (before, process_facts(*pid)) {
+                (Ok(initial), Ok(current)) if initial == current => observation,
+                (Ok(_), Ok(_)) => unavailable("process_identity_changed_during_token_read"),
+                (_, Err(reason)) => unavailable(&reason),
+                (Err(_), Ok(_)) => unavailable("process_not_in_snapshot"),
+            },
+        )
         .collect()
 }
 
 /// Read one PID's token (`readRunTokens([pid])`).
 pub fn read_run_token(pid: libc::pid_t) -> DarwinRunToken {
-    read_run_tokens(&[pid]).pop().unwrap_or_else(|| unavailable("reader_failure"))
+    read_run_tokens(&[pid])
+        .pop()
+        .unwrap_or_else(|| unavailable("reader_failure"))
 }
 
 #[cfg(test)]
@@ -315,7 +361,11 @@ mod tests {
 
     #[test]
     fn reads_token_before_the_apple_vector() {
-        let bytes = procargs(&[b"tool"], &[b"A=1", b"REA_PROCESS_RUN_ID=run-1"], &[b"ptr_munge="]);
+        let bytes = procargs(
+            &[b"tool"],
+            &[b"A=1", b"REA_PROCESS_RUN_ID=run-1"],
+            &[b"ptr_munge="],
+        );
         let parsed = parse_environment(&bytes, 8).ok().unwrap();
         assert_eq!(parsed.run_id.as_deref(), Some("run-1"));
         assert_eq!(parsed.environment_entries, 2);
@@ -324,12 +374,20 @@ mod tests {
     #[test]
     fn token_in_apple_vector_is_ambiguous() {
         let bytes = procargs(&[b"tool"], &[b"A=1"], &[b"REA_PROCESS_RUN_ID=x"]);
-        assert!(matches!(parse_environment(&bytes, 8), Err(ParseFailure::AmbiguousEnvironmentBoundary)));
+        assert!(matches!(
+            parse_environment(&bytes, 8),
+            Err(ParseFailure::AmbiguousEnvironmentBoundary)
+        ));
     }
 
     #[test]
     fn empty_environment_is_classified_by_code_signing_flags() {
-        let empty = || Ok(ParsedRunToken { run_id: None, environment_entries: 0 });
+        let empty = || {
+            Ok(ParsedRunToken {
+                run_id: None,
+                environment_entries: 0,
+            })
+        };
         assert_eq!(
             classify(empty(), || Some(CS_PLATFORM_BINARY)),
             unavailable("platform_binary_environment_withheld")
@@ -338,7 +396,10 @@ mod tests {
             classify(empty(), || Some(CS_RESTRICT)),
             unavailable("restricted_process_environment_withheld")
         );
-        assert_eq!(classify(empty(), || None), DarwinRunToken::Readable { run_id: None });
+        assert_eq!(
+            classify(empty(), || None),
+            DarwinRunToken::Readable { run_id: None }
+        );
         assert_eq!(
             classify(Err(ParseFailure::EnvironmentUnavailable), || None),
             unavailable("environment_unavailable")
@@ -347,14 +408,24 @@ mod tests {
 
     #[test]
     fn duplicate_tokens_fail_closed() {
-        let bytes = procargs(&[], &[b"REA_PROCESS_RUN_ID=a", b"REA_PROCESS_RUN_ID=b"], &[b"pfz=1"]);
-        assert!(matches!(parse_environment(&bytes, 8), Err(ParseFailure::DuplicateToken)));
+        let bytes = procargs(
+            &[],
+            &[b"REA_PROCESS_RUN_ID=a", b"REA_PROCESS_RUN_ID=b"],
+            &[b"pfz=1"],
+        );
+        assert!(matches!(
+            parse_environment(&bytes, 8),
+            Err(ParseFailure::DuplicateToken)
+        ));
     }
 
     #[test]
     fn reads_own_process_identity_and_absent_pid() {
         let own = std::process::id() as libc::pid_t;
         assert!(process_facts(own).is_ok());
-        assert_eq!(process_facts(i32::MAX).unwrap_err(), "process_not_in_snapshot");
+        assert_eq!(
+            process_facts(i32::MAX).unwrap_err(),
+            "process_not_in_snapshot"
+        );
     }
 }

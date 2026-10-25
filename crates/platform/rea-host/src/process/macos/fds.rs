@@ -41,6 +41,8 @@ fn observe_platform(pid: u64) -> DescriptorObservation {
     };
     let entry_size = std::mem::size_of::<libc::proc_fdinfo>();
     let mut storage = vec![0_u8; entry_size * MAX_PROCESS_DESCRIPTORS];
+    // SAFETY: `storage` owns writable capacity for the bounded byte count and
+    // all scalar arguments remain valid for the duration of proc_pidinfo.
     let result = unsafe {
         libc::proc_pidinfo(
             pid,
@@ -51,6 +53,7 @@ fn observe_platform(pid: u64) -> DescriptorObservation {
         )
     };
     if result <= 0 {
+        // SAFETY: libc::__error returns the calling thread's valid errno slot.
         let error = unsafe { *libc::__error() };
         return if error == libc::ESRCH {
             DescriptorObservation::Absent {

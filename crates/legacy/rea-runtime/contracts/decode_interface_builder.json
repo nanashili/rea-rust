@@ -7,31 +7,44 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "path": { "type": "string", "minLength": 1 },
-      "bytes_base64": { "type": "string", "minLength": 1 },
-      "evidence": { "type": "object", "minProperties": 1 },
-      "max_documents": { "type": "integer", "minimum": 1, "maximum": 64 },
-      "max_objects": { "type": "integer", "minimum": 1, "maximum": 20000 },
-      "max_connections": { "type": "integer", "minimum": 1, "maximum": 40000 }
-    },
-    "allOf": [
-      {
-        "if": { "required": ["evidence"] },
-        "then": { "not": { "anyOf": [ { "required": ["path"] }, { "required": ["bytes_base64"] } ] } }
+      "path": {
+        "type": "string",
+        "minLength": 1
       },
-      {
-        "if": { "required": ["bytes_base64"] },
-        "then": { "required": ["path"] }
+      "evidence": {
+        "type": "object",
+        "minProperties": 1
+      },
+      "max_documents": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 64
+      },
+      "max_objects": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20000
+      },
+      "max_connections": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 40000
       }
-    ],
-    "anyOf": [
-      { "required": ["evidence"] },
-      { "required": ["path", "bytes_base64"] }
+    },
+    "required": [
+      "path",
+      "target_sha256"
     ]
   },
   "outputSchema": {
     "type": "object",
-    "description": "Bounded decoded archive facts, graph projection, coverage, archive digest, and explicit limitations."
+    "description": "Bounded decoded archive facts, graph projection, coverage, archive digest, and explicit limitations.",
+    "required": [
+      "operation",
+      "subject",
+      "parameters",
+      "normalized_result"
+    ]
   },
   "annotations": {
     "destructiveHint": false,

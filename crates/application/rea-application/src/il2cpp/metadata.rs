@@ -11,7 +11,7 @@ use rea_core::{
     failure::{Detail, Failure},
     json_output::{self, Error as JsonOutputError},
 };
-use rea_host::fs::stable_file::{self, FileAccess, ReadFailure, ReadIssue, Snapshot};
+use rea_host::fs::stable_file::{self, FileAccess, ReadFailure, Snapshot};
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::Path, sync::Arc};

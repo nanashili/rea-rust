@@ -7,7 +7,7 @@
 use crate::mcp::{capture_timestamp, discover_electron_targets, websocket_endpoint};
 use rea_application::{
     electron,
-    electron::observation::{self as electron_observation, DiscoveredTarget, PageInspection},
+    electron::observation::{DiscoveredTarget, PageInspection},
     electron::page_inspection::{
         self as electron_page_inspection, ElectronCdpFailure, ElectronCdpFailureKind,
     },

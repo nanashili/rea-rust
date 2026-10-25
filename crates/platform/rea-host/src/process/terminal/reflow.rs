@@ -65,8 +65,9 @@ pub fn larger_lines_to_remove(
             y += group_len;
             continue;
         }
-        let mut wrapped: Vec<BufferLine> =
-            (y..i).map(|index| lines.take(index).unwrap_or_default()).collect();
+        let mut wrapped: Vec<BufferLine> = (y..i)
+            .map(|index| lines.take(index).unwrap_or_default())
+            .collect();
         let mut dest_index = 0usize;
         let mut dest_col = wrapped_trimmed_length(&wrapped, dest_index, old_cols);
         let mut src_index = 1usize;
@@ -76,7 +77,15 @@ pub fn larger_lines_to_remove(
             let src_remaining = src_trimmed.saturating_sub(src_col);
             let dest_remaining = new_cols.saturating_sub(dest_col);
             let cells = src_remaining.min(dest_remaining);
-            copy_between(&mut wrapped, dest_index, src_index, src_col, dest_col, cells, false);
+            copy_between(
+                &mut wrapped,
+                dest_index,
+                src_index,
+                src_col,
+                dest_col,
+                cells,
+                false,
+            );
             dest_col += cells;
             if dest_col == new_cols {
                 dest_index += 1;
@@ -87,8 +96,17 @@ pub fn larger_lines_to_remove(
                 src_index += 1;
                 src_col = 0;
             }
-            if dest_col == 0 && dest_index != 0 && wrapped[dest_index - 1].width(new_cols - 1) == 2 {
-                copy_between(&mut wrapped, dest_index, dest_index - 1, new_cols - 1, dest_col, 1, false);
+            if dest_col == 0 && dest_index != 0 && wrapped[dest_index - 1].width(new_cols - 1) == 2
+            {
+                copy_between(
+                    &mut wrapped,
+                    dest_index,
+                    dest_index - 1,
+                    new_cols - 1,
+                    dest_col,
+                    1,
+                    false,
+                );
                 dest_col += 1;
                 wrapped[dest_index - 1].set_cell(new_cols - 1, null);
             }
@@ -143,7 +161,11 @@ pub fn larger_apply_layout(lines: &mut CircularList, layout: &[usize]) {
 }
 
 /// `reflowSmallerGetNewLineLengths`.
-pub fn smaller_new_line_lengths(wrapped: &[BufferLine], old_cols: usize, new_cols: usize) -> Vec<usize> {
+pub fn smaller_new_line_lengths(
+    wrapped: &[BufferLine],
+    old_cols: usize,
+    new_cols: usize,
+) -> Vec<usize> {
     let needed: usize = (0..wrapped.len())
         .map(|index| wrapped_trimmed_length(wrapped, index, old_cols))
         .sum();
@@ -163,7 +185,9 @@ pub fn smaller_new_line_lengths(wrapped: &[BufferLine], old_cols: usize, new_col
             src_line += 1;
         }
         let ends_wide = src_col > 0
-            && wrapped.get(src_line).is_some_and(|line| line.width(src_col - 1) == 2);
+            && wrapped
+                .get(src_line)
+                .is_some_and(|line| line.width(src_col - 1) == 2);
         if ends_wide {
             src_col -= 1;
         }
@@ -184,7 +208,9 @@ pub fn smaller_copy(
     added: usize,
 ) {
     let length_at = |index: isize| -> Option<usize> {
-        usize::try_from(index).ok().and_then(|index| dest_lengths.get(index).copied())
+        usize::try_from(index)
+            .ok()
+            .and_then(|index| dest_lengths.get(index).copied())
     };
     let mut dest_index = dest_lengths.len() as isize - 1;
     let Some(mut dest_col) = length_at(dest_index) else {

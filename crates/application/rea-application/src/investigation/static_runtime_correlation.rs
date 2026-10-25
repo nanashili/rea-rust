@@ -375,8 +375,6 @@ fn observed_pattern(static_status: &str, runtime_status: &str) -> &'static str {
 struct Evidence {
     id: String,
     operation: String,
-    predicate: String,
-    provider: Value,
     normalized: Value,
     links: Vec<String>,
     limitations: Vec<String>,
@@ -448,8 +446,6 @@ fn parse_comparison(value: &Value, operations: &[&str], side: &str) -> Result<Ev
     Ok(Evidence {
         id: record.evidence_id().to_owned(),
         operation,
-        predicate,
-        provider,
         normalized,
         links,
         limitations,

@@ -3,24 +3,69 @@
   "title": "Inspect Managed Members",
   "description": "Project caller-supplied retained inspect_managed_members Evidence. The offline adapter authenticates the managed metadata report and preserves artifact, assembly, type, member, ambiguity, coverage, and uncertainty facts without reopening or executing the target.",
   "inputSchema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "additionalProperties": false,
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "properties": {
-      "evidence": {
-        "type": "object",
-        "description": "Complete authenticated Evidence produced by inspect_managed_members."
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^\\x00]*$",
+        "description": "Explicit absolute managed PE/CLI path; omit to reuse the previously selected managed target"
+      },
+      "detail": {
+        "type": "string",
+        "enum": [
+          "complete",
+          "summary"
+        ]
+      },
+      "type_names": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact declaring-type full_name: namespace-qualified for top-level types (System.Threading.Monitor); nested types report their bare name, so it selects every nested type of that name"
+        },
+        "uniqueItems": true,
+        "description": "Inspect only the fields, methods, call edges, and field accesses declared by these exact type full names, and the user strings their method bodies load; omit to inspect every type. Unmatched names are reported in selection.unmatched_type_names."
       }
     },
-    "required": ["evidence"]
+    "additionalProperties": false,
+    "examples": [
+      {},
+      {
+        "path": "/tmp/mscorlib.dll",
+        "type_names": [
+          "System.Threading.Monitor"
+        ]
+      },
+      {
+        "path": "/tmp/mscorlib.dll",
+        "type_names": [
+          "System.Threading.Monitor"
+        ],
+        "detail": "summary"
+      }
+    ]
   },
   "outputSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "required": ["path", "sha256", "members"],
+    "required": [
+      "path",
+      "sha256",
+      "members"
+    ],
     "properties": {
-      "path": { "type": "string", "minLength": 1 },
-      "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
       "members": {
         "type": "object",
         "additionalProperties": false,
@@ -45,35 +90,87 @@
           "selection"
         ],
         "properties": {
-          "module": { "type": ["object", "null"] },
-          "assembly": { "type": ["object", "null"] },
-          "references": { "type": "array" },
-          "module_references": { "type": "array" },
-          "exported_types": { "type": "array" },
-          "types": { "type": "array" },
-          "fields": { "type": "array" },
-          "methods": { "type": "array" },
-          "params": { "type": "array" },
-          "properties": { "type": "array" },
-          "events": { "type": "array" },
-          "generic_params": { "type": "array" },
-          "generic_constraints": { "type": "array" },
-          "method_specs": { "type": "array" },
-          "member_references": { "type": "array" },
-          "call_edges": { "type": "array" },
-          "field_accesses": { "type": "array" },
+          "module": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "assembly": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "references": {
+            "type": "array"
+          },
+          "module_references": {
+            "type": "array"
+          },
+          "exported_types": {
+            "type": "array"
+          },
+          "types": {
+            "type": "array"
+          },
+          "fields": {
+            "type": "array"
+          },
+          "methods": {
+            "type": "array"
+          },
+          "params": {
+            "type": "array"
+          },
+          "properties": {
+            "type": "array"
+          },
+          "events": {
+            "type": "array"
+          },
+          "generic_params": {
+            "type": "array"
+          },
+          "generic_constraints": {
+            "type": "array"
+          },
+          "method_specs": {
+            "type": "array"
+          },
+          "member_references": {
+            "type": "array"
+          },
+          "call_edges": {
+            "type": "array"
+          },
+          "field_accesses": {
+            "type": "array"
+          },
           "selection": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["type_names", "unmatched_type_names"],
+            "required": [
+              "type_names",
+              "unmatched_type_names"
+            ],
             "properties": {
               "type_names": {
-                "type": ["array", "null"],
-                "items": { "type": "string", "minLength": 1 }
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               },
               "unmatched_type_names": {
                 "type": "array",
-                "items": { "type": "string", "minLength": 1 }
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             }
           }

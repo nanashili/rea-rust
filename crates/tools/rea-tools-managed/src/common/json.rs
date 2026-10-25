@@ -71,11 +71,6 @@ pub fn str_at<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
 
-/// Object member as an unsigned integer.
-pub fn u64_at(value: &Value, key: &str) -> Option<u64> {
-    value.get(key).and_then(Value::as_u64)
-}
-
 /// Object member as an array slice (empty when absent or not an array).
 pub fn array_at<'a>(value: &'a Value, key: &str) -> &'a [Value] {
     value

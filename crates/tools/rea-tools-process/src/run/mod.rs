@@ -20,6 +20,6 @@ mod result;
 mod sampler;
 mod scenario;
 mod snapshot;
-pub mod tool;
 #[cfg(test)]
 mod tests;
+pub mod tool;

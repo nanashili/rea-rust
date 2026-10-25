@@ -167,9 +167,6 @@ struct Artifact {
     build_id: Option<String>,
     architecture: Option<String>,
     sha256: Option<String>,
-    image_index: Option<u64>,
-    image_name: Option<String>,
-    module_name: Option<String>,
 }
 impl Artifact {
     fn base_identity(&self) -> Option<Identity> {
@@ -211,19 +208,19 @@ fn normalize_artifact(value: Value, index: usize) -> Result<Artifact, Failure> {
     let build_id = identity_field(object, index, "build_id", &["build_id", "build", "version"])?;
     let architecture = identity_field(object, index, "architecture", &["architecture", "arch"])?;
     let sha256 = identity_field(object, index, "sha256", &["sha256", "digest"])?;
-    let image_index = identity_number(
+    let _image_index = identity_number(
         object,
         index,
         "image_index",
         &["image_index", "image_id", "index"],
     )?;
-    let image_name = identity_field(
+    let _image_name = identity_field(
         object,
         index,
         "image_name",
         &["image_name", "assembly_name", "image"],
     )?;
-    let module_name = identity_field(object, index, "module_name", &["module_name", "module"])?;
+    let _module_name = identity_field(object, index, "module_name", &["module_name", "module"])?;
     if let Some(value) = &sha256 {
         if value.len() != 64
             || !value
@@ -243,9 +240,6 @@ fn normalize_artifact(value: Value, index: usize) -> Result<Artifact, Failure> {
         build_id,
         architecture,
         sha256,
-        image_index,
-        image_name,
-        module_name,
     })
 }
 

@@ -21,21 +21,6 @@ pub(crate) fn provider_adapter(
     }
 }
 
-/// One provider-candidate rejection (`ProviderSelectionRejection`).
-pub(crate) fn rejection(
-    provider_id: &str,
-    code: &str,
-    reason: &str,
-    diagnostics: &Map<String, Value>,
-) -> SelectionRejection {
-    SelectionRejection {
-        provider_id: provider_id.to_owned(),
-        code: code.to_owned(),
-        reason: reason.to_owned(),
-        diagnostics: Value::Object(diagnostics.clone()),
-    }
-}
-
 /// `new ProviderSelectionError({ operation, reason, requestedProviderId,
 /// candidateIds, rejections })`.
 pub(crate) fn provider_selection(

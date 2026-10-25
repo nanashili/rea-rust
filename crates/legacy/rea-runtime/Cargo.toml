@@ -24,10 +24,11 @@ sha2.workspace = true
 futures.workspace = true
 http-body.workspace = true
 rmcp = { workspace = true, features = ["server", "transport-io", "transport-streamable-http-server"] }
-tokio = { workspace = true, features = ["rt-multi-thread", "signal", "net", "time", "sync"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal", "net", "time", "sync", "fs"] }
 axum = { workspace = true, features = ["http1", "json", "tokio"] }
 tokio-util = { workspace = true, features = ["rt"] }
 tower = { workspace = true, features = ["util"] }
+rustix = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 tempfile.workspace = true

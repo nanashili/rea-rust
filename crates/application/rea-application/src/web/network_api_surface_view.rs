@@ -12,7 +12,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub const OPERATION: &str = "inspect_analysis_view";
 const CAPTURE_OPERATION: &str = "inspect_web_network_capture";
-const ROUTE_RULES: [&str; 4] = ["numeric", "uuid", "hex", "iso-date"];
 
 /// Project a retained HAR capture into a deterministic, paged API surface.
 pub fn project(parent: &Value, view: &Value) -> Result<Box<serde_json::value::RawValue>, Failure> {

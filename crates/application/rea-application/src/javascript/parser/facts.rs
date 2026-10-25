@@ -7,25 +7,27 @@
 //! the program is visited (through the semantic node list), so declarations
 //! nested in `declare module` blocks are included as Babel traversal does.
 
+use oxc_ast::AstKind;
 use oxc_ast::ast::{
     Argument, Declaration, ExportDefaultDeclarationKind, Expression, ImportDeclarationSpecifier,
     ImportOrExportKind, ModuleExportName, Program, Statement, TSModuleDeclarationName,
     TSModuleReference,
 };
-use oxc_ast::AstKind;
+use oxc_semantic::IsGlobalReference;
 use oxc_span::{GetSpan, Span};
 use serde::Serialize;
 
 use super::position::{PositionIndex, SourceRange};
 use super::{ParsedJavaScriptProgram, RawDiagnostic};
 
-/// Babel `program.sourceType` after mode resolution.
+/// Babel `program.sourceType` after mode resolution. Babel reports a
+/// `sourceType: "commonjs"` parse as `script`; CommonJS isolation is the
+/// separate [`RuntimeContext`] proof.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProgramSourceType {
     Module,
     Script,
-    Commonjs,
 }
 
 /// `javaScriptRuntimeContext`: only parser-owned facts establish isolation.
@@ -56,6 +58,8 @@ pub enum ModuleReferenceKind {
     Require,
     /// `import x = require("m")`.
     ImportEquals,
+    /// An ambient TypeScript `declare module "name"` declaration.
+    DeclaresModule,
 }
 
 /// One module reference; `range`/`expression` cover the specifier expression.
@@ -125,9 +129,7 @@ fn is_type_kind(kind: ImportOrExportKind) -> bool {
 fn is_erased_declaration(declaration: &Declaration<'_>) -> bool {
     match declaration {
         Declaration::TSInterfaceDeclaration(_) | Declaration::TSTypeAliasDeclaration(_) => true,
-        Declaration::FunctionDeclaration(function) => {
-            function.declare || function.body.is_none()
-        }
+        Declaration::FunctionDeclaration(function) => function.declare || function.body.is_none(),
         Declaration::VariableDeclaration(variable) => variable.declare,
         Declaration::ClassDeclaration(class) => class.declare,
         Declaration::TSEnumDeclaration(declaration) => declaration.declare,
@@ -173,7 +175,10 @@ fn export_inline_type_only(node: &oxc_ast::ast::ExportNamedDeclaration<'_>) -> b
     !named_export_type_only(node)
         && node.source.is_some()
         && !node.specifiers.is_empty()
-        && node.specifiers.iter().all(|specifier| is_type_kind(specifier.export_kind))
+        && node
+            .specifiers
+            .iter()
+            .all(|specifier| is_type_kind(specifier.export_kind))
 }
 
 fn module_export_name(name: &ModuleExportName<'_>) -> String {
@@ -217,7 +222,10 @@ fn has_runtime_module_declaration(program: &Program<'_>) -> bool {
     program.body.iter().any(|statement| match statement {
         Statement::TSImportEqualsDeclaration(node) => {
             !is_type_kind(node.import_kind)
-                && matches!(node.module_reference, TSModuleReference::ExternalModuleReference(_))
+                && matches!(
+                    node.module_reference,
+                    TSModuleReference::ExternalModuleReference(_)
+                )
         }
         Statement::ImportDeclaration(node) => {
             !is_type_kind(node.import_kind) && !import_inline_type_only(node)
@@ -226,7 +234,10 @@ fn has_runtime_module_declaration(program: &Program<'_>) -> bool {
         Statement::ExportNamedDeclaration(node) => {
             !named_export_type_only(node)
                 && !export_inline_type_only(node)
-                && node.declaration.as_ref().is_none_or(|d| !is_erased_declaration(d))
+                && node
+                    .declaration
+                    .as_ref()
+                    .is_none_or(|d| !is_erased_declaration(d))
         }
         Statement::ExportDefaultDeclaration(node) => !is_erased_default(&node.declaration),
         _ => false,
@@ -255,7 +266,11 @@ fn runtime_context(
     if super::mode::is_explicit_module_source_path(path) {
         return RuntimeContext::Module;
     }
-    if program.body.iter().any(|s| matches!(s, Statement::TSExportAssignment(_))) {
+    if program
+        .body
+        .iter()
+        .any(|s| matches!(s, Statement::TSExportAssignment(_)))
+    {
         // CommonJS isolation does not establish strict ESM semantics.
         return RuntimeContext::Commonjs;
     }
@@ -317,14 +332,16 @@ pub(super) fn extract(
     index: &PositionIndex<'_>,
 ) -> JavaScriptSourceFacts {
     let program = parsed.program;
-    let program_source_type = if program.source_type.is_commonjs() {
-        ProgramSourceType::Commonjs
-    } else if program.source_type.is_module() {
+    let program_source_type = if program.source_type.is_module() {
         ProgramSourceType::Module
     } else {
         ProgramSourceType::Script
     };
-    let mut collector = Collector { source, index, references: Vec::new() };
+    let mut collector = Collector {
+        source,
+        index,
+        references: Vec::new(),
+    };
     let mut exports = Vec::new();
     for node in parsed.semantic.nodes().iter() {
         match node.kind() {
@@ -349,10 +366,11 @@ pub(super) fn extract(
                 );
                 exports.push(ExportFact {
                     kind: ExportFactKind::All,
-                    names: vec![node
-                        .exported
-                        .as_ref()
-                        .map_or_else(|| "*".to_owned(), module_export_name)],
+                    names: vec![
+                        node.exported
+                            .as_ref()
+                            .map_or_else(|| "*".to_owned(), module_export_name),
+                    ],
                     source: Some(node.source.value.to_string()),
                     type_only,
                     erased_declaration: false,
@@ -384,7 +402,10 @@ pub(super) fn extract(
                     names,
                     source: node.source.as_ref().map(|s| s.value.to_string()),
                     type_only,
-                    erased_declaration: node.declaration.as_ref().is_some_and(is_erased_declaration),
+                    erased_declaration: node
+                        .declaration
+                        .as_ref()
+                        .is_some_and(is_erased_declaration),
                     range: index.range(node.span),
                 });
             }
@@ -425,12 +446,26 @@ pub(super) fn extract(
                     );
                 }
             }
+            AstKind::TSModuleDeclaration(node)
+                if node.declare
+                    && matches!(&node.id, TSModuleDeclarationName::StringLiteral(_)) =>
+            {
+                if let TSModuleDeclarationName::StringLiteral(literal) = &node.id {
+                    collector.add(
+                        ModuleReferenceKind::DeclaresModule,
+                        literal.span,
+                        Some(literal.value.to_string()),
+                        true,
+                        false,
+                    );
+                }
+            }
             AstKind::ImportExpression(node) => {
                 collector.add_expression(ModuleReferenceKind::DynamicImport, &node.source);
             }
             AstKind::CallExpression(call) => {
                 if !call.optional
-                    && matches!(&call.callee, Expression::Identifier(id) if id.name == "require")
+                    && matches!(&call.callee, Expression::Identifier(id) if id.name == "require" && id.is_global_reference(parsed.semantic.scoping()))
                     && let Some(argument) = call.arguments.first()
                 {
                     match argument {
@@ -453,12 +488,18 @@ pub(super) fn extract(
             _ => {}
         }
     }
-    collector.references.sort_by_key(|reference| reference.range.start.offset);
+    collector
+        .references
+        .sort_by_key(|reference| reference.range.start.offset);
     exports.sort_by_key(|export: &ExportFact| export.range.start.offset);
     JavaScriptSourceFacts {
         program_source_type,
         runtime_context: runtime_context(path, program, program_source_type),
-        errors: parsed.errors.iter().map(|error| diagnostic(error, index)).collect(),
+        errors: parsed
+            .errors
+            .iter()
+            .map(|error| diagnostic(error, index))
+            .collect(),
         module_references: collector.references,
         exports,
         // Top-level statements only, as `hasUncertainTypeOnlyModuleSideEffect`.
