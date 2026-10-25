@@ -146,7 +146,12 @@ function Write-StableLauncher([string] $VersionedExecutable, [string] $Destinati
         $content = "@echo off" + [char]13 + [char]10 + "setlocal DisableDelayedExpansion" + [char]13 + [char]10 + '"' + $quoted + '" %*' + [char]13 + [char]10
         [System.IO.File]::WriteAllText($temporary, $content, [System.Text.UTF8Encoding]::new($false))
         if (Test-Path -LiteralPath $Destination -PathType Leaf) {
-            [System.IO.File]::Replace($temporary, $Destination, $null)
+            $replaceMethod = [System.IO.File].GetMethod(
+                'Replace',
+                [type[]]@([string], [string], [string])
+            )
+            $replaceArguments = [object[]]@($temporary, $Destination, $null)
+            $replaceMethod.Invoke($null, $replaceArguments)
         } else {
             [System.IO.File]::Move($temporary, $Destination)
         }
