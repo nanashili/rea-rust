@@ -951,7 +951,10 @@ mod tests {
         let real = directory.path().join("real.json");
         let link = directory.path().join("link.json");
         fs::write(&real, b"old").expect("write");
+        #[cfg(unix)]
         std::os::unix::fs::symlink(&real, &link).expect("symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&real, &link).expect("symlink");
         let change = PreparedClientChange::configure(
             target(&link),
             Some(sha256_hex(b"old")),
