@@ -60,23 +60,47 @@ jobs:
       - name: Run installer black-box tests
         run: python3 scripts/release/test-install.py
 
+  windows-installer:
+    name: Test Windows installer
+    runs-on: windows-2025
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Run Windows installer black-box tests
+        shell: pwsh
+        run: python scripts/release/test-install-windows.py
+
   build:
     name: Build (${{ matrix.target }})
     needs:
       - validate
       - installer
+      - windows-installer
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
             runner: macos-15
+            archive: rea-rust-aarch64-apple-darwin.tar.gz
           - target: x86_64-apple-darwin
             runner: macos-15-intel
+            archive: rea-rust-x86_64-apple-darwin.tar.gz
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
+            archive: rea-rust-aarch64-unknown-linux-gnu.tar.gz
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
+            archive: rea-rust-x86_64-unknown-linux-gnu.tar.gz
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+            archive: rea-rust-x86_64-pc-windows-msvc.zip
     runs-on: ${{ matrix.runner }}
     env:
       MACOSX_DEPLOYMENT_TARGET: "13.0"
@@ -98,6 +122,45 @@ jobs:
           echo "CC=gcc-12" >> "$GITHUB_ENV"
           echo "CXX=g++-12" >> "$GITHUB_ENV"
 
+      - name: Set up Windows MSVC environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "Visual Studio with the x64 MSVC toolchain was not found"
+          }
+          "REA_VS_PATH=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $devCmd = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
+          $vsEnvironment = cmd.exe /d /s /c "`"$devCmd`" -arch=amd64 -host_arch=amd64 >nul && set"
+          if ($LASTEXITCODE -ne 0) {
+            throw "VsDevCmd.bat could not initialize the x64 MSVC environment"
+          }
+
+          $pathValue = $null
+          $allowedVariables = '^(?i:INCLUDE|LIB|LIBPATH|VCINSTALLDIR|VCToolsInstallDir|VCToolsRedistDir|WindowsSdkDir|WindowsSDKVersion|UniversalCRTSdkDir|UCRTVersion|VSINSTALLDIR|VisualStudioVersion|VSCMD_VER)$'
+          foreach ($line in $vsEnvironment) {
+            if ($line -notmatch '^([^=]+)=(.*)$') {
+              continue
+            }
+            $name = $matches[1]
+            $value = $matches[2]
+            if ($name -match '^(?i:PATH)$') {
+              $pathValue = $value
+              continue
+            }
+            if ($name -match '^(?i:GITHUB_|RUNNER_|CI$|PATHEXT$)' -or $name -notmatch $allowedVariables) {
+              continue
+            }
+            "$name=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $pathValue) {
+            throw "VsDevCmd.bat did not provide a PATH"
+          }
+          "PATH=$pathValue" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install Rust toolchain
         shell: bash
         run: |
@@ -106,11 +169,13 @@ jobs:
           rustup target add "${{ matrix.target }}"
 
       - name: Build REA
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cargo build --locked --release --target "${{ matrix.target }}" -p rea
 
       - name: Build Ghidra worker
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cargo build \
@@ -119,24 +184,68 @@ jobs:
             --manifest-path ghidra-rust-worker/Cargo.toml \
             --target "${{ matrix.target }}"
 
+      - name: Build Windows binaries
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $devCmd = Join-Path $env:REA_VS_PATH "Common7\Tools\VsDevCmd.bat"
+          $env:RUSTFLAGS = '-C target-feature=+crt-static'
+          $command = "call `"$devCmd`" -arch=amd64 -host_arch=amd64 && cargo build --locked --release --target ${{ matrix.target }} -p rea && cargo build --locked --release --manifest-path ghidra-rust-worker/Cargo.toml --target ${{ matrix.target }}"
+          cmd.exe /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Windows runtime dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dumpbin = (Get-Command dumpbin.exe -ErrorAction Stop).Source
+          $binaries = @(
+            "target\${{ matrix.target }}\release\rea.exe",
+            "ghidra-rust-worker\target\${{ matrix.target }}\release\rea-ghidra-rust-worker.exe"
+          )
+          foreach ($binary in $binaries) {
+            if (-not (Test-Path $binary)) {
+              throw "missing Windows binary: $binary"
+            }
+            $dependencies = & $dumpbin /dependents $binary 2>&1
+            if ($LASTEXITCODE -ne 0) {
+              throw "dumpbin failed for $binary"
+            }
+            if ($dependencies -match '(?i)\b(?:MSVCP|VCRUNTIME)\d+(?:_\d+)?\.dll\b') {
+              throw "$binary depends on the dynamic MSVC runtime: $($Matches[0])"
+            }
+          }
+
       - name: Package archive
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           python3 scripts/release/package.py \
             --target "${{ matrix.target }}" \
             --output-dir dist
 
+      - name: Package Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python scripts/release/package.py --target "${{ matrix.target }}" --output-dir dist
+
       - name: Smoke test archive
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           python3 scripts/release/smoke.py \
-            --archive "dist/rea-rust-${{ matrix.target }}.tar.gz"
+            --archive "dist/${{ matrix.archive }}"
+
+      - name: Smoke test Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python scripts/release/smoke.py --archive "dist/${{ matrix.archive }}"
 
       - name: Upload platform archive
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-${{ matrix.target }}
-          path: dist/rea-rust-${{ matrix.target }}.tar.gz
+          path: dist/${{ matrix.archive }}
           if-no-files-found: error
           retention-days: 14
 
@@ -164,13 +273,13 @@ jobs:
         shell: bash
         run: |
           cd dist
-          sha256sum rea-rust-*.tar.gz | sort -k2 > SHA256SUMS
+          sha256sum rea-rust-* | sort -k2 > SHA256SUMS
 
       - name: Stage release bundle
         shell: bash
         run: |
           mkdir -p bundle
-          cp dist/rea-rust-*.tar.gz dist/SHA256SUMS install.sh bundle/
+          cp dist/rea-rust-* dist/SHA256SUMS install.sh install.ps1 bundle/
 
       - name: Upload release bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -217,7 +326,8 @@ jobs:
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
             "${release_flags[@]}" \
-            --notes "Native REA for macOS 13+ and Linux (glibc 2.35+), on ARM64 and x86-64. Each archive includes the CLI, stdio MCP server, Ghidra worker, and investigation skill. See [installation and MCP setup](https://github.com/nanashili/rea-rust/blob/$GITHUB_REF_NAME/docs/installation.md). Download install.sh to install or update without Node.js, Cargo, or sudo; archives are verified against SHA256SUMS." \
-            dist/rea-rust-*.tar.gz \
+            --notes "Native REA for macOS 13+ and Linux (glibc 2.35+) on ARM64 and x86-64, plus Windows x86-64. Each archive includes the CLI, stdio MCP server, Ghidra worker, and investigation skill. See [installation and MCP setup](https://github.com/nanashili/rea-rust/blob/$GITHUB_REF_NAME/docs/installation.md). Download install.sh or install.ps1 to install without Node.js, Cargo, or sudo; archives are verified against SHA256SUMS." \
+            dist/rea-rust-* \
             dist/SHA256SUMS \
-            install.sh
+            install.sh \
+            install.ps1

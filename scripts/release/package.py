@@ -12,6 +12,7 @@ import subprocess
 import tarfile
 import tempfile
 import tomllib
+import zipfile
 
 from skill_bundle import stage_skill
 
@@ -22,6 +23,7 @@ TARGETS = (
     "x86_64-apple-darwin",
     "aarch64-unknown-linux-gnu",
     "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
 )
 SEMVER = re.compile(
     r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
@@ -63,8 +65,9 @@ def copy_executable(source, destination):
 
 
 def stage_release(destination, target, rea, worker):
-    copy_executable(rea, destination / "bin/rea")
-    copy_executable(worker, destination / "bin/rea-ghidra-rust-worker")
+    suffix = ".exe" if target.endswith("-windows-msvc") else ""
+    copy_executable(rea, destination / f"bin/rea{suffix}")
+    copy_executable(worker, destination / f"bin/rea-ghidra-rust-worker{suffix}")
     for name in ("LICENSE", "README.md"):
         shutil.copyfile(ROOT / name, destination / name)
     version = release_version()
@@ -91,24 +94,45 @@ def stage_release(destination, target, rea, worker):
     (destination / "release.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
+def write_tar_archive(destination, archive_path):
+    with tarfile.open(archive_path, "w:gz", format=tarfile.USTAR_FORMAT) as archive:
+        for path in sorted(destination.rglob("*")):
+            relative = path.relative_to(destination)
+            info = archive.gettarinfo(str(path), arcname=f"rea-rust/{relative.as_posix()}")
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            info.mtime = 0
+            if path.is_file():
+                info.mode = 0o755 if relative.parts[0] == "bin" else 0o644
+                with path.open("rb") as content:
+                    archive.addfile(info, content)
+            else:
+                info.mode = 0o755
+                archive.addfile(info)
+
+
+def write_zip_archive(destination, archive_path):
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(destination.rglob("*")):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(destination)
+            info = zipfile.ZipInfo(f"rea-rust/{relative.as_posix()}")
+            info.compress_type = zipfile.ZIP_DEFLATED
+            mode = 0o755 if relative.parts[0] == "bin" else 0o644
+            info.external_attr = (0o100000 | mode) << 16
+            with path.open("rb") as content, archive.open(info, "w") as member:
+                shutil.copyfileobj(content, member)
+
+
 def archive_release(destination, output):
     """Publish an archive only after every staged member has been written."""
     with tempfile.TemporaryDirectory(prefix=".rea-release-", dir=output.parent) as temporary:
         archive_path = Path(temporary) / output.name
-        with tarfile.open(archive_path, "w:gz", format=tarfile.USTAR_FORMAT) as archive:
-            for path in sorted(destination.rglob("*")):
-                relative = path.relative_to(destination)
-                info = archive.gettarinfo(str(path), arcname=f"rea-rust/{relative.as_posix()}")
-                info.uid = info.gid = 0
-                info.uname = info.gname = ""
-                info.mtime = 0
-                if path.is_file():
-                    info.mode = 0o755 if relative.parts[0] == "bin" else 0o644
-                    with path.open("rb") as content:
-                        archive.addfile(info, content)
-                else:
-                    info.mode = 0o755
-                    archive.addfile(info)
+        if output.suffix == ".zip":
+            write_zip_archive(destination, archive_path)
+        else:
+            write_tar_archive(destination, archive_path)
         # Exclusive hard-link creation refuses to overwrite an earlier artifact.
         os.link(archive_path, output)
 
@@ -133,10 +157,13 @@ def main():
 
     output_directory = options.output_dir.resolve()
     output_directory.mkdir(parents=True, exist_ok=True)
-    output = output_directory / f"rea-rust-{options.target}.tar.gz"
-    rea = options.rea or ROOT / f"target/{options.target}/release/rea"
+    is_windows = options.target.endswith("-windows-msvc")
+    archive_extension = ".zip" if is_windows else ".tar.gz"
+    executable_suffix = ".exe" if is_windows else ""
+    output = output_directory / f"rea-rust-{options.target}{archive_extension}"
+    rea = options.rea or ROOT / f"target/{options.target}/release/rea{executable_suffix}"
     worker = options.worker or ROOT / (
-        f"ghidra-rust-worker/target/{options.target}/release/rea-ghidra-rust-worker"
+        f"ghidra-rust-worker/target/{options.target}/release/rea-ghidra-rust-worker{executable_suffix}"
     )
     with tempfile.TemporaryDirectory(prefix="rea-release-stage-") as temporary:
         destination = Path(temporary) / "rea-rust"

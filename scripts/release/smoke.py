@@ -17,13 +17,16 @@ import queue
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
 import threading
 import time
+import tomllib
 from typing import Any
+import zipfile
 
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
@@ -59,6 +62,16 @@ def unpack_archive(archive: Path, destination: Path) -> Path:
         fail(f"archive does not exist: {archive}")
 
     root = destination / "rea-rust"
+    if archive.suffix.lower() == ".zip":
+        unpack_zip(archive, destination)
+    else:
+        unpack_tar(archive, destination)
+    if not root.is_dir():
+        fail("archive does not contain the rea-rust/ top-level directory")
+    return root
+
+
+def unpack_tar(archive: Path, destination: Path) -> None:
     with tarfile.open(archive, "r:gz") as bundle:
         members = bundle.getmembers()
         if not members:
@@ -80,9 +93,26 @@ def unpack_archive(archive: Path, destination: Path) -> Path:
             with source, target.open("wb") as output:
                 shutil.copyfileobj(source, output)
             target.chmod(member.mode & 0o777)
-    if not root.is_dir():
-        fail("archive does not contain the rea-rust/ top-level directory")
-    return root
+
+
+def unpack_zip(archive: Path, destination: Path) -> None:
+    with zipfile.ZipFile(archive) as bundle:
+        members = bundle.infolist()
+        if not members:
+            fail("archive is empty")
+        for member in members:
+            path = safe_member_path(member.filename)
+            mode = member.external_attr >> 16
+            if stat.S_ISLNK(mode) or not (member.is_dir() or stat.S_ISREG(mode)):
+                fail(f"archive member is not a regular file or directory: {member.filename!r}")
+            target = destination / path
+            if member.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with bundle.open(member) as source, target.open("wb") as output:
+                shutil.copyfileobj(source, output)
+            target.chmod(mode & 0o777)
 
 
 def read_release_metadata(root: Path) -> tuple[str, dict[str, Any]]:
@@ -121,6 +151,9 @@ def read_release_metadata(root: Path) -> tuple[str, dict[str, Any]]:
 
 
 def run(command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -> subprocess.CompletedProcess[str]:
+    process_options: dict[str, Any] = {}
+    if os.name != "nt":
+        process_options["start_new_session"] = True
     process = subprocess.Popen(
         command,
         cwd=cwd,
@@ -128,7 +161,7 @@ def run(command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        start_new_session=True,
+        **process_options,
     )
     try:
         stdout, stderr = process.communicate(timeout=timeout)
@@ -143,6 +176,31 @@ def run(command: list[str], *, cwd: Path, env: dict[str, str], timeout: float) -
 
 def terminate_process_group(process: subprocess.Popen[str]) -> None:
     """Terminate a timed-out command and any provider children it owns."""
+    if os.name == "nt":
+        try:
+            taskkill = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+            if taskkill.returncode == 0:
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+                return
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+        return
     try:
         os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -201,6 +259,9 @@ class McpConnection:
 
     def __init__(self, binary: Path, root: Path, env: dict[str, str]) -> None:
         self.command = [str(binary), "mcp"]
+        process_options: dict[str, Any] = {}
+        if os.name != "nt":
+            process_options["start_new_session"] = True
         self.process = subprocess.Popen(
             self.command,
             cwd=root,
@@ -209,7 +270,7 @@ class McpConnection:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True,
+            **process_options,
         )
         self.stdout_queue: queue.Queue[tuple[str, str | None]] = queue.Queue()
         self.stderr_chunks: list[str] = []
@@ -345,19 +406,20 @@ def mcp_exchange(binary: Path, root: Path, env: dict[str, str]) -> None:
 
 
 def compile_fixture(directory: Path, env: dict[str, str]) -> Path:
-    compiler = shutil.which("cc", path=env.get("PATH"))
-    if compiler is None:
-        fail("release smoke requires a C compiler named cc")
     source = directory / "smoke_fixture.c"
-    binary = directory / "smoke_fixture"
+    binary = directory / ("smoke_fixture.exe" if os.name == "nt" else "smoke_fixture")
     source.write_text("int main(void) { return 42; }\n", encoding="utf-8")
+    compiler_name = "cl" if os.name == "nt" else "cc"
+    compiler = shutil.which(compiler_name, path=env.get("PATH"))
+    if compiler is None:
+        fail(f"release smoke requires a C compiler named {compiler_name}")
+    command = (
+        [compiler, "/nologo", "/O0", "/Zi", "/MT", f"/Fe:{binary}", str(source)]
+        if os.name == "nt"
+        else [compiler, "-O0", "-g", "-o", str(binary), str(source)]
+    )
     require_success(
-        run(
-            [compiler, "-O0", "-g", "-o", str(binary), str(source)],
-            cwd=directory,
-            env=env,
-            timeout=30,
-        ),
+        run(command, cwd=directory, env=env, timeout=30),
         "compile Ghidra smoke fixture",
     )
     return binary
@@ -465,11 +527,65 @@ def verify_registration(binary: Path, root: Path, env: dict[str, str]) -> None:
     config_path = root / ".codex" / "config.toml"
     if not config_path.is_file():
         fail("MCP registration did not create the isolated Codex configuration")
-    config = config_path.read_text(encoding="utf-8")
-    if str(binary) not in config or 'args = ["mcp"]' not in config:
-        fail(f"Codex configuration does not contain the native launcher:\n{config}")
-    if any(token in config.lower() for token in ("npm", "npx", "node")):
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        fail(f"Codex configuration is not valid TOML: {error}")
+    server = config.get("mcp_servers", {}).get("rea")
+    if not isinstance(server, dict):
+        fail(f"Codex configuration does not contain the rea MCP server: {config!r}")
+    if server.get("command") != str(binary) or server.get("args") != ["mcp"]:
+        fail(f"Codex configuration does not contain the native launcher: {config!r}")
+    if any(token in str(server.get("command", "")).lower() for token in ("npm", "npx", "node")):
         fail("native MCP registration wrote an npm/Node launcher")
+
+
+def isolated_environment(work: Path) -> tuple[dict[str, str], Path]:
+    isolated_home = work / "home"
+    isolated_home.mkdir()
+    isolated_cwd = work / "cwd"
+    isolated_cwd.mkdir()
+
+    env = os.environ.copy()
+    for key in list(env):
+        if key.startswith("REA_"):
+            env.pop(key)
+    for key in ("CODEX_HOME", "CLAUDE_CONFIG_DIR", "GEMINI_CLI_HOME", "REACONFIG"):
+        env.pop(key, None)
+    env.update(
+        {
+            "HOME": str(isolated_home),
+            "USERPROFILE": str(isolated_home),
+            "XDG_CONFIG_HOME": str(isolated_home / ".config"),
+            "XDG_DATA_HOME": str(isolated_home / ".local" / "share"),
+            "XDG_CACHE_HOME": str(isolated_home / ".cache"),
+        }
+    )
+    if os.name == "nt":
+        env.update(
+            {
+                "APPDATA": str(isolated_home / "AppData" / "Roaming"),
+                "LOCALAPPDATA": str(isolated_home / "AppData" / "Local"),
+            }
+        )
+
+    original_path = env.get("PATH", os.defpath)
+    compiler_name = "cl" if os.name == "nt" else "cc"
+    compiler = shutil.which(compiler_name, path=original_path)
+    if compiler is None:
+        fail(f"release smoke requires a C compiler named {compiler_name}")
+    if os.name == "nt":
+        path_entries = [
+            entry
+            for entry in original_path.split(os.pathsep)
+            if not any(token in entry.lower() for token in ("node", "npm", "npx"))
+        ]
+        system_root = env.get("SystemRoot", r"C:\\Windows")
+        path_entries.extend([str(Path(compiler).parent), str(Path(system_root) / "System32")])
+    else:
+        path_entries = [str(Path(compiler).parent), "/usr/bin", "/bin"]
+    env["PATH"] = os.pathsep.join(dict.fromkeys(path_entries))
+    return env, isolated_cwd
 
 
 def main() -> int:
@@ -478,42 +594,15 @@ def main() -> int:
         work = Path(temporary)
         root = unpack_archive(arguments.archive.resolve(), work / "unpacked")
         version, _manifest = read_release_metadata(root)
-        binary = root / "bin" / "rea"
-        worker = root / "bin" / "rea-ghidra-rust-worker"
+        suffix = ".exe" if os.name == "nt" else ""
+        binary = root / "bin" / f"rea{suffix}"
+        worker = root / "bin" / f"rea-ghidra-rust-worker{suffix}"
         if not binary.is_file() or not os.access(binary, os.X_OK):
             fail("archive does not contain an executable bin/rea")
         if not worker.is_file() or not os.access(worker, os.X_OK):
             fail("archive does not contain an executable Ghidra worker")
 
-        isolated_home = work / "home"
-        isolated_home.mkdir()
-        isolated_cwd = work / "cwd"
-        isolated_cwd.mkdir()
-        env = os.environ.copy()
-        env.update(
-            {
-                "HOME": str(isolated_home),
-                "XDG_CONFIG_HOME": str(isolated_home / ".config"),
-                "XDG_DATA_HOME": str(isolated_home / ".local" / "share"),
-                "XDG_CACHE_HOME": str(isolated_home / ".cache"),
-            }
-        )
-        for key in list(env):
-            if key.startswith("REA_"):
-                env.pop(key)
-        for key in (
-            "CODEX_HOME",
-            "CLAUDE_CONFIG_DIR",
-            "GEMINI_CLI_HOME",
-            "REACONFIG",
-        ):
-            env.pop(key, None)
-        compiler = shutil.which("cc")
-        if compiler is None:
-            fail("release smoke requires a C compiler named cc")
-        env["PATH"] = os.pathsep.join(
-            dict.fromkeys((str(Path(compiler).parent), "/usr/bin", "/bin"))
-        )
+        env, isolated_cwd = isolated_environment(work)
         verify_cli(binary, version, root, isolated_cwd, env)
         mcp_exchange(binary, isolated_cwd, env)
         verify_setup_plan(binary, isolated_cwd, env)

@@ -12,7 +12,13 @@ use serde::Deserialize;
 const PACKAGE_NAME: &str = "rea-agents";
 const RELEASE_NAME: &str = "rea-rust";
 const RELEASE_SCHEMA_VERSION: u64 = 1;
+#[cfg(windows)]
+const RELEASE_EXECUTABLE: &str = "bin/rea.exe";
+#[cfg(not(windows))]
 const RELEASE_EXECUTABLE: &str = "bin/rea";
+#[cfg(windows)]
+const RELEASE_WORKER: &str = "bin/rea-ghidra-rust-worker.exe";
+#[cfg(not(windows))]
 const RELEASE_WORKER: &str = "bin/rea-ghidra-rust-worker";
 
 /// The distribution that owns an executable.
@@ -164,6 +170,7 @@ fn expected_release_target() -> Option<&'static str> {
         ("x86_64", "macos") => Some("x86_64-apple-darwin"),
         ("aarch64", "linux") if cfg!(target_env = "gnu") => Some("aarch64-unknown-linux-gnu"),
         ("x86_64", "linux") if cfg!(target_env = "gnu") => Some("x86_64-unknown-linux-gnu"),
+        ("x86_64", "windows") if cfg!(target_env = "msvc") => Some("x86_64-pc-windows-msvc"),
         _ => None,
     }
 }
@@ -410,22 +417,11 @@ mod tests {
     fn standalone_fixture() -> tempfile::TempDir {
         let root = tempfile::tempdir().expect("fixture directory");
         fs::create_dir_all(root.path().join("bin")).expect("bin directory");
-        fs::write(root.path().join("bin/rea"), "binary").expect("rea executable");
-        fs::write(root.path().join("bin/rea-ghidra-rust-worker"), "worker")
-            .expect("worker executable");
+        fs::write(root.path().join(RELEASE_EXECUTABLE), "binary").expect("rea executable");
+        fs::write(root.path().join(RELEASE_WORKER), "worker").expect("worker executable");
         fs::write(
             root.path().join("release.json"),
-            r#"{
-                "name":"rea-rust",
-                "schema_version":1,
-                "version":"6.7.0",
-                "target":"aarch64-apple-darwin",
-                "source_commit":"0123456789012345678901234567890123456789",
-                "files":{
-                    "bin/rea":"0123456789012345678901234567890123456789012345678901234567890123",
-                    "bin/rea-ghidra-rust-worker":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
-                }
-            }"#,
+            standalone_fixture_manifest(),
         )
         .expect("release manifest");
         root
@@ -448,7 +444,8 @@ mod tests {
     #[test]
     fn accepts_standalone_release_layout() {
         let root = standalone_fixture();
-        let identity = discover_package_root(&root.path().join("bin/rea")).expect("release");
+        let identity =
+            discover_package_root(&root.path().join(RELEASE_EXECUTABLE)).expect("release");
 
         assert_eq!(
             identity.package_root,
@@ -468,9 +465,10 @@ mod tests {
         let root = standalone_fixture();
         let link = root.path().join("rea-link");
         #[cfg(unix)]
-        std::os::unix::fs::symlink(root.path().join("bin/rea"), &link).expect("symlink");
+        std::os::unix::fs::symlink(root.path().join(RELEASE_EXECUTABLE), &link).expect("symlink");
         #[cfg(windows)]
-        std::os::windows::fs::symlink_file(root.path().join("bin/rea"), &link).expect("symlink");
+        std::os::windows::fs::symlink_file(root.path().join(RELEASE_EXECUTABLE), &link)
+            .expect("symlink");
 
         let identity = discover_package_root(&link).expect("release through symlink");
         assert_eq!(
@@ -482,7 +480,7 @@ mod tests {
     #[test]
     fn rejects_standalone_release_with_unexpected_version() {
         let root = standalone_fixture_for_current_target();
-        let error = verify_standalone_release(&root.path().join("bin/rea"), "6.7.1")
+        let error = verify_standalone_release(&root.path().join(RELEASE_EXECUTABLE), "6.7.1")
             .expect_err("unexpected version must not verify");
         assert!(matches!(
             error,
@@ -494,7 +492,8 @@ mod tests {
         all(target_arch = "aarch64", target_os = "macos"),
         all(target_arch = "x86_64", target_os = "macos"),
         all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"),
-        all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+        all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
+        all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")
     ))]
     #[test]
     fn rejects_standalone_release_with_unexpected_target() {
@@ -511,7 +510,7 @@ mod tests {
             manifest.replace(current_target, wrong_target),
         )
         .expect("manifest update");
-        let error = verify_standalone_release(&root.path().join("bin/rea"), "6.7.0")
+        let error = verify_standalone_release(&root.path().join(RELEASE_EXECUTABLE), "6.7.0")
             .expect_err("unexpected target must not verify");
         assert!(matches!(
             error,
@@ -537,7 +536,6 @@ mod tests {
             r#""name":"rea-agents""#,
             r#""schema_version":2"#,
             r#""source_commit":"short""#,
-            r#""bin/rea":"short""#,
         ] {
             let manifest = fs::read_to_string(root.path().join("release.json")).expect("manifest");
             let updated = match replacement {
@@ -550,13 +548,10 @@ mod tests {
                 r#""source_commit":"short""# => {
                     manifest.replace("0123456789012345678901234567890123456789", "short")
                 }
-                _ => manifest.replace(
-                    "0123456789012345678901234567890123456789012345678901234567890123",
-                    "short",
-                ),
+                _ => unreachable!("all replacements are handled explicitly"),
             };
             fs::write(root.path().join("release.json"), updated).expect("manifest update");
-            let error = discover_package_root(&root.path().join("bin/rea"))
+            let error = discover_package_root(&root.path().join(RELEASE_EXECUTABLE))
                 .expect_err("invalid release manifest");
             assert!(matches!(
                 error,
@@ -568,20 +563,44 @@ mod tests {
             )
             .expect("restore manifest");
         }
+        let manifest = fs::read_to_string(root.path().join("release.json")).expect("manifest");
+        let digest_key = format!(
+            "\"{RELEASE_EXECUTABLE}\":\"0123456789012345678901234567890123456789012345678901234567890123\""
+        );
+        let updated = manifest.replace(&digest_key, &format!("\"{RELEASE_EXECUTABLE}\":\"short\""));
+        fs::write(root.path().join("release.json"), updated).expect("manifest update");
+        let error = discover_package_root(&root.path().join(RELEASE_EXECUTABLE))
+            .expect_err("invalid file digest must be rejected");
+        assert!(matches!(
+            error,
+            PackageIdentityError::InvalidManifest { .. }
+        ));
     }
 
-    fn standalone_fixture_manifest() -> &'static str {
-        r#"{
-            "name":"rea-rust",
-            "schema_version":1,
-            "version":"6.7.0",
-            "target":"aarch64-apple-darwin",
-            "source_commit":"0123456789012345678901234567890123456789",
-            "files":{
-                "bin/rea":"0123456789012345678901234567890123456789012345678901234567890123",
-                "bin/rea-ghidra-rust-worker":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd"
-            }
-        }"#
+    fn standalone_fixture_manifest() -> String {
+        let mut files = serde_json::Map::new();
+        files.insert(
+            RELEASE_EXECUTABLE.to_owned(),
+            serde_json::Value::String(
+                "0123456789012345678901234567890123456789012345678901234567890123".to_owned(),
+            ),
+        );
+        files.insert(
+            RELEASE_WORKER.to_owned(),
+            serde_json::Value::String(
+                "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd".to_owned(),
+            ),
+        );
+
+        serde_json::json!({
+            "name": "rea-rust",
+            "schema_version": 1,
+            "version": "6.7.0",
+            "target": "aarch64-apple-darwin",
+            "source_commit": "0123456789012345678901234567890123456789",
+            "files": files,
+        })
+        .to_string()
     }
 
     #[test]

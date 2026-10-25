@@ -10,8 +10,9 @@ require Node.js.
 
 ## Install
 
-Prebuilt releases include `rea` and the Ghidra worker for macOS and Linux,
-on Apple Silicon/ARM64 and x86-64. No Node.js, Rust toolchain, or JVM is needed.
+Prebuilt releases include `rea`, the MCP server, and the Ghidra worker for
+macOS, Linux, and Windows x64. No Node.js, Rust toolchain, or administrator
+account is needed.
 
 ```sh
 curl -fsSL https://github.com/nanashili/rea-rust/releases/latest/download/install.sh -o install-rea.sh
@@ -20,11 +21,18 @@ export PATH="$HOME/.local/bin:$PATH"
 rea --version
 ```
 
-The installer verifies release checksums, stores versioned files under
-`~/.local/share/rea-rust`, and links `~/.local/bin/rea`. It leaves shell profiles
-and MCP settings for you to configure. Rerun it to update, or set `REA_VERSION`
-to select a release. See [installation details](docs/installation.md) for
-requirements, custom paths, and removal.
+On Windows, run the PowerShell installer from a PowerShell prompt:
+
+```powershell
+irm https://github.com/nanashili/rea-rust/releases/latest/download/install.ps1 -OutFile install-rea.ps1
+powershell -ExecutionPolicy Bypass -File .\install-rea.ps1
+```
+
+The installers verify release checksums and store versioned files in a
+per-user directory. They do not edit shell profiles, `PATH`, or MCP settings.
+Rerun the installer to update, or set `REA_VERSION` to select a release. See
+[installation details](docs/installation.md) for paths, custom locations, and
+removal.
 
 ## Build from source
 
@@ -41,7 +49,8 @@ target/release/rea --help
 
 ### Ghidra decompilation
 
-On macOS or Linux, build the Ghidra worker separately and place it beside `rea`:
+On macOS, Linux, or Windows, build the Ghidra worker separately and place it
+beside `rea`:
 
 ```sh
 cargo build --manifest-path ghidra-rust-worker/Cargo.toml --locked --release
@@ -88,9 +97,9 @@ Release installs already include the Ghidra worker.
 ## Status
 
 GitHub Actions builds and smoke-tests macOS and Linux archives on both
-architectures before publishing a tagged release. Windows release packages and
-Frida-enabled binaries are not provided. Other analysis providers and external
-tools require their own installations.
+architectures, plus a Windows x64 archive, before publishing a tagged release.
+Windows ARM64, musl Linux, and Frida-enabled binaries are not provided.
+Other analysis providers and external tools require their own installations.
 
 Known behavior differences and test coverage are recorded in the
 [migration verification report](docs/verification/native-runtime-migration-2026-10-24.md).

@@ -16,8 +16,11 @@ TypeScript checkout. The commands in the [README](../README.md) use Cargo's
 default target directories; adjust executable paths if you set `CARGO_TARGET_DIR`.
 
 Rust is pinned in `rust-toolchain.toml`. Native dependencies require a C/C++20
-compiler; use GCC 12+ on Linux (`CC=gcc-12 CXX=g++-12 cargo build ...`). Provider tools such as LLDB, Swift, JADX, and mitmproxy are
-needed only for the workflows that use them.
+compiler. Use GCC 12+ on Linux (`CC=gcc-12 CXX=g++-12 cargo build ...`). On
+Windows, install Visual Studio 2022 Build Tools with the Desktop C++ workload,
+the MSVC x64 toolchain, and a Windows 10/11 SDK, then build from a Developer
+PowerShell. Provider tools such as LLDB, Swift, JADX, and mitmproxy are needed
+only for the workflows that use them.
 
 ## Ghidra worker
 
@@ -105,17 +108,21 @@ directory. See the [header](../crates/platform/rea-ffi/include/rea.h) and
 
 ## Releases
 
-The [release workflow](../.github/workflows/release.yml) builds four native
-archives on pushes and pull requests. Tagging the commit with `v` followed by
-the `rea` crate version publishes a release after every platform passes.
-Manual workflow runs build downloadable artifacts without publishing.
+The [release workflow](../.github/workflows/release.yml) builds five native
+archives on pushes and pull requests: macOS and Linux on ARM64 and x86-64, plus
+Windows x64 (`x86_64-pc-windows-msvc`). Tagging the commit with `v` followed by
+the `rea` crate version publishes a release after every platform passes. Manual
+workflow runs build downloadable artifacts without publishing.
 
 Each archive contains the CLI, Ghidra worker, investigation skill, license,
 version, and a file digest manifest. The workflow tests the packaged executable
 through CLI, MCP, client registration, and Ghidra decompilation before upload.
-`SHA256SUMS` and `install.sh` accompany published archives. The installer also
-runs `rea --verify-installation` before activation, using the runtime's own
-manifest parser to confirm the release identity.
+`SHA256SUMS`, `install.sh`, and `install.ps1` accompany published archives.
+Each installer runs `rea --verify-installation` before activation, using the
+runtime's own manifest parser to confirm the release identity.
+
+Windows release builds use the MSVC x64 toolchain and package a ZIP archive.
+Windows ARM64 builds are source-only until a CI lane and smoke test are added.
 
 To package an existing target build locally, using Python 3.11+:
 
