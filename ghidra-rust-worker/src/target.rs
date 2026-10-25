@@ -6,13 +6,14 @@ use ghidra_decompiler::program::{Program, SymbolLoading};
 use object::{Architecture, BinaryFormat, Object, ObjectSection, SectionKind};
 
 use crate::encoding::encoded_size;
-use crate::macho_starts;
-use crate::protocol::{MAX_BATCH_BYTES, MAX_NAME_BYTES, Segment, address};
+use crate::inventory::{MetadataFunction, normalize};
+use crate::protocol::{MAX_BATCH_BYTES, MAX_INVENTORY, MAX_NAME_BYTES, Segment, address};
+use crate::{macho_starts, pe_exports};
 
 pub struct TargetImage {
     pub bytes: Vec<u8>,
     pub sections: Vec<Segment>,
-    pub metadata_functions: Vec<u64>,
+    pub metadata_functions: Vec<MetadataFunction>,
     /// Executable section ranges that admit inventory entries.
     pub code_ranges: Vec<Range<u64>>,
     pub arm: bool,
@@ -44,16 +45,7 @@ impl TargetImage {
 
         let (sections, code_ranges) = read_sections(&file)?;
         let arm = file.architecture() == Architecture::Arm;
-        let mut metadata_functions = macho_starts::function_starts(&file)?;
-        if file.entry() != 0 {
-            metadata_functions.push(file.entry());
-        }
-        let address_mask = if arm { !1 } else { !0 };
-        metadata_functions.retain(|value| {
-            code_ranges
-                .iter()
-                .any(|range| range.contains(&(*value & address_mask)))
-        });
+        let metadata_functions = read_function_metadata(&file, arm, &code_ranges)?;
 
         Ok(Self {
             bytes,
@@ -63,6 +55,33 @@ impl TargetImage {
             arm,
         })
     }
+}
+
+fn read_function_metadata(
+    file: &object::File<'_>,
+    arm: bool,
+    code_ranges: &[Range<u64>],
+) -> Result<Vec<MetadataFunction>> {
+    let mut addresses = macho_starts::function_starts(file)?;
+    if file.entry() != 0 {
+        addresses.push(file.entry());
+    }
+    addresses.retain(|value| {
+        code_ranges
+            .iter()
+            .any(|range| range.contains(&normalize(*value, arm)))
+    });
+
+    let mut functions = pe_exports::function_symbols(file, arm, code_ranges)?;
+    ensure!(
+        functions.len() + addresses.len() <= MAX_INVENTORY,
+        "Function metadata exceeds the inventory limit"
+    );
+    functions.extend(addresses.into_iter().map(|address| MetadataFunction {
+        address,
+        name: None,
+    }));
+    Ok(functions)
 }
 
 pub fn load_program(path: &Path, bytes: Vec<u8>) -> Result<Program> {

@@ -11,11 +11,18 @@ use crate::protocol::{
 struct InventoryEntry {
     address: u64,
     name: String,
-    loader_symbol: bool,
+    named_symbol: bool,
+}
+
+/// Function identity supplied by object metadata. Unnamed starts receive a
+/// synthesized name; named exports participate in loader-name alias selection.
+pub struct MetadataFunction {
+    pub address: u64,
+    pub name: Option<String>,
 }
 
 /// The frozen inventory: one row per entry address plus every additional
-/// loader symbol that names one of those entries.
+/// loader symbol or PE export that names one of those entries.
 pub struct FrozenInventory {
     pub functions: Vec<Function>,
     pub inventory_sha256: String,
@@ -23,12 +30,12 @@ pub struct FrozenInventory {
     pub aliases_sha256: String,
 }
 
-/// Freeze loader function symbols in executable sections and function-start
-/// metadata. Loader symbols outside executable sections (for example the
-/// Mach-O `__mh_execute_header` marker) do not identify code and are excluded.
+/// Freeze loader function symbols, named PE exports, and function-start
+/// metadata in executable sections. Symbols outside executable sections (for
+/// example the Mach-O `__mh_execute_header` marker) do not identify code.
 pub fn freeze(
     program: &Program,
-    metadata_functions: Vec<u64>,
+    metadata_functions: Vec<MetadataFunction>,
     arm: bool,
     code_ranges: &[Range<u64>],
 ) -> Result<FrozenInventory> {
@@ -37,7 +44,7 @@ pub fn freeze(
     entries.sort_unstable_by(|left, right| {
         left.address
             .cmp(&right.address)
-            .then_with(|| right.loader_symbol.cmp(&left.loader_symbol))
+            .then_with(|| right.named_symbol.cmp(&left.named_symbol))
             .then_with(|| left.name.cmp(&right.name))
     });
 
@@ -49,15 +56,14 @@ pub fn freeze(
     for entry in entries {
         match &primary {
             Some((current, name)) if *current == entry.address => {
-                // Sorting places loader symbols before synthesized metadata
-                // names and orders names within an address, so a later entry
-                // is an alias only when the loader reported it, and an exact
-                // repeat of the previous name carries nothing new.
+                // Sorting places named symbols before synthesized metadata
+                // names and orders names within an address. Only source names
+                // become aliases; an exact repeat carries nothing new.
                 let repeated = entry.name == *name
                     || aliases.last().is_some_and(|previous: &FunctionAlias| {
                         previous.address == address(*current) && previous.name == entry.name
                     });
-                if entry.loader_symbol && !repeated {
+                if entry.named_symbol && !repeated {
                     update_alias_hash(&mut alias_hash, entry.address, &entry.name);
                     aliases.push(FunctionAlias {
                         address: address(entry.address),
@@ -104,7 +110,7 @@ fn loader_entries(
         entries.push(InventoryEntry {
             address: entry,
             name: function.name,
-            loader_symbol: true,
+            named_symbol: true,
         });
     }
     Ok(entries)
@@ -112,28 +118,29 @@ fn loader_entries(
 
 fn extend_metadata(
     entries: &mut Vec<InventoryEntry>,
-    metadata_functions: Vec<u64>,
+    metadata_functions: Vec<MetadataFunction>,
     arm: bool,
 ) -> Result<()> {
     let mut name_bytes = entries.iter().map(|entry| entry.name.len()).sum();
-    for value in metadata_functions {
+    for function in metadata_functions {
         ensure!(
             entries.len() < MAX_INVENTORY,
             "Combined loader inventory exceeds the limit"
         );
-        let value = normalize(value, arm);
-        let name = format!("FUN_{value:x}");
+        let value = normalize(function.address, arm);
+        let named_symbol = function.name.is_some();
+        let name = function.name.unwrap_or_else(|| format!("FUN_{value:x}"));
         name_bytes = admit_name(name_bytes, &name)?;
         entries.push(InventoryEntry {
             address: value,
             name,
-            loader_symbol: false,
+            named_symbol,
         });
     }
     Ok(())
 }
 
-fn admit_name(previous_bytes: usize, name: &str) -> Result<usize> {
+pub(crate) fn admit_name(previous_bytes: usize, name: &str) -> Result<usize> {
     ensure!(
         name.len() <= MAX_NAME_BYTES,
         "Function name exceeds the protocol limit"
@@ -173,6 +180,6 @@ pub(crate) fn finish_inventory_hash(hash: Sha256) -> String {
     format!("{:x}", hash.finalize())
 }
 
-fn normalize(value: u64, arm: bool) -> u64 {
+pub(crate) fn normalize(value: u64, arm: bool) -> u64 {
     if arm { value & !1 } else { value }
 }
