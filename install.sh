@@ -50,7 +50,7 @@ detect_target() {
 
 configure_download() {
     if [ -n "$REQUESTED_VERSION" ]; then
-        printf '%s\n' "$REQUESTED_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' \
+        printf '%s\n' "$REQUESTED_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' \
             || error "REA_VERSION must be a semantic version such as 0.1.0 or v0.1.0"
         VERSION_TAG=$REQUESTED_VERSION
         case "$VERSION_TAG" in v*) ;; *) VERSION_TAG="v$VERSION_TAG" ;; esac
@@ -124,7 +124,7 @@ verify_payload() {
     [ -n "$RELEASE_VERSION" ] || error "VERSION is empty"
     [ -z "$REQUESTED_VERSION" ] || [ "$RELEASE_VERSION" = "$REQUESTED_VERSION" ] || error "release version does not match requested version"
     [ "$release_target" = "$TARGET" ] || error "release target is $release_target, expected $TARGET"
-    printf '%s\n' "$RELEASE_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' || error "VERSION contains an invalid version"
+    printf '%s\n' "$RELEASE_VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' || error "VERSION contains an invalid version"
     reported_version=$("$STAGE/rea-rust/bin/rea" --version 2>/dev/null) || error "rea could not report its version"
     [ "$reported_version" = "$RELEASE_VERSION" ] || [ "$reported_version" = "v$RELEASE_VERSION" ] || error "rea reports version $reported_version, expected $RELEASE_VERSION"
     (CDPATH='' cd "$STAGE/rea-rust" && ./bin/rea --verify-installation) \

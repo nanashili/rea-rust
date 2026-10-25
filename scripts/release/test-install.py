@@ -96,7 +96,7 @@ class InstallerTests(unittest.TestCase):
             "rea": (
                 "#!/bin/sh\n"
                 "case ${1:-} in\n"
-                "  --version) printf '%s\\n' 6.7.0 ;;\n"
+                "  --version) printf '%s\\n' \"${REA_TEST_VERSION:-6.7.0}\" ;;\n"
                 "  --verify-installation) touch \"$REA_TEST_VERIFY_MARKER\"; exit 0 ;;\n"
                 "  *) exit 1 ;;\n"
                 "esac\n"
@@ -107,6 +107,16 @@ class InstallerTests(unittest.TestCase):
             path.write_text(body)
             path.chmod(0o755)
 
+        archive = self.release / f"rea-rust-{TARGET}.tar.gz"
+        with tarfile.open(archive, "w:gz") as handle:
+            handle.add(payload, arcname="rea-rust")
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        (self.release / "SHA256SUMS").write_text(
+            f"{digest}  rea-rust-{TARGET}.tar.gz\n"
+        )
+
+    def _refresh_release(self) -> None:
+        payload = self.root / "payload" / "rea-rust"
         archive = self.release / f"rea-rust-{TARGET}.tar.gz"
         with tarfile.open(archive, "w:gz") as handle:
             handle.add(payload, arcname="rea-rust")
@@ -127,6 +137,7 @@ class InstallerTests(unittest.TestCase):
                 "PATH": f"{self.fake_bin}:{env['PATH']}",
                 "REA_TEST_RELEASE": str(self.release),
                 "REA_TEST_VERIFY_MARKER": str(self.verify_marker),
+                "REA_TEST_VERSION": version.removeprefix("v"),
                 "REA_REPOSITORY": "test/repository",
                 "REA_VERSION": version,
                 "REA_INSTALL_ROOT": str(install_root),
@@ -170,6 +181,20 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         second = self._run()
         self.assertEqual(second.returncode, 0, second.stderr)
+
+    def test_accepts_prerelease_and_build_metadata(self) -> None:
+        version = "6.7.0-rc.1+build.7"
+        payload = self.root / "payload" / "rea-rust"
+        (payload / "VERSION").write_text(f"{version}\n")
+        (payload / "release.json").write_text(
+            f'{{"version":"{version}","target":"{TARGET}"}}\n'
+        )
+        self._refresh_release()
+        result = self._run(version=version)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(
+            (self.root / "data" / "versions" / version / TARGET / "bin" / "rea").exists()
+        )
 
     def test_install_root_with_spaces(self) -> None:
         result = self._run(paths_with_spaces=True)

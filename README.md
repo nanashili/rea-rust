@@ -29,7 +29,8 @@ requirements, custom paths, and removal.
 ## Build from source
 
 Requires the pinned Rust toolchain (1.93.1), Python 3.11+ for release scripts,
-and a C/C++ compiler. This repository contains all embedded helper sources.
+and a C/C++20 compiler (GCC 12+ on Linux). This repository contains all embedded
+helper sources.
 
 ```sh
 git clone https://github.com/nanashili/rea-rust.git

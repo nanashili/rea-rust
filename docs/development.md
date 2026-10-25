@@ -15,8 +15,8 @@ Embedded Java, Python, Swift, and JavaScript helpers live in `bridge/` and
 TypeScript checkout. The commands in the [README](../README.md) use Cargo's
 default target directories; adjust executable paths if you set `CARGO_TARGET_DIR`.
 
-Rust is pinned in `rust-toolchain.toml`. Use an installed C/C++ compiler for
-native dependencies. Provider tools such as LLDB, Swift, JADX, and mitmproxy are
+Rust is pinned in `rust-toolchain.toml`. Native dependencies require a C/C++20
+compiler; use GCC 12+ on Linux (`CC=gcc-12 CXX=g++-12 cargo build ...`). Provider tools such as LLDB, Swift, JADX, and mitmproxy are
 needed only for the workflows that use them.
 
 ## Ghidra worker
