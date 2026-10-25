@@ -28,6 +28,15 @@ fn semantic_coverage(ir: &Json) -> Json {
     )
 }
 
+fn module_ir(semantic: &Json) -> &Json {
+    let compact = semantic.at("metadata").at("moduleIr");
+    if compact.is_null() {
+        semantic.at("ir")
+    } else {
+        compact
+    }
+}
+
 fn program_scope(ir: &Json) -> Option<&Json> {
     ir.at("scopes")
         .arr()
@@ -94,7 +103,7 @@ pub fn add_source_modules(context: &mut GraphContext<'_>) {
         if semantic.is_null() {
             continue;
         }
-        let ir = semantic.at("ir");
+        let ir = module_ir(semantic);
         let Some(program) = program_scope(ir) else {
             continue;
         };
@@ -223,7 +232,7 @@ pub fn add_module_relationships(context: &mut GraphContext<'_>) -> usize {
         if semantic.is_null() {
             continue;
         }
-        let ir = semantic.at("ir");
+        let ir = module_ir(semantic);
         for link in ir.at("moduleLinks").arr() {
             if link.at("kind").str() == "type-import" {
                 continue;

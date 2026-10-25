@@ -82,6 +82,28 @@ fn type_only_and_runtime_context_rules() {
 }
 
 #[test]
+fn analysis_program_fact_extraction_matches_source_parser_for_module_facts() {
+    let source =
+        "import type { A } from 'types';\nimport { value } from 'runtime';\nexport { value };\n";
+    let allocator = Allocator::default();
+    let analysis_program = parse_javascript_analysis_program(&allocator, source, Some("x.ts"))
+        .expect("analysis parser should accept the fixture");
+    let extracted = super::extract_facts(source, Some("x.ts"), &analysis_program);
+    let JavaScriptParseOutcome::Parsed { facts: expected } =
+        parse_javascript_source(source, Some("x.ts"))
+    else {
+        panic!("source parser should accept the fixture");
+    };
+
+    assert_eq!(extracted.module_references, expected.module_references);
+    assert_eq!(extracted.exports, expected.exports);
+    assert_eq!(
+        extracted.uncertain_type_only_side_effect,
+        expected.uncertain_type_only_side_effect
+    );
+}
+
+#[test]
 fn flow_import_typeof_uses_the_type_only_module_contract() {
     let parsed = facts("import typeof Value from \"pkg\";\n", Some("x.ts"));
 

@@ -17,7 +17,7 @@ use serde_json::Value;
 
 use super::graph::json::{Json, Obj, parse};
 use super::{
-    acquisition::{JavaScriptArtifactFileSet, canonical_file_set_json},
+    acquisition::{JavaScriptArtifactFileSet, canonical_file_json, canonical_file_set_json},
     analysis::{JavaScriptAnalysisOptions, JavaScriptArtifactAnalysis, analyze_artifact_files},
     electron_summary::summarize_electron_boundaries,
     graph::{SemanticGraphProjection, SemanticLimits, build_application_graph},
@@ -66,7 +66,7 @@ pub fn reconstruct<'inventory>(
     }
     retain_unvisited_files(
         &mut analysis.value,
-        &file_set_json,
+        file_set,
         interrupted.as_ref().map(WorkflowInterruption::message),
     );
 
@@ -75,10 +75,11 @@ pub fn reconstruct<'inventory>(
         .map_err(|error| {
             invalid_workflow(&format!("failed to build JavaScript graph: {error:?}"))
         })?;
+    drop(file_set_json);
 
     let semantic_graph = build_semantic_graph(
         snapshot,
-        &analysis,
+        &mut analysis,
         &graph,
         semantic_limits,
         cancellation,
@@ -104,7 +105,11 @@ pub fn reconstruct<'inventory>(
     })
 }
 
-fn retain_unvisited_files(analysis: &mut Json, file_set: &Json, reason: Option<&str>) {
+fn retain_unvisited_files(
+    analysis: &mut Json,
+    file_set: &JavaScriptArtifactFileSet<'_>,
+    reason: Option<&str>,
+) {
     let Some(reason) = reason else {
         return;
     };
@@ -115,13 +120,13 @@ fn retain_unvisited_files(analysis: &mut Json, file_set: &Json, reason: Option<&
         .map(|entry| entry.at("file").at("path").text().clone())
         .collect::<HashSet<_>>();
     let mut files = analysis.at("files").arr().to_vec();
-    for file in file_set.at("files").arr() {
-        if visited.contains(file.at("path").text()) {
+    for file in &file_set.files {
+        if visited.contains(&JsString::from(file.path.as_str())) {
             continue;
         }
         files.push(
             Obj::new()
-                .with("file", file.clone())
+                .with("file", canonical_file_json(file))
                 .with("javascript", Json::Null)
                 .with("semantic", Json::Null)
                 .with(
@@ -150,7 +155,7 @@ fn checkpoint(cancellation: &Cancellation) -> ControlFlow<String> {
 
 fn build_semantic_graph(
     snapshot: &ArtifactInventoryResult,
-    analysis: &JavaScriptArtifactAnalysis,
+    analysis: &mut JavaScriptArtifactAnalysis,
     application_graph: &Json,
     limits: SemanticLimits,
     cancellation: &Cancellation,
@@ -168,7 +173,9 @@ fn build_semantic_graph(
         }
     };
 
-    for file in analysis.value.at("files").arr() {
+    let file_count = analysis.value.at("files").arr().len();
+    for file_index in 0..file_count {
+        let file = &analysis.value.at("files").arr()[file_index];
         let semantic = file.at("semantic");
         if semantic.is_null() {
             // Match the TypeScript graph builder's ownership boundary: a
@@ -191,47 +198,65 @@ fn build_semantic_graph(
             );
             continue;
         }
-        if !semantic.at("projection").is_null() {
-            match projection.adopt_file_projection(&semantic.at("projection")) {
-                Ok(()) => continue,
+        if semantic.at("projection").is_null() {
+            let ir = semantic.at("ir");
+            let (nodes, unknowns) = projection.remaining_file_capacity();
+            let paths = file
+                .at("javascript")
+                .at("electron")
+                .at("call_paths")
+                .arr()
+                .to_vec();
+            match super::graph::project_file(file.at("file"), ir, nodes, unknowns, &paths) {
+                Ok(file_projection) => {
+                    projection
+                        .adopt_file_projection(&file_projection)
+                        .map_err(|error| {
+                            invalid_workflow(&format!(
+                                "failed to retain semantic projection for {}: {error:?}",
+                                file_path_for_error(file)
+                            ))
+                        })?
+                }
                 Err(error) => {
                     return Err(invalid_workflow(&format!(
-                        "failed to adopt worker semantic projection: {error:?}"
+                        "failed to project semantic IR for {}: {error:?}",
+                        file_path_for_error(file)
                     )));
                 }
             }
+        } else {
+            projection
+                .adopt_file_projection(&semantic.at("projection"))
+                .map_err(|error| {
+                    invalid_workflow(&format!(
+                        "failed to adopt worker semantic projection: {error:?}"
+                    ))
+                })?;
         }
-        let ir = semantic.at("ir");
-        let (nodes, unknowns) = projection.remaining_file_capacity();
-        let paths = file
-            .at("javascript")
-            .at("electron")
-            .at("call_paths")
-            .arr()
-            .to_vec();
-        match super::graph::project_file(file.at("file"), ir, nodes, unknowns, &paths) {
-            Ok(file_projection) => {
-                projection
-                    .adopt_file_projection(&file_projection)
-                    .map_err(|error| {
-                        invalid_workflow(&format!(
-                            "failed to retain semantic projection for {}: {error:?}",
-                            file_path_for_error(file)
-                        ))
-                    })?
-            }
-            Err(error) => {
-                return Err(invalid_workflow(&format!(
-                    "failed to project semantic IR for {}: {error:?}",
-                    file_path_for_error(file)
-                )));
-            }
-        }
+
+        release_semantic_ir(&mut analysis.value, file_index);
     }
 
     let nodes = application_graph.at("nodes").arr();
     let graph_id = application_graph.at("graph_id").str();
     Ok(projection.finish(&snapshot.manifest.root_sha256, graph_id, nodes))
+}
+
+/// The semantic graph owns the projected facts after each file is processed.
+/// Drop the much larger worker IR as soon as its projection is adopted; the
+/// final application envelope only needs static facts and aggregate counts.
+fn release_semantic_ir(analysis: &mut Json, file_index: usize) {
+    let Json::Object(root) = analysis else {
+        return;
+    };
+    let Some(Json::Array(files)) = root.get_mut("files") else {
+        return;
+    };
+    let Some(Json::Object(file)) = files.get_mut(file_index) else {
+        return;
+    };
+    let _ = file.remove("semantic");
 }
 
 fn file_path_for_error(file: &Json) -> String {
@@ -270,4 +295,76 @@ fn invalid_workflow(reason: &str) -> Failure {
         .into_iter()
         .collect(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn releases_projected_semantic_ir_but_keeps_file_facts() {
+        let file = Obj::new()
+            .with(
+                "file",
+                Obj::new()
+                    .with("path", "src/main.js")
+                    .with("kind", "javascript"),
+            )
+            .with(
+                "javascript",
+                Obj::new()
+                    .with("findings", Json::Array(vec![Json::from("require")]))
+                    .with(
+                        "electron",
+                        Obj::new().with(
+                            "call_paths",
+                            Json::Array(vec![Json::from("ipcRenderer.send")]),
+                        ),
+                    ),
+            )
+            .with(
+                "semantic",
+                Obj::new()
+                    .with(
+                        "ir",
+                        Obj::new()
+                            .with(
+                                "moduleLinks",
+                                Json::Array(vec![
+                                    Obj::new()
+                                        .with("source", "./preload")
+                                        .with("target", "./main")
+                                        .into(),
+                                ]),
+                            )
+                            .with(
+                                "bindings",
+                                Json::Array(vec![
+                                    Obj::new()
+                                        .with("name", "ipc")
+                                        .with("kind", "require")
+                                        .into(),
+                                ]),
+                            ),
+                    )
+                    .with(
+                        "projection",
+                        Obj::new()
+                            .with("nodes", Json::Array(vec![]))
+                            .with("relations", Json::Array(vec![])),
+                    ),
+            );
+        let retained_file_facts = file.get("file").expect("file facts").clone();
+        let retained_static_facts = file.get("javascript").expect("static facts").clone();
+        let mut analysis = Obj::new()
+            .with("files", Json::Array(vec![file.into()]))
+            .into();
+
+        release_semantic_ir(&mut analysis, 0);
+
+        let retained_file = &analysis.at("files").arr()[0];
+        assert_eq!(retained_file.at("file"), &retained_file_facts);
+        assert_eq!(retained_file.at("javascript"), &retained_static_facts);
+        assert!(retained_file.get("semantic").is_none());
+    }
 }

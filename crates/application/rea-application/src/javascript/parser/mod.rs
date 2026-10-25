@@ -707,5 +707,19 @@ pub fn parse_javascript_source(source: &str, path: Option<&str>) -> JavaScriptPa
     }
 }
 
+/// Extract module facts from an already parsed program.
+///
+/// Static analysis keeps the analysis AST alive for its inspectors. Callers
+/// that already own that AST should use this seam instead of parsing the same
+/// source a second time solely to collect imports and exports.
+pub fn extract_facts(
+    source: &str,
+    path: Option<&str>,
+    parsed: &ParsedJavaScriptProgram<'_>,
+) -> JavaScriptSourceFacts {
+    let index = PositionIndex::new(source);
+    facts::extract(source, path, parsed, &index)
+}
+
 #[cfg(test)]
 mod tests;

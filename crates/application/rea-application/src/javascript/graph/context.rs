@@ -1,6 +1,6 @@
 //! `JavaScriptArtifactGraphContext`: construction state and shared helpers.
 
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 use super::super::semantic::value_types::JsString;
 use super::application_graph::{Accumulator, AppNode, EdgeInput, NodeInput, ObservationInput};
@@ -34,8 +34,9 @@ pub struct GraphContext<'a> {
     pub file_set: &'a Json,
     /// Raw analysis, as file nodes and coverage observe it.
     pub raw_analysis: &'a Json,
-    /// Admitted analysis for relationship builders (projection failures expanded to null).
-    pub analysis: Json,
+    /// Admitted analysis for relationship builders. The raw analysis is
+    /// borrowed when no projection failure requires a sanitized view.
+    pub analysis: Cow<'a, Json>,
     /// Root artifact node.
     pub root: AppNode,
     /// Files by logical path.

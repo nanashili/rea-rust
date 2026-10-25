@@ -8,12 +8,13 @@ use rea_core::JsString;
 use rea_core::artifact_inventory::ArtifactInventoryResult;
 use rea_core::cancellation::Cancellation;
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
 
 /// Concrete reader adapter used by the application acquisition port.
 pub(crate) struct ProviderJavaScriptReader {
     reader: Option<Box<dyn ArtifactReader>>,
     format: &'static str,
-    root_bytes: Option<Vec<u8>>,
+    root_bytes: Option<Arc<[u8]>>,
 }
 
 /// Provider-owned reader lifecycle for JavaScript reconstruction. The
@@ -66,7 +67,7 @@ pub fn open_javascript_artifact_reader(
 }
 
 impl ProviderJavaScriptReader {
-    pub(crate) fn new(reader: Box<dyn ArtifactReader>, root_bytes: Option<Vec<u8>>) -> Self {
+    pub(crate) fn new(reader: Box<dyn ArtifactReader>, root_bytes: Option<Arc<[u8]>>) -> Self {
         let format = reader.format();
         Self {
             reader: Some(reader),
@@ -161,7 +162,10 @@ impl JavaScriptReader for ProviderJavaScriptReader {
             return Ok(());
         };
         match reader.close() {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                self.root_bytes = None;
+                Ok(())
+            }
             Err(mut failure) => {
                 failure.retain_reader(RetainedReader::new(
                     format!("{} JavaScript artifact reader", self.format),
@@ -183,7 +187,7 @@ impl JavaScriptReader for ProviderJavaScriptReader {
 
 pub(crate) fn acquire_javascript_artifact_files<'a>(
     reader: Box<dyn ArtifactReader>,
-    root_bytes: Option<Vec<u8>>,
+    root_bytes: Option<Arc<[u8]>>,
     snapshot: &'a ArtifactInventoryResult,
     cancellation: &Cancellation,
     source_paths: Option<&[String]>,
@@ -237,12 +241,14 @@ mod tests {
     use crate::artifact_reader::{
         ArtifactEntry, ArtifactReader, ArtifactTraversalOmission, ReaderCleanupOwner, ReaderFailure,
     };
+    use rea_application::javascript::acquisition::JavaScriptReader;
     use rea_core::artifact_inventory::parse_validated_result;
     use rea_core::cancellation::Cancellation;
     use rea_mcp::Session;
     use serde_json::json;
     use sha2::{Digest, Sha256};
     use std::fs;
+    use std::sync::Arc;
 
     fn inventory_for_file(
         path: &str,
@@ -531,6 +537,19 @@ mod tests {
         .expect_err("ASAR verification requires retained root bytes");
 
         assert_eq!(failure.reason, "integrity");
+    }
+
+    #[test]
+    fn releases_root_bytes_after_successful_close() {
+        let shared = Arc::<[u8]>::from(vec![1_u8, 2, 3]);
+        let mut reader = ProviderJavaScriptReader::new(
+            Box::new(super::super::asar::AsarArtifactReader::new(Vec::new())),
+            Some(Arc::clone(&shared)),
+        );
+
+        reader.close().expect("reader close should succeed");
+
+        assert_eq!(Arc::strong_count(&shared), 1);
     }
 
     struct CloseProbe {

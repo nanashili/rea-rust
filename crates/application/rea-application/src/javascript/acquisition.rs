@@ -81,14 +81,7 @@ pub struct JavaScriptArtifactFileSet<'a> {
 /// consumers use this producer-owned representation so text values and
 /// exclusion reasons cannot drift between acquisition and analysis.
 pub(crate) fn canonical_file_json(file: &JavaScriptArtifactFile) -> Json {
-    let kind = match file.kind {
-        super::artifact_files::JavaScriptArtifactFileKind::PackageJson => "package-json",
-        super::artifact_files::JavaScriptArtifactFileKind::Json => "json",
-        super::artifact_files::JavaScriptArtifactFileKind::JavaScript => "javascript",
-        super::artifact_files::JavaScriptArtifactFileKind::Html => "html",
-        super::artifact_files::JavaScriptArtifactFileKind::SourceMap => "source-map",
-        super::artifact_files::JavaScriptArtifactFileKind::NativeAddon => "native-addon",
-    };
+    let kind = canonical_file_kind(file);
     let text = match &file.text {
         super::artifact_files::JavaScriptText::Included(source) => Obj::new()
             .with("included", true)
@@ -97,6 +90,10 @@ pub(crate) fn canonical_file_json(file: &JavaScriptArtifactFile) -> Json {
             .with("included", false)
             .with("reason", canonical_exclusion_reason(*reason)),
     };
+    canonical_file_with_text(file, kind, text)
+}
+
+fn canonical_file_with_text(file: &JavaScriptArtifactFile, kind: &str, text: Obj) -> Json {
     Obj::new()
         .with("path", JsString::from(file.path.clone()))
         .with("container_sha256", file.container_sha256.clone())
@@ -120,7 +117,11 @@ fn canonical_exclusion_reason(reason: super::artifact_files::TextExclusionReason
 }
 
 pub(crate) fn canonical_file_set_json(file_set: &JavaScriptArtifactFileSet<'_>) -> Json {
-    let files = file_set.files.iter().map(canonical_file_json).collect();
+    let files = file_set
+        .files
+        .iter()
+        .map(canonical_file_metadata_json)
+        .collect();
     let unavailable = file_set
         .unavailable_relevant_files
         .iter()
@@ -194,6 +195,31 @@ pub(crate) fn canonical_file_set_json(file_set: &JavaScriptArtifactFileSet<'_>) 
         );
     }
     value.into()
+}
+
+/// Return file metadata for graph construction without retaining a second
+/// copy of every JavaScript source. The analyzed file records retain the
+/// authenticated source text; graph lookup is indexed from those records.
+fn canonical_file_metadata_json(file: &JavaScriptArtifactFile) -> Json {
+    let kind = canonical_file_kind(file);
+    let text = match &file.text {
+        super::artifact_files::JavaScriptText::Included(_) => Obj::new().with("included", true),
+        super::artifact_files::JavaScriptText::Excluded(reason) => Obj::new()
+            .with("included", false)
+            .with("reason", canonical_exclusion_reason(*reason)),
+    };
+    canonical_file_with_text(file, kind, text)
+}
+
+fn canonical_file_kind(file: &JavaScriptArtifactFile) -> &'static str {
+    match file.kind {
+        super::artifact_files::JavaScriptArtifactFileKind::PackageJson => "package-json",
+        super::artifact_files::JavaScriptArtifactFileKind::Json => "json",
+        super::artifact_files::JavaScriptArtifactFileKind::JavaScript => "javascript",
+        super::artifact_files::JavaScriptArtifactFileKind::Html => "html",
+        super::artifact_files::JavaScriptArtifactFileKind::SourceMap => "source-map",
+        super::artifact_files::JavaScriptArtifactFileKind::NativeAddon => "native-addon",
+    }
 }
 
 /// Caller selection facts preserved in acquisition output.

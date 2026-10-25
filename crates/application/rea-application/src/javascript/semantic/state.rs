@@ -376,6 +376,10 @@ pub struct SemanticState<'a> {
     /// Direct `eval(...)` candidates with their scope id, in source order,
     /// for `indexSemanticOpaqueEffects` (opaque-effects package).
     pub opaque_candidates: Vec<(Node<'a>, String)>,
+    /// Source-derived global-eval sites. Scope and binding facts are complete
+    /// before semantic consumers run, and later semantic passes only append
+    /// member effects; neither changes the inputs used by this cache.
+    pub(crate) global_eval_sites_cache: RefCell<Option<std::rc::Rc<Vec<Node<'a>>>>>,
     /// Getter expansion limits recorded in first-observed order.
     pub getter_resource_limits: RefCell<Vec<super::value_types::ResourceLimit>>,
     /// Value interpretation limits recorded in first-observed order.

@@ -88,6 +88,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         prototype_enumeration_may_affect: Some(false),
         may_reference_global_eval: false,
         opaque_candidates: Vec::new(),
+        global_eval_sites_cache: RefCell::new(None),
         getter_resource_limits: RefCell::new(Vec::new()),
         value_resource_limits: RefCell::new(Vec::new()),
         value_caches: RefCell::new(super::values::ValueCaches::default()),

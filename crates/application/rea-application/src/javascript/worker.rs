@@ -57,6 +57,9 @@ pub struct WorkerResponse {
     pub semantic_ir: Option<Box<RawValue>>,
     #[serde(default)]
     pub semantic_projection: Option<Box<RawValue>>,
+    /// Small facts needed by aggregate coverage after the full IR is dropped.
+    #[serde(default)]
+    pub semantic_metadata: Option<Box<RawValue>>,
     #[serde(default)]
     pub semantic_failure: Option<WorkerSemanticFailure>,
 }

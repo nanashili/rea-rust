@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
+use std::rc::Rc;
 
 use crate::javascript::ast::{AstVisitor, Field, Node, traverse};
 
@@ -19,7 +20,7 @@ pub struct OpaqueEffects<'a> {
     pub by_scope: HashMap<String, Vec<Node<'a>>>,
     /// Descendant scope ids in JavaScript `Set` insertion order.
     pub children: HashMap<String, Vec<String>>,
-    pub global_sites: Vec<Node<'a>>,
+    pub global_sites: Rc<Vec<Node<'a>>>,
 }
 
 /// Index direct eval candidates and retain the scope tree needed by later
@@ -71,6 +72,12 @@ fn index_global_sites<'a, 's>(state: &'s SemanticState<'a>, effects: &mut Opaque
     if !state.may_reference_global_eval {
         return;
     }
+
+    if let Some(cached) = state.global_eval_sites_cache.borrow().as_ref() {
+        effects.global_sites = Rc::clone(cached);
+        return;
+    }
+
     let mut observer = GlobalEvalObserver {
         interop: create_module_interop_for_global_eval(state),
         sites: Vec::new(),
@@ -78,7 +85,9 @@ fn index_global_sites<'a, 's>(state: &'s SemanticState<'a>, effects: &mut Opaque
     let _ = traverse(state.program, state.source, &mut observer, || {
         ControlFlow::<()>::Continue(())
     });
-    effects.global_sites = observer.sites;
+    let sites = Rc::new(observer.sites);
+    *state.global_eval_sites_cache.borrow_mut() = Some(Rc::clone(&sites));
+    effects.global_sites = sites;
 }
 
 struct GlobalEvalObserver<'s, 'a> {
@@ -382,5 +391,62 @@ mod tests {
                 "eval('direct')",
             ]
         );
+    }
+
+    #[test]
+    fn cached_global_eval_sites_keep_shadowed_eval_unknown() {
+        let source = concat!(
+            "function shadow(eval) { eval('local'); }",
+            "globalThis.eval('global');",
+        );
+        let allocator = Allocator::default();
+        let parsed =
+            parse_javascript_analysis_program(&allocator, source, Some("x.js")).expect("parse");
+        let ControlFlow::Continue(state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Import,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("definitions cancelled");
+        };
+
+        let first = index_opaque_effects(&state);
+        let second = index_opaque_effects(&state);
+        let sites = |effects: &super::OpaqueEffects<'_>| {
+            effects
+                .global_sites
+                .iter()
+                .map(|node| state.context.slice(node.span()))
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(sites(&first), vec!["globalThis.eval('global')"]);
+        assert_eq!(sites(&second), sites(&first));
+    }
+
+    #[test]
+    fn global_eval_alias_reassignment_is_not_retained_by_the_cache() {
+        let source = concat!(
+            "let call = global.eval; call('before');",
+            "call = console.log; call('after');",
+        );
+        let allocator = Allocator::default();
+        let parsed =
+            parse_javascript_analysis_program(&allocator, source, Some("x.js")).expect("parse");
+        let ControlFlow::Continue(state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Import,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("definitions cancelled");
+        };
+
+        let effects = index_opaque_effects(&state);
+        let sites = effects
+            .global_sites
+            .iter()
+            .map(|node| state.context.slice(node.span()))
+            .collect::<Vec<_>>();
+        assert_eq!(sites, vec!["call('before')"]);
     }
 }

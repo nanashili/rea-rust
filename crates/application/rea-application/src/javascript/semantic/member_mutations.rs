@@ -6,6 +6,7 @@
 //! effect.
 
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use crate::javascript::ast::{AstVisitor, Field, Node, NodeKey, traverse};
 
@@ -55,6 +56,47 @@ struct ActiveBindingKey {
     effect: MemberMutationKind,
 }
 
+const MUTATION_ORIGIN_CACHE_ENTRY_LIMIT: usize = 2048;
+const MUTATION_ORIGIN_CACHE_ELEMENT_LIMIT: usize = 16_384;
+
+struct MutationOriginCache<'a> {
+    entries: HashMap<(BindingIndex, NodeKey), Rc<BindingOrigins<'a>>>,
+    retained_elements: usize,
+}
+
+impl<'a> MutationOriginCache<'a> {
+    fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+            retained_elements: 0,
+        }
+    }
+
+    fn get(&self, key: &(BindingIndex, NodeKey)) -> Option<Rc<BindingOrigins<'a>>> {
+        self.entries.get(key).cloned()
+    }
+
+    fn insert(&mut self, key: (BindingIndex, NodeKey), origins: Rc<BindingOrigins<'a>>) -> bool {
+        if self.entries.contains_key(&key) {
+            return true;
+        }
+
+        let retained_elements = origins.retained_element_count();
+        let within_entry_limit = self.entries.len() < MUTATION_ORIGIN_CACHE_ENTRY_LIMIT;
+        let within_element_limit = self
+            .retained_elements
+            .checked_add(retained_elements)
+            .is_some_and(|total| total <= MUTATION_ORIGIN_CACHE_ELEMENT_LIMIT);
+        if !within_entry_limit || !within_element_limit {
+            return false;
+        }
+
+        self.retained_elements += retained_elements;
+        self.entries.insert(key, origins);
+        true
+    }
+}
+
 impl MemberMutationKind {
     fn is_write(self) -> bool {
         matches!(self, Self::Write)
@@ -80,6 +122,9 @@ struct Collector<'s, 'a> {
     coverage: HashMap<String, SemanticPropertyPathCoverage>,
     active_traversals: HashMap<ActiveTraversalKey, PropertyPath>,
     active_bindings: HashMap<ActiveBindingKey, PropertyPath>,
+    // Mutation-origin selection reads only immutable binding/source facts. The
+    // collector's later effect writes do not alter those inputs.
+    mutation_origins: MutationOriginCache<'a>,
     opaque_effects: OpaqueEffects<'a>,
     deferred_iteration_sources: Vec<SemanticIterationSource<'a>>,
     sources_deferred: bool,
@@ -98,6 +143,7 @@ impl<'s, 'a> Collector<'s, 'a> {
             coverage: HashMap::new(),
             active_traversals: HashMap::new(),
             active_bindings: HashMap::new(),
+            mutation_origins: MutationOriginCache::new(),
             opaque_effects,
             deferred_iteration_sources: Vec::new(),
             sources_deferred: false,
@@ -683,8 +729,7 @@ impl<'s, 'a> Collector<'s, 'a> {
                 }
             }
             let origins = self.origins(binding, origin_at.or(mutation));
-            let initializers = origins.initializers;
-            for initializer in initializers {
+            for initializer in &origins.initializers {
                 let mut projected = projection_path(&initializer.projection);
                 projected.extend(next_path.clone());
                 self.mark_value_at(
@@ -696,12 +741,12 @@ impl<'s, 'a> Collector<'s, 'a> {
                     widened_getter_result,
                 );
             }
-            for initializer in origins.reference_initializers {
+            for initializer in &origins.reference_initializers {
                 let Some(projected) = reference_projection(&initializer, &next_path, effect) else {
                     continue;
                 };
                 self.deferred_references.push(DeferredReference {
-                    initializer,
+                    initializer: initializer.clone(),
                     path: projected,
                     effect,
                     mutation,
@@ -901,22 +946,36 @@ impl<'s, 'a> Collector<'s, 'a> {
         }
     }
 
-    fn origins(&self, binding: BindingIndex, mutation: Option<Node<'a>>) -> BindingOrigins<'a> {
-        let selected = mutation.map(|node| {
-            mutation_initializers(
-                self.state.binding(binding),
-                node,
-                &self.state.parents,
-                self.state.source,
-            )
-        });
-        let source = selected
-            .as_ref()
-            .unwrap_or_else(|| self.state.binding(binding));
-        BindingOrigins {
-            initializers: source.initializers.clone(),
-            reference_initializers: source.reference_initializers.clone(),
+    fn origins(
+        &mut self,
+        binding: BindingIndex,
+        mutation: Option<Node<'a>>,
+    ) -> Rc<BindingOrigins<'a>> {
+        let Some(mutation) = mutation else {
+            let source = self.state.binding(binding);
+            return Rc::new(BindingOrigins {
+                initializers: source.initializers.clone(),
+                reference_initializers: source.reference_initializers.clone(),
+            });
+        };
+
+        let key = (binding, mutation.key());
+        if let Some(origins) = self.mutation_origins.get(&key) {
+            return origins;
         }
+
+        let selected = mutation_initializers(
+            self.state.binding(binding),
+            mutation,
+            &self.state.parents,
+            self.state.source,
+        );
+        let origins = Rc::new(BindingOrigins {
+            initializers: selected.initializers,
+            reference_initializers: selected.reference_initializers,
+        });
+        let _ = self.mutation_origins.insert(key, Rc::clone(&origins));
+        origins
     }
 
     fn mark_constructed_value(
@@ -1586,6 +1645,13 @@ fn global_process_path<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::javascript::ast::{AstContext, AstVisitor, Role, traverse};
+    use crate::javascript::parser::parse_javascript_analysis_program;
+    use crate::javascript::semantic::definitions::collect_definitions;
+    use crate::javascript::semantic::state::ResolutionMode;
+    use oxc_allocator::Allocator;
+    use oxc_semantic::NodeId;
+    use std::ops::ControlFlow;
 
     fn string_path(container: &str, selected: &str) -> PropertyPath {
         vec![
@@ -1619,6 +1685,109 @@ mod tests {
             &process,
             &string_path("argv", "custom")
         ));
+    }
+
+    #[test]
+    fn mutation_origin_cache_falls_back_after_entry_saturation() {
+        let source = "let value = {field: 1}; value = {field: 2};";
+        let allocator = Allocator::default();
+        let parsed =
+            parse_javascript_analysis_program(&allocator, source, Some("cache.js")).expect("parse");
+        let context = AstContext::new(parsed.program);
+        let mut mutation = None;
+        let mut identifier = None;
+        {
+            let mut nodes = TestNodes {
+                mutation: &mut mutation,
+                identifier: &mut identifier,
+            };
+            let _ = traverse(context.root(), source, &mut nodes, || {
+                ControlFlow::<()>::Continue(())
+            });
+        }
+        let mutation = mutation.expect("assignment mutation");
+        let identifier = identifier.expect("value identifier");
+        let ControlFlow::Continue(mut state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Import,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("definitions cancelled");
+        };
+        let binding = state
+            .resolve_binding(&identifier, "value")
+            .expect("value binding");
+        let expected = mutation_initializers(
+            state.binding(binding),
+            mutation,
+            &state.parents,
+            state.source,
+        );
+        let expected = BindingOrigins {
+            initializers: expected.initializers,
+            reference_initializers: expected.reference_initializers,
+        };
+        let key = (binding, mutation.key());
+        let mut collector = Collector::new(&mut state);
+
+        for index in 0..MUTATION_ORIGIN_CACHE_ENTRY_LIMIT {
+            let filler_key = (
+                index,
+                NodeKey {
+                    node: NodeId::new(index),
+                    role: Role::Primary,
+                },
+            );
+            assert!(collector.mutation_origins.insert(
+                filler_key,
+                Rc::new(BindingOrigins {
+                    initializers: Vec::new(),
+                    reference_initializers: Vec::new(),
+                })
+            ));
+        }
+
+        assert!(collector.mutation_origins.get(&key).is_none());
+        let actual = collector.origins(binding, Some(mutation));
+        assert_eq!(origin_keys(&actual), origin_keys(&expected));
+
+        let retained = actual.retained_element_count();
+        assert!(retained > 0);
+        let mut element_limited_cache = MutationOriginCache::new();
+        element_limited_cache.retained_elements =
+            MUTATION_ORIGIN_CACHE_ELEMENT_LIMIT - retained + 1;
+        assert!(!element_limited_cache.insert(key, actual));
+    }
+
+    struct TestNodes<'a, 'slot> {
+        mutation: &'slot mut Option<Node<'a>>,
+        identifier: &'slot mut Option<Node<'a>>,
+    }
+
+    impl<'a, 'slot> AstVisitor<'a> for TestNodes<'a, 'slot> {
+        fn enter(&mut self, node: &Node<'a>, _parent: Option<&Node<'a>>, _ancestors: &[Node<'a>]) {
+            if node.babel_type() == "AssignmentExpression" {
+                *self.mutation = Some(*node);
+            }
+            if self.identifier.is_none() && node.identifier_name() == Some("value") {
+                *self.identifier = Some(*node);
+            }
+        }
+    }
+
+    fn origin_keys(origins: &BindingOrigins<'_>) -> (Vec<NodeKey>, Vec<NodeKey>) {
+        (
+            origins
+                .initializers
+                .iter()
+                .map(|initializer| initializer.node.key())
+                .collect(),
+            origins
+                .reference_initializers
+                .iter()
+                .map(|initializer| initializer.node.key())
+                .collect(),
+        )
     }
 }
 
@@ -1879,9 +2048,16 @@ impl<'a> AstVisitor<'a> for Collector<'_, 'a> {
     }
 }
 
+#[derive(Clone)]
 struct BindingOrigins<'a> {
     initializers: Vec<Initializer<'a>>,
     reference_initializers: Vec<ReferenceInitializer<'a>>,
+}
+
+impl BindingOrigins<'_> {
+    fn retained_element_count(&self) -> usize {
+        self.initializers.len() + self.reference_initializers.len()
+    }
 }
 
 struct DeferredReference<'a> {

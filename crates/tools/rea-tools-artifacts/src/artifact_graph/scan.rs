@@ -27,6 +27,7 @@ use rea_core::cancellation::Cancellation;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(serde::Serialize)]
 struct DirectoryDigestChild {
@@ -78,7 +79,7 @@ struct RootClassification {
     prefix: Vec<u8>,
     is_directory: bool,
     /// Captured root bytes for an in-memory container reader (ZIP / ASAR).
-    captured: Option<Vec<u8>>,
+    captured: Option<Arc<[u8]>>,
 }
 
 /// Hash a byte slice and return its lowercase hex digest.
@@ -125,7 +126,7 @@ fn classify_root(
         prefix,
         is_directory: false,
         captured: if retain_source {
-            Some(snapshot.bytes)
+            Some(snapshot.bytes.into())
         } else {
             None
         },
@@ -165,7 +166,7 @@ fn classify_root_format(lower: &str, bytes: &[u8], size: u64) -> &'static str {
 fn create_reader(
     path: &str,
     format: &str,
-    captured: Option<Vec<u8>>,
+    captured: Option<Arc<[u8]>>,
 ) -> Option<Box<dyn ArtifactReader>> {
     if is_zip_package_format(format) {
         let zip_format: &'static str = match format {
@@ -180,13 +181,14 @@ fn create_reader(
             _ => "zip",
         };
         return captured.map(|bytes| {
-            Box::new(ZipArtifactReader::new(zip_format, bytes)) as Box<dyn ArtifactReader>
+            Box::new(ZipArtifactReader::new(zip_format, bytes.to_vec())) as Box<dyn ArtifactReader>
         });
     }
     match format {
         "directory" => Some(Box::new(DirectoryArtifactReader::new(path))),
-        "asar" => captured
-            .map(|bytes| Box::new(AsarArtifactReader::new(bytes)) as Box<dyn ArtifactReader>),
+        "asar" => captured.map(|bytes| {
+            Box::new(AsarArtifactReader::new_shared(bytes)) as Box<dyn ArtifactReader>
+        }),
         "mach-o-universal" => Some(Box::new(MachOSliceArtifactReader::new(
             path,
             std::sync::Arc::new(CommandCleanup::default()),
@@ -206,7 +208,7 @@ pub(crate) fn create_reader_for_path(
     input_path: &str,
     expected_format: &str,
     cancellation: &Cancellation,
-) -> Result<(String, Option<Vec<u8>>, Box<dyn ArtifactReader>), ReaderFailure> {
+) -> Result<(String, Option<Arc<[u8]>>, Box<dyn ArtifactReader>), ReaderFailure> {
     let canonical = std::fs::canonicalize(input_path).map_err(|error| {
         ReaderFailure::new("io", format!("Could not resolve artifact path: {error}"))
     })?;

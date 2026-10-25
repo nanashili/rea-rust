@@ -16,12 +16,14 @@ use serde_json::Number;
 #[cfg(test)]
 use serde_json::Value;
 use std::fmt;
+use std::sync::Arc;
 
 const MAX_ASAR_HEADER_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_ASAR_HEADER_PROBE_BYTES: u64 = MAX_ASAR_HEADER_BYTES + 8;
 const MAX_LISTING_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 const MAX_ASAR_JSON_DEPTH: usize = 1024;
+const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
 struct Extents {
     header_bytes: u64,
@@ -449,6 +451,7 @@ struct ListedEntry {
     declared_sha256: Option<String>,
     unpacked: bool,
     offset: Option<u64>,
+    codesign_empty: bool,
 }
 
 struct ParsedIntegrity {
@@ -464,6 +467,11 @@ struct ParsedNode {
     unpacked: Option<bool>,
     executable: Option<bool>,
     integrity: Option<ParsedIntegrity>,
+    /// The observed Figma code-signing metadata uses `size: -1000` alongside
+    /// an explicit SHA-256 digest of the empty payload. Keep this marker until
+    /// the logical path and the other fields are available so this compatibility
+    /// exception cannot be applied to arbitrary entries.
+    codesign_empty: bool,
 }
 
 fn javascript_array_index(name: &JsString) -> Option<u32> {
@@ -534,7 +542,9 @@ fn optional_boolean(
         .transpose()
 }
 
-fn optional_size(object: &mut Vec<(JsString, AsarValue)>) -> Result<Option<u64>, ReaderFailure> {
+fn optional_size(
+    object: &mut Vec<(JsString, AsarValue)>,
+) -> Result<(Option<u64>, bool), ReaderFailure> {
     remove_field(object, "size")
         .map(|value| {
             let AsarValue::Number(number) = value else {
@@ -543,9 +553,12 @@ fn optional_size(object: &mut Vec<(JsString, AsarValue)>) -> Result<Option<u64>,
                     "ASAR entry size metadata is not a non-negative safe integer",
                 ));
             };
+            if number.as_i64() == Some(-1000) {
+                return Ok((Some(0), true));
+            }
             if let Some(size) = number.as_u64() {
                 if size <= MAX_SAFE_INTEGER {
-                    return Ok(size);
+                    return Ok((Some(size), false));
                 }
                 return Err(ReaderFailure::new(
                     "format",
@@ -568,9 +581,10 @@ fn optional_size(object: &mut Vec<(JsString, AsarValue)>) -> Result<Option<u64>,
                     "ASAR entry size metadata is not a non-negative safe integer",
                 ));
             }
-            Ok(size as u64)
+            Ok((Some(size as u64), false))
         })
         .transpose()
+        .map(|value| value.unwrap_or((None, false)))
 }
 
 fn optional_integrity(
@@ -649,7 +663,7 @@ impl ParsedNode {
             })
             .transpose()?;
         let link = optional_string(&mut object, "link")?;
-        let size = optional_size(&mut object)?;
+        let (size, codesign_empty) = optional_size(&mut object)?;
         let offset = optional_string(&mut object, "offset")?;
         let unpacked = optional_boolean(&mut object, "unpacked")?;
         let executable = optional_boolean(&mut object, "executable")?;
@@ -663,6 +677,7 @@ impl ParsedNode {
             unpacked,
             executable,
             integrity,
+            codesign_empty,
         })
     }
 }
@@ -681,6 +696,11 @@ impl ListedEntry {
             unpacked: self.unpacked,
             limitations: if self.kind == "symlink" {
                 vec!["ASAR symlink target was not followed or disclosed.".to_owned()]
+            } else if self.codesign_empty {
+                vec![
+                    "ASAR .codesign entry declared size -1000 and the observed empty SHA-256; interpreted payload bytes as empty."
+                        .to_owned(),
+                ]
             } else {
                 Vec::new()
             },
@@ -819,6 +839,12 @@ fn read_listing(
             parent.concat_str("/").concat(&name)
         };
         let node = ParsedNode::parse(raw)?;
+        if node.codesign_empty && !is_observed_empty_codesign(&path, &node) {
+            return Err(ReaderFailure::new(
+                "format",
+                "ASAR size -1000 marker requires an observed empty .codesign entry",
+            ));
+        }
         if node.files.is_none() && node.link.is_none() && node.size.is_none() {
             return Err(ReaderFailure::new(
                 "format",
@@ -840,6 +866,7 @@ fn read_listing(
             declared_sha256: node_integrity_sha256(node.integrity.as_ref()),
             unpacked: node.unpacked == Some(true),
             offset: node.offset.as_ref().and_then(parse_archive_offset),
+            codesign_empty: node.codesign_empty,
         });
         if let Some(files) = node.files {
             pending.push(Frame {
@@ -852,9 +879,25 @@ fn read_listing(
     Ok(entries)
 }
 
+fn is_observed_empty_codesign(path: &JsString, node: &ParsedNode) -> bool {
+    let is_codesign_path = path
+        .as_str()
+        .is_some_and(|path| path == ".codesign" || path.ends_with("/.codesign"));
+    let has_empty_integrity = node
+        .integrity
+        .as_ref()
+        .is_some_and(|integrity| integrity.algorithm == "SHA256" && integrity.hash == EMPTY_SHA256);
+    is_codesign_path
+        && node.offset.as_ref().and_then(JsString::as_str) == Some("0")
+        && node.files.is_none()
+        && node.link.is_none()
+        && node.unpacked != Some(true)
+        && has_empty_integrity
+}
+
 /// ASAR reader over an in-memory capture of the whole container.
 pub struct AsarArtifactReader {
-    bytes: Vec<u8>,
+    bytes: Arc<[u8]>,
     header_bytes: u64,
     listing: Vec<ListedEntry>,
     prepared: bool,
@@ -862,6 +905,10 @@ pub struct AsarArtifactReader {
 
 impl AsarArtifactReader {
     pub fn new(bytes: Vec<u8>) -> Self {
+        Self::new_shared(bytes.into())
+    }
+
+    pub fn new_shared(bytes: Arc<[u8]>) -> Self {
         Self {
             bytes,
             header_bytes: 0,
@@ -966,7 +1013,7 @@ impl ArtifactReader for AsarArtifactReader {
     }
 
     fn close(&mut self) -> Result<(), ReaderFailure> {
-        self.bytes = Vec::new();
+        self.bytes = Arc::from([]);
         self.listing = Vec::new();
         Ok(())
     }
@@ -1026,7 +1073,13 @@ mod tests {
     }
 
     fn archive_with_file(metadata: Value, payload: &[u8]) -> AsarArtifactReader {
-        archive_with_header(json!({"files": {"main.js": metadata}}), payload)
+        archive_with_file_path("main.js", metadata, payload)
+    }
+
+    fn archive_with_file_path(path: &str, metadata: Value, payload: &[u8]) -> AsarArtifactReader {
+        let mut files = serde_json::Map::new();
+        files.insert(path.to_owned(), metadata);
+        archive_with_header(json!({"files": files}), payload)
     }
 
     fn file_entry(reader: &mut AsarArtifactReader) -> ArtifactEntry {
@@ -1119,6 +1172,56 @@ mod tests {
             reader.open(&entry, &Cancellation::default()).unwrap(),
             b"abc"
         );
+    }
+
+    #[test]
+    fn listing_accepts_observed_empty_codesign_marker() {
+        let mut reader = archive_with_file_path(
+            ".codesign",
+            json!({
+                "size": -1000,
+                "offset": "0",
+                "integrity": {
+                    "algorithm": "SHA256",
+                    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }),
+            b"",
+        );
+        let entry = file_entry(&mut reader);
+
+        assert_eq!(entry.declared_size, Some(0));
+        assert_eq!(entry.limitations.len(), 1);
+        assert!(entry.limitations[0].contains("declared size -1000"));
+        assert_eq!(reader.open(&entry, &Cancellation::default()).unwrap(), b"");
+    }
+
+    #[test]
+    fn listing_rejects_codesign_sentinel_on_other_entries() {
+        let mut reader = archive_with_file(json!({"size": -1000, "offset": "0"}), b"");
+        let failure = reader
+            .entries(&Cancellation::default(), &mut Vec::new())
+            .expect_err("the observed marker must remain scoped to .codesign");
+
+        assert_eq!(failure.reason, "format");
+    }
+
+    #[test]
+    fn listing_rejects_codesign_marker_without_observed_empty_integrity() {
+        for integrity in [
+            json!({"algorithm": "SHA256", "hash": "00"}),
+            json!({"algorithm": "SHA256", "hash": "f3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}),
+        ] {
+            let mut reader = archive_with_file_path(
+                ".codesign",
+                json!({"size": -1000, "offset": "0", "integrity": integrity}),
+                b"",
+            );
+            let failure = reader
+                .entries(&Cancellation::default(), &mut Vec::new())
+                .expect_err("a non-empty or malformed integrity claim must fail closed");
+            assert_eq!(failure.reason, "format");
+        }
     }
 
     #[test]

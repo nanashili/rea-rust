@@ -17,6 +17,7 @@ use super::contracts::static_analysis::{ElectronFindings, ParseStatus, StaticAna
 use super::graph::SemanticLimits;
 use super::graph::json::{Json, Obj, parse};
 use super::non_js;
+use super::semantic::value_types::JsString;
 use super::worker::{WorkerFileMetadata, WorkerLimits, WorkerRequest, analyze_source_with_worker};
 
 /// Operational controls for the isolated source-analysis stage.
@@ -221,7 +222,13 @@ pub fn analyze_artifact_files<B>(
             limitations.push(reason.at("reason").str().to_owned());
         }
         let semantic = analyzed.at("semantic");
-        findings = findings.saturating_add(semantic.at("ir").at("moduleLinks").arr().len() as u64);
+        let module_links = semantic.at("metadata").at("moduleLinks");
+        let module_links = if module_links.is_null() {
+            semantic.at("ir").at("moduleLinks").arr().len() as u64
+        } else {
+            module_links.num().max(0.0) as u64
+        };
+        findings = findings.saturating_add(module_links);
         semantic_nodes =
             semantic_nodes.saturating_add(semantic.at("projection").at("nodes").arr().len());
         semantic_unknowns =
@@ -352,53 +359,52 @@ fn analyze_file<B>(
         &options.worker_limits,
         || checkpoint().is_break(),
     );
-    let (static_result_json, semantic_json, projection_json, semantic_failure) = match worker_result
-    {
-        Ok(response) => (
-            response.static_analysis.get().to_owned(),
-            response.semantic_ir.map(|value| value.get().to_owned()),
-            response
-                .semantic_projection
-                .map(|value| value.get().to_owned()),
-            response.semantic_failure,
-        ),
-        Err(failure) => {
-            let interruption = worker_failure_interruption(&failure);
-            if let Some(static_analysis) = failure
-                .static_checkpoint()
-                .and_then(|value| parse(value.get()).ok())
-            {
+    let (static_result_json, semantic_json, projection_json, metadata_json, semantic_failure) =
+        match worker_result {
+            Ok(response) => (
+                response.static_analysis,
+                response.semantic_ir,
+                response.semantic_projection,
+                response.semantic_metadata,
+                response.semantic_failure,
+            ),
+            Err(failure) => {
+                let interruption = worker_failure_interruption(&failure);
+                if let Some(static_analysis) = failure
+                    .static_checkpoint()
+                    .and_then(|value| parse(value.get()).ok())
+                {
+                    return ControlFlow::Continue((
+                        Obj::new()
+                            .with("file", file_value)
+                            .with("javascript", static_analysis)
+                            .with("semantic", Json::Null)
+                            .with(
+                                "analysis_failure",
+                                Obj::new()
+                                    .with("scope", "analyze-javascript-source")
+                                    .with("status", "partial")
+                                    .with("reason", failure.to_string())
+                                    .with("error", Json::Null)
+                                    .with("limits", worker_failure_limits(&failure)),
+                            )
+                            .into(),
+                        Some(interruption),
+                    ));
+                }
                 return ControlFlow::Continue((
-                    Obj::new()
-                        .with("file", file_value)
-                        .with("javascript", static_analysis)
-                        .with("semantic", Json::Null)
-                        .with(
-                            "analysis_failure",
-                            Obj::new()
-                                .with("scope", "analyze-javascript-source")
-                                .with("status", "partial")
-                                .with("reason", failure.to_string())
-                                .with("error", Json::Null)
-                                .with("limits", worker_failure_limits(&failure)),
-                        )
-                        .into(),
+                    analysis_failure_file(
+                        file_value,
+                        &file.path,
+                        &failure.to_string(),
+                        worker_failure_limits(&failure),
+                    ),
                     Some(interruption),
                 ));
             }
-            return ControlFlow::Continue((
-                analysis_failure_file(
-                    file_value,
-                    &file.path,
-                    &failure.to_string(),
-                    worker_failure_limits(&failure),
-                ),
-                Some(interruption),
-            ));
-        }
-    };
+        };
     checkpoint()?;
-    let static_result = match serde_json::from_str::<StaticAnalysis>(&static_result_json) {
+    let static_result = match serde_json::from_str::<StaticAnalysis>(static_result_json.get()) {
         Ok(value) => value,
         Err(error) => {
             let interruption = AnalysisInterruption::Failure(format!(
@@ -436,7 +442,7 @@ fn analyze_file<B>(
         ));
     }
     let semantic = match semantic_json {
-        Some(value) => match parse(&value) {
+        Some(value) => match parse(value.get()) {
             Ok(value) => Some(value),
             Err(error) => {
                 let interruption = AnalysisInterruption::Failure(format!(
@@ -457,7 +463,7 @@ fn analyze_file<B>(
         None => None,
     };
     let projection = match projection_json {
-        Some(value) => match parse(&value) {
+        Some(value) => match parse(value.get()) {
             Ok(value) => Some(value),
             Err(error) => {
                 let interruption = AnalysisInterruption::Failure(format!(
@@ -477,13 +483,40 @@ fn analyze_file<B>(
         },
         None => None,
     };
+    let metadata = match metadata_json {
+        Some(value) => match parse(value.get()) {
+            Ok(value) => Some(value),
+            Err(error) => {
+                let interruption = AnalysisInterruption::Failure(format!(
+                    "{}: worker semantic metadata was invalid: {error}",
+                    file.path
+                ));
+                return ControlFlow::Continue((
+                    analysis_failure_file(
+                        file_value,
+                        &file.path,
+                        interruption.message(),
+                        Json::Null,
+                    ),
+                    Some(interruption),
+                ));
+            }
+        },
+        None => None,
+    };
     let mut result = Obj::new()
         .with("file", file_value)
         .with("javascript", serialized(&static_result));
-    if semantic.is_none() {
+    if semantic.is_none() && projection.is_none() && metadata.is_none() {
         result.set("semantic", Json::Null);
     } else {
-        let mut semantic_value = Obj::new().with("ir", semantic.unwrap_or(Json::Null));
+        let mut semantic_value = Obj::new();
+        if let Some(metadata) = metadata {
+            semantic_value.set("metadata", metadata);
+        }
+        if let Some(semantic) = semantic {
+            semantic_value.set("ir", semantic);
+        }
         if let Some(projection) = projection {
             semantic_value.set("projection", projection);
         }
@@ -645,6 +678,111 @@ fn unavailable_file(file: &super::artifact_files::JavaScriptUnanalyzedArtifactFi
         .into()
 }
 
+struct ProjectedSemanticResponse {
+    projection: Box<serde_json::value::RawValue>,
+    metadata: Box<serde_json::value::RawValue>,
+}
+
+fn project_semantic_response(
+    ir_json: &Json,
+    file: &Json,
+    node_budget: usize,
+    unknown_budget: usize,
+    paths: &[Json],
+) -> Result<ProjectedSemanticResponse, super::worker::WorkerSemanticFailure> {
+    let projection = super::graph::project_file(file, ir_json, node_budget, unknown_budget, paths)
+        .map_err(|error| super::worker::WorkerSemanticFailure {
+            phase: "project-file".to_owned(),
+            reason: format!("{error:?}"),
+        })?;
+    let projection =
+        serde_json::value::RawValue::from_string(projection.canonical()).map_err(|error| {
+            super::worker::WorkerSemanticFailure {
+                phase: "serialize-projection".to_owned(),
+                reason: error.to_string(),
+            }
+        })?;
+    let metadata = Obj::new()
+        .with("moduleLinks", ir_json.at("moduleLinks").arr().len())
+        .with("coverage", ir_json.at("coverage").clone())
+        .with("moduleIr", compact_module_ir(ir_json));
+    let metadata = serde_json::value::RawValue::from_string(Json::from(metadata).canonical())
+        .map_err(|error| super::worker::WorkerSemanticFailure {
+            phase: "serialize-semantic-metadata".to_owned(),
+            reason: error.to_string(),
+        })?;
+
+    Ok(ProjectedSemanticResponse {
+        projection,
+        metadata,
+    })
+}
+
+/// Retain only the semantic facts consumed by source-module relationships.
+/// The full IR remains owned by the worker and is never transferred when the
+/// worker projection succeeds.
+fn compact_module_ir(ir: &Json) -> Json {
+    let links = ir.at("moduleLinks").arr();
+    let callable_ids: Vec<JsString> = links
+        .iter()
+        .filter_map(|link| link.at("callableId").as_js_string().cloned())
+        .collect();
+    let callables = ir
+        .at("callables")
+        .arr()
+        .iter()
+        .filter(|callable| {
+            callable
+                .at("callableId")
+                .as_js_string()
+                .is_some_and(|id| callable_ids.contains(id))
+        })
+        .map(|callable| {
+            Obj::new()
+                .with("callableId", callable.at("callableId").clone())
+                .with("kind", callable.at("kind").clone())
+                .with("location", callable.at("location").clone())
+                .with("returnSites", callable.at("returnSites").clone())
+                .with("returnCoverage", callable.at("returnCoverage").clone())
+                .into()
+        })
+        .collect();
+    let bindings = ir
+        .at("bindings")
+        .arr()
+        .iter()
+        .map(|binding| {
+            Obj::new()
+                .with("name", binding.at("name").clone())
+                .with("scopeId", binding.at("scopeId").clone())
+                .with("provenance", binding.at("provenance").clone())
+                .into()
+        })
+        .collect();
+    let scopes = ir
+        .at("scopes")
+        .arr()
+        .iter()
+        .filter(|scope| scope.at("kind").str() == "program")
+        .map(|scope| {
+            Obj::new()
+                .with("kind", scope.at("kind").clone())
+                .with("scopeId", scope.at("scopeId").clone())
+                .with("location", scope.at("location").clone())
+                .into()
+        })
+        .collect();
+
+    Obj::new()
+        .with("moduleLinks", Json::Array(links.to_vec()))
+        .with("callables", Json::Array(callables))
+        .with("bindings", Json::Array(bindings))
+        .with("scopes", Json::Array(scopes))
+        .with("coverage", ir.at("coverage").clone())
+        .with("limitations", ir.at("limitations").clone())
+        .into()
+}
+
 pub(crate) fn analyze_source_for_worker_with_checkpoint(
     source: &str,
     path: Option<&str>,
@@ -667,104 +805,62 @@ pub(crate) fn analyze_source_for_worker_with_checkpoint(
             static_analysis: static_raw,
             semantic_ir: None,
             semantic_projection: None,
+            semantic_metadata: None,
             semantic_failure: None,
         };
     }
 
-    let semantic_attempt =
-        catch_unwind(AssertUnwindSafe(
-            || match super::semantic::analysis::analyze_source(source, path) {
-                Ok(ir) => {
-                    let ir_json = serialized(&ir);
-                    let paths = serialized(&static_result)
-                        .at("electron")
-                        .at("call_paths")
-                        .arr()
-                        .to_vec();
-                    let file = metadata.map_or_else(
-                        || Obj::new().with("path", path.unwrap_or("<source>")).into(),
-                        |metadata| {
-                            Obj::new()
-                                .with("path", metadata.path.clone())
-                                .with("container_sha256", metadata.container_sha256.clone())
-                                .with("sha256", metadata.sha256.clone())
-                                .with("bytes", metadata.bytes as usize)
-                                .with(
-                                    "inventory_artifact_id",
-                                    metadata.inventory_artifact_id.clone(),
-                                )
-                                .with("kind", metadata.kind.clone())
-                                .with("unpacked", metadata.unpacked)
-                                .into()
-                        },
-                    );
-                    match super::graph::project_file(
-                        &file,
-                        &ir_json,
-                        node_budget,
-                        unknown_budget,
-                        &paths,
-                    ) {
-                        Ok(value) => {
-                            let projection =
-                                serde_json::value::RawValue::from_string(value.canonical());
-                            match projection {
-                                Ok(projection) => match serde_json::value::to_raw_value(&ir) {
-                                    Ok(ir) => (Some(ir), Some(projection), None),
-                                    Err(error) => (
-                                        None,
-                                        None,
-                                        Some(super::worker::WorkerSemanticFailure {
-                                            phase: "serialize-ir".to_owned(),
-                                            reason: error.to_string(),
-                                        }),
-                                    ),
-                                },
-                                Err(error) => (
-                                    None,
-                                    None,
-                                    Some(super::worker::WorkerSemanticFailure {
-                                        phase: "serialize-projection".to_owned(),
-                                        reason: error.to_string(),
-                                    }),
-                                ),
-                            }
-                        }
-                        Err(error) => (
-                            None,
-                            None,
-                            Some(super::worker::WorkerSemanticFailure {
-                                phase: "project-file".to_owned(),
-                                reason: format!("{error:?}"),
-                            }),
-                        ),
-                    }
-                }
-                Err(errors) => (
-                    None,
-                    None,
-                    Some(super::worker::WorkerSemanticFailure {
-                        phase: "analyze-source".to_owned(),
-                        reason: format_diagnostics(&errors),
-                    }),
-                ),
+    let semantic_attempt = catch_unwind(AssertUnwindSafe(|| {
+        let ir = super::semantic::analysis::analyze_source(source, path).map_err(|errors| {
+            super::worker::WorkerSemanticFailure {
+                phase: "analyze-source".to_owned(),
+                reason: format_diagnostics(&errors),
+            }
+        })?;
+        let ir_json = serialized(&ir);
+        let paths = serialized(&static_result)
+            .at("electron")
+            .at("call_paths")
+            .arr()
+            .to_vec();
+        let file = metadata.map_or_else(
+            || Obj::new().with("path", path.unwrap_or("<source>")).into(),
+            |metadata| {
+                Obj::new()
+                    .with("path", metadata.path.clone())
+                    .with("container_sha256", metadata.container_sha256.clone())
+                    .with("sha256", metadata.sha256.clone())
+                    .with("bytes", metadata.bytes as usize)
+                    .with(
+                        "inventory_artifact_id",
+                        metadata.inventory_artifact_id.clone(),
+                    )
+                    .with("kind", metadata.kind.clone())
+                    .with("unpacked", metadata.unpacked)
+                    .into()
             },
-        ));
-    let (semantic_ir, semantic_projection, semantic_failure) = match semantic_attempt {
-        Ok(result) => result,
-        Err(payload) => (
-            None,
-            None,
-            Some(super::worker::WorkerSemanticFailure {
-                phase: "semantic-pipeline-panic".to_owned(),
-                reason: panic_reason(payload),
-            }),
-        ),
-    };
+        );
+        project_semantic_response(&ir_json, &file, node_budget, unknown_budget, &paths)
+    }));
+    let (semantic_ir, semantic_projection, semantic_metadata, semantic_failure) =
+        match semantic_attempt {
+            Ok(Ok(result)) => (None, Some(result.projection), Some(result.metadata), None),
+            Ok(Err(failure)) => (None, None, None, Some(failure)),
+            Err(payload) => (
+                None,
+                None,
+                None,
+                Some(super::worker::WorkerSemanticFailure {
+                    phase: "semantic-pipeline-panic".to_owned(),
+                    reason: panic_reason(payload),
+                }),
+            ),
+        };
     super::worker::WorkerResponse {
         static_analysis: static_raw,
         semantic_ir,
         semantic_projection,
+        semantic_metadata,
         semantic_failure,
     }
 }
@@ -785,4 +881,118 @@ fn format_diagnostics(diagnostics: &[super::parser::RawDiagnostic]) -> String {
         .map(|diagnostic| diagnostic.message.clone())
         .collect::<Vec<_>>()
         .join("; ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_module_ir_keeps_import_export_graph_facts() {
+        let ir = Obj::new()
+            .with(
+                "moduleLinks",
+                Json::Array(vec![
+                    Obj::new()
+                        .with("kind", "export")
+                        .with("callableId", "callable-1")
+                        .with("exportedName", "run")
+                        .into(),
+                ]),
+            )
+            .with(
+                "callables",
+                Json::Array(vec![
+                    Obj::new()
+                        .with("callableId", "callable-1")
+                        .with("kind", "function")
+                        .with("returnSites", Json::Array(vec![]))
+                        .with("returnCoverage", Obj::new().with("status", "complete"))
+                        .with("body", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .into(),
+                ]),
+            )
+            .with(
+                "bindings",
+                Json::Array(vec![
+                    Obj::new()
+                        .with("name", "run")
+                        .with("scopeId", "program")
+                        .with("provenance", Obj::new().with("status", "module"))
+                        .with("unused", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .into(),
+                ]),
+            )
+            .with(
+                "scopes",
+                Json::Array(vec![
+                    Obj::new()
+                        .with("kind", "program")
+                        .with("scopeId", "program")
+                        .with("locals", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .into(),
+                ]),
+            )
+            .with("coverage", Obj::new().with("status", "complete"))
+            .with("limitations", Json::Array(vec![]));
+
+        let ir: Json = ir.into();
+        let compact = compact_module_ir(&ir);
+        assert_eq!(compact.at("moduleLinks"), ir.at("moduleLinks"));
+        assert_eq!(compact.at("callables").arr().len(), 1);
+        assert_eq!(compact.at("bindings").arr()[0].at("name").str(), "run");
+        assert_eq!(compact.at("scopes").arr().len(), 1);
+        assert!(compact.at("callables").arr()[0].get("body").is_none());
+        assert!(compact.at("bindings").arr()[0].get("unused").is_none());
+        assert!(compact.at("scopes").arr()[0].get("locals").is_none());
+    }
+
+    #[test]
+    fn worker_compact_metadata_retains_real_module_graph_facts() {
+        let response = analyze_source_for_worker_with_checkpoint(
+            r#"
+                import { helper } from "./dep.js";
+                export function run() {
+                    return helper();
+                }
+            "#,
+            Some("src/main.js"),
+            10_000,
+            10_000,
+            None,
+            |_| {},
+        );
+
+        assert!(response.semantic_failure.is_none());
+        let metadata = parse(
+            response
+                .semantic_metadata
+                .as_ref()
+                .expect("semantic metadata")
+                .get(),
+        )
+        .expect("valid semantic metadata");
+        let module_ir = metadata.at("moduleIr");
+        let links = module_ir.at("moduleLinks").arr();
+        assert!(links.iter().any(|link| {
+            link.at("kind").str() == "import" && link.at("specifier").str() == "./dep.js"
+        }));
+        let export_link = links
+            .iter()
+            .find(|link| {
+                link.at("kind").str() == "export" && link.at("exportedName").str() == "run"
+            })
+            .expect("export link");
+        let callable_id = export_link.at("callableId").str();
+        let callable = module_ir
+            .at("callables")
+            .arr()
+            .iter()
+            .find(|callable| callable.at("callableId").str() == callable_id)
+            .expect("exported callable");
+        assert!(!callable.at("returnSites").arr().is_empty());
+        assert!(!module_ir.at("scopes").arr().is_empty());
+        assert!(module_ir.at("coverage").is_object());
+        assert!(module_ir.at("limitations").is_array());
+    }
 }

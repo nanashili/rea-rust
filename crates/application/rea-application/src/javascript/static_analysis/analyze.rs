@@ -16,8 +16,7 @@ use crate::javascript::contracts::static_analysis::{
     StaticValue, UtilityProcess,
 };
 use crate::javascript::parser::{
-    JavaScriptParseOutcome, ModuleReferenceKind, RawDiagnostic, parse_javascript_analysis_program,
-    parse_javascript_source,
+    ModuleReferenceKind, RawDiagnostic, extract_facts, parse_javascript_analysis_program,
 };
 use crate::javascript::semantic::ambient_writes::index_ambient_writes;
 use crate::javascript::semantic::definitions::collect_definitions;
@@ -109,38 +108,32 @@ pub fn analyze_source(
         .filter(|reference| reference.specifier.is_none())
         .count() as u64;
     calls.references.extend(runtime_references);
-    let (mut type_only_by_specifier, type_only_import_equals, uncertain_type_only_side_effect) =
-        match parse_javascript_source(source, path) {
-            JavaScriptParseOutcome::Parsed { facts } => {
-                let uncertain = facts.uncertain_type_only_side_effect;
-                let mut type_only = HashMap::<String, VecDeque<bool>>::new();
-                let mut type_only_import_equals = HashSet::new();
-                for reference in facts.module_references {
-                    match reference.kind {
-                        ModuleReferenceKind::StaticImport | ModuleReferenceKind::ReExport => {
-                            let Some(specifier) = reference.specifier else {
-                                continue;
-                            };
-                            type_only
-                                .entry(specifier)
-                                .or_default()
-                                .push_back(reference.type_only);
-                        }
-                        ModuleReferenceKind::ImportEquals if reference.type_only => {
-                            type_only_import_equals.insert((
-                                reference.range.start.line,
-                                reference.range.start.column,
-                                reference.range.end.line,
-                                reference.range.end.column,
-                            ));
-                        }
-                        _ => {}
-                    }
-                }
-                (type_only, type_only_import_equals, uncertain)
+    let facts = extract_facts(source, path, &parsed);
+    let uncertain_type_only_side_effect = facts.uncertain_type_only_side_effect;
+    let mut type_only_by_specifier = HashMap::<String, VecDeque<bool>>::new();
+    let mut type_only_import_equals = HashSet::new();
+    for reference in facts.module_references {
+        match reference.kind {
+            ModuleReferenceKind::StaticImport | ModuleReferenceKind::ReExport => {
+                let Some(specifier) = reference.specifier else {
+                    continue;
+                };
+                type_only_by_specifier
+                    .entry(specifier)
+                    .or_default()
+                    .push_back(reference.type_only);
             }
-            JavaScriptParseOutcome::Fatal { .. } => (HashMap::new(), HashSet::new(), false),
-        };
+            ModuleReferenceKind::ImportEquals if reference.type_only => {
+                type_only_import_equals.insert((
+                    reference.range.start.line,
+                    reference.range.start.column,
+                    reference.range.end.line,
+                    reference.range.end.column,
+                ));
+            }
+            _ => {}
+        }
+    }
     calls.references.retain(|reference| {
         if matches!(
             reference.kind,

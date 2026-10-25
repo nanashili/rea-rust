@@ -1,7 +1,7 @@
 //! `JavaScriptArtifactGraphBuilder`: compose the application graph from
 //! inventory, file and analysis facts.
 
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 use super::application_graph::{Accumulator, GraphInput, seal_graph};
 use super::bundlers::add_bundler_nodes;
@@ -36,7 +36,8 @@ pub enum ApplicationGraphError {
 ///
 /// `snapshot` needs `manifest`, the root entry of `nodes` and
 /// `integrity_contradictions`; `file_set` is the JavaScript artifact file set
-/// and `analysis` the module artifact analysis.
+/// metadata and `analysis` the module artifact analysis, including source
+/// text owned by analyzed file records.
 pub fn build_application_graph(
     snapshot: &Json,
     file_set: &Json,
@@ -51,11 +52,17 @@ pub fn build_application_graph(
         snapshot.at("manifest").at("root_sha256").str().to_owned(),
         root.clone(),
     );
-    let files_by_path = file_set
+    // Analysis records own the authenticated source text. The file-set JSON
+    // passed here contains metadata only, so indexing it would discard source
+    // facts needed by relationship and finding builders.
+    let files_by_path = analysis
         .at("files")
         .arr()
         .iter()
-        .map(|file| (file.at("path").text().clone(), file.clone()))
+        .filter_map(|entry| {
+            let file = entry.get("file")?;
+            Some((file.at("path").text().clone(), file.clone()))
+        })
         .collect();
     let mut context = GraphContext {
         accumulator,
@@ -108,7 +115,15 @@ pub fn build_application_graph(
 }
 
 /// Raw observations stay on file nodes; relationship builders see only admitted expansions.
-fn admitted_analysis(analysis: &Json) -> Json {
+fn admitted_analysis<'a>(analysis: &'a Json) -> Cow<'a, Json> {
+    if !analysis
+        .at("files")
+        .arr()
+        .iter()
+        .any(|file| file.get("application_projection_failure").is_some())
+    {
+        return Cow::Borrowed(analysis);
+    }
     let mut admitted = analysis.obj();
     let files = analysis
         .at("files")
@@ -125,7 +140,7 @@ fn admitted_analysis(analysis: &Json) -> Json {
         })
         .collect();
     admitted.set("files", Json::Array(files));
-    admitted.into()
+    Cow::Owned(admitted.into())
 }
 
 fn sorted_semantic_limits(analysis: &Json) -> Vec<String> {
@@ -135,7 +150,13 @@ fn sorted_semantic_limits(analysis: &Json) -> Vec<String> {
         if semantic.is_null() {
             continue;
         }
-        for limit in semantic_resource_limits(semantic.at("ir").at("coverage")) {
+        let metadata_coverage = semantic.at("metadata").at("coverage");
+        let coverage = if metadata_coverage.is_null() {
+            semantic.at("ir").at("coverage")
+        } else {
+            metadata_coverage
+        };
+        for limit in semantic_resource_limits(coverage) {
             if !limits.contains(&limit) {
                 limits.push(limit);
             }

@@ -52,6 +52,17 @@ impl Obj {
             .map(|(_, value)| value)
     }
 
+    /// Mutably access one own property without changing its insertion order.
+    pub fn get_mut<K: ?Sized>(&mut self, key: &K) -> Option<&mut Json>
+    where
+        JsString: PartialEq<K>,
+    {
+        self.0
+            .iter_mut()
+            .find(|(name, _)| name == key)
+            .map(|(_, value)| value)
+    }
+
     /// Whether the property exists (JavaScript `key in value`).
     pub fn has<K: ?Sized>(&self, key: &K) -> bool
     where

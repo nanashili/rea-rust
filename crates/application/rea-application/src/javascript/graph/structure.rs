@@ -196,7 +196,12 @@ pub fn add_files(context: &mut GraphContext<'_>) {
                     if semantic.is_null() {
                         Json::Null
                     } else {
-                        semantic.at("ir").clone()
+                        let compact = semantic.at("metadata").at("moduleIr");
+                        if compact.is_null() {
+                            semantic.at("ir").clone()
+                        } else {
+                            compact.clone()
+                        }
                     },
                 )
                 .with(
