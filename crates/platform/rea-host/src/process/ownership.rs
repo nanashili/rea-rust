@@ -526,16 +526,10 @@ pub fn scan_token_owned(
         );
         related_groups.extend(scan.owned.iter().map(|process| process.process_group_id));
     }
-    let live: Option<BTreeSet<u32>> = list_live_processes()
-        .ok()
-        .map(|rows| rows.into_iter().map(|row| row.pid).collect());
+    // The strict token/identity retries above already discard exited
+    // generations. A display inventory omits unreadable rows and therefore
+    // cannot establish that any remaining unknown process has exited.
     for (process, diagnostic) in unreadable {
-        if live
-            .as_ref()
-            .is_some_and(|live| !live.contains(&process.pid))
-        {
-            continue;
-        }
         let related = relation.is_none()
             || related_pids.contains(&process.pid)
             || related_groups.contains(&process.process_group_id);
