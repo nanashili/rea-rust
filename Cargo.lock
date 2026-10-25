@@ -3015,6 +3015,7 @@ dependencies = [
  "rea-rust-analysis",
  "regex",
  "rusqlite",
+ "rustc-hash",
  "ryu-js",
  "serde",
  "serde_json",

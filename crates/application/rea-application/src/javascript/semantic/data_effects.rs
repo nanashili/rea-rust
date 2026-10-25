@@ -22,7 +22,6 @@ use crate::javascript::semantic::data_effect_helpers::{
     data_effect_literal_string, data_effect_member_callee, is_semantic_process_object,
     traverse_data_effects,
 };
-use crate::javascript::semantic::mutation_initializers::semantic_binding_at_read;
 use crate::javascript::semantic::state::SemanticState;
 use crate::javascript::semantic::value_types::{JsString, Primitive};
 use crate::javascript::static_analysis::helpers::range as contract_range;
@@ -38,7 +37,7 @@ pub struct DataEffectAnalysis {
 /// Collect all data effects in Babel visitor order.
 pub fn collect_semantic_data_effects<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
 ) -> DataEffectAnalysis {
     let callable_ids: HashSet<String> = callables
@@ -237,7 +236,7 @@ fn process_object_matches<'a>(
 
 fn collect_defaults<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &HashSet<String>,
 ) -> Vec<SemanticConfigurationOperation> {
     let mut context = DataEffectTraversalContext {
@@ -519,7 +518,7 @@ fn boundary_details<'a>(
 
 fn collect_response_consumers<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &HashSet<String>,
     requests: &[SemanticRequestOperation],
 ) -> Vec<SemanticRequestOperation> {
@@ -628,6 +627,7 @@ fn sole_write_reaches_read<'a>(read: Node<'a>, state: &SemanticState<'a>) -> boo
     let binding = state.binding(binding_index);
     binding.initializers.len() == 1
         && (state.stable_initializer(binding_index).is_some()
-            || semantic_binding_at_read(binding, read, &state.parents, state.source)
+            || state
+                .semantic_binding_at_read(binding, read)
                 .has_definite_initializer)
 }

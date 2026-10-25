@@ -139,3 +139,44 @@ fn methods_fold_their_function_and_positions_are_utf16() {
         ]
     );
 }
+
+#[test]
+fn parent_lookup_preserves_babel_views_and_synthesized_identities() {
+    #[derive(Default)]
+    struct Parents<'a> {
+        actual: NodeParents<'a>,
+        expected: Vec<(NodeKey, String)>,
+    }
+
+    impl<'a> AstVisitor<'a> for Parents<'a> {
+        fn enter(&mut self, node: &Node<'a>, parent: Option<&Node<'a>>, _: &[Node<'a>]) {
+            if let Some(parent) = parent {
+                self.actual.insert(node.key(), *parent);
+                self.expected.push((node.key(), format!("{parent:?}")));
+            }
+        }
+    }
+
+    for source in [
+        "'use strict'; class Box { #value; read() { return this.#value; } }",
+        "const box = ({ method() { return (source?.child).value; }, get value() {} });",
+        "namespace A.B { export class Box { constructor(public value: T = input) {} } }",
+    ] {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(&allocator, source, Some("x.ts"))
+            .expect("source parses");
+        let context = AstContext::new(parsed.program);
+        let mut parents = Parents::default();
+        let traversal = traverse::<()>(context.root(), source, &mut parents, || {
+            ControlFlow::Continue(())
+        });
+        assert!(traversal.is_continue());
+        assert!(parents.actual.get(&context.root().key()).is_none());
+        assert_eq!(parents.actual.len(), parents.expected.len());
+
+        for (child, expected) in parents.expected {
+            let actual = parents.actual.get(&child).expect("parent retained");
+            assert_eq!(format!("{actual:?}"), expected);
+        }
+    }
+}

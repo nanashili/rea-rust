@@ -16,8 +16,10 @@ use super::ast_values::{
 };
 use super::iteration_sources::{SemanticIterationSource, semantic_iteration_sources};
 use super::map_operations::{MapReferenceMutationIndex, is_intrinsic_map_lookup};
-use super::mutation_initializers::mutation_initializers;
 use super::mutation_initializers::{EffectTiming, effect_timing};
+use super::mutation_initializers::{
+    StatementPositionCache, mutation_initializers, selected_initializer_origins_cached,
+};
 use super::opaque_effects::{OpaqueEffects, index_opaque_effects};
 use super::property_paths::{
     PropertyPath, PropertyPathKey, PropertySelection, SemanticPropertyPathCoverage,
@@ -62,6 +64,44 @@ const MUTATION_ORIGIN_CACHE_ELEMENT_LIMIT: usize = 16_384;
 struct MutationOriginCache<'a> {
     entries: HashMap<(BindingIndex, NodeKey), Rc<BindingOrigins<'a>>>,
     retained_elements: usize,
+}
+
+struct BaseOriginCache<'a> {
+    entries: HashMap<BindingIndex, Rc<BindingOrigins<'a>>>,
+    retained_elements: usize,
+}
+
+impl<'a> BaseOriginCache<'a> {
+    fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+            retained_elements: 0,
+        }
+    }
+
+    fn get(&self, binding: &BindingIndex) -> Option<Rc<BindingOrigins<'a>>> {
+        self.entries.get(binding).cloned()
+    }
+
+    fn insert(&mut self, binding: BindingIndex, origins: Rc<BindingOrigins<'a>>) -> bool {
+        if self.entries.contains_key(&binding) {
+            return true;
+        }
+
+        let retained_elements = origins.retained_element_count();
+        let within_entry_limit = self.entries.len() < MUTATION_ORIGIN_CACHE_ENTRY_LIMIT;
+        let within_element_limit = self
+            .retained_elements
+            .checked_add(retained_elements)
+            .is_some_and(|total| total <= MUTATION_ORIGIN_CACHE_ELEMENT_LIMIT);
+        if !within_entry_limit || !within_element_limit {
+            return false;
+        }
+
+        self.retained_elements += retained_elements;
+        self.entries.insert(binding, origins);
+        true
+    }
 }
 
 impl<'a> MutationOriginCache<'a> {
@@ -125,6 +165,8 @@ struct Collector<'s, 'a> {
     // Mutation-origin selection reads only immutable binding/source facts. The
     // collector's later effect writes do not alter those inputs.
     mutation_origins: MutationOriginCache<'a>,
+    base_origins: BaseOriginCache<'a>,
+    statement_positions: StatementPositionCache,
     opaque_effects: OpaqueEffects<'a>,
     deferred_iteration_sources: Vec<SemanticIterationSource<'a>>,
     sources_deferred: bool,
@@ -144,6 +186,8 @@ impl<'s, 'a> Collector<'s, 'a> {
             active_traversals: HashMap::new(),
             active_bindings: HashMap::new(),
             mutation_origins: MutationOriginCache::new(),
+            base_origins: BaseOriginCache::new(),
+            statement_positions: StatementPositionCache::default(),
             opaque_effects,
             deferred_iteration_sources: Vec::new(),
             sources_deferred: false,
@@ -158,6 +202,7 @@ impl<'s, 'a> Collector<'s, 'a> {
     fn replay_deferred_work(&mut self) {
         let mut previous_effects = self.effect_count();
         loop {
+            self.deduplicate_deferred_work();
             let before = self.effect_count();
             let queued_before = self.deferred_references.len() + self.deferred_iterables.len();
             let iteration_before = self.array_iteration_unknown;
@@ -173,6 +218,7 @@ impl<'s, 'a> Collector<'s, 'a> {
             self.replay_deferred_iterables();
             self.replay_map_receivers();
 
+            self.deduplicate_deferred_work();
             let after = self.effect_count();
             let queued_after = self.deferred_references.len() + self.deferred_iterables.len();
             if after == before
@@ -184,6 +230,25 @@ impl<'s, 'a> Collector<'s, 'a> {
             }
             previous_effects = after;
         }
+    }
+
+    /// Collapse semantically identical work before the next fixpoint pass.
+    ///
+    /// Deferred work is produced from several traversal paths.  Those paths
+    /// can converge on the same initializer or iterable, especially in large
+    /// bundled modules.  Retaining duplicate queue entries makes each
+    /// fixpoint pass repeat the same source-order and value evaluation while
+    /// contributing no new effect.  The identity includes every field that
+    /// can change the result, including the selected source paths and origin
+    /// positions; it does not discard a distinct fallback or mutation.
+    fn deduplicate_deferred_work(&mut self) {
+        let mut references = HashSet::new();
+        self.deferred_references
+            .retain(|reference| references.insert(deferred_reference_identity(reference)));
+
+        let mut iterables = HashSet::new();
+        self.deferred_iterables
+            .retain(|iterable| iterables.insert(deferred_iterable_identity(iterable)));
     }
 
     fn effect_count(&self) -> usize {
@@ -952,11 +1017,16 @@ impl<'s, 'a> Collector<'s, 'a> {
         mutation: Option<Node<'a>>,
     ) -> Rc<BindingOrigins<'a>> {
         let Some(mutation) = mutation else {
+            if let Some(origins) = self.base_origins.get(&binding) {
+                return origins;
+            }
             let source = self.state.binding(binding);
-            return Rc::new(BindingOrigins {
+            let origins = Rc::new(BindingOrigins {
                 initializers: source.initializers.clone(),
                 reference_initializers: source.reference_initializers.clone(),
             });
+            let _ = self.base_origins.insert(binding, Rc::clone(&origins));
+            return origins;
         };
 
         let key = (binding, mutation.key());
@@ -964,15 +1034,26 @@ impl<'s, 'a> Collector<'s, 'a> {
             return origins;
         }
 
-        let selected = mutation_initializers(
-            self.state.binding(binding),
-            mutation,
-            &self.state.parents,
-            self.state.source,
-        );
+        let Some((initializers, reference_initializers, _replaces_entry)) =
+            selected_initializer_origins_cached(
+                &mut self.statement_positions,
+                self.state.binding(binding),
+                mutation,
+                &self.state.parents,
+                self.state.source,
+            )
+        else {
+            let source = self.state.binding(binding);
+            let origins = Rc::new(BindingOrigins {
+                initializers: source.initializers.clone(),
+                reference_initializers: source.reference_initializers.clone(),
+            });
+            let _ = self.mutation_origins.insert(key, Rc::clone(&origins));
+            return origins;
+        };
         let origins = Rc::new(BindingOrigins {
-            initializers: selected.initializers,
-            reference_initializers: selected.reference_initializers,
+            initializers,
+            reference_initializers,
         });
         let _ = self.mutation_origins.insert(key, Rc::clone(&origins));
         origins
@@ -1759,6 +1840,60 @@ mod tests {
         assert!(!element_limited_cache.insert(key, actual));
     }
 
+    #[test]
+    fn deferred_reference_identity_preserves_copy_semantics() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = source;",
+            Some("queue.js"),
+        )
+        .expect("parse");
+        let node = AstContext::new(parsed.program).root();
+        let initializer = ReferenceInitializer {
+            node,
+            projection: Vec::new(),
+            copy_kind: None,
+            copy_projection_offset: None,
+            copy_excluded_keys: None,
+            copy_start_index: None,
+            fallback_sources: None,
+            required_sources: None,
+        };
+        let duplicate = DeferredReference {
+            initializer: initializer.clone(),
+            path: Vec::new(),
+            effect: MemberMutationKind::Escape,
+            mutation: None,
+            origin_at: None,
+            widened_getter_result: false,
+        };
+        let mut copy_variant = duplicate.clone();
+        copy_variant.initializer.copy_kind = Some(super::super::state::CopyKind::ObjectRest);
+
+        assert_eq!(
+            deferred_reference_identity(&duplicate),
+            deferred_reference_identity(&duplicate)
+        );
+        assert_ne!(
+            deferred_reference_identity(&duplicate),
+            deferred_reference_identity(&copy_variant)
+        );
+
+        let initializer_a = Initializer {
+            record_id: 1,
+            node,
+            projection: Vec::new(),
+            entry_body: None,
+        };
+        let mut initializer_b = initializer_a.clone();
+        initializer_b.record_id = 2;
+        assert_ne!(
+            initializer_identity(&initializer_a),
+            initializer_identity(&initializer_b)
+        );
+    }
+
     struct TestNodes<'a, 'slot> {
         mutation: &'slot mut Option<Node<'a>>,
         identifier: &'slot mut Option<Node<'a>>,
@@ -2060,6 +2195,7 @@ impl BindingOrigins<'_> {
     }
 }
 
+#[derive(Clone)]
 struct DeferredReference<'a> {
     initializer: ReferenceInitializer<'a>,
     path: PropertyPath,
@@ -2082,6 +2218,133 @@ struct DeferredIterable<'a> {
     origin_at: Option<Node<'a>>,
     widened_getter_result: bool,
     iteration_only: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DeferredInitializerIdentity {
+    record_id: Option<usize>,
+    node: NodeKey,
+    projection: PropertyPath,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DeferredSourceIdentity {
+    node: NodeKey,
+    projection: PropertyPath,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DeferredReferenceIdentity {
+    initializer: DeferredInitializerIdentity,
+    path: PropertyPath,
+    required_sources: Vec<DeferredInitializerIdentity>,
+    fallback_sources: Vec<DeferredInitializerIdentity>,
+    copy_kind: Option<super::state::CopyKind>,
+    copy_projection_offset: Option<usize>,
+    copy_excluded_keys: Option<Vec<JsString>>,
+    copy_start_index: Option<usize>,
+    effect: MemberMutationKind,
+    mutation: Option<NodeKey>,
+    origin_at: Option<NodeKey>,
+    widened_getter_result: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct DeferredIterableIdentity {
+    node: NodeKey,
+    projection: PropertyPath,
+    path: PropertyPath,
+    fallback_path: PropertyPath,
+    required_sources: Vec<DeferredSourceIdentity>,
+    fallback_sources: Vec<DeferredSourceIdentity>,
+    effect: MemberMutationKind,
+    mutation: Option<NodeKey>,
+    origin_at: Option<NodeKey>,
+    widened_getter_result: bool,
+    iteration_only: bool,
+}
+
+fn initializer_identity(initializer: &Initializer<'_>) -> DeferredInitializerIdentity {
+    deferred_initializer_identity(
+        Some(initializer.record_id),
+        initializer.node,
+        &initializer.projection,
+    )
+}
+
+fn reference_initializer_identity(
+    initializer: &ReferenceInitializer<'_>,
+) -> DeferredInitializerIdentity {
+    deferred_initializer_identity(None, initializer.node, &initializer.projection)
+}
+
+fn deferred_initializer_identity(
+    record_id: Option<usize>,
+    node: Node<'_>,
+    projection: &[ProjectionKey],
+) -> DeferredInitializerIdentity {
+    DeferredInitializerIdentity {
+        record_id,
+        node: node.key(),
+        projection: projection_path(projection),
+    }
+}
+
+fn deferred_reference_identity(reference: &DeferredReference<'_>) -> DeferredReferenceIdentity {
+    DeferredReferenceIdentity {
+        initializer: reference_initializer_identity(&reference.initializer),
+        path: reference.path.clone(),
+        required_sources: reference
+            .initializer
+            .required_sources
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .map(initializer_identity)
+            .collect(),
+        fallback_sources: reference
+            .initializer
+            .fallback_sources
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .map(initializer_identity)
+            .collect(),
+        copy_kind: reference.initializer.copy_kind,
+        copy_projection_offset: reference.initializer.copy_projection_offset,
+        copy_excluded_keys: reference.initializer.copy_excluded_keys.clone(),
+        copy_start_index: reference.initializer.copy_start_index,
+        effect: reference.effect,
+        mutation: reference.mutation.map(|node| node.key()),
+        origin_at: reference.origin_at.map(|node| node.key()),
+        widened_getter_result: reference.widened_getter_result,
+    }
+}
+
+fn deferred_iterable_identity(iterable: &DeferredIterable<'_>) -> DeferredIterableIdentity {
+    let source_identity = |sources: &[super::iteration_sources::IterationSourceValue<'_>]| {
+        sources
+            .iter()
+            .map(|source| DeferredSourceIdentity {
+                node: source.node.key(),
+                projection: source.projection.clone(),
+            })
+            .collect()
+    };
+
+    DeferredIterableIdentity {
+        node: iterable.node.key(),
+        projection: iterable.projection.clone(),
+        path: iterable.path.clone(),
+        fallback_path: iterable.fallback_path.clone(),
+        required_sources: source_identity(&iterable.required_sources),
+        fallback_sources: source_identity(&iterable.fallback_sources),
+        effect: iterable.effect,
+        mutation: iterable.mutation.map(|node| node.key()),
+        origin_at: iterable.origin_at.map(|node| node.key()),
+        widened_getter_result: iterable.widened_getter_result,
+        iteration_only: iterable.iteration_only,
+    }
 }
 
 fn projection_path(projection: &[ProjectionKey]) -> PropertyPath {

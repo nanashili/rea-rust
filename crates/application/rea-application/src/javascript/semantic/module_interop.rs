@@ -6,6 +6,7 @@
 //! owning passes.
 
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use crate::javascript::ast::{Field, Node, NodeKey};
 use crate::javascript::static_analysis::interop::{
@@ -452,31 +453,47 @@ pub fn argument<'a>(state: &SemanticState<'a>, call: Node<'a>, index: usize) -> 
 
 pub(crate) struct StateFacts<'a, 's> {
     state: &'s SemanticState<'a>,
-    facts: HashMap<String, BindingFacts>,
+    facts: Rc<HashMap<String, BindingFacts>>,
 }
 
 impl<'a, 's> StateFacts<'a, 's> {
+    pub(crate) fn prime_cache(state: &SemanticState<'a>) {
+        if state.state_facts_cache.borrow().is_some() {
+            return;
+        }
+
+        let facts = Rc::new(
+            state
+                .bindings
+                .iter()
+                .map(|binding| {
+                    (
+                        binding.binding_id.clone(),
+                        BindingFacts {
+                            binding_id: binding.binding_id.clone(),
+                            name: binding.name.clone(),
+                            mutable: binding.mutable,
+                            scope_kind: state
+                                .scopes_by_id
+                                .get(&binding.scope_id)
+                                .map(|index| state.scopes[*index].kind.as_str().to_owned()),
+                            definitions: binding.definitions.len(),
+                            initializers: binding.initializers.len(),
+                        },
+                    )
+                })
+                .collect(),
+        );
+        *state.state_facts_cache.borrow_mut() = Some(facts);
+    }
+
     pub(crate) fn new(state: &'s SemanticState<'a>) -> Self {
+        Self::prime_cache(state);
         let facts = state
-            .bindings
-            .iter()
-            .map(|binding| {
-                (
-                    binding.binding_id.clone(),
-                    BindingFacts {
-                        binding_id: binding.binding_id.clone(),
-                        name: binding.name.clone(),
-                        mutable: binding.mutable,
-                        scope_kind: state
-                            .scopes_by_id
-                            .get(&binding.scope_id)
-                            .map(|index| state.scopes[*index].kind.as_str().to_owned()),
-                        definitions: binding.definitions.len(),
-                        initializers: binding.initializers.len(),
-                    },
-                )
-            })
-            .collect();
+            .state_facts_cache
+            .borrow()
+            .clone()
+            .expect("state facts are primed after definitions finalize");
         Self { state, facts }
     }
 }

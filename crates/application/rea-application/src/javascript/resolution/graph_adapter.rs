@@ -23,8 +23,8 @@ use super::{
         artifact_files::{InventoryLookup, UnanalyzedArtifactLookup},
     },
     artifact_path::{
-        ResolutionContext, ResolveInput, ResolverFile, ResolverFileText, UnanalyzedFile,
-        UnanalyzedLookup, resolve_artifact_path,
+        ContainerDirectoryIndex, PackageMetadataCache, ResolutionContext, ResolveInput,
+        ResolverFile, ResolverFileText, UnanalyzedFile, UnanalyzedLookup, resolve_artifact_path,
     },
     mode::{ModuleReferenceKind, module_resolution_mode_for_reference},
 };
@@ -33,7 +33,9 @@ use super::{
 pub struct JavaScriptGraphResolver<'a> {
     files: HashMap<JsString, ResolverFile>,
     directory_paths: HashSet<JsString>,
+    container_directory_paths: ContainerDirectoryIndex,
     unanalyzed: InventoryLookupAdapter<'a>,
+    package_metadata_cache: PackageMetadataCache,
 }
 
 struct InventoryLookupAdapter<'a> {
@@ -74,9 +76,7 @@ impl<'a> JavaScriptGraphResolver<'a> {
             .map(|file| {
                 let text = match &file.text {
                     super::super::artifact_files::JavaScriptText::Included(value) => {
-                        ResolverFileText::Included(prepare_package_json_text(
-                            &encode_json_text_units(value),
-                        ))
+                        ResolverFileText::Included(value.clone())
                     }
                     super::super::artifact_files::JavaScriptText::Excluded(reason) => {
                         ResolverFileText::Excluded(format!("{reason:?}"))
@@ -92,13 +92,16 @@ impl<'a> JavaScriptGraphResolver<'a> {
             })
             .collect();
 
+        let container_directory_paths = container_directory_index(&files);
         let directory_paths = inventory_directories(snapshot);
         Self {
             files,
             directory_paths,
+            container_directory_paths,
             unanalyzed: InventoryLookupAdapter {
                 inner: RefCell::new(InventoryLookup::new(snapshot, &file_set.containers)),
             },
+            package_metadata_cache: PackageMetadataCache::default(),
         }
     }
 
@@ -174,10 +177,12 @@ impl ArtifactPathResolver for JavaScriptGraphResolver<'_> {
             context,
             files: &self.files,
             directory_paths: Some(&self.directory_paths),
+            container_directory_paths: Some(&self.container_directory_paths),
             unanalyzed_files: Some(&self.unanalyzed),
             html_base_href: html_base_href.as_deref(),
             module_kind,
             runtime_path_kind,
+            package_metadata_cache: &self.package_metadata_cache,
         };
         let result = resolve_artifact_path(&input);
         let mut object = Obj::new()
@@ -320,155 +325,32 @@ fn inventory_directories(snapshot: &ArtifactInventoryResult) -> HashSet<JsString
     directories
 }
 
-const INTERNAL_SURROGATE_MARKER: char = '\u{e000}';
+fn container_directory_index(files: &HashMap<JsString, ResolverFile>) -> ContainerDirectoryIndex {
+    let mut index = ContainerDirectoryIndex::new();
 
-fn encode_json_text_units(value: &JsString) -> String {
-    value
-        .code_points()
-        .flat_map(|point| {
-            if point <= 0xffff {
-                encode_code_unit(point as u16).chars().collect::<Vec<_>>()
-            } else {
-                char::from_u32(point)
-                    .map(|character| vec![character])
-                    .unwrap_or_default()
+    for (path, file) in files {
+        let units = path.units();
+        for (position, unit) in units.iter().enumerate() {
+            if *unit != b'/' as u16 {
+                continue;
             }
-        })
-        .collect()
-}
 
-fn encode_code_unit(unit: u16) -> String {
-    if (0xd800..=0xdfff).contains(&unit) {
-        format!("{INTERNAL_SURROGATE_MARKER}{unit:04x}")
-    } else if unit == INTERNAL_SURROGATE_MARKER as u16 {
-        format!("{INTERNAL_SURROGATE_MARKER}{INTERNAL_SURROGATE_MARKER}")
-    } else {
-        char::from_u32(u32::from(unit))
-            .expect("non-surrogate UTF-16 code unit is a Unicode scalar")
-            .to_string()
-    }
-}
-
-#[cfg(test)]
-fn decode_json_text_units(value: &str) -> JsString {
-    let mut units = Vec::new();
-    let mut chars = value.chars().peekable();
-    while let Some(character) = chars.next() {
-        if character != INTERNAL_SURROGATE_MARKER {
-            let mut buffer = [0; 2];
-            units.extend(character.encode_utf16(&mut buffer).iter().copied());
-            continue;
-        }
-        if chars.next_if_eq(&INTERNAL_SURROGATE_MARKER).is_some() {
-            units.push(INTERNAL_SURROGATE_MARKER as u16);
-            continue;
-        }
-        let digits: String = chars.by_ref().take(4).collect();
-        if digits.len() == 4 && digits.chars().all(|digit| digit.is_ascii_hexdigit()) {
-            units.push(u16::from_str_radix(&digits, 16).expect("validated hexadecimal digits"));
-        } else {
-            units.push(INTERNAL_SURROGATE_MARKER as u16);
-            units.extend(digits.encode_utf16());
+            index
+                .entry(file.container_sha256.clone())
+                .or_default()
+                .insert(JsString::from_utf16(units[..position].to_vec()));
         }
     }
-    JsString::from_utf16(units)
-}
 
-fn prepare_package_json_text(value: &str) -> String {
-    let mut output = String::with_capacity(value.len());
-    let mut characters = value.chars().peekable();
-    let mut in_string = false;
-
-    while let Some(character) = characters.next() {
-        if !in_string {
-            if character == '"' {
-                in_string = true;
-            }
-            output.push(character);
-            continue;
-        }
-
-        if character == '"' {
-            in_string = false;
-            output.push(character);
-            continue;
-        }
-
-        if character == INTERNAL_SURROGATE_MARKER {
-            output.push_str(&encode_code_unit(INTERNAL_SURROGATE_MARKER as u16));
-            continue;
-        }
-
-        if character == '\\' {
-            let Some(escape) = characters.next() else {
-                output.push('\\');
-                continue;
-            };
-            if escape != 'u' {
-                output.push('\\');
-                output.push(escape);
-                continue;
-            }
-
-            let mut digits = String::new();
-            for _ in 0..4 {
-                let Some(digit) = characters.next() else {
-                    output.push_str("\\u");
-                    output.push_str(&digits);
-                    break;
-                };
-                digits.push(digit);
-            }
-            if digits.len() != 4 || !digits.chars().all(|digit| digit.is_ascii_hexdigit()) {
-                output.push_str("\\u");
-                output.push_str(&digits);
-                continue;
-            }
-
-            let unit = u16::from_str_radix(&digits, 16).expect("validated hexadecimal digits");
-            if (0xd800..=0xdbff).contains(&unit) {
-                let is_low_pair = characters.peek() == Some(&'\\');
-                if is_low_pair {
-                    let mut lookahead = characters.clone();
-                    let _ = lookahead.next();
-                    if lookahead.next() == Some('u') {
-                        let low_digits: String = lookahead.take(4).collect();
-                        let low = u16::from_str_radix(&low_digits, 16)
-                            .ok()
-                            .filter(|low| (0xdc00..=0xdfff).contains(low));
-                        if low.is_some() {
-                            output.push('\\');
-                            output.push('u');
-                            output.push_str(&digits);
-                            continue;
-                        }
-                    }
-                }
-                output.push_str(&encode_code_unit(unit));
-                continue;
-            }
-            if (0xdc00..=0xdfff).contains(&unit) {
-                output.push_str(&encode_code_unit(unit));
-                continue;
-            }
-
-            output.push('\\');
-            output.push('u');
-            output.push_str(&digits);
-            continue;
-        }
-
-        output.push(character);
-    }
-
-    output
+    index
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        JsString, decode_json_text_units, encode_json_text_units, prepare_package_json_text,
+    use super::super::artifact_path::{
+        decode_json_text_units, encode_json_text_units, prepare_package_json_text,
     };
+    use crate::javascript::semantic::value_types::JsString;
 
     #[test]
     fn json_text_unit_encoding_round_trips_unpaired_surrogates() {

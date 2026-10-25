@@ -1,6 +1,7 @@
 //! Golden bytes/digests from REA's current TypeScript canonicalization owner.
 use rea_core::canonical_json::{self, Error};
 use serde_json::value::RawValue;
+use std::collections::BTreeMap;
 use std::io;
 
 #[test]
@@ -52,6 +53,41 @@ fn agrees_with_original_rea_on_numbers_utf16_order_and_duplicate_keys() {
     let mut bytes = Vec::new();
     canonical_json::write(raw, &mut bytes).unwrap();
     assert_eq!(bytes, br#"{"a":2}"#);
+}
+
+#[test]
+fn borrowed_object_digest_matches_full_semantic_projection() {
+    let source = r#"{
+        "locations": [{"offset": -0, "end": 1e+21}],
+        "subject": {"digest": {"sha256": "abc"}, "format": "elf", "architecture": "x86_64", "display": "\ud800"},
+        "raw_result": {"z": 1e-7, "a": 9007199254740993, "duplicate": 1, "duplicate": 2},
+        "environment": null,
+        "parameters": {"large": 100000000000000000000, "small": 0.000001}
+    }"#;
+    let raw: &RawValue = serde_json::from_str(source).unwrap();
+    let fields: BTreeMap<String, &RawValue> = serde_json::from_str(source).unwrap();
+    let selected = [
+        ("parameters", fields["parameters"]),
+        ("environment", fields["environment"]),
+        ("raw_result", fields["raw_result"]),
+        ("subject", fields["subject"]),
+        ("locations", fields["locations"]),
+    ];
+
+    assert_eq!(
+        canonical_json::digest_object_fields(&selected).unwrap(),
+        canonical_json::digest_raw(raw).unwrap()
+    );
+
+    let duplicate = [
+        ("value", fields["parameters"]),
+        ("value", fields["environment"]),
+    ];
+    let expected: &RawValue = serde_json::from_str(r#"{"value":null}"#).unwrap();
+    assert_eq!(
+        canonical_json::digest_object_fields(&duplicate).unwrap(),
+        canonical_json::digest_raw(expected).unwrap()
+    );
 }
 
 #[test]

@@ -16,11 +16,12 @@ pub const RETURNED_REFERENCE_WIDENING_LIMITATION: &str = "Local returned-referen
 
 /// Attach the recovered bundle module to every module-attributable finding.
 pub fn attribute_modules(analysis: &mut StaticAnalysis, source: &str, modules: &ModuleRangeIndex) {
+    let offsets = Utf16OffsetIndex::new(source);
     for finding in &mut analysis.references {
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            &offsets,
             finding.location.start,
             modules,
         );
@@ -29,7 +30,7 @@ pub fn attribute_modules(analysis: &mut StaticAnalysis, source: &str, modules: &
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            &offsets,
             finding.location.start,
             modules,
         );
@@ -38,7 +39,7 @@ pub fn attribute_modules(analysis: &mut StaticAnalysis, source: &str, modules: &
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            &offsets,
             finding.location.start,
             modules,
         );
@@ -47,12 +48,12 @@ pub fn attribute_modules(analysis: &mut StaticAnalysis, source: &str, modules: &
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            &offsets,
             finding.location.start,
             modules,
         );
     }
-    attribute_electron(&mut analysis.electron, source, modules);
+    attribute_electron(&mut analysis.electron, &offsets, modules);
 }
 
 /// Add the limitations whose source facts are known only after traversal.
@@ -114,12 +115,16 @@ pub fn finalize_limitations(
     analysis.parse_error_count = parser_error_count as u64;
 }
 
-fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &ModuleRangeIndex) {
+fn attribute_electron(
+    electron: &mut ElectronFindings,
+    offsets: &Utf16OffsetIndex,
+    modules: &ModuleRangeIndex,
+) {
     for finding in &mut electron.browser_windows {
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -128,7 +133,7 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -137,7 +142,7 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -146,7 +151,7 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -155,7 +160,7 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -164,7 +169,7 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
         apply_module(
             &mut finding.module_key,
             &mut finding.module_runtime,
-            source,
+            offsets,
             finding.location.start,
             modules,
         );
@@ -174,11 +179,11 @@ fn attribute_electron(electron: &mut ElectronFindings, source: &str, modules: &M
 fn apply_module(
     module_key: &mut Option<String>,
     module_runtime: &mut Option<String>,
-    source: &str,
+    offsets: &Utf16OffsetIndex,
     point: SourcePoint,
     modules: &ModuleRangeIndex,
 ) {
-    let Some(offset) = utf16_offset_for_point(source, point) else {
+    let Some(offset) = offsets.offset(point) else {
         return;
     };
     let Some(module) = modules.find(Some(offset)) else {
@@ -188,44 +193,169 @@ fn apply_module(
     *module_runtime = Some(module.runtime.clone());
 }
 
-fn utf16_offset_for_point(source: &str, point: SourcePoint) -> Option<i64> {
-    if point.line == 0 {
-        return None;
-    }
-    let target_column = usize::try_from(point.column).ok()?;
-    let mut line = 1_u32;
-    let mut line_column = 0_usize;
-    let mut offset = 0_i64;
-    let mut characters = source.chars().peekable();
+struct Utf16OffsetIndex {
+    lines: Vec<(i64, usize, Vec<usize>)>,
+}
 
-    while let Some(character) = characters.next() {
-        if line == point.line {
-            if line_column >= target_column {
-                return Some(offset);
-            }
-            line_column = line_column.saturating_add(character.len_utf16());
-        }
+impl Utf16OffsetIndex {
+    fn new(source: &str) -> Self {
+        let mut lines = Vec::new();
+        let mut line_start = 0_i64;
+        let mut line_length = 0_usize;
+        let mut surrogate_boundaries = Vec::new();
+        let mut offset = 0_i64;
+        let mut characters = source.chars().peekable();
 
-        offset = offset.saturating_add(i64::from(character.len_utf16() as u32));
-        match character {
-            '\r' => {
-                if characters.peek() == Some(&'\n') {
+        while let Some(character) = characters.next() {
+            if matches!(character, '\r' | '\n' | '\u{2028}' | '\u{2029}') {
+                let newline_length = if character == '\r' && characters.peek() == Some(&'\n') {
                     characters.next();
-                    offset = offset.saturating_add(1);
+                    2
+                } else {
+                    1
+                };
+                offset += newline_length;
+                lines.push((line_start, line_length, surrogate_boundaries));
+                line_start = offset;
+                line_length = 0;
+                surrogate_boundaries = Vec::new();
+            } else {
+                let units = character.len_utf16();
+                if units == 2 {
+                    surrogate_boundaries.push(line_length + 1);
                 }
-                line = line.saturating_add(1);
-                line_column = 0;
+                line_length += units;
+                offset += i64::try_from(units).unwrap_or(i64::MAX);
             }
-            '\n' | '\u{2028}' | '\u{2029}' => {
-                line = line.saturating_add(1);
-                line_column = 0;
+        }
+
+        lines.push((line_start, line_length, surrogate_boundaries));
+        Self { lines }
+    }
+
+    fn offset(&self, point: SourcePoint) -> Option<i64> {
+        if point.line == 0 {
+            return None;
+        }
+        let target_column = usize::try_from(point.column).ok()?;
+        let (line_start, line_length, surrogate_boundaries) =
+            self.lines.get(usize::try_from(point.line - 1).ok()?)?;
+        if target_column > *line_length {
+            return None;
+        }
+        let rounded_units = usize::from(surrogate_boundaries.binary_search(&target_column).is_ok());
+        Some(*line_start + i64::try_from(target_column + rounded_units).ok()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Utf16OffsetIndex;
+    use crate::javascript::contracts::static_analysis::SourcePoint;
+
+    fn legacy_utf16_offset_for_point(source: &str, point: SourcePoint) -> Option<i64> {
+        if point.line == 0 {
+            return None;
+        }
+
+        let target_column = usize::try_from(point.column).ok()?;
+        let mut line = 1_u32;
+        let mut line_column = 0_usize;
+        let mut offset = 0_i64;
+        let mut characters = source.chars().peekable();
+
+        while let Some(character) = characters.next() {
+            if line == point.line {
+                if line_column >= target_column {
+                    return Some(offset);
+                }
+                line_column = line_column.saturating_add(character.len_utf16());
             }
-            _ => {}
+
+            offset = offset.saturating_add(i64::from(character.len_utf16() as u32));
+            match character {
+                '\r' => {
+                    if characters.peek() == Some(&'\n') {
+                        characters.next();
+                        offset = offset.saturating_add(1);
+                    }
+                    line = line.saturating_add(1);
+                    line_column = 0;
+                }
+                '\n' | '\u{2028}' | '\u{2029}' => {
+                    line = line.saturating_add(1);
+                    line_column = 0;
+                }
+                _ => {}
+            }
+        }
+
+        (line == point.line && line_column >= target_column).then_some(offset)
+    }
+
+    #[test]
+    fn utf16_index_preserves_unicode_columns_and_crlf_lines() {
+        let index = Utf16OffsetIndex::new("a😀\r\nb");
+
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 0 }), Some(0));
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 1 }), Some(1));
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 2 }), Some(3));
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 3 }), Some(3));
+        assert_eq!(index.offset(SourcePoint { line: 2, column: 0 }), Some(5));
+        assert_eq!(index.offset(SourcePoint { line: 2, column: 1 }), Some(6));
+    }
+
+    #[test]
+    fn utf16_index_handles_all_line_terminators_and_rejects_invalid_points() {
+        let index = Utf16OffsetIndex::new("a\nb\rc\u{2028}d\u{2029}e");
+
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 1 }), Some(1));
+        assert_eq!(index.offset(SourcePoint { line: 2, column: 1 }), Some(3));
+        assert_eq!(index.offset(SourcePoint { line: 3, column: 1 }), Some(5));
+        assert_eq!(index.offset(SourcePoint { line: 4, column: 1 }), Some(7));
+        assert_eq!(index.offset(SourcePoint { line: 5, column: 1 }), Some(9));
+        assert_eq!(index.offset(SourcePoint { line: 0, column: 0 }), None);
+        assert_eq!(index.offset(SourcePoint { line: 6, column: 0 }), None);
+        assert_eq!(index.offset(SourcePoint { line: 1, column: 2 }), None);
+    }
+
+    #[test]
+    fn utf16_index_matches_the_previous_scanner_for_representative_points() {
+        let sources = [
+            "a😀\r\nb",
+            "\r\n😀\ntext\u{2028}z\u{2029}",
+            "😀😀\rplain\n終",
+            "",
+        ];
+
+        for source in sources {
+            let index = Utf16OffsetIndex::new(source);
+            for line in 0..=8 {
+                for column in 0..=12 {
+                    let point = SourcePoint { line, column };
+                    assert_eq!(
+                        index.offset(point),
+                        legacy_utf16_offset_for_point(source, point),
+                        "source={source:?}, line={line}, column={column}"
+                    );
+                }
+            }
         }
     }
 
-    if line == point.line && line_column >= target_column {
-        return Some(offset);
+    #[test]
+    fn utf16_index_keeps_single_line_storage_bounded() {
+        let source = "x".repeat(100_000);
+        let index = Utf16OffsetIndex::new(&source);
+
+        assert_eq!(index.lines.len(), 1);
+        assert!(index.lines[0].2.is_empty());
+        assert_eq!(
+            index.offset(SourcePoint {
+                line: 1,
+                column: 100_000,
+            }),
+            Some(100_000)
+        );
     }
-    None
 }

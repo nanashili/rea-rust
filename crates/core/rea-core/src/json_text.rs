@@ -95,6 +95,17 @@ impl JsonText {
         }
     }
 
+    /// Consume the value while retaining its most compact lossless form.
+    ///
+    /// Unicode text is returned without cloning. Values containing unpaired
+    /// UTF-16 units are decoded into their exact units for a lossless owner.
+    pub fn into_string_or_units(self) -> Result<Result<String, Vec<u16>>, JsonTextError> {
+        match self.0 {
+            Text::Unicode(value) => Ok(Ok(value)),
+            Text::Unpaired(raw) => decode_json_string_units(raw.get()).map(|units| Err(units)),
+        }
+    }
+
     /// Decode a validated raw JSON value without losing UTF-16 code units.
     ///
     /// # Errors

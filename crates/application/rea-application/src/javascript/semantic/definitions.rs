@@ -9,9 +9,12 @@
 //! [`SemanticState::opaque_candidates`]; neither changes scopes or bindings.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ops::ControlFlow;
 
-use crate::javascript::ast::{AstContext, AstVisitor, Field, Node, NodeMap, NodeSet, traverse};
+use crate::javascript::ast::{
+    AstContext, AstVisitor, Field, Node, NodeMap, NodeParents, NodeSet, traverse,
+};
 
 use super::ast_values::{
     is_call, is_class, is_function, is_identifier_named, is_member, object_pattern_keys,
@@ -19,6 +22,7 @@ use super::ast_values::{
 };
 use super::evaluation_order::{IterationCardinality, branch_may_be_skipped, iteration_cardinality};
 use super::globals::{GLOBAL_EVAL_ROOTS, is_unmodified_global_reference};
+use super::module_interop::StateFacts;
 use super::reference_role::reference_role;
 use super::state::{
     BindingState, CopyKind, DeclarationKind, Definition, DefinitionKind, Initializer, InsertionMap,
@@ -39,6 +43,7 @@ pub fn collect_definitions<'a, B>(
 ) -> ControlFlow<B, SemanticState<'a>> {
     let mut state = create_state(context, static_import_resolution_mode);
     collect(&mut state, &mut checkpoint)?;
+    StateFacts::prime_cache(&state);
     ControlFlow::Continue(state)
 }
 
@@ -70,7 +75,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         program,
         script,
         static_import_resolution_mode: mode,
-        parents: NodeMap::default(),
+        parents: NodeParents::default(),
         scopes: vec![root],
         scopes_by_id,
         scope_by_node: RefCell::new(scope_by_node),
@@ -89,6 +94,11 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         may_reference_global_eval: false,
         opaque_candidates: Vec::new(),
         global_eval_sites_cache: RefCell::new(None),
+        state_facts_cache: RefCell::new(None),
+        callable_result_cache: RefCell::new(HashMap::new()),
+        statement_position_cache: RefCell::new(
+            super::mutation_initializers::StatementPositionCache::default(),
+        ),
         getter_resource_limits: RefCell::new(Vec::new()),
         value_resource_limits: RefCell::new(Vec::new()),
         value_caches: RefCell::new(super::values::ValueCaches::default()),

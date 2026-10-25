@@ -6,8 +6,10 @@
 //! content digest). [`Json`] keeps producer key order so both are reproducible.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt::{self, Write as _};
 use std::ops::Index;
+use std::sync::Arc;
 
 use super::super::semantic::value_types::JsString;
 use serde::de::{Deserialize, Deserializer, Error as _};
@@ -32,13 +34,16 @@ pub enum Json {
 }
 
 /// A JSON object with JavaScript property-assignment semantics.
+///
+/// Graph projections share immutable object contents. A mutation detaches its
+/// property list first, preserving independent value semantics for every clone.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Obj(Vec<(JsString, Json)>);
+pub struct Obj(Arc<Vec<(JsString, Json)>>);
 
 impl Obj {
     /// An empty object.
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self(Arc::new(Vec::new()))
     }
 
     /// Read one own property.
@@ -57,10 +62,8 @@ impl Obj {
     where
         JsString: PartialEq<K>,
     {
-        self.0
-            .iter_mut()
-            .find(|(name, _)| name == key)
-            .map(|(_, value)| value)
+        let index = self.0.iter().position(|(name, _)| name == key)?;
+        Some(&mut Arc::make_mut(&mut self.0)[index].1)
     }
 
     /// Whether the property exists (JavaScript `key in value`).
@@ -75,10 +78,11 @@ impl Obj {
     pub fn set(&mut self, key: impl Into<JsString>, value: impl Into<Json>) {
         let key = key.into();
         let value = value.into();
-        if let Some(slot) = self.0.iter_mut().find(|(name, _)| *name == key) {
+        let properties = Arc::make_mut(&mut self.0);
+        if let Some(slot) = properties.iter_mut().find(|(name, _)| *name == key) {
             slot.1 = value;
         } else {
-            self.0.push((key, value));
+            properties.push((key, value));
         }
     }
 
@@ -91,7 +95,7 @@ impl Obj {
 
     /// Spread another object's properties (`{...this, ...other}`).
     pub fn extend_from(&mut self, other: &Obj) {
-        for (key, value) in &other.0 {
+        for (key, value) in other.0.iter() {
             self.set(key.clone(), value.clone());
         }
     }
@@ -99,7 +103,7 @@ impl Obj {
     /// Remove one property by exact JavaScript UTF-16 key.
     pub fn remove_js(&mut self, key: &JsString) -> Option<Json> {
         let index = self.0.iter().position(|(name, _)| name == key)?;
-        Some(self.0.remove(index).1)
+        Some(Arc::make_mut(&mut self.0).remove(index).1)
     }
 
     /// Remove one property addressed by a valid UTF-8 key.
@@ -393,6 +397,18 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     output
 }
 
+/// Hash the canonical object used for semantic node identities without
+/// cloning the identity tree into a temporary [`Json`] value.
+pub fn digest_kind_identity(kind: &str, identity: &Json) -> String {
+    let mut canonical = String::new();
+    canonical.push_str("{\"identity\":");
+    canonical_into(identity, &mut canonical);
+    canonical.push_str(",\"kind\":");
+    canonical_into(&Json::String(JsString::from(kind)), &mut canonical);
+    canonical.push('}');
+    sha256_hex(canonical.as_bytes())
+}
+
 /// SHA-256 of a JavaScript string encoded as UTF-8 (`createHash().update(text)`).
 pub fn sha256_text(value: &str) -> String {
     sha256_hex(value.as_bytes())
@@ -403,8 +419,8 @@ fn stringify_into(value: &Json, output: &mut String) {
         Json::Null => output.push_str("null"),
         Json::Bool(true) => output.push_str("true"),
         Json::Bool(false) => output.push_str("false"),
-        Json::Number(number) => output.push_str(&js_number(*number)),
-        Json::String(text) => quote_units_into(text.units(), output),
+        Json::Number(number) => write_js_number(*number, output),
+        Json::String(text) => quote_js_string_into(text, output),
         Json::Array(values) => {
             output.push('[');
             for (index, item) in values.iter().enumerate() {
@@ -421,7 +437,7 @@ fn stringify_into(value: &Json, output: &mut String) {
                 if index > 0 {
                     output.push(',');
                 }
-                quote_units_into(key.units(), output);
+                quote_js_string_into(key, output);
                 output.push(':');
                 stringify_into(item, output);
             }
@@ -467,7 +483,7 @@ fn canonical_into(value: &Json, output: &mut String) {
                 if index > 0 {
                     output.push(',');
                 }
-                quote_units_into(key.units(), output);
+                quote_js_string_into(key, output);
                 output.push(':');
                 canonical_into(item, output);
             }
@@ -499,6 +515,14 @@ pub fn quote_units(units: &[u16]) -> String {
     let mut output = String::with_capacity(units.len() + 2);
     quote_units_into(units, &mut output);
     output
+}
+
+fn quote_js_string_into(value: &JsString, output: &mut String) {
+    if let Some(text) = value.as_str() {
+        quote_into(text, output);
+    } else {
+        quote_units_into(value.units(), output);
+    }
 }
 
 fn quote_units_into(units: &[u16], output: &mut String) {
@@ -557,54 +581,20 @@ fn quote_into(value: &str, output: &mut String) {
     output.push('"');
 }
 
-/// JavaScript `Number.prototype.toString` for finite values.
+/// JavaScript JSON number spelling, including `null` for non-finite values.
 pub fn js_number(value: f64) -> String {
-    if value == 0.0 {
-        return "0".to_owned();
-    }
-    if !value.is_finite() {
-        return "null".to_owned();
-    }
-    // Rust's `{:e}` prints the shortest round-trip digits.
-    let scientific = format!("{:e}", value.abs());
-    let (mantissa, exponent) = scientific.split_once('e').unwrap_or((&scientific, "0"));
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
-    let exponent: i32 = exponent.parse().unwrap_or(0);
-    let count = i32::try_from(digits.len()).unwrap_or(i32::MAX);
-    let point = exponent + 1;
     let mut output = String::new();
-    if value < 0.0 {
-        output.push('-');
-    }
-    if (count..=21).contains(&point) {
-        output.push_str(&digits);
-        output.extend(std::iter::repeat_n(
-            '0',
-            usize::try_from(point - count).unwrap_or(0),
-        ));
-    } else if 0 < point && point <= 21 {
-        let split = usize::try_from(point).unwrap_or(0);
-        output.push_str(&digits[..split]);
-        output.push('.');
-        output.push_str(&digits[split..]);
-    } else if -6 < point && point <= 0 {
-        output.push_str("0.");
-        output.extend(std::iter::repeat_n(
-            '0',
-            usize::try_from(-point).unwrap_or(0),
-        ));
-        output.push_str(&digits);
-    } else {
-        output.push_str(&digits[..1]);
-        if digits.len() > 1 {
-            output.push('.');
-            output.push_str(&digits[1..]);
-        }
-        output.push('e');
-        output.push(if point - 1 < 0 { '-' } else { '+' });
-        let _ = write!(output, "{}", (point - 1).abs());
-    }
+    write_js_number(value, &mut output);
     output
+}
+
+fn write_js_number(value: f64, output: &mut String) {
+    if value.is_finite() {
+        let mut buffer = ryu_js::Buffer::new();
+        output.push_str(buffer.format_finite(value));
+    } else {
+        output.push_str("null");
+    }
 }
 
 /// JavaScript `String(number)` for an integer-valued count or position.
@@ -614,7 +604,7 @@ pub fn js_int(value: f64) -> String {
 
 /// Compare two strings by UTF-16 code units (`Array.prototype.sort` order).
 pub fn compare_utf16(left: &JsString, right: &JsString) -> Ordering {
-    left.units().cmp(right.units())
+    left.encode_utf16().cmp(right.encode_utf16())
 }
 
 pub fn compare_utf16_str(left: &str, right: &str) -> Ordering {
@@ -672,11 +662,62 @@ pub fn parse(text: &str) -> Result<Json, serde_json::Error> {
         .map_err(serde_json::Error::custom)
 }
 
+enum StringBuilder {
+    Utf8(String),
+    Utf16(Vec<u16>),
+}
+
+impl StringBuilder {
+    fn new() -> Self {
+        Self::Utf8(String::new())
+    }
+
+    fn push_char(&mut self, character: char) {
+        match self {
+            Self::Utf8(value) => value.push(character),
+            Self::Utf16(units) => {
+                let mut encoded = [0; 2];
+                units.extend(character.encode_utf16(&mut encoded).iter().copied());
+            }
+        }
+    }
+
+    fn push_unit(&mut self, unit: u16) {
+        if let Self::Utf8(value) = self {
+            if let Some(character) = char::from_u32(u32::from(unit)) {
+                value.push(character);
+                return;
+            }
+
+            let mut units = value.encode_utf16().collect::<Vec<_>>();
+            units.push(unit);
+            *self = Self::Utf16(units);
+            return;
+        }
+
+        if let Self::Utf16(units) = self {
+            units.push(unit);
+        }
+    }
+
+    fn finish(self) -> JsString {
+        match self {
+            Self::Utf8(value) => JsString::from(value),
+            Self::Utf16(units) => JsString::from_utf16(units),
+        }
+    }
+}
+
 struct RawParser<'a> {
     input: &'a [u8],
     position: usize,
     depth: usize,
+    interned_keys: HashSet<JsString>,
+    interned_key_bytes: usize,
 }
+
+const MAX_INTERNED_KEYS: usize = 1024;
+const MAX_INTERNED_KEY_BYTES: usize = 256 * 1024;
 
 impl<'a> RawParser<'a> {
     fn new(input: &'a str) -> Self {
@@ -684,6 +725,8 @@ impl<'a> RawParser<'a> {
             input: input.as_bytes(),
             position: 0,
             depth: 0,
+            interned_keys: HashSet::new(),
+            interned_key_bytes: 0,
         }
     }
 
@@ -785,36 +828,35 @@ impl<'a> RawParser<'a> {
 
     fn string(&mut self) -> Result<JsString, String> {
         self.expect(b'"')?;
-        let mut units = Vec::new();
+        let mut value = StringBuilder::new();
         loop {
             match self.next() {
-                Some(b'"') => return Ok(JsString::from_utf16(units)),
-                Some(b'\\') => self.escape(&mut units)?,
+                Some(b'"') => return Ok(value.finish()),
+                Some(b'\\') => self.escape(&mut value)?,
                 Some(byte @ 0..=0x1f) => {
                     return self.error(&format!("control character {byte:#x} in string"));
                 }
                 Some(byte) => {
                     let start = self.position - 1;
                     let character = self.decode_character(byte, start)?;
-                    let mut encoded = [0; 2];
-                    units.extend(character.encode_utf16(&mut encoded).iter().copied());
+                    value.push_char(character);
                 }
                 None => return self.error("unterminated string"),
             }
         }
     }
 
-    fn escape(&mut self, units: &mut Vec<u16>) -> Result<(), String> {
+    fn escape(&mut self, value: &mut StringBuilder) -> Result<(), String> {
         match self.next() {
-            Some(b'"') => units.push(u16::from(b'"')),
-            Some(b'\\') => units.push(u16::from(b'\\')),
-            Some(b'/') => units.push(u16::from(b'/')),
-            Some(b'b') => units.push(0x08),
-            Some(b'f') => units.push(0x0c),
-            Some(b'n') => units.push(b'\n' as u16),
-            Some(b'r') => units.push(b'\r' as u16),
-            Some(b't') => units.push(b'\t' as u16),
-            Some(b'u') => units.push(self.hex_escape()?),
+            Some(b'"') => value.push_unit(u16::from(b'"')),
+            Some(b'\\') => value.push_unit(u16::from(b'\\')),
+            Some(b'/') => value.push_unit(u16::from(b'/')),
+            Some(b'b') => value.push_unit(0x08),
+            Some(b'f') => value.push_unit(0x0c),
+            Some(b'n') => value.push_unit(b'\n' as u16),
+            Some(b'r') => value.push_unit(b'\r' as u16),
+            Some(b't') => value.push_unit(b'\t' as u16),
+            Some(b'u') => value.push_unit(self.hex_escape()?),
             _ => return self.error("invalid string escape"),
         }
         Ok(())
@@ -867,7 +909,8 @@ impl<'a> RawParser<'a> {
             if self.peek() != Some(b'"') {
                 return self.error("object key must be a string");
             }
-            let key = self.string()?;
+            let parsed_key = self.string()?;
+            let key = self.intern_key(parsed_key);
             self.whitespace();
             self.expect(b':')?;
             object.set(key, self.value()?);
@@ -877,6 +920,23 @@ impl<'a> RawParser<'a> {
             }
             self.expect(b',')?;
         }
+    }
+
+    fn intern_key(&mut self, key: JsString) -> JsString {
+        if let Some(existing) = self.interned_keys.get(&key) {
+            return existing.clone();
+        }
+
+        let key_bytes = key
+            .as_str()
+            .map_or_else(|| key.len().saturating_mul(2), str::len);
+        if self.interned_keys.len() < MAX_INTERNED_KEYS
+            && self.interned_key_bytes.saturating_add(key_bytes) <= MAX_INTERNED_KEY_BYTES
+        {
+            self.interned_key_bytes += key_bytes;
+            self.interned_keys.insert(key.clone());
+        }
+        key
     }
 
     fn decode_character(&mut self, first: u8, start: usize) -> Result<char, String> {
@@ -976,6 +1036,14 @@ mod tests {
     fn numbers_follow_javascript_formatting() {
         for (value, expected) in [
             (1.0, "1"),
+            (-0.0, "0"),
+            (f64::NAN, "null"),
+            (f64::INFINITY, "null"),
+            (f64::NEG_INFINITY, "null"),
+            (f64::from_bits(1), "5e-324"),
+            (f64::MAX, "1.7976931348623157e+308"),
+            (1e20, "100000000000000000000"),
+            (1e23, "1e+23"),
             (-0.5, "-0.5"),
             (123_456.789, "123456.789"),
             (1e21, "1e+21"),
@@ -984,7 +1052,40 @@ mod tests {
             (9_007_199_254_740_991.0, "9007199254740991"),
         ] {
             assert_eq!(js_number(value), expected);
+            assert_eq!(Json::Number(value).canonical(), expected);
+            assert_eq!(Json::Number(value).stringify(), expected);
         }
+    }
+
+    #[test]
+    fn object_clones_preserve_independent_nested_values_and_key_order() {
+        let original = parse(r#"{"nested":{"\ud800":1,"keep":2},"list":[{"value":3}],"tail":4}"#)
+            .expect("valid JSON");
+        let mut changed = original.obj();
+        let Json::Object(nested) = changed.get_mut("nested").expect("nested object") else {
+            panic!("expected object");
+        };
+        nested.remove_js(&JsString::from_utf16(vec![0xd800]));
+        nested.set("keep", 5_usize);
+        nested.set("added", 6_usize);
+
+        let Json::Array(list) = changed.get_mut("list").expect("list") else {
+            panic!("expected array");
+        };
+        let Json::Object(item) = &mut list[0] else {
+            panic!("expected list object");
+        };
+        item.set("value", 7_usize);
+        changed.remove("tail");
+
+        assert_eq!(
+            original.stringify(),
+            r#"{"nested":{"\ud800":1,"keep":2},"list":[{"value":3}],"tail":4}"#,
+        );
+        assert_eq!(
+            Json::from(changed).stringify(),
+            r#"{"nested":{"keep":5,"added":6},"list":[{"value":7}]}"#,
+        );
     }
 
     #[test]
@@ -1021,6 +1122,72 @@ mod tests {
         let decoded: Json = serde_json::from_str(r#"{"\ud800":"\ud800"}"#)
             .expect("raw JSON deserialization preserves surrogate units");
         assert_eq!(decoded.stringify(), r#"{"\ud800":"\ud800"}"#);
+    }
+
+    #[test]
+    fn stringify_preserves_utf8_and_utf16_equivalent_output() {
+        let source = format!("prefix\n\t{}\u{0000}suffix", "🚀".repeat(32));
+        let utf8 = Json::String(JsString::from(source.as_str()));
+        let exact = Json::String(JsString::from_utf16(
+            source.encode_utf16().collect::<Vec<_>>(),
+        ));
+
+        assert_eq!(utf8.stringify(), exact.stringify());
+        assert_eq!(utf8.canonical(), exact.canonical());
+        assert_eq!(
+            utf8.stringify(),
+            format!("\"prefix\\n\\t{}\\u0000suffix\"", "🚀".repeat(32))
+        );
+    }
+
+    #[test]
+    fn stringify_keeps_lone_surrogate_escapes_byte_exact() {
+        let value = Json::String(JsString::from_utf16([b'a' as u16, 0xd800, b'b' as u16]));
+
+        assert_eq!(value.stringify().as_bytes(), b"\"a\\ud800b\"");
+        assert_eq!(value.canonical().as_bytes(), b"\"a\\ud800b\"");
+    }
+
+    #[test]
+    fn repeated_object_keys_share_storage_without_changing_assignment_order() {
+        let value = parse(r#"[{"name":1,"\ud800":2},{"name":3,"name":4,"\ud800":5}]"#)
+            .expect("valid repeated keys");
+        let Json::Object(first) = &value.arr()[0] else {
+            panic!("first object");
+        };
+        let Json::Object(second) = &value.arr()[1] else {
+            panic!("second object");
+        };
+
+        for ((first_key, _), (second_key, _)) in first.iter().zip(second.iter()) {
+            assert!(std::ptr::eq(first_key.units(), second_key.units()));
+        }
+        assert_eq!(
+            value.stringify(),
+            r#"[{"name":1,"\ud800":2},{"name":4,"\ud800":5}]"#
+        );
+    }
+
+    #[test]
+    fn key_cache_limits_do_not_limit_parsed_objects() {
+        let members = (0..MAX_INTERNED_KEYS + 2)
+            .map(|index| format!("\"key-{index}\":{index}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let source = format!("{{{members}}}");
+        let mut parser = RawParser::new(&source);
+        let value = parser.value().expect("all keys are parsed");
+
+        assert_eq!(parser.interned_keys.len(), MAX_INTERNED_KEYS);
+        assert_eq!(
+            value.at(&format!("key-{}", MAX_INTERNED_KEYS + 1)).num(),
+            (MAX_INTERNED_KEYS + 1) as f64
+        );
+
+        let large_key = JsString::from("x".repeat(MAX_INTERNED_KEY_BYTES + 1));
+        let mut parser = RawParser::new("{}");
+        assert_eq!(parser.intern_key(large_key.clone()), large_key);
+        assert!(parser.interned_keys.is_empty());
     }
 
     #[test]

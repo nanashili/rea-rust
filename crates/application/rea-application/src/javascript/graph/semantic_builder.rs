@@ -52,18 +52,20 @@ pub fn project_file(
         ..ProjectionState::default()
     };
     let fingerprints = project_source(file, ir, &mut state, paths);
+    let roots = strings(std::mem::take(&mut state.roots));
+    let nodes = Json::Array(state.nodes.take_values());
+    let relations = Json::Array(state.relations.take_values());
+    let unknowns = Json::Array(state.unknowns.take_values());
     let mut projection = Obj::new()
-        .with("roots", strings(state.roots.clone()))
+        .with("roots", roots)
         .with("evidenceContexts", Json::Array(state.evidence.contexts()))
-        .with("nodes", Json::Array(state.nodes.values()))
-        .with("relations", Json::Array(state.relations.values()))
-        .with("unknowns", Json::Array(state.unknowns.values()))
+        .with("nodes", nodes)
+        .with("relations", relations)
+        .with("unknowns", unknowns)
         .with("fingerprints", Json::Array(fingerprints));
     if !state.unknown_omissions.is_empty() {
-        projection.set(
-            "omittedUnknownOccurrences",
-            Json::Array(state.unknown_omissions.values()),
-        );
+        let omissions = state.unknown_omissions.take_values();
+        projection.set("omittedUnknownOccurrences", Json::Array(omissions));
     }
     projection.set("nodesTruncated", state.file_nodes_dropped);
     Ok(projection.into())

@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "name": "get_navigation_context",
   "title": "Get Native Navigation Context",
-  "description": "Project retained document, address, and containing procedure while validating observation provenance.",
+  "description": "Project retained document, address, and containing procedure while validating observation provenance. Address and procedure are explicit unavailable facets when the provider has no cursor surface.",
   "inputSchema": {"type":"object","additionalProperties":false,"required":["document","address","procedure","evidence_links","source_order"],"properties":{"requested_document":{"type":"string"},"document":{"type":"object"},"address":{"type":"object"},"procedure":{"type":"object"},"evidence_links":{"type":"array","items":{"type":"string"}},"source_order":{"type":"array","items":{"type":"object"}}}},
-  "outputSchema": {"type":"object","additionalProperties":false,"required":["result"],"properties":{"result":{"type":"object","additionalProperties":false,"required":["document","address","procedure"],"properties":{"document":{"type":"string"},"address":{"type":"string"},"procedure":{"type":["string","null"]}}}}},
+  "outputSchema": {"type":"object","additionalProperties":false,"required":["result"],"properties":{"result":{"type":"object","additionalProperties":false,"required":["document","address","procedure"],"properties":{"document":{"type":"string"},"address":{"anyOf":[{"type":"string"},{"$ref":"#/$defs/unavailableFacet"}]},"procedure":{"anyOf":[{"type":"string"},{"type":"null"},{"$ref":"#/$defs/unavailableFacet"}]}},"$defs":{"unavailableFacet":{"type":"object","additionalProperties":false,"required":["state","operation","reason","remediation"],"properties":{"state":{"const":"unavailable"},"operation":{"type":"string","minLength":1},"reason":{"type":"string","minLength":1},"remediation":{"type":"string","minLength":1}}}}}}},
   "annotations":{"destructiveHint":false,"idempotentHint":true,"openWorldHint":false,"readOnlyHint":true}
 }

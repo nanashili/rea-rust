@@ -19,9 +19,7 @@ use crate::javascript::semantic::data_effect_helpers::{
     assigned_semantic_result_bindings, builtin_data_effect_method, data_effect_literal_string,
     data_effect_member_callee,
 };
-use crate::javascript::semantic::mutation_initializers::{
-    BindingReadStatus, semantic_binding_at_read,
-};
+use crate::javascript::semantic::mutation_initializers::BindingReadStatus;
 use crate::javascript::semantic::state::SemanticState;
 use crate::javascript::semantic::value_types::JsString;
 use crate::javascript::static_analysis::helpers::range;
@@ -63,7 +61,7 @@ struct HandleRead<'a> {
 /// Collect explicit EventEmitter-style and Node timer candidates.
 pub fn collect_semantic_async_effects<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
 ) -> AsyncEffectAnalysis {
     let callable_ids: HashSet<String> = callables
@@ -223,7 +221,7 @@ fn emitter_identity<'a>(
 fn collect_timer<'a>(
     node: Node<'a>,
     owner: Option<String>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     ancestors: &[Node<'a>],
 ) -> Option<TimerCandidate<'a>> {
     let callee = node.field(state.source, Field::Callee)?;
@@ -270,7 +268,7 @@ fn collect_timer<'a>(
                 let name = arg.identifier_name()?;
                 let index = state.resolve_binding(&arg, name)?;
                 let binding = state.binding(index);
-                let snapshot = semantic_binding_at_read(binding, arg, &state.parents, state.source);
+                let snapshot = state.semantic_binding_at_read(binding, arg);
                 let stable = !binding.mutable
                     && binding.initializers.len() == 1
                     && binding.reference_initializers.is_empty();

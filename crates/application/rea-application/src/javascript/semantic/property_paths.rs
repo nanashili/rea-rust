@@ -11,14 +11,14 @@ use std::collections::HashMap;
 use super::value_types::JsString;
 
 /// Slots retained by a shallow copy after exclusions or an array prefix.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PropertySelection {
     pub excluded_keys: Vec<JsString>,
     pub start_index: Option<usize>,
 }
 
 /// One internal mutation path component.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PropertyPathKey {
     String(JsString),
     Number(usize),

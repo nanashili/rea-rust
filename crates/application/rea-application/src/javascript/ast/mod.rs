@@ -24,11 +24,13 @@ mod children;
 mod context;
 mod fields;
 pub mod node;
+mod parents;
 mod traverse;
 
 pub use context::{AstContext, NodeMap, NodeSet};
 pub use fields::Field;
 pub use node::{Node, NodeKey, NodeKind, Role};
+pub use parents::NodeParents;
 pub use traverse::{AstVisitor, TRAVERSAL_CHECKPOINT_INTERVAL, traverse};
 
 #[cfg(test)]

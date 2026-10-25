@@ -142,28 +142,28 @@ fn is_asar_container(context: &GraphContext<'_>, container_sha256: &str) -> bool
 fn source_file_range(file: &Json) -> Json {
     let text = file.at("text").at("value").text();
     let mut line = 1.0;
-    let mut last_line_start = 0usize;
-    let mut offset = 0usize;
-    while offset < text.units().len() {
-        let unit = text.units()[offset];
+    let mut column = 0.0;
+    let mut units = text.encode_utf16().peekable();
+
+    while let Some(unit) = units.next() {
         let terminator = match unit {
             0x000d => {
-                if text.units().get(offset + 1) == Some(&0x000a) {
-                    offset += 1;
+                if units.peek() == Some(&0x000a) {
+                    units.next();
                 }
                 true
             }
             0x000a | 0x2028 | 0x2029 => true,
             _ => false,
         };
-        offset += 1;
         if terminator {
             line += 1.0;
-            last_line_start = offset;
+            column = 0.0;
+        } else {
+            column += 1.0;
         }
     }
-    #[allow(clippy::cast_precision_loss)]
-    let column = (text.len() - last_line_start) as f64;
+
     Obj::new()
         .with("start", Obj::new().with("line", 1.0).with("column", 0.0))
         .with("end", Obj::new().with("line", line).with("column", column))
@@ -827,5 +827,15 @@ mod tests {
 
         assert_eq!(actual_surrogate.at("end").at("column").num(), 1.0);
         assert_eq!(literal_escape.at("end").at("column").num(), 6.0);
+    }
+
+    #[test]
+    fn source_range_counts_line_terminators_and_utf16_columns() {
+        let range = source_file_range(&file_with_text(JsString::from(
+            "a\r\nb\rc\nd\u{2028}e\u{2029}😀x",
+        )));
+
+        assert_eq!(range.at("end").at("line").num(), 6.0);
+        assert_eq!(range.at("end").at("column").num(), 3.0);
     }
 }

@@ -190,10 +190,10 @@ impl EvidenceRegistry {
 
 /// `javaScriptSemanticNodeId`.
 pub fn semantic_node_id(kind: &str, identity: &Json) -> String {
-    let semantic = Obj::new()
-        .with("kind", kind)
-        .with("identity", identity.clone());
-    format!("jsrg_node_{}", Json::from(semantic).digest())
+    format!(
+        "jsrg_node_{}",
+        super::json::digest_kind_identity(kind, identity)
+    )
 }
 
 /// An insertion-ordered map keyed by fact identifier (JavaScript `Map` semantics).
@@ -232,6 +232,15 @@ impl OrderedFacts {
         self.order
             .iter()
             .filter_map(|id| self.values.get(id).cloned())
+            .collect()
+    }
+
+    /// Move facts out in insertion order without cloning their JSON trees.
+    pub fn take_values(&mut self) -> Vec<Json> {
+        let mut values = std::mem::take(&mut self.values);
+        self.order
+            .drain(..)
+            .filter_map(|id| values.remove(&id))
             .collect()
     }
     /// Identifiers in insertion order.

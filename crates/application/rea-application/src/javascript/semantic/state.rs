@@ -8,9 +8,11 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-use crate::javascript::ast::{AstContext, Field, Node, NodeKey, NodeMap, NodeSet};
+use crate::javascript::ast::{AstContext, Field, Node, NodeKey, NodeMap, NodeParents, NodeSet};
 use crate::javascript::parser::SourceRange;
+use crate::javascript::static_analysis::semantics::BindingFacts;
 
 use super::ast_values::{is_identifier_named, property_key_of, static_property_key, unwrapped};
 use super::bundled_require_origin::BundledRequireProofCache;
@@ -194,7 +196,7 @@ pub struct Initializer<'a> {
 }
 
 /// `copyKind` of a reference initializer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CopyKind {
     ObjectRest,
     ArrayRest,
@@ -343,7 +345,7 @@ pub struct SemanticState<'a> {
     /// Babel `program.sourceType === "script"`.
     pub script: bool,
     pub static_import_resolution_mode: ResolutionMode,
-    pub parents: NodeMap<Node<'a>>,
+    pub parents: NodeParents<'a>,
     pub scopes: Vec<ScopeState<'a>>,
     pub scopes_by_id: InsertionMap<ScopeIndex>,
     /// Scope boundaries plus descendants resolved on demand (memo).
@@ -380,6 +382,19 @@ pub struct SemanticState<'a> {
     /// before semantic consumers run, and later semantic passes only append
     /// member effects; neither changes the inputs used by this cache.
     pub(crate) global_eval_sites_cache: RefCell<Option<std::rc::Rc<Vec<Node<'a>>>>>,
+    /// Binding facts are immutable after the definitions pass.  Consumers
+    /// such as bundled-loader proof may ask for them from many AST nodes; the
+    /// owner keeps one shared map instead of rebuilding and cloning every
+    /// binding record for each proof attempt.
+    pub(crate) state_facts_cache: RefCell<Option<Rc<HashMap<String, BindingFacts>>>>,
+    /// Pure direct return/yield syntax facts, shared by semantic consumers.
+    pub(crate) callable_result_cache:
+        RefCell<HashMap<NodeKey, Rc<Vec<super::callable_results::CallableResultExpression<'a>>>>>,
+    /// Source-order facts are immutable after definitions; all semantic
+    /// consumers in this analysis share the owner cache instead of rebuilding
+    /// ancestry walks for each initializer read.
+    pub(crate) statement_position_cache:
+        RefCell<super::mutation_initializers::StatementPositionCache>,
     /// Getter expansion limits recorded in first-observed order.
     pub getter_resource_limits: RefCell<Vec<super::value_types::ResourceLimit>>,
     /// Value interpretation limits recorded in first-observed order.
@@ -405,6 +420,39 @@ pub enum ModuleRequireWritesCache<'a> {
 }
 
 impl<'a> SemanticState<'a> {
+    pub(crate) fn callable_result_expressions(
+        &self,
+        callable: &Node<'a>,
+    ) -> Rc<Vec<super::callable_results::CallableResultExpression<'a>>> {
+        if let Some(results) = self.callable_result_cache.borrow().get(&callable.key()) {
+            return Rc::clone(results);
+        }
+        let results = Rc::new(super::callable_results::callable_result_expressions(
+            self.source,
+            callable,
+        ));
+        self.callable_result_cache
+            .borrow_mut()
+            .insert(callable.key(), Rc::clone(&results));
+        results
+    }
+
+    /// Select binding facts at a read site using this analysis' shared
+    /// source-order cache.
+    pub(crate) fn semantic_binding_at_read(
+        &self,
+        binding: &BindingState<'a>,
+        read: Node<'a>,
+    ) -> super::mutation_initializers::SemanticBindingRead<'a> {
+        super::mutation_initializers::semantic_binding_at_read_cached(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            read,
+            &self.parents,
+            self.source,
+        )
+    }
+
     /// Record a value resource limit once, preserving observation order.
     pub fn record_value_resource_limit(&self, limit: super::value_types::ResourceLimit) {
         let mut limits = self.value_resource_limits.borrow_mut();

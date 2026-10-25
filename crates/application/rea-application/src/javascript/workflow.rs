@@ -76,6 +76,7 @@ pub fn reconstruct<'inventory>(
             invalid_workflow(&format!("failed to build JavaScript graph: {error:?}"))
         })?;
     drop(file_set_json);
+    drop(snapshot_json);
 
     let semantic_graph = build_semantic_graph(
         snapshot,
@@ -119,7 +120,13 @@ fn retain_unvisited_files(
         .iter()
         .map(|entry| entry.at("file").at("path").text().clone())
         .collect::<HashSet<_>>();
-    let mut files = analysis.at("files").arr().to_vec();
+    let Json::Object(root) = analysis else {
+        return;
+    };
+    let Some(Json::Array(files)) = root.get_mut("files") else {
+        return;
+    };
+
     for file in &file_set.files {
         if visited.contains(&JsString::from(file.path.as_str())) {
             continue;
@@ -140,9 +147,6 @@ fn retain_unvisited_files(
                 )
                 .into(),
         );
-    }
-    if let Json::Object(object) = analysis {
-        object.set("files", Json::Array(files));
     }
 }
 

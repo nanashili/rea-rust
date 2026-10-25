@@ -8,6 +8,7 @@ use crate::batch::{self, BatchOptions, Item};
 use crate::configuration::Configuration;
 use crate::identity::{Operation, PROVIDER_ID, identity, limitations};
 use crate::inventory::Inventory;
+use crate::native_instruction;
 use crate::profile::profile_matches;
 use crate::protocol::{Procedure, parse_segments};
 use crate::selectors;
@@ -25,7 +26,264 @@ use std::sync::{Arc, Condvar, Mutex};
 const MAX_BATCH_INPUT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_BATCH_SELECTORS: usize = 1_000_000;
 const MAX_SELECTOR_BYTES: usize = 4096;
-const UNAVAILABLE_BODY_REASON: &str = "The Ghidra worker does not recover function bodies; its listing extent ends at the next inventory entry.";
+const UNAVAILABLE_BODY_REASON: &str =
+    "Reachable body ranges are unavailable for this procedure projection.";
+
+fn canonical_address(value: &str) -> Option<String> {
+    let digits = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))?;
+    (!digits.is_empty()
+        && digits.len() <= 16
+        && digits.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    .then(|| u64::from_str_radix(digits, 16).ok())
+    .flatten()
+    .map(|value| format!("0x{value:x}"))
+}
+
+fn address_number(value: &str) -> Option<u64> {
+    let canonical = canonical_address(value)?;
+    u64::from_str_radix(canonical.strip_prefix("0x")?, 16).ok()
+}
+
+#[derive(Clone, Copy)]
+struct WorkerBodyRange {
+    start: u64,
+    end: u64,
+}
+
+struct WorkerFunctionBody {
+    complete: bool,
+    ranges: Vec<WorkerBodyRange>,
+    total_bytes: u64,
+    basicblock_count: u64,
+}
+
+impl WorkerFunctionBody {
+    fn span_bytes(&self) -> Option<u64> {
+        let first = self.ranges.first()?;
+        let last = self.ranges.last()?;
+        last.end.checked_sub(first.start)?.checked_add(1)
+    }
+}
+
+fn parse_worker_function_body(
+    body: &Value,
+    entry: u64,
+) -> Result<WorkerFunctionBody, &'static str> {
+    let complete = body
+        .get("complete")
+        .and_then(Value::as_bool)
+        .ok_or("worker body completeness is missing")?;
+    let raw_ranges = body
+        .get("ranges")
+        .and_then(Value::as_array)
+        .ok_or("worker body ranges are missing")?;
+    let mut ranges: Vec<WorkerBodyRange> = Vec::with_capacity(raw_ranges.len());
+    let mut total_from_ranges = 0_u64;
+    for raw_range in raw_ranges {
+        let start_text = raw_range
+            .get("start")
+            .and_then(Value::as_str)
+            .ok_or("worker body range start is invalid")?;
+        let end_text = raw_range
+            .get("end")
+            .and_then(Value::as_str)
+            .ok_or("worker body range end is invalid")?;
+        if canonical_address(start_text).as_deref() != Some(start_text)
+            || canonical_address(end_text).as_deref() != Some(end_text)
+        {
+            return Err("worker body range address is not canonical");
+        }
+        let start = address_number(start_text).ok_or("worker body range start is invalid")?;
+        let end = address_number(end_text).ok_or("worker body range end is invalid")?;
+        if end < start {
+            return Err("worker body range is reversed");
+        }
+        if let Some(previous) = ranges.last()
+            && start <= previous.end.saturating_add(1)
+        {
+            return Err("worker body ranges are not ordered and disjoint");
+        }
+        total_from_ranges = total_from_ranges
+            .checked_add(
+                end.checked_sub(start)
+                    .ok_or("worker body range overflows")?,
+            )
+            .and_then(|total| total.checked_add(1))
+            .ok_or("worker body byte count overflows")?;
+        ranges.push(WorkerBodyRange { start, end });
+    }
+    let total_bytes = body
+        .get("total_bytes")
+        .and_then(Value::as_u64)
+        .ok_or("worker body byte count is missing")?;
+    let basicblock_count = body
+        .get("basicblock_count")
+        .and_then(Value::as_u64)
+        .ok_or("worker body block count is missing")?;
+    if total_bytes != total_from_ranges {
+        return Err("worker body byte count does not match ranges");
+    }
+    let body_address = body
+        .get("address")
+        .and_then(Value::as_str)
+        .ok_or("worker body address is missing")?;
+    if address_number(body_address) != Some(entry)
+        || canonical_address(body_address).as_deref() != Some(body_address)
+    {
+        return Err("worker body address does not match its requested entry");
+    }
+    if complete {
+        if ranges.is_empty()
+            || !ranges
+                .iter()
+                .any(|range| (range.start..=range.end).contains(&entry))
+        {
+            return Err("complete worker body does not contain its entry");
+        }
+        if basicblock_count == 0 {
+            return Err("complete worker body has no basic blocks");
+        }
+    }
+    Ok(WorkerFunctionBody {
+        complete,
+        ranges,
+        total_bytes,
+        basicblock_count,
+    })
+}
+
+fn body_ranges_json(body: &WorkerFunctionBody) -> Vec<Value> {
+    body.ranges
+        .iter()
+        .map(|range| {
+            json!({
+                "start": format!("0x{:x}", range.start),
+                "end": format!("0x{:x}", range.end),
+            })
+        })
+        .collect()
+}
+
+fn address_is_in_segments(segments: &Value, requested: u64) -> Result<bool, &'static str> {
+    let items = segments
+        .get("items")
+        .and_then(Value::as_array)
+        .ok_or("worker segments are malformed")?;
+    let mut contained = false;
+    for segment in items {
+        let start = segment
+            .get("address")
+            .and_then(Value::as_str)
+            .and_then(address_number)
+            .ok_or("worker segment start is invalid")?;
+        let end = segment
+            .get("end")
+            .and_then(Value::as_str)
+            .and_then(address_number)
+            .ok_or("worker segment end is invalid")?;
+        if start > end {
+            return Err("worker segment range is reversed");
+        }
+        contained |= (start..end).contains(&requested);
+    }
+    Ok(contained)
+}
+
+struct WorkerImageMapping {
+    section: String,
+    start: String,
+    end: String,
+    start_value: u64,
+    length: u64,
+    initialized: bool,
+    loaded: bool,
+    file_offset: Option<u64>,
+}
+
+impl WorkerImageMapping {
+    fn to_json(&self) -> Value {
+        json!({
+            "block": self.section,
+            "start": self.start,
+            "end": self.end,
+            "address_space": "ram",
+            "initialized": self.initialized,
+            "loaded": self.loaded,
+            "overlay": false,
+            "length": self.length,
+            "source_file_index": Value::Null,
+            "file_offset": self.file_offset,
+            "sha256": Value::Null
+        })
+    }
+}
+
+fn parse_worker_image_mapping(value: &Value) -> Result<WorkerImageMapping, &'static str> {
+    let object = value
+        .as_object()
+        .ok_or("worker image mapping is not an object")?;
+    let section = object
+        .get("section")
+        .and_then(Value::as_str)
+        .filter(|section| !section.is_empty())
+        .ok_or("worker image mapping section is missing")?;
+    let start = object
+        .get("start")
+        .and_then(Value::as_str)
+        .ok_or("worker image mapping start is missing")?;
+    let end = object
+        .get("end")
+        .and_then(Value::as_str)
+        .ok_or("worker image mapping end is missing")?;
+    if canonical_address(start).as_deref() != Some(start)
+        || canonical_address(end).as_deref() != Some(end)
+    {
+        return Err("worker image mapping address is not canonical");
+    }
+    let start_value = address_number(start).ok_or("worker image mapping start is invalid")?;
+    let end_value = address_number(end).ok_or("worker image mapping end is invalid")?;
+    let length = object
+        .get("length")
+        .and_then(Value::as_u64)
+        .ok_or("worker image mapping length is missing")?;
+    let expected_length = end_value
+        .checked_sub(start_value)
+        .and_then(|length| length.checked_add(1))
+        .ok_or("worker image mapping range is reversed")?;
+    if length != expected_length {
+        return Err("worker image mapping length does not match its inclusive range");
+    }
+    let initialized = object
+        .get("initialized")
+        .and_then(Value::as_bool)
+        .ok_or("worker image mapping initialized flag is missing")?;
+    let loaded = object
+        .get("loaded")
+        .and_then(Value::as_bool)
+        .ok_or("worker image mapping loaded flag is missing")?;
+    let file_offset = object
+        .get("file_offset")
+        .ok_or("worker image mapping file offset is missing")?
+        .as_u64();
+    if !object
+        .get("file_offset")
+        .is_some_and(|value| value.is_null() || value.is_u64())
+    {
+        return Err("worker image mapping file offset is invalid");
+    }
+    Ok(WorkerImageMapping {
+        section: section.to_owned(),
+        start: start.to_owned(),
+        end: end.to_owned(),
+        start_value,
+        length,
+        initialized,
+        loaded,
+        file_offset,
+    })
+}
 
 /// One completed provider read.
 struct Observation {
@@ -469,6 +727,14 @@ impl Client {
             Operation::InspectNativeInstruction => {
                 crate::native_instruction::inspect(session, input, control).map(Observation::from)
             }
+            Operation::ProcedureInfo => self.procedure_info(input, control),
+            Operation::ResolveContainingProcedure => {
+                self.resolve_containing_procedure(input, control)
+            }
+            Operation::ResolveNativeCallTargets => self.resolve_native_call_targets(input, control),
+            Operation::InspectNativeLoadImage => self.inspect_native_load_image(control),
+            Operation::CurrentAddress => self.current_address(control),
+            Operation::GetNavigationContext => self.navigation_context(input, control),
             Operation::ReadBytes => {
                 crate::analysis::read_bytes(session, input, control).map(Observation::from)
             }
@@ -496,6 +762,355 @@ impl Client {
                     .map(read)
             }
         }
+    }
+
+    fn procedure_info(
+        &self,
+        input: &Map<String, Value>,
+        control: &Control,
+    ) -> Result<Observation, AnalysisError> {
+        let selector = input
+            .get("procedure")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let page = selectors::resolve_page(
+            &self.session,
+            &[selector.to_owned()],
+            control,
+            "procedure_info",
+        )?;
+        let item = page.first().ok_or_else(|| {
+            self.session
+                .failure("The worker omitted a procedure selector result.")
+        })?;
+        let (Some(address), Some(name)) = (&item.address, &item.name) else {
+            return Err(selectors::selector_error(
+                "procedure_info",
+                item.status,
+                control.selector_from_provider,
+            ));
+        };
+        let body = self.function_body(address, control)?;
+        let entry = address_number(address).ok_or_else(|| {
+            self.session
+                .failure("The worker returned an invalid procedure address.")
+        })?;
+        let parsed = parse_worker_function_body(&body, entry)
+            .map_err(|reason| self.session.failure(reason))?;
+        if !parsed.complete {
+            return Err(AnalysisError::capability_unavailable(
+                PROVIDER_ID,
+                "procedure_info",
+                "The worker could not recover complete reachable body ranges for this procedure.",
+            ));
+        }
+        let ranges = body_ranges_json(&parsed);
+        let length = parsed.total_bytes;
+        let basicblock_count = parsed.basicblock_count;
+        let result = json!({
+            "name": name,
+            "entrypoint": address,
+            "basicblock_count": basicblock_count,
+            "length": length,
+            "signature": null,
+            "locals": null,
+            "classification": {
+                "external": null,
+                "thunk": null,
+                "thunk_target": null,
+                "provenance": "ghidra-rust-sleigh-cfg"
+            },
+            "body": {
+                "available": true,
+                "provenance": "ghidra-rust-sleigh-cfg",
+                "ranges": ranges,
+                "total_bytes": length,
+                "span_bytes": parsed
+                    .span_bytes()
+                    .ok_or_else(|| {
+                        self.session
+                            .failure("The worker returned invalid procedure body ranges.")
+                    })?,
+                "non_contiguous": parsed.ranges.len() > 1,
+                "contains_entry": true
+            }
+        });
+        Ok(Observation {
+            result,
+            raw_result: None,
+            relationship_coverage: None,
+            references_truncated: None,
+        })
+    }
+
+    fn function_body(&self, address: &str, control: &Control) -> Result<Value, AnalysisError> {
+        self.session.prepare(control)?;
+        self.session.worker.request(
+            "function_body",
+            json!({ "address": address }),
+            Some(control),
+        )
+    }
+
+    fn resolve_containing_procedure(
+        &self,
+        input: &Map<String, Value>,
+        control: &Control,
+    ) -> Result<Observation, AnalysisError> {
+        let address = input
+            .get("address")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let requested = canonical_address(address)
+            .ok_or_else(|| self.session.failure("The address must be hexadecimal."))?;
+        let requested_value = address_number(&requested).ok_or_else(|| {
+            self.session
+                .failure("The address is outside the worker address range.")
+        })?;
+        self.session.prepare(control)?;
+        let segments = self
+            .session
+            .worker
+            .request("segments", json!({}), Some(control))?;
+        let in_segment = address_is_in_segments(&segments, requested_value)
+            .map_err(|reason| self.session.failure(reason))?;
+        if !in_segment {
+            return Ok(Observation {
+                result: json!({
+                    "query_address": requested,
+                    "found": false,
+                    "procedure": null,
+                    "reason": "outside_segments"
+                }),
+                raw_result: None,
+                relationship_coverage: None,
+                references_truncated: None,
+            });
+        }
+        let procedures = self.inventory.read(&self.session, control)?;
+        let mut containing = procedures
+            .iter()
+            .find(|item| address_number(&item.address) == Some(requested_value));
+        for item in procedures.iter().rev() {
+            if containing.is_some() {
+                break;
+            }
+            let item_address = address_number(&item.address).ok_or_else(|| {
+                self.session
+                    .failure("The worker returned an invalid procedure address.")
+            })?;
+            if item_address > requested_value {
+                continue;
+            }
+            let body = self.function_body(&item.address, control)?;
+            let item_entry = address_number(&item.address).ok_or_else(|| {
+                self.session
+                    .failure("The worker returned an invalid procedure address.")
+            })?;
+            let parsed = parse_worker_function_body(&body, item_entry)
+                .map_err(|reason| self.session.failure(reason))?;
+            if !parsed.complete {
+                continue;
+            }
+            if parsed
+                .ranges
+                .iter()
+                .any(|range| (range.start..=range.end).contains(&requested_value))
+            {
+                containing = Some(item);
+                break;
+            }
+            if containing.is_some() {
+                break;
+            }
+        }
+        let result = match containing {
+            Some(item) => json!({
+                "query_address": requested,
+                "found": true,
+                "procedure": procedure_identity(item)
+            }),
+            None => {
+                return Err(AnalysisError::capability_unavailable(
+                    PROVIDER_ID,
+                    "resolve_containing_procedure",
+                    "The worker could not prove that this mapped address is outside every recovered procedure body.",
+                ));
+            }
+        };
+        Ok(Observation {
+            result,
+            raw_result: None,
+            relationship_coverage: None,
+            references_truncated: None,
+        })
+    }
+
+    fn resolve_native_call_targets(
+        &self,
+        input: &Map<String, Value>,
+        control: &Control,
+    ) -> Result<Observation, AnalysisError> {
+        let instruction = native_instruction::inspect(&self.session, input, control)?.result;
+        let call_site = instruction.get("address").cloned().unwrap_or(Value::Null);
+        let procedure = instruction.get("procedure").cloned().unwrap_or(Value::Null);
+        let references = instruction
+            .get("references")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let mut grouped: std::collections::BTreeMap<String, Vec<Value>> =
+            std::collections::BTreeMap::new();
+        for reference in references {
+            if reference.get("call") != Some(&Value::Bool(true)) {
+                continue;
+            }
+            if let Some(address) = reference.get("target_address").and_then(Value::as_str) {
+                grouped
+                    .entry(address.to_owned())
+                    .or_default()
+                    .push(reference);
+            }
+        }
+        let is_call = instruction
+            .get("flow")
+            .and_then(|v| v.get("kind"))
+            .and_then(Value::as_str)
+            == Some("call");
+        let computed = instruction
+            .get("flow")
+            .and_then(|flow| flow.get("computed"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let ambiguous = grouped.len() > 1;
+        let targets = grouped
+            .into_iter()
+            .map(|(address, references)| {
+                let procedure = references
+                    .iter()
+                    .find_map(|reference| reference.get("target_procedure").cloned())
+                    .unwrap_or(Value::Null);
+                json!({
+                    "address": address,
+                    "procedure": procedure,
+                    "status": if ambiguous { "candidate" } else if computed { "resolved-indirect" } else { "direct" },
+                    "basis": "provider-reference",
+                    "references": references
+                })
+            })
+            .collect::<Vec<_>>();
+        let status = if instruction.get("status").and_then(Value::as_str) != Some("decoded") {
+            "unavailable"
+        } else if !is_call {
+            "not-call"
+        } else if targets.is_empty() {
+            "unresolved"
+        } else if ambiguous {
+            "ambiguous"
+        } else if computed {
+            "resolved-indirect"
+        } else {
+            "direct"
+        };
+        let mechanism = if !is_call {
+            "unavailable"
+        } else if computed {
+            "computed"
+        } else {
+            "direct"
+        };
+        let result = json!({
+            "call_site": call_site,
+            "procedure": procedure,
+            "status": status,
+            "mechanism": mechanism,
+            "targets": targets,
+            "limitations": [
+                "Targets are static provider call-reference observations; a resolved reference is not proof of runtime execution.",
+                "Objective-C, Swift, vtable and closure mechanisms are not identified by this reference-only boundary."
+            ]
+        });
+        Ok(Observation {
+            result,
+            raw_result: None,
+            relationship_coverage: None,
+            references_truncated: None,
+        })
+    }
+
+    fn inspect_native_load_image(&self, control: &Control) -> Result<Observation, AnalysisError> {
+        let info = self.session.prepare(control)?;
+        let image = self
+            .session
+            .worker
+            .request("image_map", json!({}), Some(control))?;
+        let ranges = image
+            .get("items")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                self.session
+                    .failure("The worker returned malformed image mappings.")
+            })?;
+        let mut image_base: Option<(u64, String)> = None;
+        let mut mappings = Vec::with_capacity(ranges.len());
+        for range in ranges {
+            let mapping =
+                parse_worker_image_mapping(range).map_err(|reason| self.session.failure(reason))?;
+            if image_base
+                .as_ref()
+                .is_none_or(|(value, _)| mapping.start_value < *value)
+            {
+                image_base = Some((mapping.start_value, mapping.start.clone()));
+            }
+            mappings.push(mapping.to_json());
+        }
+        let image_base = image_base
+            .map(|(_, address)| address)
+            .unwrap_or_else(|| "unknown".to_owned());
+        let observations = json!({
+            "executable_format": self.target.format,
+            "language_id": info.raw.get("language").and_then(Value::as_str).unwrap_or("unknown"),
+            "compiler_spec_id": "unknown",
+            "image_base": image_base,
+            "default_address_space": "ram",
+            "source_files": [],
+            "mappings": mappings,
+            "relocations": [],
+            "entry_points": [],
+            "entry_context": []
+        });
+        let result = json!({
+            "status": "unsupported",
+            "reason": "The Rust worker preserves native image mappings but does not expose Ghidra load-image relocation semantics for this target.",
+            "observations": observations,
+            "limitations": ["Load-image relocation and source-file provenance are unavailable from the Rust worker."]
+        });
+        Ok(Observation {
+            result,
+            raw_result: None,
+            relationship_coverage: None,
+            references_truncated: None,
+        })
+    }
+
+    fn current_address(&self, _control: &Control) -> Result<Observation, AnalysisError> {
+        Err(AnalysisError::capability_unavailable(
+            PROVIDER_ID,
+            "current_address",
+            "The Rust provider has no UI cursor or current address.",
+        ))
+    }
+
+    fn navigation_context(
+        &self,
+        _input: &Map<String, Value>,
+        _control: &Control,
+    ) -> Result<Observation, AnalysisError> {
+        Err(AnalysisError::capability_unavailable(
+            PROVIDER_ID,
+            "get_navigation_context",
+            "The Rust provider has no UI navigation context.",
+        ))
     }
 
     fn batch(&self, input: &Map<String, Value>, control: &Control) -> Result<Value, AnalysisError> {
@@ -777,6 +1392,13 @@ fn operation_fields(operation: Operation) -> &'static [(&'static str, Field)] {
             min: 0,
         },
     );
+    const REQUIRED_ADDRESS: (&str, Field) = (
+        "address",
+        Field::String {
+            required: true,
+            min: 1,
+        },
+    );
     const PROCEDURE: (&str, Field) = (
         "procedure",
         Field::String {
@@ -785,7 +1407,12 @@ fn operation_fields(operation: Operation) -> &'static [(&'static str, Field)] {
         },
     );
     match operation {
-        Operation::Health | Operation::ListDocuments | Operation::CurrentDocument => &[],
+        Operation::Health
+        | Operation::ListDocuments
+        | Operation::CurrentDocument
+        | Operation::InspectNativeLoadImage
+        | Operation::GetNavigationContext
+        | Operation::CurrentAddress => &[],
         Operation::ListSegments | Operation::ListProcedures | Operation::ListNames => &[DOCUMENT],
         Operation::AnalyzeFunction => &[PROCEDURE, DOCUMENT],
         Operation::AddressToFileOffset => &[
@@ -859,6 +1486,9 @@ fn operation_fields(operation: Operation) -> &'static [(&'static str, Field)] {
             ),
             DOCUMENT,
         ],
+        Operation::ProcedureInfo => &[PROCEDURE, DOCUMENT],
+        Operation::ResolveContainingProcedure => &[REQUIRED_ADDRESS, DOCUMENT],
+        Operation::ResolveNativeCallTargets => &[REQUIRED_ADDRESS, DOCUMENT],
         Operation::AddressName => &[
             DOCUMENT,
             (
@@ -1238,5 +1868,116 @@ impl AnalysisClient for Client {
         }
         drop(active);
         self.worker().close()
+    }
+}
+
+#[cfg(test)]
+mod address_tests {
+    use super::{
+        address_number, canonical_address, parse_worker_function_body, parse_worker_image_mapping,
+    };
+    use crate::protocol::Procedure;
+    use serde_json::json;
+
+    #[test]
+    fn canonicalizes_hex_addresses_without_panicking_on_short_input() {
+        assert_eq!(canonical_address("0X000A"), Some("0xa".to_owned()));
+        assert_eq!(address_number("0x000A"), Some(10));
+        assert_eq!(address_number("0xffffffffffffffff"), Some(u64::MAX));
+    }
+
+    #[test]
+    fn rejects_non_hex_and_missing_prefix_addresses() {
+        assert_eq!(canonical_address("a"), None);
+        assert_eq!(address_number("0x"), None);
+        assert_eq!(address_number("0x10000000000000000"), None);
+        assert_eq!(address_number("0x12xz"), None);
+    }
+
+    #[test]
+    fn inventory_entry_identity_remains_known_when_body_is_unavailable() {
+        let procedure = Procedure {
+            address: "0x10".to_owned(),
+            name: "entry".to_owned(),
+        };
+        let identity = super::procedure_identity(&procedure);
+        assert_eq!(identity["address"], "0x10");
+        assert_eq!(identity["name"], "entry");
+        assert_eq!(identity["body"]["available"], false);
+        assert_eq!(
+            identity["body"]["reason"],
+            "Reachable body ranges are unavailable for this procedure projection."
+        );
+    }
+
+    #[test]
+    fn rejects_inconsistent_complete_worker_body_facts() {
+        let base = |ranges, total| {
+            json!({
+                "address": "0x10",
+                "complete": true,
+                "ranges": ranges,
+                "total_bytes": total,
+                "basicblock_count": 1
+            })
+        };
+        assert!(
+            parse_worker_function_body(
+                &base(vec![json!({"start": "0x10", "end": "0x13"})], 3),
+                0x10
+            )
+            .is_err()
+        );
+        assert!(
+            parse_worker_function_body(
+                &base(
+                    vec![
+                        json!({"start": "0x20", "end": "0x23"}),
+                        json!({"start": "0x10", "end": "0x13"})
+                    ],
+                    8
+                ),
+                0x20
+            )
+            .is_err()
+        );
+        assert!(
+            parse_worker_function_body(
+                &base(vec![json!({"start": "0x10", "end": "0x13"})], 4),
+                0x20
+            )
+            .is_err()
+        );
+
+        let body = json!({
+            "address": "0x10",
+            "complete": true,
+            "ranges": [
+                {"start": "0x10", "end": "0x13"},
+                {"start": "0x20", "end": "0x23"}
+            ],
+            "total_bytes": 8,
+            "basicblock_count": 2
+        });
+        let parsed = parse_worker_function_body(&body, 0x10).expect("valid body");
+        assert_eq!(parsed.span_bytes(), Some(0x14));
+    }
+
+    #[test]
+    fn rejects_inconsistent_image_mapping_length_and_file_offset() {
+        let mut mapping = json!({
+            "section": ".text",
+            "start": "0x10",
+            "end": "0x13",
+            "length": 3,
+            "initialized": true,
+            "loaded": true,
+            "file_offset": null
+        });
+        assert!(parse_worker_image_mapping(&mapping).is_err());
+        mapping["length"] = json!(4);
+        assert!(parse_worker_image_mapping(&mapping).is_ok());
+        mapping["file_offset"] = json!("0");
+        assert!(parse_worker_image_mapping(&mapping).is_err());
     }
 }

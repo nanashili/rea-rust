@@ -47,7 +47,7 @@ pub fn collect_semantic_module_links<'a>(
 /// Collect links and retain the lexical/default-expression associations that
 /// the later callable resolver consumes.
 pub fn collect_semantic_module_links_with_facts<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     commonjs_receivers: &HashMap<NodeKey, CommonJsExportReceiverEffect>,
 ) -> CollectedModuleLinks<'a> {
     let mut collector = Collector {

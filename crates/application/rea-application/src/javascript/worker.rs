@@ -259,6 +259,7 @@ pub fn analyze_source_with_worker(
         }
     }
     child.close_input();
+    drop(request_bytes);
 
     if started.elapsed() >= limits.timeout {
         return Err(interrupted_worker_failure(
@@ -424,6 +425,10 @@ pub fn run_worker_from_stdin_with_limit(
         Ok(request) => request,
         Err(_) => return 2,
     };
+    // The request owns its decoded source. Release the wire buffer before
+    // building the AST and semantic facts within the same heap budget.
+    drop(input);
+
     let mut checkpoint_error = false;
     let response = super::analysis::analyze_source_for_worker_with_checkpoint(
         &request.source,

@@ -3,7 +3,6 @@
 use crate::javascript::ast::{Field, Node};
 
 use super::super::ast_values::{read_exact_literal, static_property_key, unwrap_expression};
-use super::super::mutation_initializers::semantic_binding_at_read;
 use super::super::opaque_effects;
 use super::super::provenance::{
     BindingProvenance, semantic_ambiguous_provenance, semantic_local_provenance,
@@ -334,8 +333,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
                 "Direct eval may have changed this runtime value.",
             );
         }
-        let snapshot =
-            semantic_binding_at_read(binding, read, &self.state.parents, self.state.source);
+        let snapshot = self.state.semantic_binding_at_read(binding, read);
         if !snapshot.selection_changed {
             return self.provenance_for_binding(binding, point);
         }

@@ -11,7 +11,7 @@ use super::super::limits::{
     SEMANTIC_EXPRESSION_DEPTH_LIMIT, SEMANTIC_PRIMITIVE_CANDIDATE_LIMIT,
     exceeds_primitive_addition_byte_budget, exceeds_template_byte_budget, resource_limit_reason,
 };
-use super::super::mutation_initializers::{BindingReadStatus, semantic_binding_at_read};
+use super::super::mutation_initializers::BindingReadStatus;
 use super::super::opaque_effects::opaque_binding_read_may_have_changed;
 use super::super::primitives::{semantic_primitive_candidates, semantic_primitive_set};
 use super::super::slots::semantic_slot_at_path;
@@ -722,9 +722,8 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
             .definitions
             .iter()
             .any(|definition| definition.kind == DefinitionKind::Assignment);
-        let read = (binding.mutable && has_assignment_definition).then(|| {
-            semantic_binding_at_read(&binding, node, &self.state.parents, self.state.source)
-        });
+        let read = (binding.mutable && has_assignment_definition)
+            .then(|| self.state.semantic_binding_at_read(&binding, node));
 
         if read
             .as_ref()

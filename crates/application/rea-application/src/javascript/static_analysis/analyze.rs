@@ -18,15 +18,12 @@ use crate::javascript::contracts::static_analysis::{
 use crate::javascript::parser::{
     ModuleReferenceKind, RawDiagnostic, extract_facts, parse_javascript_analysis_program,
 };
-use crate::javascript::semantic::ambient_writes::index_ambient_writes;
-use crate::javascript::semantic::definitions::collect_definitions;
-use crate::javascript::semantic::member_mutations::collect_semantic_member_mutations;
+use crate::javascript::semantic::analysis::{PreparedSemanticState, prepare_state};
 use crate::javascript::semantic::module_interop::StateFacts;
 use crate::javascript::semantic::module_interop::create_module_interop;
-use crate::javascript::semantic::mutation_initializers::semantic_binding_at_read;
 use crate::javascript::semantic::mutation_initializers::{EffectTiming, effect_timing};
 use crate::javascript::semantic::property_paths::PropertyPathKey;
-use crate::javascript::semantic::state::{DeclarationKind, ResolutionMode};
+use crate::javascript::semantic::state::{DeclarationKind, ResolutionMode, SemanticState};
 
 use super::super::semantic::ast_values::{StaticObjectProperty, static_object_property, unwrapped};
 use super::bundler::{
@@ -59,32 +56,53 @@ pub fn analyze_source(
 ) -> Result<StaticAnalysis, Vec<RawDiagnostic>> {
     let allocator = Allocator::default();
     let parsed = parse_javascript_analysis_program(&allocator, source, path)?;
-    let parser_error_count = parsed.errors.len();
+    let prepared = prepare_state(&parsed, ResolutionMode::Import);
+    Ok(analyze_source_with_prepared_state(source, path, &parsed, prepared).0)
+}
+
+pub(crate) fn analyze_source_with_prepared_state<'a>(
+    source: &'a str,
+    path: Option<&str>,
+    parsed: &crate::javascript::parser::ParsedJavaScriptProgram<'a>,
+    mut prepared: PreparedSemanticState<'a>,
+) -> (StaticAnalysis, PreparedSemanticState<'a>) {
     let context = AstContext::new(parsed.program);
-    // Babel counts its synthetic `File` wrapper in `visitedNodes`; Oxc starts
-    // at `Program`.  Account for that contract node without polluting the
-    // semantic traversal with a fabricated AST node.
     let (nodes, visited_ast_nodes) = collect_nodes(context.root(), source);
 
-    let state = match collect_definitions(context, ResolutionMode::Import, || {
-        ControlFlow::<()>::Continue(())
-    }) {
-        ControlFlow::Continue(state) => state,
-        ControlFlow::Break(()) => unreachable!("non-cancelling definition pass"),
-    };
-
-    // Ambient writes are always needed by the inspectors. The broader member
-    // mutation index is populated below only when a deferred consumer exists;
-    // that keeps unrelated returned-reference analysis out of ordinary files.
-    let mut state = state;
-    index_ambient_writes(&mut state);
-    let electron_exports = index_electron_exports(&state, &nodes);
-    let needs_member_mutation_facts = calls::requires_member_mutation_facts(&state, &nodes)
-        || requires_electron_browser_window_mutation_facts(&state, &nodes, &electron_exports);
+    prepared.ensure_ambient_writes();
+    let state = prepared.state();
+    let electron_exports = index_electron_exports(state, &nodes);
+    let needs_member_mutation_facts = calls::requires_member_mutation_facts(state, &nodes)
+        || requires_electron_browser_window_mutation_facts(state, &nodes, &electron_exports);
     if needs_member_mutation_facts {
-        collect_semantic_member_mutations(&mut state);
+        prepared.ensure_member_mutations();
     }
-    let semantics = StateFacts::new(&state);
+
+    let analysis = prepared.inspect(|state| {
+        inspect_prepared_source(
+            source,
+            path,
+            parsed,
+            nodes,
+            visited_ast_nodes,
+            electron_exports,
+            state,
+        )
+    });
+    (analysis, prepared)
+}
+
+fn inspect_prepared_source<'a>(
+    source: &'a str,
+    path: Option<&str>,
+    parsed: &crate::javascript::parser::ParsedJavaScriptProgram<'a>,
+    nodes: Vec<Node<'a>>,
+    visited_ast_nodes: u64,
+    electron_exports: HashMap<u32, Vec<String>>,
+    state: &SemanticState<'a>,
+) -> StaticAnalysis {
+    let parser_error_count = parsed.errors.len();
+    let semantics = StateFacts::new(state);
     let mut accumulator = StaticAccumulator::new(source.encode_utf16().count());
     for node in &nodes {
         if node.babel_type() == "CallExpression" || node.babel_type() == "OptionalCallExpression" {
@@ -108,7 +126,7 @@ pub fn analyze_source(
         .filter(|reference| reference.specifier.is_none())
         .count() as u64;
     calls.references.extend(runtime_references);
-    let facts = extract_facts(source, path, &parsed);
+    let facts = extract_facts(source, path, parsed);
     let uncertain_type_only_side_effect = facts.uncertain_type_only_side_effect;
     let mut type_only_by_specifier = HashMap::<String, VecDeque<bool>>::new();
     let mut type_only_import_equals = HashSet::new();
@@ -326,7 +344,7 @@ pub fn analyze_source(
         uncertain_type_only_side_effect,
         has_electron_reference,
     );
-    Ok(analysis)
+    analysis
 }
 
 fn append_rpc_endpoints(
@@ -394,6 +412,7 @@ fn collect_nodes<'ast>(root: Node<'ast>, source: &'ast str) -> (Vec<Node<'ast>>,
     let mut nodes = Vec::new();
     let mut collector = CollectNodes { nodes: &mut nodes };
     let _: ControlFlow<()> = traverse(root, source, &mut collector, || ControlFlow::Continue(()));
+    // Preserve Babel's synthetic File wrapper in the public visited-node count.
     let count = nodes.len() as u64 + 1;
     (nodes, count)
 }
@@ -570,7 +589,8 @@ fn has_electron_option_object_candidate<'a>(
             return false;
         };
         if !initializer.projection.is_empty()
-            || !semantic_binding_at_read(binding, node, &state.parents, state.source)
+            || !state
+                .semantic_binding_at_read(binding, node)
                 .has_definite_initializer
         {
             return false;

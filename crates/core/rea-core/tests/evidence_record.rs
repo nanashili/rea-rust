@@ -136,6 +136,39 @@ fn display_subject_can_retain_an_unpaired_surrogate() {
 }
 
 #[test]
+fn lone_surrogate_payload_keeps_raw_shape_fallback_for_invalid_sibling() {
+    let evidence = artifact_evidence();
+    let source = raw(&evidence)
+        .get()
+        .replace(
+            "\"normalized_result\":{\"value\":42}",
+            "\"normalized_result\":\"\\ud800\"",
+        )
+        .replace("\"confidence\":\"observed\"", "\"confidence\":\"invalid\"");
+    let source = RawValue::from_string(source).unwrap();
+
+    assert!(matches!(
+        EvidenceRecord::parse(&source),
+        Err(EvidenceRecordError::Invalid(_))
+    ));
+}
+
+#[test]
+fn escaped_surrogate_text_without_a_json_escape_remains_a_string() {
+    let evidence = artifact_evidence();
+    let source = raw(&evidence).get().replace(
+        "\"normalized_result\":{\"value\":42}",
+        "\"normalized_result\":\"\\\\uD800\"",
+    );
+    let source = RawValue::from_string(source).unwrap();
+
+    assert!(matches!(
+        EvidenceRecord::parse(&source),
+        Err(EvidenceRecordError::SemanticIdMismatch)
+    ));
+}
+
+#[test]
 fn duplicate_object_keys_follow_json_parse_last_key_wins_semantics() {
     let evidence = artifact_evidence();
     let source = raw(&evidence).get().replace(
@@ -148,6 +181,34 @@ fn duplicate_object_keys_follow_json_parse_last_key_wins_semantics() {
 
     assert_eq!(parsed.evidence_id(), evidence.evidence_id());
     assert!(!parsed.raw().get().contains("\"operation\":\"wrong\""));
+}
+
+#[test]
+fn create_unsigned_normalizes_duplicate_fields_and_preserves_lone_surrogates() {
+    let evidence = artifact_evidence();
+    let mut source = raw(&evidence).get().to_owned();
+
+    let evidence_id_start = source.find("\"evidence_id\":").unwrap();
+    let evidence_id_end = source[evidence_id_start..]
+        .find(',')
+        .map(|offset| evidence_id_start + offset + 1)
+        .unwrap();
+    source.replace_range(evidence_id_start..evidence_id_end, "");
+    source = source.replace(
+        "\"operation\":\"inspect_rust_binary\"",
+        "\"operation\":\"wrong\",\"operation\":\"inspect_rust_binary\"",
+    );
+    source = source.replace(
+        "\"local_path\":\"/artifacts/example\"",
+        "\"local_path\":\"/artifacts/\\ud800\"",
+    );
+
+    let unsigned = RawValue::from_string(source).unwrap();
+    let created = EvidenceRecord::create_unsigned(&unsigned).unwrap();
+
+    assert!(created.evidence_id().starts_with("ev_"));
+    assert!(created.raw().get().contains("/artifacts/\\ud800"));
+    assert!(!created.raw().get().contains("\"operation\":\"wrong\""));
 }
 
 #[test]

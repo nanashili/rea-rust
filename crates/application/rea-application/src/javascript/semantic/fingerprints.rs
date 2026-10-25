@@ -46,7 +46,7 @@ pub struct SemanticFingerprintInputs<'a> {
 
 /// Build bounded, rename- and formatting-resistant fingerprints in callable order.
 pub fn collect_semantic_fingerprints<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     input: &SemanticFingerprintInputs<'_>,
     parser_partial: bool,
 ) -> Vec<SemanticFunctionFingerprint> {
@@ -121,12 +121,12 @@ pub fn collect_semantic_fingerprints<'a>(
     fingerprints
 }
 
-fn callable_nodes<'a>(state: &'a SemanticState<'a>) -> HashMap<String, Node<'a>> {
-    struct Collector<'a> {
-        state: &'a SemanticState<'a>,
+fn callable_nodes<'a>(state: &SemanticState<'a>) -> HashMap<String, Node<'a>> {
+    struct Collector<'s, 'a> {
+        state: &'s SemanticState<'a>,
         nodes: HashMap<String, Node<'a>>,
     }
-    impl<'a> AstVisitor<'a> for Collector<'a> {
+    impl<'s, 'a> AstVisitor<'a> for Collector<'s, 'a> {
         fn enter(&mut self, node: &Node<'a>, _parent: Option<&Node<'a>>, _ancestors: &[Node<'a>]) {
             if let Some(id) = callable_id_for_node(&self.state.context, node) {
                 self.nodes.insert(id, *node);
@@ -150,12 +150,12 @@ struct SyntaxFingerprint {
     literals: Vec<JsString>,
 }
 
-struct SyntaxCollector<'a> {
-    state: &'a SemanticState<'a>,
+struct SyntaxCollector<'s, 'a> {
+    state: &'s SemanticState<'a>,
     output: SyntaxFingerprint,
 }
 
-impl<'a> AstVisitor<'a> for SyntaxCollector<'a> {
+impl<'s, 'a> AstVisitor<'a> for SyntaxCollector<'s, 'a> {
     fn skip(&mut self, node: &Node<'a>) -> bool {
         callable_id_for_node(&self.state.context, node).is_some()
     }
@@ -173,7 +173,7 @@ impl<'a> AstVisitor<'a> for SyntaxCollector<'a> {
     }
 }
 
-fn syntax_fingerprint<'a>(state: &'a SemanticState<'a>, root: Node<'a>) -> SyntaxFingerprint {
+fn syntax_fingerprint<'a>(state: &SemanticState<'a>, root: Node<'a>) -> SyntaxFingerprint {
     let mut collector = SyntaxCollector {
         state,
         output: SyntaxFingerprint::default(),

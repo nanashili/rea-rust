@@ -40,7 +40,7 @@ pub struct CallFindings {
 }
 
 pub fn collect_calls<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     nodes: &[Node<'a>],
     factory_require_binding_ids: &[String],
 ) -> CallFindings {

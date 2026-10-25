@@ -136,7 +136,15 @@ enum Pending<'a> {
 /// Invalid JSON, non-finite numbers, depth overflow or writer failure are errors.
 /// Whitespace and duplicate-key source spelling are normalized as JSON.parse does.
 pub fn write(raw: &RawValue, mut output: impl Write) -> Result<(), Error> {
-    let mut pending = vec![Pending::Value(raw, 0)];
+    write_with_depth(raw, &mut output, 0)
+}
+
+fn write_with_depth(
+    raw: &RawValue,
+    mut output: &mut impl Write,
+    initial_depth: usize,
+) -> Result<(), Error> {
+    let mut pending = vec![Pending::Value(raw, initial_depth)];
     let mut numbers = ryu_js::Buffer::new();
     while let Some(next) = pending.pop() {
         match next {
@@ -266,6 +274,73 @@ pub fn digest_raw(raw: &RawValue) -> Result<String, Error> {
         buffered.flush().map_err(Error::Io)?;
     }
     Ok(format!("{:x}", output.0.finalize()))
+}
+
+/// SHA-256 over a canonical JSON object assembled from already parsed fields.
+///
+/// Field values are borrowed and canonicalized as they are written, so callers
+/// can authenticate a projection without first allocating a second full JSON
+/// object. Duplicate names use the last field in the input slice, matching
+/// JSON.parse semantics.
+pub fn digest_object_fields(fields: &[(&str, &RawValue)]) -> Result<String, Error> {
+    let mut output = HashWriter(Sha256::new());
+    {
+        let mut buffered = BufWriter::new(&mut output);
+        write_object_fields(fields, &mut buffered)?;
+        buffered.flush().map_err(Error::Io)?;
+    }
+    Ok(format!("{:x}", output.0.finalize()))
+}
+
+/// Write a canonical JSON object assembled from already parsed fields.
+///
+/// Field values are borrowed and canonicalized as they are written, so the
+/// caller does not need to assemble an intermediate object. Duplicate names
+/// use the last field in the input slice, matching JSON.parse semantics.
+pub fn write_object_fields(
+    fields: &[(&str, &RawValue)],
+    mut output: impl Write,
+) -> Result<(), Error> {
+    let unique = ordered_unique_fields(fields);
+
+    output.write_all(b"{").map_err(Error::Io)?;
+    for (index, (_, name, value)) in unique.iter().enumerate() {
+        if index > 0 {
+            output.write_all(b",").map_err(Error::Io)?;
+        }
+        serde_json::to_writer(&mut output, name).map_err(Error::Json)?;
+        output.write_all(b":").map_err(Error::Io)?;
+        write_with_depth(value, &mut output, 1)?;
+    }
+    output.write_all(b"}").map_err(Error::Io)?;
+    Ok(())
+}
+
+fn ordered_unique_fields<'a>(
+    fields: &'a [(&'a str, &'a RawValue)],
+) -> Vec<(usize, &'a str, &'a RawValue)> {
+    let mut ordered: Vec<_> = fields
+        .iter()
+        .enumerate()
+        .map(|(index, (name, value))| (index, *name, *value))
+        .collect();
+    ordered.sort_by(|(left_index, left, _), (right_index, right, _)| {
+        left.encode_utf16()
+            .cmp(right.encode_utf16())
+            .then(left_index.cmp(right_index))
+    });
+
+    let mut unique: Vec<(usize, &str, &RawValue)> = Vec::with_capacity(ordered.len());
+    for field in ordered {
+        if let Some(previous) = unique.last_mut() {
+            if previous.1 == field.1 {
+                *previous = field;
+                continue;
+            }
+        }
+        unique.push(field);
+    }
+    unique
 }
 
 /// Serialize a typed value losslessly, then digest its canonical semantics.

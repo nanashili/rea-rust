@@ -53,8 +53,12 @@ pub struct SourceObservation {
 #[derive(Clone, Debug, Serialize)]
 pub struct NavigationContext {
     pub document: String,
-    pub address: String,
-    pub procedure: Option<String>,
+    /// The address is a string when the provider retained a cursor and an
+    /// unavailable facet when the provider has no cursor surface.
+    pub address: serde_json::Value,
+    /// The procedure is a name, null for an address outside a procedure, or
+    /// an unavailable facet when the address itself is unavailable.
+    pub procedure: serde_json::Value,
     pub procedure_state: Retained<ProcedureObservation>,
     pub evidence_links: Vec<String>,
     pub source_order: Vec<SourceObservation>,
@@ -64,12 +68,12 @@ pub struct NavigationContext {
 /// Project retained sequential observations into the provider-neutral result.
 pub fn project(input: Input) -> Result<NavigationContext, Failure> {
     let document = available_text(&input.document, "document")?;
-    let address = available_text(&input.address, "address")?;
+    let address = retained_address(&input.address)?;
     validate_requested_document(input.requested_document.as_deref())?;
     validate_source_order(&input.source_order)?;
     validate_evidence_links(&input.evidence_links)?;
 
-    let procedure = procedure_name(&input.procedure);
+    let procedure = procedure_value(&input.procedure);
     let mut unknowns = Vec::new();
     if matches!(input.procedure, Retained::Omitted) {
         unknowns.push("Containing procedure observation was omitted.".into());
@@ -99,19 +103,57 @@ pub fn project_value(input: &serde_json::Value) -> Result<serde_json::Value, Fai
     serde_json::to_value(project(retained)?).map_err(|_| invalid("result is not serializable"))
 }
 
-fn procedure_name(procedure: &Retained<ProcedureObservation>) -> Option<String> {
+fn procedure_value(procedure: &Retained<ProcedureObservation>) -> serde_json::Value {
     match procedure {
         Retained::Available {
             value: ProcedureObservation::Containing { name },
             ..
-        } => Some(name.clone()),
+        } => serde_json::json!(name),
         Retained::Available {
             value: ProcedureObservation::OutsideProcedure,
             ..
-        }
-        | Retained::Omitted
-        | Retained::Unavailable { .. } => None,
+        } => serde_json::Value::Null,
+        Retained::Omitted => unavailable_facet(
+            "resolve_containing_procedure",
+            "Containing procedure observation was omitted.",
+            "Retain a procedure observation or provide an explicit address.",
+        ),
+        Retained::Unavailable {
+            reason,
+            remediation,
+        } => serde_json::json!({
+            "state": "unavailable",
+            "operation": "resolve_containing_procedure",
+            "reason": reason,
+            "remediation": remediation,
+        }),
     }
+}
+
+fn retained_address(address: &Retained<String>) -> Result<serde_json::Value, Failure> {
+    match address {
+        Retained::Available { value, .. } if !value.is_empty() => Ok(serde_json::json!(value)),
+        Retained::Available { .. } => Err(invalid("address observation is empty")),
+        Retained::Omitted => Err(invalid("address observation was omitted")),
+        Retained::Unavailable {
+            reason,
+            remediation,
+        } => Ok(serde_json::json!({
+            "state": "unavailable",
+            "operation": "current_address",
+            "reason": reason,
+            "remediation": remediation,
+        })),
+    }
+}
+
+fn unavailable_facet(operation: &str, reason: &str, remediation: &str) -> serde_json::Value {
+    serde_json::json!({
+        "state": "unavailable",
+        "operation": operation,
+        "reason": reason,
+        "remediation": remediation,
+    })
 }
 
 fn available_text<T>(fact: &Retained<T>, field: &str) -> Result<String, Failure>

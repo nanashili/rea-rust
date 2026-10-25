@@ -33,14 +33,14 @@ pub struct ReconstructionEvidenceInput<'a> {
     /// The validated analysis parameters, excluding `detail`.
     pub parameters: &'a Json,
     /// The assembled reconstruction result containing `electron_summary`.
-    pub result: &'a Json,
+    pub result: Json,
     /// The caller-selected input path, including any unpaired UTF-16 units.
     /// The resolved subject path is read from the completed result instead.
-    pub input_path: &'a JsString,
+    pub input_path: JsString,
     /// The caller-requested artifact format (`auto`, `asar`, or `directory`).
-    pub format: &'a str,
+    pub format: String,
     /// The authenticated root artifact digest.
-    pub root_artifact_sha256: &'a str,
+    pub root_artifact_sha256: String,
 }
 
 /// Create and authenticate the complete JavaScript application Evidence.
@@ -52,20 +52,23 @@ pub struct ReconstructionEvidenceInput<'a> {
 pub fn create(
     input: ReconstructionEvidenceInput<'_>,
 ) -> Result<EvidenceRecord, EvidenceRecordError> {
-    let parameters = analysis_parameters(input.parameters, input.input_path, input.format)?;
-    let resolved_subject = resolved_subject(input.result)?;
-    validate_root_artifact_digest(input.result, input.root_artifact_sha256)?;
-    let normalized_result = application_result(input.result)?;
-    let limitations = graph_limitations(input.result)?;
+    let parameters = analysis_parameters(&input)?;
+    let resolved_subject = resolved_subject(&input.result)?;
+    let subject_path = resolved_subject.path.clone();
+    let subject_format = resolved_subject.format.to_owned();
+
+    validate_root_artifact_digest(&input.result, &input.root_artifact_sha256)?;
+    let limitations = graph_limitations(&input.result)?;
+    let normalized_result = application_result(input.result, &limitations)?;
 
     let subject = Obj::new()
-        .with("name", display_name(resolved_subject.path))
+        .with("name", display_name(&subject_path))
         .with(
             "digest",
             Obj::new().with("sha256", input.root_artifact_sha256),
         )
-        .with("local_path", resolved_subject.path.clone())
-        .with("format", resolved_subject.format)
+        .with("local_path", subject_path)
+        .with("format", subject_format)
         .with("architecture", Json::Null);
     let provider = Obj::new()
         .with("id", PROVIDER_ID)
@@ -190,22 +193,20 @@ fn summarize(
 }
 
 fn analysis_parameters(
-    parameters: &Json,
-    input_path: &JsString,
-    format: &str,
+    input: &ReconstructionEvidenceInput<'_>,
 ) -> Result<Json, EvidenceRecordError> {
-    let Json::Object(mut parameters) = parameters.clone() else {
+    let Json::Object(mut parameters) = input.parameters.clone() else {
         return Err(invalid("analysis parameters must be an object"));
     };
 
-    parameters.set("input_path", input_path.clone());
-    parameters.set("format", format);
+    parameters.set("input_path", input.input_path.clone());
+    parameters.set("format", input.format.clone());
     parameters.remove("detail");
     Ok(parameters.into())
 }
 
-fn application_result(result: &Json) -> Result<Json, EvidenceRecordError> {
-    let Json::Object(mut result) = result.clone() else {
+fn application_result(result: Json, limitations: &Json) -> Result<Json, EvidenceRecordError> {
+    let Json::Object(mut result) = result else {
         return Err(invalid("JavaScript application result must be an object"));
     };
 
@@ -215,8 +216,7 @@ fn application_result(result: &Json) -> Result<Json, EvidenceRecordError> {
         ));
     };
     result.set("summary", summary);
-    let limitations = graph_limitations(&Json::Object(result.clone()))?;
-    result.set("limitations", limitations);
+    result.set("limitations", limitations.clone());
     Ok(result.into())
 }
 
@@ -270,7 +270,7 @@ mod tests {
             "limitations",
             Json::Array(vec![Json::String(JsString::from_utf16([0xdc00]))]),
         );
-        let result = Obj::new()
+        let result: Json = Obj::new()
             .with("input_path", path.clone())
             .with("format", "directory")
             .with("root_artifact_sha256", digest)
@@ -286,10 +286,10 @@ mod tests {
 
         let evidence = create(ReconstructionEvidenceInput {
             parameters: &parameters,
-            result: &result,
-            input_path: &caller_path,
-            format: "auto",
-            root_artifact_sha256: digest,
+            result: result.clone(),
+            input_path: caller_path.clone(),
+            format: "auto".to_owned(),
+            root_artifact_sha256: digest.to_owned(),
         })
         .expect("exact application Evidence");
         let raw = evidence.raw().get();
@@ -333,10 +333,10 @@ mod tests {
             &context,
             ReconstructionEvidenceInput {
                 parameters: &parameters,
-                result: &result,
-                input_path: &caller_path,
-                format: "auto",
-                root_artifact_sha256: digest,
+                result,
+                input_path: caller_path,
+                format: "auto".to_owned(),
+                root_artifact_sha256: digest.to_owned(),
             },
             None,
             Some(AnalysisError::cancelled(OPERATION)),

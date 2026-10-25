@@ -9,8 +9,6 @@ use std::collections::{HashMap, HashSet};
 use crate::javascript::ast::{Field, Node, NodeKey};
 
 use super::ast_values::{is_class, is_function, static_property_key, unwrapped};
-use super::callable_results::callable_result_expressions;
-use super::mutation_initializers::semantic_binding_at_read;
 use super::property_paths::{PropertyPath, PropertyPathKey, semantic_array_index_units};
 use super::state::{ProjectionKey, SemanticState};
 use super::value_types::JsString;
@@ -120,7 +118,7 @@ fn resolve_returned_references<'a>(
 
     let mut references = Vec::new();
     for function in functions {
-        for result in callable_result_expressions(state.source, &function) {
+        for result in state.callable_result_expressions(&function).iter() {
             if let Some(node) = result.node {
                 references.push(SemanticReturnedReference {
                     node,
@@ -153,13 +151,9 @@ fn expand_candidate<'a>(
         if let Some(name) = node.identifier_name()
             && let Some(binding_index) = state.resolve_binding(&node, name)
         {
-            let selected = semantic_binding_at_read(
-                state.binding(binding_index),
-                node,
-                &state.parents,
-                state.source,
-            )
-            .binding;
+            let selected = state
+                .semantic_binding_at_read(state.binding(binding_index), node)
+                .binding;
             for initializer in selected.initializers {
                 pending.push(Candidate {
                     node: initializer.node,

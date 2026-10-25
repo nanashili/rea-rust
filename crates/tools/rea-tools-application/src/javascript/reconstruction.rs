@@ -34,12 +34,14 @@ fn analyze(context: &ToolContext<'_>, mut input: Value) -> ToolOutput {
             return ToolOutput::Failure(AnalysisError::output(OPERATION, error.to_string()));
         }
     };
-    let result = &completed.result;
-    let path = parameters.at("input_path").text();
-    let format = parameters.at("format").str();
-    let root_sha256 = result.at("root_artifact_sha256").str();
-    let interruption = completed
-        .interrupted
+    let WorkflowResult {
+        result,
+        interrupted,
+    } = completed;
+    let path = parameters.at("input_path").text().clone();
+    let format = parameters.at("format").str().to_owned();
+    let root_sha256 = result.at("root_artifact_sha256").str().to_owned();
+    let interruption = interrupted
         .map(analysis_interruption)
         .or_else(|| context.cancellation.reason().map(|_| cancelled()));
 
@@ -78,12 +80,20 @@ fn reconstruct_application(
         .as_str()
         .ok_or_else(|| AnalysisError::output(OPERATION, "validated input has no input_path"))?;
     let requested_format = input["format"].as_str().unwrap_or("auto");
+
+    let fail_integrity = input["integrity_policy"].as_str() != Some("record-and-continue");
+    context
+        .progress
+        .report(OPERATION, "Inventorying and parsing application artifacts");
+    let snapshot = inventory_for_javascript(input_path, fail_integrity, &context.cancellation)
+        .map_err(|failure| translate_javascript_reader_failure(context, failure))?;
+
     let mut reader =
         open_javascript_artifact_reader_for_analysis(context, input_path, requested_format)?;
 
     // Closing after either outcome is deliberate. Acquisition may fail before
     // transferring its files, and inventory may fail before acquisition starts.
-    let outcome = reconstruct_from_reader(context, input, &mut reader);
+    let outcome = reconstruct_from_reader(context, input, &mut reader, &snapshot);
     let cleanup = reader
         .close()
         .map_err(|failure| translate_javascript_reader_failure(context, failure));
@@ -99,16 +109,10 @@ fn reconstruct_from_reader(
     context: &ToolContext<'_>,
     input: &Value,
     reader: &mut JavaScriptArtifactReaderHandle,
+    snapshot: &rea_tools_artifacts::ArtifactInventoryResult,
 ) -> Result<WorkflowResult, AnalysisError> {
     let path = reader.path().to_owned();
     let format = reader.format();
-    let fail_integrity = input["integrity_policy"].as_str() != Some("record-and-continue");
-
-    context
-        .progress
-        .report(OPERATION, "Inventorying and parsing application artifacts");
-    let snapshot = inventory_for_javascript(&path, fail_integrity, &context.cancellation)
-        .map_err(|failure| translate_javascript_reader_failure(context, failure))?;
     if snapshot.manifest.root_format != format {
         return Err(translate_javascript_reader_failure(
             context,

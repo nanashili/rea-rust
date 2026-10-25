@@ -149,15 +149,18 @@ fn validate_result(result: &Value) -> Result<(), Failure> {
     {
         return Err(invalid("procedure-info identity or counts are invalid"));
     }
-    let locals = object
-        .get("locals")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("procedure-info locals must be an array"))?;
-    if locals.len() > 200_000 {
-        return Err(invalid("procedure-info locals exceed the resource limit"));
-    }
-    for local in locals {
-        validate_local(local)?;
+    match object.get("locals") {
+        Some(Value::Null) => {}
+        Some(Value::Array(locals)) => {
+            if locals.len() > 200_000 {
+                return Err(invalid("procedure-info locals exceed the resource limit"));
+            }
+
+            for local in locals {
+                validate_local(local)?;
+            }
+        }
+        _ => return Err(invalid("procedure-info locals must be an array or null")),
     }
     let external = validate_classification(object.get("classification"))?;
     validate_body(
@@ -194,7 +197,7 @@ fn validate_local(local: &Value) -> Result<(), Failure> {
     Ok(())
 }
 
-fn validate_classification(value: Option<&Value>) -> Result<bool, Failure> {
+fn validate_classification(value: Option<&Value>) -> Result<Option<bool>, Failure> {
     let Some(value) = value else {
         return Err(invalid("procedure-info classification is required"));
     };
@@ -208,26 +211,30 @@ fn validate_classification(value: Option<&Value>) -> Result<bool, Failure> {
     if object
         .keys()
         .any(|key| !CLASSIFICATION_FIELDS.contains(&key.as_str()))
-        || !object.get("external").is_some_and(Value::is_boolean)
-        || !object.get("thunk").is_some_and(Value::is_boolean)
+        || !object
+            .get("external")
+            .is_some_and(|value| value.is_null() || value.is_boolean())
+        || !object
+            .get("thunk")
+            .is_some_and(|value| value.is_null() || value.is_boolean())
         || !object.get("thunk_target").is_some_and(|target| {
             target.is_null() || target.as_str().and_then(parse_canonical_address).is_some()
         })
-        || object.get("provenance").and_then(Value::as_str) != Some("ghidra-function-manager")
+        || !matches!(
+            object.get("provenance").and_then(Value::as_str),
+            Some("ghidra-function-manager") | Some("ghidra-rust-sleigh-cfg")
+        )
     {
         return Err(invalid("procedure-info classification has invalid fields"));
     }
-    Ok(object
-        .get("external")
-        .and_then(Value::as_bool)
-        .unwrap_or(false))
+    Ok(object.get("external").and_then(Value::as_bool))
 }
 
 fn validate_body(
     value: Option<&Value>,
     entrypoint: &str,
     length: u64,
-    external: bool,
+    external: Option<bool>,
 ) -> Result<(), Failure> {
     let object = value
         .and_then(Value::as_object)
@@ -272,8 +279,10 @@ fn validate_body(
             .is_some_and(|v| v.is_null() || v.as_u64().is_some())
         || !object.get("non_contiguous").is_some_and(Value::is_boolean)
         || !object.get("contains_entry").is_some_and(Value::is_boolean)
-        || object.get("provenance").and_then(Value::as_str)
-            != Some("ghidra-function-body-address-set")
+        || !matches!(
+            object.get("provenance").and_then(Value::as_str),
+            Some("ghidra-function-body-address-set") | Some("ghidra-rust-sleigh-cfg")
+        )
     {
         return Err(invalid(
             "procedure-info body counts or metadata are invalid",
@@ -365,7 +374,7 @@ fn validate_body(
             && object.get("non_contiguous").and_then(Value::as_bool) != Some(false))
         || reported_span != Some(expected_span)
         || object.get("contains_entry").and_then(Value::as_bool) != Some(entry_is_contained)
-        || (!external && !entry_is_contained)
+        || (external != Some(true) && !entry_is_contained)
     {
         return Err(invalid(
             "procedure-info body counts or entry membership disagree with ranges",
@@ -479,4 +488,120 @@ fn invalid(reason: &str) -> Failure {
         "Provide authenticated procedure_info Evidence with complete body and classification facts.".into(),
         BTreeMap::from([(String::from("operation"), Detail::Text(OPERATION.into()))]),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::retain_result;
+    use serde_json::json;
+
+    #[test]
+    fn accepts_rust_cfg_body_with_unknown_classification() {
+        let input = json!({
+            "evidence": {
+            "evidence_id": "evidence-1",
+            "operation": "procedure_info",
+            "result": {
+                "name": "main",
+                "entrypoint": "0x1000",
+                "basicblock_count": 1,
+                "length": 4,
+                "signature": null,
+                "locals": null,
+                "classification": {
+                    "external": null,
+                    "thunk": null,
+                    "thunk_target": null,
+                    "provenance": "ghidra-rust-sleigh-cfg"
+                },
+                "body": {
+                    "available": true,
+                    "provenance": "ghidra-rust-sleigh-cfg",
+                    "ranges": [{"start": "0x1000", "end": "0x1003"}],
+                    "total_bytes": 4,
+                    "span_bytes": 4,
+                    "non_contiguous": false,
+                    "contains_entry": true
+                }
+            }
+            }
+        });
+        assert!(retain_result(&input, input["evidence"]["result"].clone()).is_ok());
+    }
+
+    #[test]
+    fn accepts_legacy_body_provenance() {
+        let input = json!({
+            "evidence": {
+            "evidence_id": "evidence-1",
+            "operation": "procedure_info",
+            "result": {
+                "name": "main",
+                "entrypoint": "0x1000",
+                "basicblock_count": 1,
+                "length": 4,
+                "signature": null,
+                "locals": null,
+                "classification": {
+                    "external": false,
+                    "thunk": false,
+                    "thunk_target": null,
+                    "provenance": "ghidra-function-manager"
+                },
+                "body": {
+                    "available": true,
+                    "provenance": "ghidra-function-body-address-set",
+                    "ranges": [{"start": "0x1000", "end": "0x1003"}],
+                    "total_bytes": 4,
+                    "span_bytes": 4,
+                    "non_contiguous": false,
+                    "contains_entry": true
+                }
+            }
+            }
+        });
+
+        assert!(retain_result(&input, input["evidence"]["result"].clone()).is_ok());
+    }
+
+    #[test]
+    fn rejects_malformed_locals() {
+        let input = json!({
+            "evidence": {
+            "evidence_id": "evidence-1",
+            "operation": "procedure_info",
+            "result": {
+                "name": "main",
+                "entrypoint": "0x1000",
+                "basicblock_count": 1,
+                "length": 4,
+                "signature": null,
+                "locals": "unknown",
+                "classification": {
+                    "external": null,
+                    "thunk": null,
+                    "thunk_target": null,
+                    "provenance": "ghidra-rust-sleigh-cfg"
+                },
+                "body": {
+                    "available": true,
+                    "provenance": "ghidra-rust-sleigh-cfg",
+                    "ranges": [{"start": "0x1000", "end": "0x1003"}],
+                    "total_bytes": 4,
+                    "span_bytes": 4,
+                    "non_contiguous": false,
+                    "contains_entry": true
+                }
+            }
+            }
+        });
+
+        let error = retain_result(&input, input["evidence"]["result"].clone())
+            .expect_err("malformed locals must be rejected");
+        assert!(
+            error
+                .to_string()
+                .contains("locals must be an array or null")
+        );
+    }
 }

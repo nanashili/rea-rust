@@ -1,14 +1,15 @@
 //! Persistent dependency proofs for one semantic state's binding identities.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SemanticDependencyProof {
     Empty,
     Leaf,
     Branch {
-        zero: Option<Box<SemanticDependencyProof>>,
-        one: Option<Box<SemanticDependencyProof>>,
+        zero: Option<Rc<SemanticDependencyProof>>,
+        one: Option<Rc<SemanticDependencyProof>>,
     },
 }
 
@@ -45,11 +46,11 @@ impl SemanticDependencyProofs {
             proof = if one {
                 SemanticDependencyProof::Branch {
                     zero: None,
-                    one: Some(Box::new(proof)),
+                    one: Some(Rc::new(proof)),
                 }
             } else {
                 SemanticDependencyProof::Branch {
-                    zero: Some(Box::new(proof)),
+                    zero: Some(Rc::new(proof)),
                     one: None,
                 }
             };
@@ -89,8 +90,8 @@ impl SemanticDependencyProofs {
         else {
             return Some(SemanticDependencyProof::Leaf);
         };
-        let zero = Self::union(first_zero.as_deref(), second_zero.as_deref()).map(Box::new);
-        let one = Self::union(first_one.as_deref(), second_one.as_deref()).map(Box::new);
+        let zero = Self::union(first_zero.as_deref(), second_zero.as_deref()).map(Rc::new);
+        let one = Self::union(first_one.as_deref(), second_one.as_deref()).map(Rc::new);
         Some(SemanticDependencyProof::Branch { zero, one })
     }
 
@@ -155,5 +156,59 @@ mod tests {
         assert!(!proofs.intersects(Some(&union), &active));
         active.insert("c".into(), 2);
         assert!(proofs.intersects(Some(&union), &active));
+    }
+
+    #[test]
+    fn cloned_deep_proofs_share_immutable_nodes() {
+        let bindings = (0..4096)
+            .map(|index| format!("binding-{index}"))
+            .collect::<Vec<_>>();
+        let mut proofs = SemanticDependencyProofs::new(bindings);
+        let original = proofs.binding("binding-2048");
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+        assert_shared_nodes(&original, &cloned);
+
+        let union = SemanticDependencyProofs::union(Some(&original), None).expect("union");
+        assert_eq!(union, original);
+        assert_shared_nodes(&original, &union);
+        assert!(proofs.has(&union, "binding-2048"));
+        assert!(!proofs.has(&union, "binding-2049"));
+    }
+
+    fn assert_shared_nodes(left: &SemanticDependencyProof, right: &SemanticDependencyProof) {
+        match (left, right) {
+            (SemanticDependencyProof::Empty, SemanticDependencyProof::Empty)
+            | (SemanticDependencyProof::Leaf, SemanticDependencyProof::Leaf) => {}
+            (
+                SemanticDependencyProof::Branch {
+                    zero: left_zero,
+                    one: left_one,
+                },
+                SemanticDependencyProof::Branch {
+                    zero: right_zero,
+                    one: right_one,
+                },
+            ) => {
+                assert_options_share_nodes(left_zero, right_zero);
+                assert_options_share_nodes(left_one, right_one);
+            }
+            _ => panic!("proof clones changed shape"),
+        }
+    }
+
+    fn assert_options_share_nodes(
+        left: &Option<Rc<SemanticDependencyProof>>,
+        right: &Option<Rc<SemanticDependencyProof>>,
+    ) {
+        match (left, right) {
+            (None, None) => {}
+            (Some(left), Some(right)) => {
+                assert!(Rc::ptr_eq(left, right));
+                assert_shared_nodes(left, right);
+            }
+            _ => panic!("proof clones changed branch shape"),
+        }
     }
 }

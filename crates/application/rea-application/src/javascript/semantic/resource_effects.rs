@@ -31,7 +31,7 @@ struct ResourceCandidate<'a> {
 /// Recover built-in acquisition calls and local handle releases in source order.
 pub fn collect_semantic_resources<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
 ) -> Vec<SemanticResourceOperation> {
     let callable_ids: HashSet<String> = callables

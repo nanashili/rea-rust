@@ -28,7 +28,7 @@ use super::helpers::{argument_value, callee_name, range, source_slice};
 /// collector so callers can merge them once, after bundler factories have
 /// populated their proven binding IDs.
 pub fn collect_runtime_references<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     nodes: &[Node<'a>],
     factory_binding_ids: &BTreeSet<String>,
 ) -> Vec<StaticReference> {
@@ -51,7 +51,7 @@ pub fn collect_runtime_references<'a>(
 }
 
 fn collect_factory_require_references<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     nodes: &[Node<'a>],
     factory_binding_ids: &HashSet<String>,
     semantics: &dyn super::semantics::StaticSemantics<'a>,
@@ -106,7 +106,7 @@ fn collect_factory_require_references<'a>(
 }
 
 fn collect_factory_chunk_references<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     nodes: &[Node<'a>],
     factory_binding_ids: &HashSet<String>,
     semantics: &dyn super::semantics::StaticSemantics<'a>,
@@ -152,7 +152,7 @@ fn collect_factory_chunk_references<'a>(
 }
 
 fn collect_vite_preload_references<'a>(
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     nodes: &[Node<'a>],
 ) -> Vec<StaticReference> {
     let Some(table) = index_vite_map_deps(state) else {
@@ -216,7 +216,7 @@ fn collect_vite_preload_references<'a>(
         .collect()
 }
 
-fn unknown_reference<'a>(state: &'a SemanticState<'a>, node: Node<'a>) -> StaticReference {
+fn unknown_reference<'a>(state: &SemanticState<'a>, node: Node<'a>) -> StaticReference {
     StaticReference {
         module_key: None,
         location: range(&state.context, &node),
@@ -238,7 +238,7 @@ fn is_explicit_default<'a>(state: &SemanticState<'a>, node: &Node<'a>) -> bool {
 }
 
 /// Recover the dependency table assigned to Vite's canonical map helper.
-pub fn index_vite_map_deps<'a>(state: &'a SemanticState<'a>) -> Option<Vec<Option<JsString>>> {
+pub fn index_vite_map_deps<'a>(state: &SemanticState<'a>) -> Option<Vec<Option<JsString>>> {
     let source = state.source;
     let mut helpers = Vec::new();
     struct Find<'a> {
@@ -384,7 +384,7 @@ fn chunk_specifier<'a>(source: &'a str, node: Option<Node<'a>>) -> Option<JsStri
     Some(JsString::from("chunk:").concat(&exact_literal_value(source, node)?))
 }
 
-fn vite_helper_is_stable<'a>(state: &'a SemanticState<'a>, helper: Node<'a>) -> bool {
+fn vite_helper_is_stable<'a>(state: &SemanticState<'a>, helper: Node<'a>) -> bool {
     struct Uses<'a> {
         source: &'a str,
         helper: Node<'a>,

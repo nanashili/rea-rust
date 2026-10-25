@@ -4,6 +4,7 @@
 //! (`application/AnalysisContextQueries.ts`) and their registration in
 //! `server/registerSessionTools.ts`.
 use crate::analysis::Analysis;
+use crate::analysis::is_capability_unavailable;
 use crate::enhanced::overview::resolve_analysis_document;
 use rea_analysis::AnalysisExecution;
 use rea_core::analysis_error::AnalysisError;
@@ -65,6 +66,28 @@ fn containing_procedure_name(value: &Value) -> Value {
         .map_or(Value::Null, |name| json!(name))
 }
 
+fn unavailable_navigation_facet(
+    operation: &str,
+    error: &AnalysisError,
+    remediation: &str,
+) -> Value {
+    json!({
+        "state": "unavailable",
+        "reason": error.message(),
+        "operation": operation,
+        "remediation": remediation,
+    })
+}
+
+fn unavailable_procedure_facet(reason: &str) -> Value {
+    json!({
+        "state": "unavailable",
+        "reason": reason,
+        "operation": "resolve_containing_procedure",
+        "remediation": "Provide an address explicitly or use a provider with cursor support.",
+    })
+}
+
 fn navigation(analysis: &Analysis<'_>, input: &Value) -> Result<Value, AnalysisError> {
     let document = match text(input, "document") {
         Some(document) => document.to_owned(),
@@ -75,16 +98,34 @@ fn navigation(analysis: &Analysis<'_>, input: &Value) -> Result<Value, AnalysisE
             })?
         }
     };
-    let address = analysis.execute("current_address", &parameters(Some(&document), None), false)?;
-    let Some(address) = address.result.as_str().map(str::to_owned) else {
-        return Err(AnalysisError::output(
-            "current_address",
-            "expected an address string",
-        ));
+    let address = match analysis.execute("current_address", &Map::new(), false) {
+        Ok(address) => {
+            let Some(address) = address.result.as_str().map(str::to_owned) else {
+                return Err(AnalysisError::output(
+                    "current_address",
+                    "expected an address string",
+                ));
+            };
+            address
+        }
+        Err(error) if is_capability_unavailable(&error) => {
+            return Ok(json!({
+                "document": document,
+                "address": unavailable_navigation_facet(
+                    "current_address",
+                    &error,
+                    "Use get_navigation_context with an interactive provider, or provide an address to inspect_address_context.",
+                ),
+                "procedure": unavailable_procedure_facet(
+                    "Containing procedure is unavailable because the provider did not expose a current address.",
+                ),
+            }));
+        }
+        Err(error) => return Err(error),
     };
     let procedure = match analysis.execute(
         "resolve_containing_procedure",
-        &parameters(Some(&document), Some(&address)),
+        &parameters(None, Some(&address)),
         false,
     ) {
         Ok(procedure) => containing_procedure_name(&procedure.result),
@@ -213,4 +254,125 @@ fn address_context(analysis: &Analysis<'_>, input: &Value) -> Result<Value, Anal
 /// `inspect_address_context`.
 pub fn inspect_address_context(context: &ToolContext<'_>, input: Value) -> ToolOutput {
     admitted(context, &input, address_context)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rea_analysis::{AnalysisExecution, ExecutionOptions, ProviderIdentity};
+    use rea_core::cancellation::Cancellation;
+    use rea_tools_binary::port::AnalysisPort;
+
+    struct StubPort {
+        address: Result<Value, AnalysisError>,
+    }
+
+    impl AnalysisPort for StubPort {
+        fn supports_operation(&self, _operation: &str) -> bool {
+            true
+        }
+
+        fn execute(
+            &self,
+            operation: &str,
+            parameters: &Map<String, Value>,
+            _options: &ExecutionOptions,
+        ) -> Result<AnalysisExecution, AnalysisError> {
+            match operation {
+                "current_document" => Ok(AnalysisExecution::new(
+                    json!("/tmp/example.bin"),
+                    ProviderIdentity::new("stub", "stub provider", None),
+                )),
+                "current_address" => {
+                    if parameters.contains_key("document") {
+                        return Err(AnalysisError::output(
+                            operation,
+                            "unknown_argument document",
+                        ));
+                    }
+                    self.address
+                        .as_ref()
+                        .map(|value| {
+                            AnalysisExecution::new(
+                                value.clone(),
+                                ProviderIdentity::new("stub", "stub provider", None),
+                            )
+                        })
+                        .map_err(Clone::clone)
+                }
+                "resolve_containing_procedure" => {
+                    if parameters.contains_key("document") {
+                        return Err(AnalysisError::output(
+                            operation,
+                            "unknown_argument document",
+                        ));
+                    }
+                    Ok(AnalysisExecution::new(
+                        json!({
+                            "found": true,
+                            "procedure": {"name": "main"}
+                        }),
+                        ProviderIdentity::new("stub", "stub provider", None),
+                    ))
+                }
+                _ => Err(AnalysisError::output(
+                    operation,
+                    "unexpected stub operation",
+                )),
+            }
+        }
+    }
+
+    #[test]
+    fn navigation_keeps_document_when_provider_has_no_cursor() {
+        let error = AnalysisError::capability_unavailable(
+            "ghidra-rust",
+            "current_address",
+            "The Rust provider has no UI cursor or current address.",
+        );
+
+        let port = StubPort {
+            address: Err(error),
+        };
+        let analysis = Analysis::new(&port, Cancellation::default(), None);
+        let result = navigation(&analysis, &json!({})).expect("capability gaps are partial");
+
+        assert_eq!(result["document"], "/tmp/example.bin");
+        assert_eq!(result["address"]["state"], "unavailable");
+        assert_eq!(result["address"]["operation"], "current_address");
+        assert_eq!(result["procedure"]["state"], "unavailable");
+        assert_eq!(
+            result["procedure"]["operation"],
+            "resolve_containing_procedure"
+        );
+    }
+
+    #[test]
+    fn navigation_preserves_unexpected_cursor_failures() {
+        let port = StubPort {
+            address: Err(AnalysisError::output(
+                "current_address",
+                "cursor transport failed",
+            )),
+        };
+        let analysis = Analysis::new(&port, Cancellation::default(), None);
+
+        let error = navigation(&analysis, &json!({})).expect_err("unexpected failures propagate");
+        assert_eq!(error.tag(), "AnalysisOutputError");
+        assert!(error.message().contains("cursor transport failed"));
+    }
+
+    #[test]
+    fn navigation_uses_each_provider_operation_parameter_contract() {
+        let port = StubPort {
+            address: Ok(json!("0x1000")),
+        };
+        let analysis = Analysis::new(&port, Cancellation::default(), None);
+
+        let result = navigation(&analysis, &json!({})).expect("navigation succeeds");
+
+        assert_eq!(result["document"], "/tmp/example.bin");
+        assert_eq!(result["address"], "0x1000");
+        assert_eq!(result["procedure"], "main");
+    }
 }

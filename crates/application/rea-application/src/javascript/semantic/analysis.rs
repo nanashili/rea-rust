@@ -14,7 +14,9 @@ use crate::javascript::ast::{AstContext, NodeSet};
 use crate::javascript::contracts::semantic_ir::{
     SemanticCallable as ContractCallable, SemanticIr, SemanticReference,
 };
-use crate::javascript::parser::{RawDiagnostic, parse_javascript_analysis_program};
+use crate::javascript::parser::{
+    ParsedJavaScriptProgram, RawDiagnostic, parse_javascript_analysis_program,
+};
 
 use super::ambient_writes::index_ambient_writes;
 use super::async_effects::collect_semantic_async_effects;
@@ -58,6 +60,106 @@ struct DerivedPhase {
     resources: Vec<crate::javascript::contracts::semantic_ir::SemanticResourceOperation>,
     objects: Vec<crate::javascript::contracts::semantic_ir::SemanticObjectOperation>,
     fingerprints: Vec<crate::javascript::contracts::semantic_ir::SemanticFunctionFingerprint>,
+}
+
+/// Owns the ordered producer phases shared by static and semantic analysis.
+/// Replaying member mutation collection would duplicate effects.
+pub(crate) struct PreparedSemanticState<'a> {
+    state: super::state::SemanticState<'a>,
+    phase: PreparedPhase,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PreparedPhase {
+    Definitions,
+    AmbientWrites,
+    MemberMutations,
+}
+
+impl<'a> PreparedSemanticState<'a> {
+    pub(crate) fn state(&self) -> &super::state::SemanticState<'a> {
+        &self.state
+    }
+
+    pub(crate) fn ensure_ambient_writes(&mut self) {
+        if self.phase == PreparedPhase::Definitions {
+            index_ambient_writes(&mut self.state);
+            self.phase = PreparedPhase::AmbientWrites;
+        }
+    }
+
+    pub(crate) fn ensure_member_mutations(&mut self) {
+        self.ensure_ambient_writes();
+        if self.phase == PreparedPhase::AmbientWrites {
+            collect_semantic_member_mutations(&mut self.state);
+            self.phase = PreparedPhase::MemberMutations;
+        }
+    }
+
+    pub(crate) fn inspect<T>(
+        &self,
+        inspect: impl FnOnce(&super::state::SemanticState<'a>) -> T,
+    ) -> T {
+        let _observations = InspectorObservations::new(&self.state);
+        inspect(&self.state)
+    }
+}
+
+/// Static inspectors may evaluate expressions the semantic pass never visits.
+/// Keep their warnings in the static result without leaking them or their
+/// memoized values into semantic coverage. Producer observations stay intact.
+struct InspectorObservations<'state, 'source> {
+    state: &'state super::state::SemanticState<'source>,
+    widenings: Vec<crate::javascript::parser::SourceRange>,
+    getter_limits: Vec<super::value_types::ResourceLimit>,
+    value_limits: Vec<super::value_types::ResourceLimit>,
+}
+
+impl<'state, 'source> InspectorObservations<'state, 'source> {
+    fn new(state: &'state super::state::SemanticState<'source>) -> Self {
+        Self {
+            state,
+            widenings: state.returned_reference_widenings.borrow().clone(),
+            getter_limits: state.getter_resource_limits.borrow().clone(),
+            value_limits: state.value_resource_limits.borrow().clone(),
+        }
+    }
+}
+
+impl Drop for InspectorObservations<'_, '_> {
+    fn drop(&mut self) {
+        *self.state.returned_reference_widenings.borrow_mut() = std::mem::take(&mut self.widenings);
+        *self.state.getter_resource_limits.borrow_mut() = std::mem::take(&mut self.getter_limits);
+        *self.state.value_resource_limits.borrow_mut() = std::mem::take(&mut self.value_limits);
+        super::values::clear_semantic_value_caches(self.state);
+    }
+}
+
+pub(crate) fn prepare_state<'a>(
+    parsed: &ParsedJavaScriptProgram<'a>,
+    static_import_resolution_mode: ResolutionMode,
+) -> PreparedSemanticState<'a> {
+    match prepare_state_with_checkpoint(parsed, static_import_resolution_mode, || {
+        ControlFlow::<()>::Continue(())
+    }) {
+        ControlFlow::Continue(prepared) => prepared,
+        ControlFlow::Break(()) => unreachable!("the default checkpoint never cancels"),
+    }
+}
+
+fn prepare_state_with_checkpoint<'a, B>(
+    parsed: &ParsedJavaScriptProgram<'a>,
+    static_import_resolution_mode: ResolutionMode,
+    mut checkpoint: impl FnMut() -> ControlFlow<B>,
+) -> ControlFlow<B, PreparedSemanticState<'a>> {
+    let context = AstContext::new(parsed.program);
+    let state = collect_definitions(context, static_import_resolution_mode, &mut checkpoint)?;
+    checkpoint()?;
+
+    ControlFlow::Continue(PreparedSemanticState {
+        state,
+        phase: PreparedPhase::Definitions,
+    })
 }
 
 /// Result of the internal source analysis.  The parsed arena and state do not
@@ -106,23 +208,35 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
         Ok(parsed) => parsed,
         Err(diagnostics) => return ControlFlow::Continue(Err(diagnostics)),
     };
+
+    let mut prepared =
+        prepare_state_with_checkpoint(&parsed, static_import_resolution_mode, &mut checkpoint)?;
+    analyze_prepared_source_with_checkpoint(&parsed, &mut prepared, checkpoint)
+}
+
+/// Continue semantic analysis from state prepared by the static phase.
+///
+/// The parsed arena and semantic state are borrowed together for this call;
+/// neither escapes in the returned contract.  The caller owns the phase
+/// boundary and may have already populated the mutation facts.
+pub(crate) fn analyze_prepared_source_with_checkpoint<'a, B>(
+    parsed: &ParsedJavaScriptProgram<'a>,
+    prepared: &mut PreparedSemanticState<'a>,
+    mut checkpoint: impl FnMut() -> ControlFlow<B>,
+) -> ControlFlow<B, Result<SemanticIr, Vec<RawDiagnostic>>> {
     let parser_partial = !parsed.errors.is_empty();
-    let context = AstContext::new(parsed.program);
+    collect_primary_state_phase(prepared, &mut checkpoint)?;
+    let state = &prepared.state;
 
-    let mut state = collect_definitions(context, static_import_resolution_mode, &mut checkpoint)?;
+    let public_call_writes = collect_public_call_writes(state);
+    let commonjs_receivers = index_commonjs_export_receivers(state, &public_call_writes);
+    let links = collect_semantic_module_links_with_facts(state, &commonjs_receivers);
     checkpoint()?;
 
-    collect_primary_state_phase(&mut state, &mut checkpoint)?;
-
-    let public_call_writes = collect_public_call_writes(&state);
-    let commonjs_receivers = index_commonjs_export_receivers(&state, &public_call_writes);
-    let links = collect_semantic_module_links_with_facts(&state, &commonjs_receivers);
-    checkpoint()?;
-
-    let primary = collect_primary_projection_phase(&state, links, &mut checkpoint)?;
-    let callable_phase = collect_callable_phase(&state, &primary, parser_partial, &mut checkpoint)?;
+    let primary = collect_primary_projection_phase(state, links, &mut checkpoint)?;
+    let callable_phase = collect_callable_phase(state, &primary, parser_partial, &mut checkpoint)?;
     let derived = collect_derived_phase(
-        &state,
+        state,
         &primary,
         &callable_phase,
         &callable_phase.callables,
@@ -134,7 +248,7 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
     resource_limits.extend(state.value_resource_limits.borrow().iter().cloned());
     resource_limits.sort_by_key(|limit| format!("{limit:?}"));
     resource_limits.dedup();
-    let limitations = limitations(&state, parser_partial, &resource_limits);
+    let limitations = limitations(state, parser_partial, &resource_limits);
     let widened_returned_references = state
         .returned_reference_widenings
         .borrow()
@@ -178,13 +292,13 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
 }
 
 fn collect_primary_state_phase<'a, B>(
-    state: &mut super::state::SemanticState<'a>,
+    prepared: &mut PreparedSemanticState<'a>,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
 ) -> ControlFlow<B, ()> {
-    index_ambient_writes(state);
+    prepared.ensure_ambient_writes();
     checkpoint()?;
 
-    collect_semantic_member_mutations(state);
+    prepared.ensure_member_mutations();
     checkpoint()?;
 
     ControlFlow::Continue(())
@@ -223,7 +337,7 @@ fn collect_primary_projection_phase<'a, B>(
 }
 
 fn collect_derived_phase<'a, B>(
-    state: &'a super::state::SemanticState<'a>,
+    state: &super::state::SemanticState<'a>,
     primary: &PrimaryPhase<'a>,
     callable_phase: &CallablePhase<'a>,
     callables: &[ContractCallable],
@@ -419,4 +533,83 @@ fn limitations(
     .map(str::to_owned));
 
     limitations
+}
+
+#[cfg(test)]
+mod shared_pipeline_tests {
+    use super::*;
+    use crate::javascript::static_analysis::analyze::analyze_source_with_prepared_state;
+
+    #[test]
+    fn semantic_output_matches_an_independent_pass_after_static_inspection() {
+        let sources = [
+            r#"import { helper } from "./dep.js";
+                export function run() { return helper(); }"#,
+            r#"const options = { url: "https://first.test" };
+                options.url = "https://second.test";
+                fetch(options.url);
+                export function endpoint() { return options.url; }"#,
+            r#"const { BrowserWindow } = require("electron");
+                const preferences = { nodeIntegration: false };
+                preferences.contextIsolation = true;
+                new BrowserWindow({ webPreferences: preferences });"#,
+            r#"const cyclic = { get url() { return cyclic.url; } };
+                fetch(cyclic.url);
+                export function read() { return cyclic.url; }"#,
+            r#"const first = {}; const second = {};
+                first.next = second; second.next = first;
+                first.value = globalThis.URL;
+                second[unknownKey] = globalThis.Location;
+                consume(first);"#,
+        ];
+
+        for source in sources {
+            let expected = analyze_source(source, Some("shared.js")).expect("standalone analysis");
+            let allocator = Allocator::default();
+            let parsed = parse_javascript_analysis_program(&allocator, source, Some("shared.js"))
+                .expect("parse source");
+            let prepared = prepare_state(&parsed, ResolutionMode::Import);
+            let (_, mut prepared) =
+                analyze_source_with_prepared_state(source, Some("shared.js"), &parsed, prepared);
+            let ControlFlow::Continue(Ok(actual)) =
+                analyze_prepared_source_with_checkpoint(&parsed, &mut prepared, || {
+                    ControlFlow::<()>::Continue(())
+                })
+            else {
+                panic!("shared analysis did not complete");
+            };
+
+            assert_eq!(
+                serde_json::to_value(actual).expect("serialize shared IR"),
+                serde_json::to_value(expected).expect("serialize standalone IR"),
+                "static inspection changed semantic output for {source}",
+            );
+        }
+    }
+
+    #[test]
+    fn source_analysis_honors_every_cancellation_checkpoint() {
+        let source = "let value = 1; value = 2; export function read() { return value; }";
+        let mut checkpoint_count = 0;
+        let completed = analyze_source_with_checkpoint(source, Some("cancel.js"), || {
+            checkpoint_count += 1;
+            ControlFlow::<usize>::Continue(())
+        });
+        assert!(matches!(completed, ControlFlow::Continue(Ok(_))));
+        assert!(checkpoint_count > 2);
+
+        for stop_at in 1..=checkpoint_count {
+            let mut observed = 0;
+            let cancelled = analyze_source_with_checkpoint(source, Some("cancel.js"), || {
+                observed += 1;
+                if observed == stop_at {
+                    ControlFlow::Break(stop_at)
+                } else {
+                    ControlFlow::Continue(())
+                }
+            });
+            assert!(matches!(cancelled, ControlFlow::Break(checkpoint) if checkpoint == stop_at));
+            assert_eq!(observed, stop_at);
+        }
+    }
 }

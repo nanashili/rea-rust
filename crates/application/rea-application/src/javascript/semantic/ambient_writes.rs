@@ -6,20 +6,22 @@
 //! retains the resulting paths in the canonical property-path index.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::rc::Rc;
 
 use crate::javascript::ast::{Field, Node, NodeKey};
+use rustc_hash::FxHashMap;
 
 use super::ast_values::{is_member, static_property_key, unwrapped};
-use super::callable_results::callable_result_expressions;
 use super::identity_writes::{
-    IdentityPath, IdentityWriteKind, JavaScriptIntrinsicInvocation, collect_identity_writes_steps,
-    electron_member_path,
+    ElectronMemberPath, IdentityPath, IdentityWriteKind, JavaScriptIntrinsicInvocation,
+    collect_identity_writes_steps, electron_member_path,
 };
 use super::iteration_sources::{IterationSourceKind, semantic_iteration_sources};
 use super::module_interop;
-use super::mutation_initializers::semantic_binding_at_read;
 use super::property_paths::{PropertyPath, PropertyPathKey, semantic_array_index_units};
-use super::returned_references::create_semantic_returned_references;
+use super::returned_references::{
+    SemanticReturnedReferenceResult, create_semantic_returned_references,
+};
 use super::state::{ProjectionKey, SemanticState};
 use super::value_types::JsString;
 
@@ -32,10 +34,116 @@ pub struct AmbientWriteEffect<'a> {
 
 #[derive(Clone, Debug)]
 struct StoredAmbientPath<'a> {
-    source_index: usize,
     node: Node<'a>,
+    member_path: Rc<ElectronMemberPath<'a>>,
     projection: PropertyPath,
     path: Option<PropertyPath>,
+}
+
+#[derive(Clone, Debug, Default)]
+struct StoredAmbientPaths<'a> {
+    entries: Vec<StoredAmbientPath<'a>>,
+    source_to_entry: FxHashMap<usize, usize>,
+    by_first: HashMap<PropertyPathKey, Vec<usize>>,
+    wildcard: Vec<usize>,
+    any: Vec<usize>,
+}
+
+impl<'a> StoredAmbientPaths<'a> {
+    fn add_to_index(&mut self, index: usize, path: Option<&PropertyPath>) {
+        let Some(path) = path.filter(|path| !path.is_empty()) else {
+            insert_sorted_index(&mut self.any, index);
+            return;
+        };
+        match path.first() {
+            Some(PropertyPathKey::Wildcard) => insert_sorted_index(&mut self.wildcard, index),
+            Some(first) => {
+                insert_sorted_index(self.by_first.entry(first.clone()).or_default(), index)
+            }
+            None => insert_sorted_index(&mut self.any, index),
+        }
+    }
+
+    fn remove_from_index(&mut self, index: usize, path: Option<&PropertyPath>) {
+        let bucket = match path
+            .filter(|path| !path.is_empty())
+            .and_then(|path| path.first())
+        {
+            None => &mut self.any,
+            Some(PropertyPathKey::Wildcard) => &mut self.wildcard,
+            Some(first) => self.by_first.entry(first.clone()).or_default(),
+        };
+        bucket.retain(|candidate| *candidate != index);
+    }
+
+    fn update_index(
+        &mut self,
+        index: usize,
+        previous: Option<&PropertyPath>,
+        current: Option<&PropertyPath>,
+    ) {
+        self.remove_from_index(index, previous);
+        self.add_to_index(index, current);
+    }
+
+    fn candidate_indices(&self, path: &PropertyPath) -> StoredCandidates<'_> {
+        if path.is_empty() || matches!(path.first(), Some(PropertyPathKey::Wildcard)) {
+            return StoredCandidates::all(self.entries.len());
+        }
+
+        StoredCandidates::indexed(
+            &self.any,
+            &self.wildcard,
+            self.by_first
+                .get(path.first().expect("non-empty path has a first key"))
+                .map_or(&[], Vec::as_slice),
+        )
+    }
+}
+
+fn insert_sorted_index(indices: &mut Vec<usize>, index: usize) {
+    let position = indices
+        .binary_search(&index)
+        .unwrap_or_else(|position| position);
+    indices.insert(position, index);
+}
+
+enum StoredCandidates<'a> {
+    All(std::ops::Range<usize>),
+    Indexed([&'a [usize]; 3]),
+}
+
+impl<'a> StoredCandidates<'a> {
+    fn all(entry_count: usize) -> Self {
+        Self::All(0..entry_count)
+    }
+
+    fn indexed(any: &'a [usize], wildcard: &'a [usize], matching: &'a [usize]) -> Self {
+        Self::Indexed([any, wildcard, matching])
+    }
+
+    fn next(&mut self) -> Option<usize> {
+        match self {
+            Self::All(range) => range.next_back(),
+            Self::Indexed(buckets) => {
+                let (bucket_index, candidate) = buckets
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, bucket)| bucket.last().map(|value| (index, *value)))
+                    .max_by_key(|(_, candidate)| *candidate)?;
+                let bucket = &mut buckets[bucket_index];
+                *bucket = &bucket[..bucket.len() - 1];
+                Some(candidate)
+            }
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            Self::All(range) => range.is_empty(),
+            Self::Indexed(buckets) => buckets.iter().all(|bucket| bucket.is_empty()),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -44,6 +152,197 @@ struct PendingEscape<'a> {
     browser_receiver: bool,
     projection: Option<PropertyPath>,
     capture: Node<'a>,
+}
+
+/// Immutable AST facts shared by all ambient resolver invocations in one
+/// analysis. Store projections, captures, and fixpoint generations remain
+/// outside this cache because they affect semantic results. Parser-assigned
+/// integer keys use the same bounded-key hasher as the resolver work maps.
+#[derive(Default)]
+struct MemberPathCache<'a> {
+    member_paths: FxHashMap<NodeKey, Rc<ElectronMemberPath<'a>>>,
+}
+
+impl<'a> MemberPathCache<'a> {
+    fn member_path(&mut self, source: &'a str, node: Node<'a>) -> &ElectronMemberPath<'a> {
+        let path = self
+            .member_paths
+            .entry(node.key())
+            .or_insert_with(|| Rc::new(electron_member_path(source, node)));
+        Rc::as_ref(path)
+    }
+
+    fn member_path_handle(
+        &mut self,
+        source: &'a str,
+        node: Node<'a>,
+    ) -> Rc<ElectronMemberPath<'a>> {
+        self.member_paths
+            .entry(node.key())
+            .or_insert_with(|| Rc::new(electron_member_path(source, node)))
+            .clone()
+    }
+}
+
+enum PendingWork<'source, 'stores> {
+    Node {
+        current: Node<'source>,
+        suffix: Option<PropertyPath>,
+        reads_at_self: bool,
+    },
+    StoredEdges {
+        cursor: StoredEdgeCursor<'source, 'stores>,
+    },
+}
+
+struct StoredEdgeCursor<'source, 'stores> {
+    path: PropertyPath,
+    stored_paths: &'stores StoredAmbientPaths<'source>,
+    candidates: StoredCandidates<'stores>,
+}
+
+fn stored_path_selected(
+    stored_path: Option<&PropertyPath>,
+    query: &PropertyPath,
+    escaped_contents: bool,
+) -> bool {
+    let selected = stored_path.is_none_or(|stored_path| {
+        stored_path.iter().enumerate().all(|(index, key)| {
+            index >= query.len()
+                || key == &PropertyPathKey::Wildcard
+                || query[index] == PropertyPathKey::Wildcard
+                || key == &query[index]
+        })
+    });
+    let too_short =
+        stored_path.is_some_and(|stored_path| query.len() < stored_path.len() && !escaped_contents);
+    selected && !too_short
+}
+
+impl<'source, 'stores> StoredEdgeCursor<'source, 'stores> {
+    fn take_candidate(&mut self) -> Option<usize> {
+        self.candidates.next()
+    }
+
+    fn requeue_remaining(self, pending: &mut Vec<PendingWork<'source, 'stores>>) {
+        if !self.candidates.is_empty() {
+            pending.push(PendingWork::StoredEdges { cursor: self });
+        }
+    }
+}
+
+fn queue_node<'source, 'stores>(
+    pending: &mut Vec<PendingWork<'source, 'stores>>,
+    current: Node<'source>,
+    suffix: Option<PropertyPath>,
+    reads_at_self: bool,
+) {
+    pending.push(PendingWork::Node {
+        current,
+        suffix,
+        reads_at_self,
+    });
+}
+
+fn schedule_next_stored_edge<'source, 'stores>(
+    mut cursor: StoredEdgeCursor<'source, 'stores>,
+    escaped_contents: bool,
+    expanded: &FxHashMap<NodeKey, Option<PropertyPath>>,
+    queued: &FxHashMap<NodeKey, Vec<PropertyPath>>,
+    pending: &mut Vec<PendingWork<'source, 'stores>>,
+) {
+    // Rejected and duplicate candidates do not change `expanded` or `queued`,
+    // so consume them locally. Requeue the cursor only after materializing the
+    // first useful node; this retains the previous LIFO ordering while avoiding
+    // one outer scheduler turn per skipped stored edge.
+    while let Some(stored_index) = cursor.take_candidate() {
+        let Some(stored) = cursor.stored_paths.entries.get(stored_index) else {
+            continue;
+        };
+        let path_len = cursor.path.len();
+        if !stored_path_selected(stored.path.as_ref(), &cursor.path, escaped_contents) {
+            continue;
+        }
+
+        let next = {
+            let remaining = stored
+                .path
+                .as_ref()
+                .filter(|stored_path| path_len >= stored_path.len())
+                .map_or(&[][..], |stored_path| &cursor.path[stored_path.len()..]);
+            let stored_member_path = stored.member_path.as_ref();
+            let stored_root_key = stored_member_path.root.key();
+            let duplicate = queued_stored_projection_matches(
+                stored_member_path,
+                expanded.get(&stored_root_key),
+                queued.get(&stored_root_key),
+                &stored.projection,
+                remaining,
+            );
+            if duplicate {
+                None
+            } else {
+                let mut next = stored.projection.clone();
+                next.extend(remaining.iter().cloned());
+                Some(next)
+            }
+        };
+
+        let Some(next) = next else {
+            continue;
+        };
+        let current = stored.node;
+        cursor.requeue_remaining(pending);
+        pending.push(PendingWork::Node {
+            current,
+            suffix: Some(next),
+            reads_at_self: true,
+        });
+        return;
+    }
+}
+
+fn queued_stored_projection_matches(
+    member_path: &ElectronMemberPath<'_>,
+    expanded: Option<&Option<PropertyPath>>,
+    queued: Option<&Vec<PropertyPath>>,
+    projection: &PropertyPath,
+    remaining: &[PropertyPathKey],
+) -> bool {
+    let Some(queued) = queued else {
+        return false;
+    };
+    let candidate_len = member_path.members.len() + projection.len() + remaining.len();
+    let Some(expanded) = expanded else {
+        return false;
+    };
+    let Some(previous) = expanded else {
+        return queued.iter().any(|path| path.is_empty());
+    };
+    if previous.len() != candidate_len {
+        // A length change widens the stored projection to unknown. Let the
+        // normal resolver update `expanded` before applying its queue guard.
+        return false;
+    }
+
+    let unchanged = previous.iter().enumerate().all(|(index, previous_key)| {
+        if *previous_key == PropertyPathKey::Wildcard {
+            return true;
+        }
+        if let Some(member) = member_path.members.get(index) {
+            return match (member, previous_key) {
+                (Some(name), PropertyPathKey::String(previous_name)) => name == previous_name,
+                (None, PropertyPathKey::Wildcard) => true,
+                _ => false,
+            };
+        }
+        let projection_index = index - member_path.members.len();
+        if let Some(key) = projection.get(projection_index) {
+            return key == previous_key;
+        }
+        remaining[index - member_path.members.len() - projection.len()] == *previous_key
+    });
+    unchanged && queued.iter().any(|queued_path| queued_path == previous)
 }
 
 /// Collapse repeated global-object aliases while preserving dynamic segments.
@@ -240,6 +539,8 @@ pub fn resolve_ambient_paths<'source, 'state>(
     capture: Option<Node<'source>>,
     escaped_contents: bool,
 ) -> Vec<PropertyPath> {
+    let mut returned_references = create_semantic_returned_references(state);
+    let mut structural_facts = MemberPathCache::default();
     resolve_ambient_paths_with_stores(
         state,
         node,
@@ -249,34 +550,68 @@ pub fn resolve_ambient_paths<'source, 'state>(
         escaped_contents,
         None,
         None,
+        &mut returned_references,
+        &mut structural_facts,
     )
 }
 
-fn resolve_ambient_paths_with_stores<'source, 'state>(
+fn resolve_ambient_paths_with_stores<'source, 'state, F>(
     state: &'state SemanticState<'source>,
     node: Node<'source>,
     possible_writes: bool,
     projection: Option<PropertyPath>,
     capture: Option<Node<'source>>,
     escaped_contents: bool,
-    stores: Option<&HashMap<NodeKey, Vec<StoredAmbientPath<'source>>>>,
+    stores: Option<&FxHashMap<NodeKey, StoredAmbientPaths<'source>>>,
     mut local_identities: Option<&mut Vec<(Node<'source>, PropertyPath)>>,
-) -> Vec<PropertyPath> {
-    let mut returned_references = create_semantic_returned_references(state);
-    let mut pending = vec![(node, projection, false)];
-    let mut expanded = HashMap::<NodeKey, Option<PropertyPath>>::new();
-    let mut queued = HashSet::<(NodeKey, String)>::new();
+    returned_references: &mut F,
+    structural_facts: &mut MemberPathCache<'source>,
+) -> Vec<PropertyPath>
+where
+    F: FnMut(Node<'source>) -> SemanticReturnedReferenceResult<'source>,
+{
+    let mut pending = vec![PendingWork::Node {
+        current: node,
+        suffix: projection,
+        reads_at_self: false,
+    }];
+    // NodeKey contains parser-assigned integer IDs and a two-value role. It
+    // cannot contain caller-controlled strings, so the faster integer-keyed
+    // hasher is safe for these local traversal maps. Path and string maps keep
+    // the standard randomized hasher.
+    let mut expanded = FxHashMap::<NodeKey, Option<PropertyPath>>::default();
+    // Keep the root keyed by itself and compare projections directly. Hashing
+    // every property key dominated this loop for large applications, while a
+    // root usually has only a few distinct projections.
+    let mut queued = FxHashMap::<NodeKey, Vec<PropertyPath>>::default();
     let mut result = Vec::new();
 
-    while let Some((current, suffix, reads_at_self)) = pending.pop() {
-        let member_path = electron_member_path(state.source, current);
+    while let Some(work) = pending.pop() {
+        let (current, suffix, reads_at_self) = match work {
+            PendingWork::Node {
+                current,
+                suffix,
+                reads_at_self,
+            } => (current, suffix, reads_at_self),
+            PendingWork::StoredEdges { cursor } => {
+                schedule_next_stored_edge(
+                    cursor,
+                    escaped_contents,
+                    &expanded,
+                    &queued,
+                    &mut pending,
+                );
+                continue;
+            }
+        };
+        let member_path = structural_facts.member_path(state.source, current);
         let root = member_path.root;
         let mut path = member_path
             .members
-            .into_iter()
+            .iter()
             .map(|member| {
-                member.map_or(PropertyPathKey::Wildcard, |value| {
-                    PropertyPathKey::String(value)
+                member.as_ref().map_or(PropertyPathKey::Wildcard, |value| {
+                    PropertyPathKey::String(value.clone())
                 })
             })
             .collect::<PropertyPath>();
@@ -308,10 +643,11 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
         // the source identity at its root; dropping it would turn a
         // conflicting alias into an unsound absence claim.
         let path = joined.unwrap_or_default();
-        let key = serde_json::to_string(&path).expect("property path is serializable");
-        if !queued.insert((root.key(), key)) {
+        let queued_paths = queued.entry(root.key()).or_default();
+        if queued_paths.iter().any(|queued_path| queued_path == &path) {
             continue;
         }
+        queued_paths.push(path.clone());
 
         if is_import_meta(state, root) {
             retain_unique_path(
@@ -374,13 +710,9 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                 let initializers = if possible_writes {
                     let read = if reads_at_self { Some(root) } else { capture };
                     let selected = read.map(|read| {
-                        semantic_binding_at_read(
-                            &state.bindings[binding],
-                            read,
-                            &state.parents,
-                            state.source,
-                        )
-                        .binding
+                        state
+                            .semantic_binding_at_read(&state.bindings[binding], read)
+                            .binding
                     });
                     selected
                         .unwrap_or_else(|| state.bindings[binding].clone())
@@ -403,7 +735,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                         })
                         .collect::<PropertyPath>();
                     next.extend(path.clone());
-                    pending.push((initializer.node, Some(next), true));
+                    queue_node(&mut pending, initializer.node, Some(next), true);
                 }
                 if !initializers.is_empty() {
                     continue;
@@ -421,38 +753,15 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
             if let Some(local_identities) = local_identities.as_mut() {
                 (**local_identities).push((root, path.clone()));
             }
-            for stored in stores
-                .and_then(|stores| stores.get(&root.key()))
-                .into_iter()
-                .flatten()
-            {
-                let selected = stored.path.as_ref().is_none_or(|stored_path| {
-                    stored_path.iter().enumerate().all(|(index, key)| {
-                        index >= path.len()
-                            || key == &PropertyPathKey::Wildcard
-                            || path[index] == PropertyPathKey::Wildcard
-                            || key == &path[index]
-                    })
+            if let Some(stored_paths) = stores.and_then(|stores| stores.get(&root.key())) {
+                let candidates = stored_paths.candidate_indices(&path);
+                pending.push(PendingWork::StoredEdges {
+                    cursor: StoredEdgeCursor {
+                        path: path.clone(),
+                        stored_paths,
+                        candidates,
+                    },
                 });
-                if !selected {
-                    continue;
-                }
-                if let Some(stored_path) = stored.path.as_ref()
-                    && path.len() < stored_path.len()
-                    && !escaped_contents
-                {
-                    continue;
-                }
-                let mut remaining = match stored.path.as_ref() {
-                    Some(stored_path) if path.len() >= stored_path.len() => {
-                        path[stored_path.len()..].to_vec()
-                    }
-                    Some(_) => Vec::new(),
-                    None => Vec::new(),
-                };
-                let mut next = stored.projection.clone();
-                next.append(&mut remaining);
-                pending.push((stored.node, Some(next), true));
             }
         }
         if possible_writes
@@ -474,7 +783,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     Some(child)
                 };
                 if let Some(child) = child {
-                    pending.push((child, Some(path.clone()), reads_at_self));
+                    queue_node(&mut pending, child, Some(path.clone()), reads_at_self);
                 }
             }
         }
@@ -490,7 +799,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                 for reference in returned_references(root).references {
                     let mut projected = reference.projection;
                     projected.extend(path.clone());
-                    pending.push((reference.node, Some(projected), reads_at_self));
+                    queue_node(&mut pending, reference.node, Some(projected), reads_at_self);
                 }
             }
             "ConditionalExpression" | "LogicalExpression" => {
@@ -501,7 +810,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     Field::Right,
                 ] {
                     if let Some(child) = root.field(state.source, field) {
-                        pending.push((child, Some(path.clone()), reads_at_self));
+                        queue_node(&mut pending, child, Some(path.clone()), reads_at_self);
                     }
                 }
             }
@@ -512,12 +821,12 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     .flatten()
                     .last()
                 {
-                    pending.push((child, Some(path), reads_at_self));
+                    queue_node(&mut pending, child, Some(path), reads_at_self);
                 }
             }
             "AssignmentExpression" if possible_writes && root.operator() == Some("=") => {
                 if let Some(right) = root.field(state.source, Field::Right) {
-                    pending.push((right, Some(path), reads_at_self));
+                    queue_node(&mut pending, right, Some(path), reads_at_self);
                 }
             }
             "CallExpression" | "OptionalCallExpression" | "NewExpression" if possible_writes => {
@@ -531,7 +840,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     })
                     && let Some(callee) = root.field(state.source, Field::Callee)
                 {
-                    pending.push((callee, Some(path.clone()), reads_at_self));
+                    queue_node(&mut pending, callee, Some(path.clone()), reads_at_self);
                 }
                 if root.babel_type() != "NewExpression" {
                     let intrinsic =
@@ -565,7 +874,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                         } else {
                             path.clone()
                         };
-                        pending.push((argument, Some(argument_path), reads_at_self));
+                        queue_node(&mut pending, argument, Some(argument_path), reads_at_self);
                     }
                 }
                 if let Some(callee) = root.field(state.source, Field::Callee) {
@@ -574,7 +883,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     for reference in returned {
                         let mut projected = reference.projection;
                         projected.extend(path.clone());
-                        pending.push((reference.node, Some(projected), reads_at_self));
+                        queue_node(&mut pending, reference.node, Some(projected), reads_at_self);
                     }
                 }
             }
@@ -585,7 +894,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     for reference in returned {
                         let mut projected = reference.projection;
                         projected.extend(path.clone());
-                        pending.push((reference.node, Some(projected), reads_at_self));
+                        queue_node(&mut pending, reference.node, Some(projected), reads_at_self);
                     }
                 }
             }
@@ -640,7 +949,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                         } else {
                             path.clone()
                         };
-                        pending.push((value, Some(suffix), reads_at_self));
+                        queue_node(&mut pending, value, Some(suffix), reads_at_self);
                     }
                 }
             }
@@ -654,7 +963,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                 for (index, element) in elements.into_iter().enumerate() {
                     if element.babel_type() == "SpreadElement" {
                         if let Some(argument) = element.field(state.source, Field::Argument) {
-                            pending.push((argument, Some(path.clone()), reads_at_self));
+                            queue_node(&mut pending, argument, Some(path.clone()), reads_at_self);
                         }
                         continue;
                     }
@@ -673,7 +982,7 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                             } else {
                                 path.clone()
                             };
-                        pending.push((element, Some(suffix), reads_at_self));
+                        queue_node(&mut pending, element, Some(suffix), reads_at_self);
                     }
                 }
             }
@@ -697,7 +1006,12 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                         .is_some_and(|property_key| property_key == *key)
                     {
                         if let Some(value) = property.field(state.source, Field::Value) {
-                            pending.push((value, Some(path[1..].to_vec()), reads_at_self));
+                            queue_node(
+                                &mut pending,
+                                value,
+                                Some(path[1..].to_vec()),
+                                reads_at_self,
+                            );
                         }
                         break;
                     }
@@ -727,17 +1041,22 @@ fn resolve_ambient_paths_with_stores<'source, 'state>(
                     continue;
                 }
                 if let Some(element) = elements.get(index).copied() {
-                    pending.push((element, Some(path[1..].to_vec()), reads_at_self));
+                    queue_node(
+                        &mut pending,
+                        element,
+                        Some(path[1..].to_vec()),
+                        reads_at_self,
+                    );
                 }
             }
             "SpreadElement" => {
                 if let Some(argument) = root.field(state.source, Field::Argument) {
-                    pending.push((argument, Some(path), reads_at_self));
+                    queue_node(&mut pending, argument, Some(path), reads_at_self);
                 }
             }
             "ObjectProperty" if possible_writes => {
                 if let Some(value) = root.field(state.source, Field::Value) {
-                    pending.push((value, Some(path), reads_at_self));
+                    queue_node(&mut pending, value, Some(path), reads_at_self);
                 }
             }
             _ => {}
@@ -762,40 +1081,46 @@ fn direct_callable_results<'a>(
         );
     }
 
-    candidates
-        .into_iter()
-        .filter(|candidate| {
-            matches!(
-                candidate.babel_type(),
-                "FunctionDeclaration"
-                    | "FunctionExpression"
-                    | "ArrowFunctionExpression"
-                    | "ObjectMethod"
-                    | "ClassMethod"
-                    | "ClassPrivateMethod"
-            )
-        })
-        .flat_map(|candidate| callable_result_expressions(state.source, &candidate))
-        .filter_map(|result| {
-            result.node.map(
-                |node| super::returned_references::SemanticReturnedReference {
-                    node,
-                    projection: if result.delegated {
-                        vec![PropertyPathKey::Wildcard]
-                    } else {
-                        Vec::new()
-                    },
-                },
-            )
-        })
-        .collect()
+    let mut results = Vec::new();
+    for candidate in candidates.into_iter().filter(|candidate| {
+        matches!(
+            candidate.babel_type(),
+            "FunctionDeclaration"
+                | "FunctionExpression"
+                | "ArrowFunctionExpression"
+                | "ObjectMethod"
+                | "ClassMethod"
+                | "ClassPrivateMethod"
+        )
+    }) {
+        results.extend(
+            state
+                .callable_result_expressions(&candidate)
+                .iter()
+                .filter_map(|result| {
+                    result.node.map(
+                        |node| super::returned_references::SemanticReturnedReference {
+                            node,
+                            projection: if result.delegated {
+                                vec![PropertyPathKey::Wildcard]
+                            } else {
+                                Vec::new()
+                            },
+                        },
+                    )
+                }),
+        );
+    }
+    results
 }
 
 fn resolve_pending_write_effects<'a>(
     state: &SemanticState<'a>,
     pending_writes: Vec<(usize, Node<'a>, PropertyPath)>,
     pending_targets: &[(Node<'a>, Node<'a>)],
-    stores: &HashMap<NodeKey, Vec<StoredAmbientPath<'a>>>,
+    stores: &FxHashMap<NodeKey, StoredAmbientPaths<'a>>,
+    returned_references: &mut impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a>,
+    structural_facts: &mut MemberPathCache<'a>,
     writes: &mut Vec<AmbientWriteEffect<'a>>,
 ) {
     for (target_id, node, suffix) in pending_writes {
@@ -811,6 +1136,8 @@ fn resolve_pending_write_effects<'a>(
             false,
             Some(stores),
             None,
+            returned_references,
+            structural_facts,
         ) {
             let mut path = identity;
             path.extend(suffix.iter().cloned());
@@ -823,7 +1150,9 @@ fn collect_stored_escapes<'a>(
     state: &SemanticState<'a>,
     source: &'a str,
     stored_references: &[super::iteration_sources::SemanticIterationSource<'a>],
-    stores: &HashMap<NodeKey, Vec<StoredAmbientPath<'a>>>,
+    stores: &FxHashMap<NodeKey, StoredAmbientPaths<'a>>,
+    returned_references: &mut impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a>,
+    structural_facts: &mut MemberPathCache<'a>,
     pending_escapes: &mut Vec<PendingEscape<'a>>,
 ) {
     for stored in stored_references {
@@ -843,6 +1172,8 @@ fn collect_stored_escapes<'a>(
             false,
             Some(stores),
             Some(&mut local_identities),
+            returned_references,
+            structural_facts,
         );
         if local_identities.is_empty() || !ambient.is_empty() {
             pending_escapes.push(PendingEscape {
@@ -858,7 +1189,9 @@ fn collect_stored_escapes<'a>(
 fn publish_pending_escapes<'a>(
     state: &SemanticState<'a>,
     pending_escapes: Vec<PendingEscape<'a>>,
-    stores: &HashMap<NodeKey, Vec<StoredAmbientPath<'a>>>,
+    stores: &FxHashMap<NodeKey, StoredAmbientPaths<'a>>,
+    returned_references: &mut impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a>,
+    structural_facts: &mut MemberPathCache<'a>,
     escapes: &mut Vec<PropertyPath>,
 ) {
     for pending in pending_escapes {
@@ -871,6 +1204,8 @@ fn publish_pending_escapes<'a>(
             true,
             Some(stores),
             None,
+            returned_references,
+            structural_facts,
         );
         if paths.is_empty() {
             paths = origin_path(state, pending.target, IdentityWriteKind::Member)
@@ -891,12 +1226,107 @@ fn publish_pending_escapes<'a>(
     }
 }
 
+/// Queries observed by each stored source, retained for this fixpoint only.
+/// A missing projection means that different query lengths were observed;
+/// every change must then be considered. Observations only widen, so an
+/// earlier dependency cannot disappear during a later source evaluation.
+#[derive(Default)]
+struct StoreDependents {
+    queries: FxHashMap<NodeKey, FxHashMap<usize, Option<PropertyPath>>>,
+}
+
+impl StoreDependents {
+    fn observe(&mut self, root: NodeKey, source_index: usize, query: &PropertyPath) {
+        self.queries
+            .entry(root)
+            .or_default()
+            .entry(source_index)
+            .and_modify(|previous| {
+                *previous = join_ambient_projection(previous.as_ref(), Some(query));
+            })
+            .or_insert_with(|| Some(query.clone()));
+    }
+
+    fn queue_affected(
+        &self,
+        root: NodeKey,
+        change: &StoredPathChange,
+        queued: &mut HashSet<usize>,
+        pending: &mut VecDeque<usize>,
+    ) {
+        for (source_index, query) in self.queries.get(&root).into_iter().flatten() {
+            let affected = query.as_ref().is_none_or(|query| change.affects(query));
+            if affected && queued.insert(*source_index) {
+                pending.push_back(*source_index);
+            }
+        }
+    }
+}
+
+struct StoredPathChange {
+    // Unknown stored paths are absorbing, so they never produce another
+    // change. Here `None` denotes a newly inserted entry with no prior path.
+    previous: Option<PropertyPath>,
+    current: Option<PropertyPath>,
+}
+
+impl StoredPathChange {
+    fn affects(&self, query: &PropertyPath) -> bool {
+        stored_path_selected(self.current.as_ref(), query, false)
+            || self
+                .previous
+                .as_ref()
+                .is_some_and(|previous| stored_path_selected(Some(previous), query, false))
+    }
+}
+
+fn record_stored_source<'a>(
+    entries: &mut StoredAmbientPaths<'a>,
+    source_index: usize,
+    source: &super::iteration_sources::SemanticIterationSource<'a>,
+    path: PropertyPath,
+    source_text: &'a str,
+    structural_facts: &mut MemberPathCache<'a>,
+) -> Option<StoredPathChange> {
+    let Some(existing_index) = entries.source_to_entry.get(&source_index).copied() else {
+        let inserted_index = entries.entries.len();
+        entries.entries.push(StoredAmbientPath {
+            node: source.node,
+            member_path: structural_facts.member_path_handle(source_text, source.node),
+            projection: source.projection.clone(),
+            path: Some(path.clone()),
+        });
+        entries.source_to_entry.insert(source_index, inserted_index);
+        entries.add_to_index(inserted_index, Some(&path));
+        return Some(StoredPathChange {
+            previous: None,
+            current: Some(path),
+        });
+    };
+
+    let previous = entries.entries[existing_index].path.as_ref()?;
+    let current = join_ambient_projection(Some(previous), Some(&path));
+    if current.as_ref() == Some(previous) {
+        return None;
+    }
+
+    let previous = previous.clone();
+    entries.entries[existing_index].path = current.clone();
+    entries.update_index(existing_index, Some(&previous), current.as_ref());
+    Some(StoredPathChange {
+        previous: Some(previous),
+        current,
+    })
+}
+
 fn resolve_stored_references<'a>(
     state: &SemanticState<'a>,
     stored_references: &[super::iteration_sources::SemanticIterationSource<'a>],
-) -> HashMap<NodeKey, Vec<StoredAmbientPath<'a>>> {
-    let mut stores = HashMap::<NodeKey, Vec<StoredAmbientPath<'a>>>::new();
-    let mut dependents = HashMap::<NodeKey, HashSet<usize>>::new();
+    returned_references: &mut impl FnMut(Node<'a>) -> SemanticReturnedReferenceResult<'a>,
+    structural_facts: &mut MemberPathCache<'a>,
+) -> FxHashMap<NodeKey, StoredAmbientPaths<'a>> {
+    let mut stores = FxHashMap::<NodeKey, StoredAmbientPaths<'a>>::default();
+    let mut dependents = StoreDependents::default();
     let mut pending_stores = VecDeque::from_iter(0..stored_references.len());
     let mut queued_stores = (0..stored_references.len()).collect::<HashSet<_>>();
 
@@ -918,59 +1348,28 @@ fn resolve_stored_references<'a>(
             false,
             Some(&stores),
             Some(&mut identities),
+            returned_references,
+            structural_facts,
         );
 
         for (node, path) in identities {
-            dependents
-                .entry(node.key())
-                .or_default()
-                .insert(source_index);
+            dependents.observe(node.key(), source_index, &path);
             let entries = stores.entry(node.key()).or_default();
-            let Some(existing) = entries
-                .iter_mut()
-                .find(|entry| entry.source_index == source_index)
-            else {
-                entries.push(StoredAmbientPath {
-                    source_index,
-                    node: source.node,
-                    projection: source.projection.clone(),
-                    path: Some(path),
-                });
-                queue_store_dependents(
-                    node.key(),
-                    &dependents,
-                    &mut queued_stores,
-                    &mut pending_stores,
-                );
+            let Some(change) = record_stored_source(
+                entries,
+                source_index,
+                source,
+                path,
+                state.source,
+                structural_facts,
+            ) else {
                 continue;
             };
-            let joined = join_ambient_projection(existing.path.as_ref(), Some(&path));
-            if existing.path != joined {
-                existing.path = joined;
-                queue_store_dependents(
-                    node.key(),
-                    &dependents,
-                    &mut queued_stores,
-                    &mut pending_stores,
-                );
-            }
+            dependents.queue_affected(node.key(), &change, &mut queued_stores, &mut pending_stores);
         }
     }
 
     stores
-}
-
-fn queue_store_dependents(
-    node: NodeKey,
-    dependents: &HashMap<NodeKey, HashSet<usize>>,
-    queued_stores: &mut HashSet<usize>,
-    pending_stores: &mut VecDeque<usize>,
-) {
-    for dependent in dependents.get(&node).into_iter().flatten() {
-        if queued_stores.insert(*dependent) {
-            pending_stores.push_back(*dependent);
-        }
-    }
 }
 
 /// Index ambient writes for a completed definitions state.
@@ -985,6 +1384,8 @@ pub fn index_ambient_writes<'a>(state: &mut SemanticState<'a>) {
     let mut stored_references = Vec::new();
     let mut escapes = Vec::<PropertyPath>::new();
     let mut assignment_escapes = Vec::<PropertyPath>::new();
+    let mut returned_references = create_semantic_returned_references(state);
+    let mut structural_facts = MemberPathCache::default();
 
     let _ = collect_identity_writes_steps(
         program,
@@ -1093,13 +1494,20 @@ pub fn index_ambient_writes<'a>(state: &mut SemanticState<'a>) {
         },
     );
 
-    let stores = resolve_stored_references(state, &stored_references);
+    let stores = resolve_stored_references(
+        state,
+        &stored_references,
+        &mut returned_references,
+        &mut structural_facts,
+    );
 
     resolve_pending_write_effects(
         state,
         pending_writes,
         &pending_targets,
         &stores,
+        &mut returned_references,
+        &mut structural_facts,
         &mut writes,
     );
 
@@ -1108,9 +1516,19 @@ pub fn index_ambient_writes<'a>(state: &mut SemanticState<'a>) {
         source,
         &stored_references,
         &stores,
+        &mut returned_references,
+        &mut structural_facts,
         &mut pending_escapes,
     );
-    publish_pending_escapes(state, pending_escapes, &stores, &mut escapes);
+    publish_pending_escapes(
+        state,
+        pending_escapes,
+        &stores,
+        &mut returned_references,
+        &mut structural_facts,
+        &mut escapes,
+    );
+    drop(returned_references);
 
     escapes.extend(assignment_escapes);
 
@@ -1207,11 +1625,107 @@ mod tests {
     use std::ops::ControlFlow;
 
     use super::*;
-    use crate::javascript::ast::AstContext;
+    use crate::javascript::ast::{AstContext, AstVisitor, Node, traverse};
     use crate::javascript::parser::parse_javascript_analysis_program;
     use crate::javascript::semantic::definitions::collect_definitions;
     use crate::javascript::semantic::state::ResolutionMode;
     use oxc_allocator::Allocator;
+
+    #[test]
+    fn stored_dependencies_keep_prior_queries_and_skip_disjoint_properties() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(&allocator, "", Some("dependencies.js"))
+            .expect("parse source");
+        let root = AstContext::new(parsed.program).root().key();
+        let key = |name: &str| PropertyPathKey::String(JsString::from(name));
+        let mut dependencies = StoreDependents::default();
+        dependencies.observe(root, 0, &vec![key("foo")]);
+        dependencies.observe(root, 1, &vec![key("bar")]);
+        dependencies.observe(root, 2, &vec![]);
+        dependencies.observe(root, 3, &vec![PropertyPathKey::Wildcard]);
+        dependencies.observe(root, 4, &vec![key("foo"), key("child")]);
+        dependencies.observe(root, 5, &vec![key("foo"), key("child")]);
+        dependencies.observe(root, 5, &vec![key("foo")]);
+        dependencies.observe(root, 6, &vec![key("foo")]);
+        dependencies.observe(root, 6, &vec![key("bar")]);
+
+        let affected_sources = |change: StoredPathChange| {
+            let mut queued = HashSet::new();
+            let mut pending = VecDeque::new();
+            dependencies.queue_affected(root, &change, &mut queued, &mut pending);
+            let mut pending = pending.into_iter().collect::<Vec<_>>();
+            pending.sort_unstable();
+            pending
+        };
+        assert_eq!(
+            affected_sources(StoredPathChange {
+                previous: None,
+                current: Some(vec![key("foo")]),
+            }),
+            vec![0, 3, 4, 5, 6],
+        );
+        assert_eq!(
+            affected_sources(StoredPathChange {
+                previous: Some(vec![key("foo")]),
+                current: Some(vec![PropertyPathKey::Wildcard]),
+            }),
+            vec![0, 1, 3, 4, 5, 6],
+        );
+        assert_eq!(
+            affected_sources(StoredPathChange {
+                previous: Some(vec![key("foo")]),
+                current: None,
+            }),
+            vec![0, 1, 2, 3, 4, 5, 6],
+        );
+    }
+
+    #[test]
+    fn stored_alias_fixpoint_preserves_nested_and_dynamic_global_writes() {
+        for source in [
+            r#"
+                const trunk = {};
+                const left = {};
+                const right = {};
+                trunk.left = left;
+                trunk.right = right;
+                left.global = globalThis;
+                trunk.left.global.URL = replacement;
+            "#,
+            r#"
+                const trunk = {};
+                const left = {};
+                trunk[key] = left;
+                left.global = globalThis;
+                trunk.other.global.URL = replacement;
+            "#,
+        ] {
+            let allocator = Allocator::default();
+            let parsed = parse_javascript_analysis_program(
+                &allocator,
+                source,
+                Some("stored-dependency-aliases.js"),
+            )
+            .expect("parse source");
+            let ControlFlow::Continue(mut state) = collect_definitions::<()>(
+                AstContext::new(parsed.program),
+                ResolutionMode::Require,
+                || ControlFlow::Continue(()),
+            ) else {
+                panic!("definition pass cancelled");
+            };
+
+            index_ambient_writes(&mut state);
+
+            assert!(
+                state.ambient_writes.covers(&[
+                    PropertyPathKey::String(JsString::from("global")),
+                    PropertyPathKey::String(JsString::from("URL")),
+                ]),
+                "nested stored aliases must retain the global URL write: {source}",
+            );
+        }
+    }
 
     #[test]
     fn indexes_global_member_writes() {
@@ -1234,5 +1748,312 @@ mod tests {
             PropertyPathKey::String(JsString::from("global")),
             PropertyPathKey::String(JsString::from("URL")),
         ]));
+    }
+
+    #[test]
+    fn escaped_fresh_object_without_stores_still_resolves_children() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: globalThis.URL, second: window.navigator }; consume(value);",
+            Some("ambient-escaped-object.js"),
+        )
+        .expect("parse source");
+        let ControlFlow::Continue(state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Require,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("definitions cancelled");
+        };
+
+        let mut object = None;
+        struct ObjectFinder<'ast, 'slot> {
+            object: &'slot mut Option<Node<'ast>>,
+        }
+        impl<'ast, 'slot> AstVisitor<'ast> for ObjectFinder<'ast, 'slot> {
+            fn enter(
+                &mut self,
+                node: &Node<'ast>,
+                _parent: Option<&Node<'ast>>,
+                _ancestors: &[Node<'ast>],
+            ) {
+                if node.babel_type() == "ObjectExpression" {
+                    *self.object = Some(*node);
+                }
+            }
+        }
+        let mut finder = ObjectFinder {
+            object: &mut object,
+        };
+        let _ = traverse(state.program, state.source, &mut finder, || {
+            ControlFlow::<()>::Continue(())
+        });
+        let object = object.expect("object expression");
+
+        let paths = resolve_ambient_paths(&state, object, true, None, Some(object), true);
+        assert_eq!(
+            paths,
+            vec![
+                vec![
+                    PropertyPathKey::String(JsString::from("global")),
+                    PropertyPathKey::String(JsString::from("navigator")),
+                ],
+                vec![
+                    PropertyPathKey::String(JsString::from("global")),
+                    PropertyPathKey::String(JsString::from("URL")),
+                ],
+            ]
+        );
+    }
+
+    #[test]
+    fn reuses_returned_reference_resolution_across_stored_aliases() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            r#"
+                const shared = {
+                    first: globalThis.URL,
+                    second: globalThis.Location,
+                };
+                const produced = flag ? shared.first : shared.second;
+                const holder = {};
+                holder.value = produced;
+                const alias = holder.value;
+                alias.target = value;
+            "#,
+            Some("returned-aliases.js"),
+        )
+        .expect("parse source");
+        let ControlFlow::Continue(mut state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Require,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("definitions cancelled");
+        };
+
+        let mut produced = None;
+        struct ProducedFinder<'ast, 'slot> {
+            produced: &'slot mut Option<Node<'ast>>,
+        }
+        impl<'ast, 'slot> AstVisitor<'ast> for ProducedFinder<'ast, 'slot> {
+            fn enter(
+                &mut self,
+                node: &Node<'ast>,
+                _parent: Option<&Node<'ast>>,
+                _ancestors: &[Node<'ast>],
+            ) {
+                if node.babel_type() == "ConditionalExpression" {
+                    *self.produced = Some(*node);
+                }
+            }
+        }
+        let mut finder = ProducedFinder {
+            produced: &mut produced,
+        };
+        let _ = traverse(state.program, state.source, &mut finder, || {
+            ControlFlow::<()>::Continue(())
+        });
+        let produced = produced.expect("produced conditional");
+        let mut returned_references = create_semantic_returned_references(&state);
+        let returned = returned_references(produced);
+        assert_eq!(
+            returned.precision,
+            super::super::returned_references::ReturnedReferencePrecision::Widened
+        );
+        drop(returned_references);
+
+        index_ambient_writes(&mut state);
+
+        assert!(
+            state.ambient_write_effects.iter().any(|effect| {
+                effect.path.first() == Some(&PropertyPathKey::String(JsString::from("global")))
+            }),
+            "the stored alias chain should retain an ambient global write"
+        );
+    }
+
+    #[test]
+    fn stored_path_index_matches_full_scan_and_preserves_entry_order() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = {};",
+            Some("stored-path-index.js"),
+        )
+        .expect("parse source");
+        let node = AstContext::new(parsed.program).root();
+        let string = |value: &str| PropertyPathKey::String(JsString::from(value));
+        let entries = [
+            Some(vec![string("foo"), string("child")]),
+            None,
+            Some(Vec::new()),
+            Some(vec![PropertyPathKey::Wildcard]),
+            Some(vec![string("bar")]),
+        ];
+        let mut index = StoredAmbientPaths::default();
+        for (source_index, path) in entries.iter().cloned().enumerate() {
+            index.entries.push(StoredAmbientPath {
+                node,
+                member_path: Rc::new(electron_member_path("const value = {};", node)),
+                projection: Vec::new(),
+                path,
+            });
+            index.source_to_entry.insert(source_index, source_index);
+            let entry_path = index.entries[source_index].path.clone();
+            index.add_to_index(source_index, entry_path.as_ref());
+        }
+
+        assert_eq!(index.source_to_entry.get(&3), Some(&3));
+        assert_eq!(index.source_to_entry.get(&4), Some(&4));
+
+        for query in [
+            Vec::new(),
+            vec![string("foo")],
+            vec![string("bar")],
+            vec![PropertyPathKey::Wildcard],
+        ] {
+            let mut indexed_candidates = index.candidate_indices(&query);
+            let mut indexed = std::iter::from_fn(|| indexed_candidates.next()).collect::<Vec<_>>();
+            indexed.reverse();
+            let full_scan = entries
+                .iter()
+                .enumerate()
+                .filter_map(|(source_index, stored_path)| {
+                    let selected = stored_path.as_ref().is_none_or(|stored_path| {
+                        stored_path.iter().enumerate().all(|(offset, key)| {
+                            offset >= query.len()
+                                || key == &PropertyPathKey::Wildcard
+                                || query[offset] == PropertyPathKey::Wildcard
+                                || key == &query[offset]
+                        })
+                    });
+                    selected.then_some(source_index)
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(indexed, full_scan);
+        }
+
+        let previous = index.entries[4].path.clone();
+        index.entries[4].path = Some(vec![string("foo")]);
+        let current = index.entries[4].path.clone();
+        index.update_index(4, previous.as_ref(), current.as_ref());
+        let mut foo_candidates = index.candidate_indices(&vec![string("foo")]);
+        assert_eq!(
+            std::iter::from_fn(|| foo_candidates.next()).collect::<Vec<_>>(),
+            vec![4, 3, 2, 1, 0]
+        );
+        let mut bar_candidates = index.candidate_indices(&vec![string("bar")]);
+        assert_eq!(
+            std::iter::from_fn(|| bar_candidates.next()).collect::<Vec<_>>(),
+            vec![3, 2, 1]
+        );
+        assert_eq!(index.source_to_entry.get(&4), Some(&4));
+
+        // Widening an earlier entry must insert it before later entries in
+        // its new bucket. Appending would change the lazy merge order.
+        let previous = index.entries[0].path.clone();
+        index.entries[0].path = Some(vec![PropertyPathKey::Wildcard, string("child")]);
+        let current = index.entries[0].path.clone();
+        index.update_index(0, previous.as_ref(), current.as_ref());
+        let mut bar_candidates = index.candidate_indices(&vec![string("bar")]);
+        assert_eq!(
+            std::iter::from_fn(|| bar_candidates.next()).collect::<Vec<_>>(),
+            vec![3, 2, 1, 0]
+        );
+    }
+
+    #[test]
+    fn stored_projection_skip_matches_normalized_member_join() {
+        let allocator = Allocator::default();
+        let source = "const value = globalThis.foo[dynamic].bar;";
+        let parsed =
+            parse_javascript_analysis_program(&allocator, source, Some("stored-member-join.js"))
+                .expect("parse source");
+        let mut member = None;
+        struct MemberFinder<'ast, 'slot> {
+            member: &'slot mut Option<Node<'ast>>,
+        }
+        impl<'ast, 'slot> AstVisitor<'ast> for MemberFinder<'ast, 'slot> {
+            fn enter(
+                &mut self,
+                node: &Node<'ast>,
+                _parent: Option<&Node<'ast>>,
+                _ancestors: &[Node<'ast>],
+            ) {
+                if self.member.is_none() && node.babel_type() == "MemberExpression" {
+                    *self.member = Some(*node);
+                }
+            }
+        }
+        let mut finder = MemberFinder {
+            member: &mut member,
+        };
+        let _ = traverse(
+            AstContext::new(parsed.program).root(),
+            source,
+            &mut finder,
+            || ControlFlow::<()>::Continue(()),
+        );
+        let member = member.expect("member expression");
+        let member_path = electron_member_path(source, member);
+        assert_eq!(member_path.root.identifier_name(), Some("globalThis"));
+        assert_eq!(member_path.members.len(), 3);
+        let member_prefix = member_path
+            .members
+            .iter()
+            .map(|member| {
+                member.as_ref().map_or(PropertyPathKey::Wildcard, |name| {
+                    PropertyPathKey::String(name.clone())
+                })
+            })
+            .collect::<PropertyPath>();
+        let projection = vec![PropertyPathKey::String(JsString::from("projection"))];
+        let remainder = vec![PropertyPathKey::String(JsString::from("tail"))];
+        let mut candidate = member_prefix;
+        candidate.extend(projection.iter().cloned());
+        candidate.extend(remainder.iter().cloned());
+
+        let assert_case = |previous: Option<PropertyPath>, queued: Vec<PropertyPath>| {
+            let joined = join_ambient_projection(previous.as_ref(), Some(&candidate));
+            let expected = joined == previous
+                && queued.iter().any(|queued_path| {
+                    queued_path.as_slice() == joined.as_deref().unwrap_or_default()
+                });
+            let actual = queued_stored_projection_matches(
+                &member_path,
+                Some(&previous),
+                Some(&queued),
+                &projection,
+                &remainder,
+            );
+            assert_eq!(actual, expected);
+        };
+
+        assert!(!queued_stored_projection_matches(
+            &member_path,
+            None,
+            Some(&vec![candidate.clone()]),
+            &projection,
+            &remainder,
+        ));
+        assert_case(Some(candidate.clone()), vec![candidate.clone()]);
+        assert_case(Some(candidate.clone()), vec![]);
+        assert_case(Some(vec![]), vec![vec![]]);
+        let widened = vec![PropertyPathKey::Wildcard; candidate.len()];
+        assert_case(Some(widened.clone()), vec![widened]);
+        assert_case(
+            Some(vec![PropertyPathKey::Wildcard; candidate.len()]),
+            vec![candidate.clone()],
+        );
+        assert_case(Some(vec![PropertyPathKey::Wildcard; 2]), vec![vec![]]);
+        assert_case(
+            Some(vec![PropertyPathKey::String(JsString::from("other"))]),
+            vec![],
+        );
+        assert_case(None, vec![vec![]]);
+        assert_case(None, vec![]);
     }
 }

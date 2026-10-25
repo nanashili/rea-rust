@@ -19,9 +19,7 @@ use crate::javascript::semantic::data_effect_helpers::{
     assigned_semantic_result_bindings, builtin_data_effect_method, data_effect_literal_string,
     data_effect_member_callee, scalar_assigned_result_binding, traverse_data_effects,
 };
-use crate::javascript::semantic::mutation_initializers::{
-    BindingReadStatus, semantic_binding_at_read,
-};
+use crate::javascript::semantic::mutation_initializers::BindingReadStatus;
 use crate::javascript::semantic::state::SemanticState;
 use crate::javascript::semantic::value_types::JsString;
 use crate::javascript::static_analysis::helpers::range;
@@ -48,7 +46,7 @@ struct SpawnCandidate<'a> {
 /// Collect child-process facts in source traversal order.
 pub fn collect_semantic_child_processes<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
 ) -> ChildProcessAnalysis {
     let callable_ids: HashSet<String> = callables.iter().map(|c| c.callable_id.clone()).collect();
@@ -288,7 +286,7 @@ fn is_callback(node: Node<'_>, _state: &SemanticState<'_>) -> bool {
 
 fn collect_interactions<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
     candidates: &[SpawnCandidate<'a>],
 ) -> Vec<SemanticChildProcessInteraction> {
@@ -424,7 +422,7 @@ fn signal_name<'a>(args: &[Node<'a>], state: &SemanticState<'a>) -> Option<JsStr
 
 fn resolve_candidates<'a>(
     node: Option<Node<'a>>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     by_node: &HashMap<crate::javascript::ast::NodeKey, SpawnCandidate<'a>>,
     by_binding: &HashMap<String, Vec<SpawnCandidate<'a>>>,
 ) -> (Vec<SpawnCandidate<'a>>, bool) {
@@ -464,7 +462,7 @@ fn resolve_candidates<'a>(
         for candidate in by_binding.get(&binding.binding_id).into_iter().flatten() {
             fallback.insert(candidate.node.key());
         }
-        let snapshot = semantic_binding_at_read(binding, current, &state.parents, state.source);
+        let snapshot = state.semantic_binding_at_read(binding, current);
         let selected = snapshot.binding;
         let mut initializers = selected.initializers.clone();
         initializers.extend(selected.reference_initializers.iter().map(|reference| {

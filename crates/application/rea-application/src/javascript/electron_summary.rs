@@ -9,8 +9,8 @@ use std::collections::{HashMap, HashSet};
 
 use super::graph::json::{Json, Obj};
 use super::resolution::artifact_path::{
-    ResolutionContext, ResolveInput, ResolverFile, ResolverFileText, RuntimePathKind,
-    resolve_artifact_path,
+    PackageMetadataCache, ResolutionContext, ResolveInput, ResolverFile, ResolverFileText,
+    RuntimePathKind, resolve_artifact_path,
 };
 use super::resolution::mode::ModuleResolutionMode;
 use super::semantic::value_types::JsString;
@@ -19,6 +19,7 @@ use super::semantic::value_types::JsString;
 pub fn summarize_electron_boundaries(analysis: &Json, directory_paths: &HashSet<JsString>) -> Json {
     let files = analysis.at("files").arr();
     let file_lookup = resolver_files(files);
+    let package_metadata_cache = PackageMetadataCache::default();
     let file_kinds = file_kinds(files);
     let javascript = files
         .iter()
@@ -85,6 +86,7 @@ pub fn summarize_electron_boundaries(analysis: &Json, directory_paths: &HashSet<
                         None,
                         &file_lookup,
                         directory_paths,
+                        &package_metadata_cache,
                         &file_kinds,
                         None,
                     )
@@ -108,6 +110,7 @@ pub fn summarize_electron_boundaries(analysis: &Json, directory_paths: &HashSet<
                     .and_then(module_mode),
                 &file_lookup,
                 directory_paths,
+                &package_metadata_cache,
                 &file_kinds,
                 Some("native-addon"),
             )
@@ -325,13 +328,10 @@ fn resolver_files(files: &[Json]) -> HashMap<JsString, ResolverFile> {
             let path = file.at("path").as_js_string()?.clone();
             let text = file.at("text");
             let text = if text.at("included").as_bool() == Some(true) {
-                text.at("value")
-                    .as_js_string()
-                    .and_then(|value| value.try_to_string().ok())
-                    .map_or_else(
-                        || ResolverFileText::Excluded("invalid-utf8".into()),
-                        ResolverFileText::Included,
-                    )
+                text.at("value").as_js_string().map_or_else(
+                    || ResolverFileText::Excluded("invalid-utf8".into()),
+                    |value| ResolverFileText::Included(value.clone()),
+                )
             } else {
                 ResolverFileText::Excluded("outside-analysis-scope".into())
             };
@@ -383,6 +383,7 @@ fn resolve_path(
     module_kind: Option<ModuleResolutionMode>,
     files: &HashMap<JsString, ResolverFile>,
     directory_paths: &HashSet<JsString>,
+    package_metadata_cache: &PackageMetadataCache,
 ) -> Option<String> {
     let source_path = file.at("path").as_js_string()?.try_to_string().ok()?;
     let declared_path = specifier.try_to_string().ok()?;
@@ -392,10 +393,12 @@ fn resolve_path(
         context,
         files,
         directory_paths: Some(directory_paths),
+        container_directory_paths: None,
         unanalyzed_files: None,
         html_base_href: None,
         module_kind,
         runtime_path_kind: Some(runtime_path_kind),
+        package_metadata_cache,
     })
     .resolved_path
 }
@@ -408,6 +411,7 @@ fn resolves_to_file(
     module_kind: Option<ModuleResolutionMode>,
     files: &HashMap<JsString, ResolverFile>,
     directory_paths: &HashSet<JsString>,
+    package_metadata_cache: &PackageMetadataCache,
     file_kinds: &HashMap<JsString, String>,
     expected_kind: Option<&str>,
 ) -> bool {
@@ -419,6 +423,7 @@ fn resolves_to_file(
         module_kind,
         files,
         directory_paths,
+        package_metadata_cache,
     )
     .is_some_and(|path| {
         file_kinds

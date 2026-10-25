@@ -11,12 +11,16 @@ use std::ops::ControlFlow;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
 
+use oxc_allocator::Allocator;
+
 use super::acquisition::{JavaScriptArtifactFileSet, canonical_file_json};
 use super::artifact_files::{JavaScriptArtifactFile, JavaScriptArtifactFileKind, JavaScriptText};
 use super::contracts::static_analysis::{ElectronFindings, ParseStatus, StaticAnalysis};
 use super::graph::SemanticLimits;
 use super::graph::json::{Json, Obj, parse};
 use super::non_js;
+use super::parser::parse_javascript_analysis_program;
+use super::semantic::state::ResolutionMode;
 use super::semantic::value_types::JsString;
 use super::worker::{WorkerFileMetadata, WorkerLimits, WorkerRequest, analyze_source_with_worker};
 
@@ -382,7 +386,7 @@ fn analyze_file<B>(
                             .with(
                                 "analysis_failure",
                                 Obj::new()
-                                    .with("scope", "analyze-javascript-source")
+                                    .with("scope", javascript_analysis_scope())
                                     .with("status", "partial")
                                     .with("reason", failure.to_string())
                                     .with("error", Json::Null)
@@ -417,6 +421,8 @@ fn analyze_file<B>(
             ));
         }
     };
+    let static_json = serialized(&static_result);
+    drop(static_result);
 
     if let Some(failure) = semantic_failure {
         let interruption = AnalysisInterruption::Failure(format!(
@@ -426,12 +432,12 @@ fn analyze_file<B>(
         return ControlFlow::Continue((
             Obj::new()
                 .with("file", file_value)
-                .with("javascript", serialized(&static_result))
+                .with("javascript", static_json)
                 .with("semantic", Json::Null)
                 .with(
                     "analysis_failure",
                     Obj::new()
-                        .with("scope", "analyze-javascript-source")
+                        .with("scope", javascript_analysis_scope())
                         .with("status", "partial")
                         .with("reason", interruption.message())
                         .with("error", Json::Null)
@@ -506,7 +512,7 @@ fn analyze_file<B>(
     };
     let mut result = Obj::new()
         .with("file", file_value)
-        .with("javascript", serialized(&static_result));
+        .with("javascript", static_json);
     if semantic.is_none() && projection.is_none() && metadata.is_none() {
         result.set("semantic", Json::Null);
     } else {
@@ -555,12 +561,19 @@ fn analysis_failure_file(file: Json, path: &str, reason: &str, limits: Json) -> 
         .with(
             "analysis_failure",
             Obj::new()
-                .with("scope", "analyze-javascript-source")
+                .with("scope", javascript_analysis_scope())
                 .with("status", "interrupted")
                 .with("reason", format!("{path}: {reason}"))
                 .with("error", Json::Null)
                 .with("limits", limits),
         )
+        .into()
+}
+
+fn javascript_analysis_scope() -> Json {
+    Obj::new()
+        .with("operation", "analyze-javascript-source")
+        .with("authority", "ast-static-analysis")
         .into()
 }
 
@@ -669,7 +682,7 @@ fn unavailable_file(file: &super::artifact_files::JavaScriptUnanalyzedArtifactFi
         .with(
             "analysis_failure",
             Obj::new()
-                .with("scope", "analyze-javascript-source")
+                .with("scope", javascript_analysis_scope())
                 .with("status", "not-started")
                 .with("reason", file.limitations.join("; "))
                 .with("error", Json::Null)
@@ -690,13 +703,17 @@ fn project_semantic_response(
     unknown_budget: usize,
     paths: &[Json],
 ) -> Result<ProjectedSemanticResponse, super::worker::WorkerSemanticFailure> {
-    let projection = super::graph::project_file(file, ir_json, node_budget, unknown_budget, paths)
-        .map_err(|error| super::worker::WorkerSemanticFailure {
-            phase: "project-file".to_owned(),
-            reason: format!("{error:?}"),
-        })?;
+    let projection_json =
+        super::graph::project_file(file, ir_json, node_budget, unknown_budget, paths).map_err(
+            |error| super::worker::WorkerSemanticFailure {
+                phase: "project-file".to_owned(),
+                reason: format!("{error:?}"),
+            },
+        )?;
+    let projection_text = projection_json.canonical();
+    drop(projection_json);
     let projection =
-        serde_json::value::RawValue::from_string(projection.canonical()).map_err(|error| {
+        serde_json::value::RawValue::from_string(projection_text).map_err(|error| {
             super::worker::WorkerSemanticFailure {
                 phase: "serialize-projection".to_owned(),
                 reason: error.to_string(),
@@ -783,6 +800,15 @@ fn compact_module_ir(ir: &Json) -> Json {
         .into()
 }
 
+struct WorkerSourceAnalysis {
+    static_analysis: Box<serde_json::value::RawValue>,
+    call_paths: Vec<Json>,
+    semantic_ir: Result<
+        Option<super::contracts::semantic_ir::SemanticIr>,
+        super::worker::WorkerSemanticFailure,
+    >,
+}
+
 pub(crate) fn analyze_source_for_worker_with_checkpoint(
     source: &str,
     path: Option<&str>,
@@ -791,78 +817,130 @@ pub(crate) fn analyze_source_for_worker_with_checkpoint(
     metadata: Option<&super::worker::WorkerFileMetadata>,
     checkpoint: impl FnOnce(&serde_json::value::RawValue),
 ) -> super::worker::WorkerResponse {
-    let static_result = analyze_source_for_static_analysis(source, path);
-    let static_raw = serde_json::value::to_raw_value(&static_result)
-        .expect("static analysis contract is serializable");
-    checkpoint(&static_raw);
-
-    // A syntax failure is already a complete static checkpoint. The
-    // semantic parser cannot recover facts from a source that did not yield
-    // an AST, and reporting that second parser failure would turn the
-    // TypeScript workflow's successful partial file into an execution error.
-    if static_result.parse_status == ParseStatus::Failed {
-        return super::worker::WorkerResponse {
-            static_analysis: static_raw,
-            semantic_ir: None,
-            semantic_projection: None,
-            semantic_metadata: None,
-            semantic_failure: None,
+    // Source analysis owns the arena and producer caches. Release them before
+    // expanding the owned IR into graph JSON and serializing the projection.
+    let analysis = analyze_worker_source(source, path, checkpoint);
+    let projected = catch_semantic_failure(|| {
+        let Some(ir) = analysis.semantic_ir? else {
+            return Ok(None);
         };
-    }
-
-    let semantic_attempt = catch_unwind(AssertUnwindSafe(|| {
-        let ir = super::semantic::analysis::analyze_source(source, path).map_err(|errors| {
-            super::worker::WorkerSemanticFailure {
-                phase: "analyze-source".to_owned(),
-                reason: format_diagnostics(&errors),
-            }
-        })?;
         let ir_json = serialized(&ir);
-        let paths = serialized(&static_result)
-            .at("electron")
-            .at("call_paths")
-            .arr()
-            .to_vec();
-        let file = metadata.map_or_else(
-            || Obj::new().with("path", path.unwrap_or("<source>")).into(),
-            |metadata| {
-                Obj::new()
-                    .with("path", metadata.path.clone())
-                    .with("container_sha256", metadata.container_sha256.clone())
-                    .with("sha256", metadata.sha256.clone())
-                    .with("bytes", metadata.bytes as usize)
-                    .with(
-                        "inventory_artifact_id",
-                        metadata.inventory_artifact_id.clone(),
-                    )
-                    .with("kind", metadata.kind.clone())
-                    .with("unpacked", metadata.unpacked)
-                    .into()
-            },
-        );
-        project_semantic_response(&ir_json, &file, node_budget, unknown_budget, &paths)
-    }));
-    let (semantic_ir, semantic_projection, semantic_metadata, semantic_failure) =
-        match semantic_attempt {
-            Ok(Ok(result)) => (None, Some(result.projection), Some(result.metadata), None),
-            Ok(Err(failure)) => (None, None, None, Some(failure)),
-            Err(payload) => (
-                None,
-                None,
-                None,
-                Some(super::worker::WorkerSemanticFailure {
-                    phase: "semantic-pipeline-panic".to_owned(),
-                    reason: panic_reason(payload),
-                }),
-            ),
-        };
+        drop(ir);
+
+        let file = worker_semantic_file(path, metadata);
+        project_semantic_response(
+            &ir_json,
+            &file,
+            node_budget,
+            unknown_budget,
+            &analysis.call_paths,
+        )
+        .map(Some)
+    });
+
+    let (semantic_projection, semantic_metadata, semantic_failure) = match projected {
+        Ok(Some(result)) => (Some(result.projection), Some(result.metadata), None),
+        Ok(None) => (None, None, None),
+        Err(failure) => (None, None, Some(failure)),
+    };
     super::worker::WorkerResponse {
-        static_analysis: static_raw,
-        semantic_ir,
+        static_analysis: analysis.static_analysis,
+        semantic_ir: None,
         semantic_projection,
         semantic_metadata,
         semantic_failure,
     }
+}
+
+fn analyze_worker_source(
+    source: &str,
+    path: Option<&str>,
+    checkpoint: impl FnOnce(&serde_json::value::RawValue),
+) -> WorkerSourceAnalysis {
+    let allocator = Allocator::default();
+    let parsed = match parse_javascript_analysis_program(&allocator, source, path) {
+        Ok(parsed) => parsed,
+        Err(_) => {
+            let static_analysis = serde_json::value::to_raw_value(&failed_static_analysis())
+                .expect("static analysis contract is serializable");
+            checkpoint(&static_analysis);
+            return WorkerSourceAnalysis {
+                static_analysis,
+                call_paths: Vec::new(),
+                semantic_ir: Ok(None),
+            };
+        }
+    };
+
+    let prepared = super::semantic::analysis::prepare_state(&parsed, ResolutionMode::Import);
+    let (static_result, mut prepared) =
+        super::static_analysis::analyze::analyze_source_with_prepared_state(
+            source, path, &parsed, prepared,
+        );
+    let static_analysis = serde_json::value::to_raw_value(&static_result)
+        .expect("static analysis contract is serializable");
+    checkpoint(&static_analysis);
+    let call_paths = serialized(&static_result.electron.call_paths)
+        .arr()
+        .to_vec();
+
+    // Preserve the completed static checkpoint when semantic analysis fails.
+    let semantic_ir = if static_result.parse_status == ParseStatus::Failed {
+        Ok(None)
+    } else {
+        catch_semantic_failure(|| {
+            match super::semantic::analysis::analyze_prepared_source_with_checkpoint(
+                &parsed,
+                &mut prepared,
+                || ControlFlow::<()>::Continue(()),
+            ) {
+                ControlFlow::Continue(result) => result,
+                ControlFlow::Break(()) => unreachable!("the default checkpoint never cancels"),
+            }
+            .map(Some)
+            .map_err(|errors| super::worker::WorkerSemanticFailure {
+                phase: "analyze-source".to_owned(),
+                reason: format_diagnostics(&errors),
+            })
+        })
+    };
+    WorkerSourceAnalysis {
+        static_analysis,
+        call_paths,
+        semantic_ir,
+    }
+}
+
+fn catch_semantic_failure<T>(
+    operation: impl FnOnce() -> Result<T, super::worker::WorkerSemanticFailure>,
+) -> Result<T, super::worker::WorkerSemanticFailure> {
+    catch_unwind(AssertUnwindSafe(operation)).unwrap_or_else(|payload| {
+        Err(super::worker::WorkerSemanticFailure {
+            phase: "semantic-pipeline-panic".to_owned(),
+            reason: panic_reason(payload),
+        })
+    })
+}
+
+fn worker_semantic_file(
+    path: Option<&str>,
+    metadata: Option<&super::worker::WorkerFileMetadata>,
+) -> Json {
+    let Some(metadata) = metadata else {
+        return Obj::new().with("path", path.unwrap_or("<source>")).into();
+    };
+    Obj::new()
+        .with("path", metadata.path.clone())
+        .with("container_sha256", metadata.container_sha256.clone())
+        .with("sha256", metadata.sha256.clone())
+        .with("bytes", metadata.bytes as usize)
+        .with(
+            "inventory_artifact_id",
+            metadata.inventory_artifact_id.clone(),
+        )
+        .with("kind", metadata.kind.clone())
+        .with("unpacked", metadata.unpacked)
+        .into()
 }
 
 fn panic_reason(payload: Box<dyn std::any::Any + Send>) -> String {
@@ -886,6 +964,103 @@ fn format_diagnostics(diagnostics: &[super::parser::RawDiagnostic]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::javascript::graph::builder::build_application_graph;
+    use crate::javascript::graph::resolution::{ArtifactPathResolver, ResolveRequest};
+
+    struct TestResolver;
+
+    impl ArtifactPathResolver for TestResolver {
+        fn resolve(&self, _request: &ResolveRequest<'_>) -> Json {
+            Obj::new()
+                .with("resolution_status", "not-applicable")
+                .with("limitations", Json::Array(Vec::new()))
+                .into()
+        }
+
+        fn module_resolution_mode(
+            &self,
+            _source_path: &JsString,
+            _reference_kind: &str,
+            _explicit_mode: Option<&str>,
+        ) -> String {
+            "commonjs".to_owned()
+        }
+    }
+
+    #[test]
+    fn interrupted_file_graph_preserves_scope_evidence() {
+        let digest = "a".repeat(64);
+        let file = Obj::new()
+            .with("path", "worker.js")
+            .with("sha256", digest.clone())
+            .with("kind", "javascript")
+            .with("text", Obj::new().with("included", true));
+        let interrupted =
+            analysis_failure_file(file.into(), "worker.js", "worker timed out", Json::Null);
+        let snapshot = Obj::new()
+            .with(
+                "manifest",
+                Obj::new()
+                    .with("root_artifact_id", "art_root")
+                    .with("root_sha256", digest.clone())
+                    .with("root_format", "directory")
+                    .with("manifest_id", "manifest_test")
+                    .with("graph_sha256", digest.clone()),
+            )
+            .with(
+                "nodes",
+                Json::Array(vec![
+                    Obj::new()
+                        .with("artifact_id", "art_root")
+                        .with("sha256", digest.clone())
+                        .with("size", 1_usize)
+                        .into(),
+                ]),
+            )
+            .with("integrity_contradictions", Json::Array(Vec::new()));
+        let file_set = Obj::new()
+            .with("containers", Json::Array(Vec::new()))
+            .with("packages", Json::Array(Vec::new()))
+            .with("json_modules", Json::Array(Vec::new()))
+            .with("source_maps", Json::Array(Vec::new()))
+            .with("html_inline_scripts", Json::Array(Vec::new()))
+            .with("unavailable_relevant_files", Json::Array(Vec::new()));
+        let analysis = Obj::new().with("files", Json::Array(vec![interrupted]));
+
+        let graph = build_application_graph(
+            &snapshot.into(),
+            &file_set.into(),
+            &analysis.into(),
+            &TestResolver,
+        )
+        .expect("minimal interrupted analysis graph");
+        let unknown_node = graph
+            .at("nodes")
+            .arr()
+            .iter()
+            .find(|node| {
+                node.at("kind").str() == "unknown"
+                    && node.at("observations").arr().iter().any(|observation| {
+                        observation.at("properties").at("analysis_status").str() == "interrupted"
+                    })
+            })
+            .expect("interrupted analysis observation");
+        let evidence = unknown_node
+            .at("observations")
+            .arr()
+            .iter()
+            .find(|observation| {
+                observation.at("properties").at("analysis_status").str() == "interrupted"
+            })
+            .expect("interrupted observation")
+            .at("evidence");
+
+        assert_eq!(evidence.at("authority").str(), "ast-static-analysis");
+        assert_eq!(
+            evidence.at("extractor").at("operation").str(),
+            "analyze-javascript-source"
+        );
+    }
 
     #[test]
     fn compact_module_ir_keeps_import_export_graph_facts() {
