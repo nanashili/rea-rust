@@ -2,32 +2,18 @@
 
 ## Source setup
 
-The Rust workspace currently embeds seven helper files from the parent
-checkout's `bridge/` and `scripts/` directories at compile time. A standalone
-clone does not contain them yet. Use a checkout of the original REA repository
-as the parent directory:
+Clone and build this repository directly:
 
 ```sh
-git clone https://github.com/morluto/rea.git rea-workspace
-git -C rea-workspace checkout 833136507dd79d959340b09862a53af344e4f1b3
-git clone https://github.com/nanashili/rea-rust.git rea-workspace/rea-rust
-cd rea-workspace/rea-rust
+git clone https://github.com/nanashili/rea-rust.git
+cd rea-rust
 cargo build --locked --release -p rea
 ```
 
-That parent revision contains the helper sources used by the migration:
-
-- `bridge/android/ReaJadxBridge.java`
-- `bridge/mitmproxy/capture.py`
-- `bridge/native/rea_lldb_tracer.py`
-- `bridge/native/ReaNativeUI.swift`
-- `bridge/native/NativeUIChildren.swift`
-- `scripts/electron-active-hook.cjs`
-- `scripts/electron-active-hook-boundaries.cjs`
-
-No npm install is needed to build the Rust executable. The commands in the
-[README](../README.md) use Cargo's default target directories; adjust executable
-paths if you set `CARGO_TARGET_DIR`.
+Embedded Java, Python, Swift, and JavaScript helpers live in `bridge/` and
+`scripts/`. Building the executable does not require Node.js or the original
+TypeScript checkout. The commands in the [README](../README.md) use Cargo's
+default target directories; adjust executable paths if you set `CARGO_TARGET_DIR`.
 
 Rust is pinned in `rust-toolchain.toml`. Use an installed C/C++ compiler for
 native dependencies. Provider tools such as LLDB, Swift, JADX, and mitmproxy are
@@ -71,16 +57,8 @@ cargo clippy --workspace --locked
 cargo test --locked -p rea-core -p rea-rust-analysis -p rea-mcp
 ```
 
-Full workspace tests and Clippy's `--all-targets` also compile a test that
-embeds a parent-workspace golden fixture:
-
-```text
-../.cache/rust-migration/js-graph-golden/golden/utf16-boundary/raw/86464-0000-application-graph.json
-```
-
-That fixture is not published in this repository or the parent source checkout.
-The full checks below require the original migration workspace with the
-fixture present:
+The UTF-16 graph regression fixture is checked into the application crate.
+Full workspace checks run from a standalone checkout:
 
 ```sh
 cargo test --workspace --locked
@@ -124,3 +102,29 @@ The verifier requires macOS or Linux, a C compiler, and cached Rust dependencies
 It builds and runs the ABI assertions and example consumer in a temporary
 directory. See the [header](../crates/platform/rea-ffi/include/rea.h) and
 [C API notes](../crates/platform/rea-ffi/README.md) for ownership and error handling.
+
+## Releases
+
+The [release workflow](../.github/workflows/release.yml) builds four native
+archives on pushes and pull requests. Tagging the commit with `v` followed by
+the `rea` crate version publishes a release after every platform passes.
+Manual workflow runs build downloadable artifacts without publishing.
+
+Each archive contains the CLI, Ghidra worker, investigation skill, license,
+version, and a file digest manifest. The workflow tests the packaged executable
+through CLI, MCP, client registration, and Ghidra decompilation before upload.
+`SHA256SUMS` and `install.sh` accompany published archives. The installer also
+runs `rea --verify-installation` before activation, using the runtime's own
+manifest parser to confirm the release identity.
+
+To package an existing target build locally, using Python 3.11+:
+
+```sh
+python3 scripts/release/package.py --target aarch64-apple-darwin --output-dir dist
+python3 scripts/release/smoke.py --archive dist/rea-rust-aarch64-apple-darwin.tar.gz
+python3 scripts/release/test-install.py
+```
+
+The packager also accepts `--rea` and `--worker` for custom build directories.
+Installer tests use local download fixtures; the archive smoke uses the actual
+built executables and compiles its own small C analysis target.

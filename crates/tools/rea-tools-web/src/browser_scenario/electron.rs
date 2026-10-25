@@ -61,9 +61,9 @@ const STDERR_CAPTURE: usize = 1024 * 1024;
 const MESSAGE_BYTES: usize = 256 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 const POLL: Duration = Duration::from_millis(25);
-const HOOK: &str = include_str!("../../../../../../scripts/electron-active-hook.cjs");
+const HOOK: &str = include_str!("../../../../../scripts/electron-active-hook.cjs");
 const HOOK_BOUNDARIES: &str =
-    include_str!("../../../../../../scripts/electron-active-hook-boundaries.cjs");
+    include_str!("../../../../../scripts/electron-active-hook-boundaries.cjs");
 const PATH_MESSAGE: &str = "Electron executable, application, and root paths must be absolute local filesystem paths (for example /Applications/Electron.app/Contents/MacOS/Electron)";
 
 fn provider() -> EvidenceProvider {

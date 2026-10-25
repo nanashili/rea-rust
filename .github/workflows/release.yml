@@ -1,0 +1,207 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_TOOLCHAIN: 1.93.1
+
+jobs:
+  validate:
+    name: Validate release inputs
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: python3 scripts/release/package.py --validate-tag "$GITHUB_REF_NAME"
+
+      - name: Accept non-release ref
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "No release tag to validate for $GITHUB_REF"
+
+  installer:
+    name: Test installer
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Check installer syntax
+        shell: bash
+        run: sh -n install.sh
+
+      - name: Run installer black-box tests
+        run: python3 scripts/release/test-install.py
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs:
+      - validate
+      - installer
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          rustup default "$RUST_TOOLCHAIN"
+          rustup target add "${{ matrix.target }}"
+
+      - name: Build REA
+        shell: bash
+        run: |
+          cargo build --locked --release --target "${{ matrix.target }}" -p rea
+
+      - name: Build Ghidra worker
+        shell: bash
+        run: |
+          cargo build \
+            --locked \
+            --release \
+            --manifest-path ghidra-rust-worker/Cargo.toml \
+            --target "${{ matrix.target }}"
+
+      - name: Package archive
+        shell: bash
+        run: |
+          python3 scripts/release/package.py \
+            --target "${{ matrix.target }}" \
+            --output-dir dist
+
+      - name: Smoke test archive
+        shell: bash
+        run: |
+          python3 scripts/release/smoke.py \
+            --archive "dist/rea-rust-${{ matrix.target }}.tar.gz"
+
+      - name: Upload platform archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/rea-rust-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  collect:
+    name: Collect release assets
+    if: >-
+      ${{
+        needs.build.result == 'success' &&
+        (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
+      }}
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Download platform archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum rea-rust-*.tar.gz | sort -k2 > SHA256SUMS
+
+      - name: Stage release bundle
+        shell: bash
+        run: |
+          mkdir -p bundle
+          cp dist/rea-rust-*.tar.gz dist/SHA256SUMS install.sh bundle/
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-bundle
+          path: bundle
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish GitHub release
+    if: >-
+      ${{
+        needs.collect.result == 'success' &&
+        startsWith(github.ref, 'refs/tags/v')
+      }}
+    needs: collect
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Download release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundle
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --notes "Native REA for macOS 13+ and Linux (glibc 2.35+), on ARM64 and x86-64. Each archive includes the CLI, stdio MCP server, Ghidra worker, and investigation skill. See [installation and MCP setup](https://github.com/nanashili/rea-rust/blob/$GITHUB_REF_NAME/docs/installation.md). Download install.sh to install or update without Node.js, Cargo, or sudo; archives are verified against SHA256SUMS." \
+            dist/rea-rust-*.tar.gz \
+            dist/SHA256SUMS \
+            install.sh

@@ -337,6 +337,11 @@ fn package_identity_check() -> Value {
                 "launcher": identity.launcher_path,
                 "native_bin": identity.native_bin_path,
                 "version": identity.version,
+                "installation_kind": match identity.installation_kind {
+                    rea_application::package_identity::PackageInstallationKind::NodePackage => "node-package",
+                    rea_application::package_identity::PackageInstallationKind::StandaloneRelease => "standalone-release",
+                },
+                "target": identity.target,
             },
         }),
         Err(error) => json!({
@@ -345,7 +350,7 @@ fn package_identity_check() -> Value {
             "code": "package_identity_unavailable",
             "classification": "unknown",
             "detail": error.to_string(),
-            "remediation": "Run doctor from an owned rea-agents package installation.",
+            "remediation": "Run doctor from an owned REA installation.",
         }),
     }
 }
@@ -386,7 +391,10 @@ fn package_identity_report(server_identity: Option<&Value>, skill_check: Option<
             },
             "catalog": Value::Null,
             "live_server": {"state": "unknown", "remediation": "Call binary_session in the active client to inspect the running server identity."},
-            "installations": {"paths": [identity.package_root], "state": "single"},
+            "installations": {"paths": [identity.package_root], "state": "single", "kind": match identity.installation_kind {
+                rea_application::package_identity::PackageInstallationKind::NodePackage => "node-package",
+                rea_application::package_identity::PackageInstallationKind::StandaloneRelease => "standalone-release",
+            }},
             "skill": {"installed_version": Value::Null, "installed_tool_count": Value::Null, "state": "unknown", "remediation": Value::Null},
             "registrations": [],
         }),
@@ -968,7 +976,7 @@ fn skill_check(context: &ClientResolutionContext, requested_clients: &[String]) 
                 "code": "package_identity_unavailable",
                 "classification": "runtime_failure",
                 "detail": error.to_string(),
-                "remediation": "Run doctor from an owned rea-agents package installation.",
+                "remediation": "Run doctor from an owned REA installation.",
             });
         }
     };

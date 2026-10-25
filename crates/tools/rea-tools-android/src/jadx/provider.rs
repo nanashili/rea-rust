@@ -37,7 +37,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// The embedded REA bridge source (distinct from the engine).
-const BRIDGE_SOURCE: &[u8] = include_bytes!("../../../../../../bridge/android/ReaJadxBridge.java");
+const BRIDGE_SOURCE: &[u8] = include_bytes!("../../../../../bridge/android/ReaJadxBridge.java");
 
 /// SHA-256 of the embedded bridge bytes.
 pub fn bridge_sha256() -> String {

@@ -45,7 +45,7 @@ const XCRUN_TIMEOUT: Duration = Duration::from_millis(60_000);
 /// Remediation for a target LLDB may not debug.
 const ATTACH_REMEDIATION: &str = "Allow debugging for this user (Developer Tools access: `DevToolsSecurity -enable`, or membership in the _developer group). A hardened-runtime target is debuggable only with the com.apple.security.get-task-allow entitlement; inspect_signature reports hardened_runtime and entitlements.";
 /// `bridge/native/rea_lldb_tracer.py`, materialized into each runtime root.
-const BRIDGE: &[u8] = include_bytes!("../../../../../../../bridge/native/rea_lldb_tracer.py");
+const BRIDGE: &[u8] = include_bytes!("../../../../../../bridge/native/rea_lldb_tracer.py");
 
 /// One trace request (`NativeCallTracer.trace` request).
 pub(crate) struct TraceRequest {

@@ -5,7 +5,7 @@
 //! that the TypeScript launcher reads and then exits quietly.
 
 use rea_application::maintenance_update::run_update_check;
-use rea_application::package_identity::discover_current_package_root;
+use rea_application::package_identity::{PackageInstallationKind, discover_current_package_root};
 use rea_core::cancellation::Cancellation;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -48,6 +48,9 @@ fn run_refresh(environment: &BTreeMap<String, String>, cancellation: &Cancellati
     let Ok(identity) = discover_current_package_root() else {
         return 0;
     };
+    if identity.installation_kind == PackageInstallationKind::StandaloneRelease {
+        return 0;
+    }
     let result = run_update_check(
         &identity.version,
         &identity.package_root,

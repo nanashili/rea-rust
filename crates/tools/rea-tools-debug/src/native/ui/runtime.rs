@@ -25,10 +25,10 @@ use std::time::Duration;
 
 /// `../../bridge/native/ReaNativeUI.swift` (compiled as `main.swift`).
 const REA_NATIVE_UI_SWIFT: &[u8] =
-    include_bytes!("../../../../../../../bridge/native/ReaNativeUI.swift");
+    include_bytes!("../../../../../../bridge/native/ReaNativeUI.swift");
 /// `../../bridge/native/NativeUIChildren.swift`.
 const NATIVE_UI_CHILDREN_SWIFT: &[u8] =
-    include_bytes!("../../../../../../../bridge/native/NativeUIChildren.swift");
+    include_bytes!("../../../../../../bridge/native/NativeUIChildren.swift");
 
 /// A failure observed while compiling or invoking the Swift helper.
 #[derive(Debug)]

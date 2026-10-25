@@ -423,6 +423,15 @@ pub fn update(runner: &Runner<'_>) -> Value {
     let Ok(identity) = package_identity::discover_current_package_root() else {
         return json!({"status":"failed", "currentVersion":Value::Null, "latestVersion":Value::Null, "reason":"unknown-installation"});
     };
+    if identity.installation_kind == package_identity::PackageInstallationKind::StandaloneRelease {
+        return json!({
+            "status": "unavailable",
+            "currentVersion": identity.version,
+            "latestVersion": Value::Null,
+            "reason": "standalone-release",
+            "remediation": "Install the latest standalone release with the installer from https://github.com/nanashili/rea-rust/releases, then run rea setup again.",
+        });
+    }
     maintenance_update::run_update_with_maintenance(
         &identity.version,
         &identity.package_root,
@@ -733,6 +742,13 @@ fn verified_registration_identity(
         .map_err(|error| format!("could not determine the current executable: {error}"))?;
     let identity =
         package_identity::discover_package_root(&executable).map_err(|error| error.to_string())?;
+    if identity.installation_kind == package_identity::PackageInstallationKind::StandaloneRelease {
+        return Ok((
+            vec![executable.to_string_lossy().into_owned(), "mcp".to_owned()],
+            Some(executable),
+        ));
+    }
+
     let package_specifier = format!("rea-agents@{}", identity.version);
     let npm_command = context.environment.get("npm_command");
     if npm_command.is_some_and(|value| value == "exec") {

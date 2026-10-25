@@ -54,7 +54,7 @@ fn remediation(code: &str) -> &'static str {
             "Configure the Rust worker: build rea-ghidra-rust-worker beside rea or set REA_GHIDRA_RUST_WORKER, and leave REA_GHIDRA_RUST_ENABLED unset or set it to true."
         }
         "executable_missing" => {
-            "Build the Rust worker with `npm run build:ghidra:rust-worker`, then place it beside rea or set REA_GHIDRA_RUST_WORKER to its absolute path."
+            "For a release install, keep rea-ghidra-rust-worker beside rea. For a source build, compile ghidra-rust-worker with Cargo, then place it beside rea or set REA_GHIDRA_RUST_WORKER to its absolute path."
         }
         "unsupported_host" => "Run REA on macOS or Linux to use the Rust worker.",
         _ => "Inspect the provider configuration, then retry.",

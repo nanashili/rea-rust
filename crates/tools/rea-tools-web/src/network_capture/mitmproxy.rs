@@ -29,7 +29,7 @@ const PROVIDER_VERSION: &str = "12.2.3";
 const TIMEOUT: Duration = Duration::from_secs(30);
 const DIAGNOSTIC_BYTES: usize = 1024 * 1024;
 const MITMPROXY_MEMORY_BYTES: u64 = 768 * 1024 * 1024;
-const EMBEDDED_BRIDGE: &[u8] = include_bytes!("../../../../../../bridge/mitmproxy/capture.py");
+const EMBEDDED_BRIDGE: &[u8] = include_bytes!("../../../../../bridge/mitmproxy/capture.py");
 
 #[cfg(unix)]
 type HostFiles = rea_host::fs::unix_file::UnixFiles;

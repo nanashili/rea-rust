@@ -43,7 +43,7 @@ const PROGRAM_MEMORY_MIB: u64 = 768;
 /// File name of the worker executable distributed beside `rea`.
 pub(crate) const WORKER_EXECUTABLE: &str = "rea-ghidra-rust-worker";
 
-const BUILD_GUIDANCE: &str = "Build the worker with `npm run build:ghidra:rust-worker` (or `cargo build --locked --release` in native/ghidra-rust-worker), then place `rea-ghidra-rust-worker` beside the rea executable or set REA_GHIDRA_RUST_WORKER to its absolute path.";
+const BUILD_GUIDANCE: &str = "For a release install, keep `rea-ghidra-rust-worker` beside the rea executable. For a source build, run `cargo build --locked --release` in ghidra-rust-worker, then place the worker beside rea or set REA_GHIDRA_RUST_WORKER to its absolute path.";
 
 /// Where each effective setting came from.
 #[derive(Clone, Debug, Eq, PartialEq)]

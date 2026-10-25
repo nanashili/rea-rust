@@ -5,6 +5,10 @@
 # Release artifacts are copied here only while assembling an npm package.
 /bin/
 
+# Native release archives and Python script caches.
+/dist/
+__pycache__/
+
 # macOS metadata
 .DS_Store
 

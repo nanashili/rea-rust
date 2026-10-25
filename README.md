@@ -8,13 +8,32 @@ read managed and mobile artifacts, and work with process and browser captures.
 The CLI and MCP server use the same tool implementations. The runtime does not
 require Node.js.
 
-## Build
+## Install
 
-Requires the pinned Rust toolchain (1.93.1) and a C/C++ compiler. Source builds
-currently need helper files from the original REA checkout at `../bridge/` and
-`../scripts/`; follow the [source setup](docs/development.md#source-setup).
+Prebuilt releases include `rea` and the Ghidra worker for macOS and Linux,
+on Apple Silicon/ARM64 and x86-64. No Node.js, Rust toolchain, or JVM is needed.
 
 ```sh
+curl -fsSL https://github.com/nanashili/rea-rust/releases/latest/download/install.sh -o install-rea.sh
+sh install-rea.sh
+export PATH="$HOME/.local/bin:$PATH"
+rea --version
+```
+
+The installer verifies release checksums, stores versioned files under
+`~/.local/share/rea-rust`, and links `~/.local/bin/rea`. It leaves shell profiles
+and MCP settings for you to configure. Rerun it to update, or set `REA_VERSION`
+to select a release. See [installation details](docs/installation.md) for
+requirements, custom paths, and removal.
+
+## Build from source
+
+Requires the pinned Rust toolchain (1.93.1), Python 3.11+ for release scripts,
+and a C/C++ compiler. This repository contains all embedded helper sources.
+
+```sh
+git clone https://github.com/nanashili/rea-rust.git
+cd rea-rust
 cargo build --locked --release -p rea
 target/release/rea --help
 ```
@@ -37,10 +56,10 @@ Other analysis providers and external tools require their own installations.
 ## CLI
 
 ```sh
-target/release/rea inspect /path/to/program
-target/release/rea decompile /path/to/program main --provider ghidra-rust
-target/release/rea inspect-go-binary /path/to/go-program --format json
-target/release/rea doctor
+rea inspect /path/to/program
+rea decompile /path/to/program main --provider ghidra-rust
+rea inspect-go-binary /path/to/go-program --format json
+rea doctor
 ```
 
 Use `--help` on any command for its arguments and options.
@@ -53,20 +72,25 @@ Add this to your client's MCP configuration, replacing the executable path:
 {
   "mcpServers": {
     "rea": {
-      "command": "/absolute/path/to/rea-rust/target/release/rea",
+      "command": "/absolute/path/to/rea",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-`rea mcp` starts the stdio server. Keep the Ghidra worker beside the executable,
-or set `REA_GHIDRA_RUST_WORKER` in the client's environment.
+`rea mcp` starts the stdio server. Use the installed executable's absolute path;
+MCP clients may have a different `PATH` from your shell. `rea setup` previews
+client registrations and skill installation, then asks before applying changes.
+Release installs already include the Ghidra worker.
 
 ## Status
 
-The release workflow has been verified on macOS arm64. Linux and Windows
-release workflows remain unverified; the Ghidra worker supports macOS and Linux.
+GitHub Actions builds and smoke-tests macOS and Linux archives on both
+architectures before publishing a tagged release. Windows release packages and
+Frida-enabled binaries are not provided. Other analysis providers and external
+tools require their own installations.
+
 Known behavior differences and test coverage are recorded in the
 [migration verification report](docs/verification/native-runtime-migration-2026-10-24.md).
 

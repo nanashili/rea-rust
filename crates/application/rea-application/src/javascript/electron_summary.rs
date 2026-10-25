@@ -585,7 +585,7 @@ mod tests {
     #[test]
     fn utf16_graph_golden_uses_the_real_analysis_envelope() {
         let golden = parse(include_str!(
-            "../../../../../../.cache/rust-migration/js-graph-golden/golden/utf16-boundary/raw/86464-0000-application-graph.json"
+            "../../tests/fixtures/electron/utf16-boundary/raw/86464-0000-application-graph.json"
         ))
         .expect("the checked-in UTF-16 graph corpus must parse");
         let summary =
