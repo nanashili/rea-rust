@@ -516,13 +516,20 @@ fn set_rename_information(handle: HANDLE, name: &[u16], replace: bool) -> io::Re
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "rename path is too long"))?;
     let name_length = u32::try_from(name_bytes)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "rename path is too long"))?;
+
+    // Win32 resolves FileName as a NUL-terminated path even though
+    // FileNameLength excludes the terminator. Reserve it explicitly rather
+    // than relying on spare alignment bytes at the end of the allocation.
     let total_size = header_size
         .checked_add(name_bytes)
+        .and_then(|size| size.checked_add(std::mem::size_of::<u16>()))
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "rename path is too long"))?;
     let total_size = total_size.max(std::mem::size_of::<FILE_RENAME_INFO>());
     let mut storage = vec![0u64; total_size.div_ceil(std::mem::size_of::<u64>())];
     let info = storage.as_mut_ptr().cast::<FILE_RENAME_INFO>();
-    // SAFETY: storage is aligned and large enough for the fixed header.
+
+    // SAFETY: storage is aligned and large enough for the header, UTF-16 name,
+    // and trailing zero, which remains initialized after copying the name.
     unsafe {
         ptr::write(
             info,
@@ -585,22 +592,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn non_overwrite_publication_removes_staged_content() {
-        let directory = tempfile::tempdir().expect("temporary directory");
-        let destination = directory.path().join("output.txt");
+    fn publication_uses_requested_paths_and_removes_staged_content() {
+        let names = [
+            "output.txt",
+            "output1.txt",
+            "output12.txt",
+            "output123.txt",
+            "résultat-🦀.txt",
+        ];
 
-        let published = publish(&destination, false, &Cancellation::default(), |output| {
-            output.write_all(b"published")?;
-            Ok::<(), io::Error>(())
-        })
-        .expect("publication succeeds");
+        for overwrite in [false, true] {
+            for name in names {
+                let directory = tempfile::tempdir().expect("temporary directory");
+                let destination = directory.path().join(name);
+                if overwrite {
+                    fs::write(&destination, b"original").expect("existing output");
+                }
 
-        assert_eq!(published.bytes, 9);
-        assert_eq!(
-            fs::read(&destination).expect("published output"),
-            b"published"
-        );
-        assert!(no_staging_directories(directory.path()));
+                let published = publish(
+                    &destination,
+                    overwrite,
+                    &Cancellation::default(),
+                    |output| {
+                        output.write_all(b"published")?;
+                        Ok::<(), io::Error>(())
+                    },
+                )
+                .unwrap_or_else(|error| panic!("publication to {destination:?} failed: {error:?}"));
+
+                assert_eq!(published.bytes, 9);
+                assert_eq!(
+                    fs::read(&destination).expect("published output"),
+                    b"published",
+                    "publication destination: {destination:?}"
+                );
+                assert!(no_staging_directories(directory.path()));
+            }
+        }
     }
 
     #[test]
