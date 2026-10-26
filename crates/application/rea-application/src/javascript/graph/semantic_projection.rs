@@ -10,8 +10,8 @@ use super::leaves::{
     semantic_resource_limit_reason, slot_at_value,
 };
 use super::semantic_graph::{
-    NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation, add_unknown,
-    inferred_evidence_at, retain_node, unknown_evidence,
+    NodeDetails, NodeAdmission, NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation,
+    add_unknown, inferred_evidence_at, retain_node, retain_node_lazy, unknown_evidence,
 };
 use super::semantic_ir_view::{BindingValueLookup, SemanticCollection, SemanticIrView};
 use super::semantic_lookup::{CallableOwnerLookup, NodeRangeLookup, range_key};
@@ -335,24 +335,30 @@ fn property_slot(
         ])
         .stringify()
     );
-    context.retain(NodeSpec {
-        kind: "property-slot",
-        role_key: role_key.into(),
-        location: Json::Null,
-        label: Some(fact.name()),
-        function_node_id: function.map(Into::into),
-        properties: Obj::new()
-            .with_static("name", fact.raw_name())
-            .with_static(
-                "property_path",
-                Json::array(path.iter().cloned().map(Json::from).collect()),
-            )
-            .with_static("property_pointer", property_pointer_js(path))
-            .with_static("object_binding_id", binding_id)
-            .with_static("presence", fact.raw_presence())
-            .with_static("value_status", fact.value_status())
-            .with_static("value_coverage", fact.value_coverage()),
-    })
+    retain_node_lazy(
+        context.state,
+        &context.file,
+        NodeAdmission {
+            kind: "property-slot",
+            role_key: role_key.into(),
+            location: Json::Null,
+            function_node_id: function.map(Into::into),
+        },
+        || NodeDetails {
+            label: Some(fact.name()),
+            properties: Obj::new()
+                .with_static("name", fact.raw_name())
+                .with_static(
+                    "property_path",
+                    Json::array(path.iter().cloned().map(Json::from).collect()),
+                )
+                .with_static("property_pointer", property_pointer_js(path))
+                .with_static("object_binding_id", binding_id)
+                .with_static("presence", fact.raw_presence())
+                .with_static("value_status", fact.value_status())
+                .with_static("value_coverage", fact.value_coverage()),
+        },
+    )
 }
 
 // ---------------------------------------------------------------- objects
@@ -364,29 +370,37 @@ pub fn project_objects(context: &mut FileContext<'_>) {
     for operation in ir.records(SemanticCollection::ObjectOperations) {
         let kind = operation.at("kind").str();
         let path = operation.at("propertyPath");
-        let label = if path.is_null() {
-            JsString::from(kind)
-        } else {
-            JsString::from(kind)
-                .concat_str(":")
-                .concat(&property_pointer_js(&js_string_path(path)))
-        };
         let function = owner_id(context, operation.at("ownerCallableId"));
-        let occurrence = context.retain(NodeSpec {
-            kind: "expression",
-            role_key: operation.at("objectOperationId").str().to_owned().into(),
-            location: operation.at("location").clone(),
-            label: Some(label),
-            function_node_id: function.map(Into::into),
-            properties: Obj::new().with_static("operation_kind", kind).with_static(
-                "property_path",
-                if path.is_null() {
-                    Json::Null
+        let occurrence = retain_node_lazy(
+            context.state,
+            &context.file,
+            NodeAdmission {
+                kind: "expression",
+                role_key: operation.at("objectOperationId").str().to_owned().into(),
+                location: operation.at("location").clone(),
+                function_node_id: function.map(Into::into),
+            },
+            || {
+                let label = if path.is_null() {
+                    JsString::from(kind)
                 } else {
-                    path.clone()
-                },
-            ),
-        });
+                    JsString::from(kind)
+                        .concat_str(":")
+                        .concat(&property_pointer_js(&js_string_path(path)))
+                };
+                NodeDetails {
+                    label: Some(label),
+                    properties: Obj::new().with_static("operation_kind", kind).with_static(
+                        "property_path",
+                        if path.is_null() {
+                            Json::Null
+                        } else {
+                            path.clone()
+                        },
+                    ),
+                }
+            },
+        );
         let (object_node, slot, presence, receiver_resolved) =
             object_target(context, &values, &operation);
         let (source, target) = match kind {

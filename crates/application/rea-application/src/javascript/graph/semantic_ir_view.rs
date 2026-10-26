@@ -3,14 +3,15 @@
 //! The worker keeps the producer's typed facts and converts one record at a
 //! time. Existing JSON callers use the same projection passes without another
 //! interpretation of their facts. Clones share immutable backing storage; the
-//! conversion context retains static field names, never converted records.
+//! conversion uses the shared compiled static-string pool and never retains
+//! converted records.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use serde::Serialize;
 
-use super::direct_serializer::JsonConversion;
+use super::direct_serializer::serialize;
 use super::json::{Json, Obj};
 use super::leaves::ValueRef;
 use crate::javascript::contracts::semantic_ir::{
@@ -70,21 +71,18 @@ enum SemanticBacking {
 #[derive(Clone)]
 pub(crate) struct SemanticIrView {
     backing: SemanticBacking,
-    conversion: JsonConversion,
 }
 
 impl SemanticIrView {
     pub(crate) fn from_typed(ir: SemanticIr) -> Self {
         Self {
             backing: SemanticBacking::Typed(Rc::new(ir)),
-            conversion: JsonConversion::default(),
         }
     }
 
     pub(crate) fn from_json(ir: &Json) -> Self {
         Self {
             backing: SemanticBacking::Serialized(ir.clone()),
-            conversion: JsonConversion::default(),
         }
     }
 
@@ -508,9 +506,7 @@ impl SemanticIrView {
     }
 
     fn convert<T: ?Sized + Serialize>(&self, value: &T) -> Json {
-        self.conversion
-            .serialize(value)
-            .expect("semantic IR contract is serializable and valid JSON")
+        serialize(value).expect("semantic IR contract is serializable and valid JSON")
     }
 
     fn binding_header(&self, binding: &SemanticBinding) -> Json {

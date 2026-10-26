@@ -5,7 +5,7 @@
 use super::super::semantic::value_types::{
     Coverage, JsString, Property, SemanticValue, SlotPresence,
 };
-use super::direct_serializer::JsonConversion;
+use super::direct_serializer::serialize;
 use super::evidence::{limit, partial_coverage};
 use super::json::{Json, Obj};
 
@@ -458,9 +458,7 @@ fn value_metadata_json(value: ValueRef<'_>) -> Json {
             value @ (SemanticValue::Unknown { .. }
             | SemanticValue::Ambiguous { .. }
             | SemanticValue::Cycle { .. }),
-        ) => JsonConversion::default()
-            .serialize(value)
-            .expect("opaque semantic values must serialize"),
+        ) => serialize(value).expect("opaque semantic values must serialize"),
         ValueRef::Typed(value) => Obj::new()
             .with_static("status", semantic_status(value))
             .into(),
@@ -674,7 +672,7 @@ pub fn export_return_shapes(
 #[cfg(test)]
 mod tests {
     use super::{Json, Obj, ValueRef, property_pointer_js, slot_at_value, value_metadata_json};
-    use crate::javascript::graph::direct_serializer::JsonConversion;
+    use crate::javascript::graph::direct_serializer::serialize;
     use crate::javascript::semantic::value_types::JsString;
     use crate::javascript::semantic::value_types::{
         Coverage, Primitive, Property, PropertySlots, ResourceLimit, SemanticValue, SlotPresence,
@@ -796,7 +794,7 @@ mod tests {
             ]),
             coverage: Coverage::Exact,
         };
-        let full = JsonConversion::default().serialize(&value).unwrap();
+        let full = serialize(&value).unwrap();
 
         for path in [
             vec![duplicate_name.clone()],

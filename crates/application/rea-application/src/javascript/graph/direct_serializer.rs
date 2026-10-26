@@ -4,17 +4,14 @@
 //! retain the existing parser boundary because their serialized representation
 //! is already raw JSON and must preserve exact UTF-16 code units.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
 
 use serde::ser::{
     self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
 };
 
 use super::super::semantic::value_types::JsString;
-use super::json::{Json, Obj, parse};
+use super::json::{Json, Obj, parse, static_string};
 
 const RAW_VALUE_TOKEN: &str = "$serde_json::private::RawValue";
 
@@ -52,50 +49,14 @@ impl ser::Error for DirectJsonError {
 type ParseRaw = fn(&str) -> Result<Json, DirectJsonError>;
 
 pub(crate) fn serialize<T: ?Sized + Serialize>(value: &T) -> Result<Json, DirectJsonError> {
-    JsonConversion::default().serialize(value)
+    serialize_with_parser(value, parse_raw)
 }
 
-fn serialize_with_keys<T: ?Sized + Serialize>(
+fn serialize_with_parser<T: ?Sized + Serialize>(
     value: &T,
-    keys: &KeyPoolRef,
+    parse_raw: ParseRaw,
 ) -> Result<Json, DirectJsonError> {
-    DirectJsonSerializer::new(parse_raw, keys.clone()).serialize(value)
-}
-
-type KeyPoolRef = Rc<RefCell<KeyPool>>;
-
-/// Reuse static serde keys across a graph projection's ephemeral records.
-/// Dynamic keys and record values are not retained by this conversion context.
-#[derive(Clone, Default)]
-pub(crate) struct JsonConversion {
-    keys: KeyPoolRef,
-}
-
-impl JsonConversion {
-    pub(crate) fn serialize<T: ?Sized + Serialize>(
-        &self,
-        value: &T,
-    ) -> Result<Json, DirectJsonError> {
-        serialize_with_keys(value, &self.keys)
-    }
-}
-
-fn pool_key(keys: &KeyPoolRef, value: &'static str) -> JsString {
-    keys.borrow_mut().get(value)
-}
-
-#[derive(Default)]
-struct KeyPool {
-    values: HashMap<&'static str, JsString>,
-}
-
-impl KeyPool {
-    fn get(&mut self, key: &'static str) -> JsString {
-        self.values
-            .entry(key)
-            .or_insert_with(|| JsString::from(key))
-            .clone()
-    }
+    DirectJsonSerializer::new(parse_raw).serialize(value)
 }
 
 fn parse_raw(text: &str) -> Result<Json, DirectJsonError> {
@@ -104,12 +65,11 @@ fn parse_raw(text: &str) -> Result<Json, DirectJsonError> {
 
 struct DirectJsonSerializer {
     parse_raw: ParseRaw,
-    keys: KeyPoolRef,
 }
 
 impl DirectJsonSerializer {
-    fn new(parse_raw: ParseRaw, keys: KeyPoolRef) -> Self {
-        Self { parse_raw, keys }
+    fn new(parse_raw: ParseRaw) -> Self {
+        Self { parse_raw }
     }
 
     fn serialize<T: ?Sized + Serialize>(self, value: &T) -> Result<Json, DirectJsonError> {
@@ -222,7 +182,7 @@ impl ser::Serializer for DirectJsonSerializer {
         _index: u32,
         variant: &'static str,
     ) -> Result<Json, DirectJsonError> {
-        Ok(Json::String(pool_key(&self.keys, variant)))
+        Ok(Json::String(static_string(variant)))
     }
     fn serialize_newtype_struct<T: ?Sized + Serialize>(
         self,
@@ -238,14 +198,14 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         value: &T,
     ) -> Result<Json, DirectJsonError> {
-        let variant_key = pool_key(&self.keys, variant);
+        let variant_key = static_string(variant);
         let value = value.serialize(self)?;
         let mut object = Obj::new();
         object.set(variant_key, value);
         Ok(Json::Object(object))
     }
     fn serialize_seq(self, len: Option<usize>) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::array(self.parse_raw, self.keys, len))
+        Ok(Compound::array(self.parse_raw, len))
     }
     fn serialize_tuple(self, len: usize) -> Result<Compound, DirectJsonError> {
         self.serialize_seq(Some(len))
@@ -264,21 +224,16 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::variant_array(
-            self.parse_raw,
-            self.keys,
-            variant,
-            len,
-        ))
+        Ok(Compound::variant_array(self.parse_raw, variant, len))
     }
     fn serialize_map(self, len: Option<usize>) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::object(self.parse_raw, self.keys, len))
+        Ok(Compound::object(self.parse_raw, len))
     }
     fn serialize_struct(self, name: &'static str, len: usize) -> Result<Compound, DirectJsonError> {
         if name == RAW_VALUE_TOKEN {
-            return Ok(Compound::raw(self.parse_raw, self.keys));
+            return Ok(Compound::raw(self.parse_raw));
         }
-        Ok(Compound::object(self.parse_raw, self.keys, Some(len)))
+        Ok(Compound::object(self.parse_raw, Some(len)))
     }
     fn serialize_struct_variant(
         self,
@@ -287,12 +242,7 @@ impl ser::Serializer for DirectJsonSerializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Compound, DirectJsonError> {
-        Ok(Compound::variant_object(
-            self.parse_raw,
-            self.keys,
-            variant,
-            len,
-        ))
+        Ok(Compound::variant_object(self.parse_raw, variant, len))
     }
 }
 
@@ -306,61 +256,50 @@ enum Container {
 
 struct Compound {
     parse_raw: ParseRaw,
-    keys: KeyPoolRef,
     container: Container,
     pending_key: Option<JsString>,
 }
 impl Compound {
-    fn array(parse_raw: ParseRaw, keys: KeyPoolRef, len: Option<usize>) -> Self {
+    fn array(parse_raw: ParseRaw, len: Option<usize>) -> Self {
         Self {
             parse_raw,
-            keys,
             container: Container::Array(Vec::with_capacity(len.unwrap_or(0))),
             pending_key: None,
         }
     }
-    fn object(parse_raw: ParseRaw, keys: KeyPoolRef, len: Option<usize>) -> Self {
+
+    fn object(parse_raw: ParseRaw, len: Option<usize>) -> Self {
         Self {
             parse_raw,
-            keys,
             container: Container::Object(Obj::with_capacity(len.unwrap_or(0))),
             pending_key: None,
         }
     }
-    fn variant_array(
-        parse_raw: ParseRaw,
-        keys: KeyPoolRef,
-        variant: &'static str,
-        len: usize,
-    ) -> Self {
+
+    fn variant_array(parse_raw: ParseRaw, variant: &'static str, len: usize) -> Self {
         Self {
             parse_raw,
-            keys,
             container: Container::VariantArray(variant, Vec::with_capacity(len)),
             pending_key: None,
         }
     }
-    fn variant_object(
-        parse_raw: ParseRaw,
-        keys: KeyPoolRef,
-        variant: &'static str,
-        len: usize,
-    ) -> Self {
+
+    fn variant_object(parse_raw: ParseRaw, variant: &'static str, len: usize) -> Self {
         Self {
             parse_raw,
-            keys,
             container: Container::VariantObject(variant, Obj::with_capacity(len)),
             pending_key: None,
         }
     }
-    fn raw(parse_raw: ParseRaw, keys: KeyPoolRef) -> Self {
+
+    fn raw(parse_raw: ParseRaw) -> Self {
         Self {
             parse_raw,
-            keys,
             container: Container::Raw(None),
             pending_key: None,
         }
     }
+
     fn finish(self) -> Result<Json, DirectJsonError> {
         let Compound {
             parse_raw,
@@ -418,7 +357,7 @@ impl SerializeSeq for Compound {
         &mut self,
         value: &T,
     ) -> Result<(), DirectJsonError> {
-        let serialized = serialize_with_keys(value, &self.keys)?;
+        let serialized = serialize_with_parser(value, self.parse_raw)?;
         self.push(serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
@@ -468,7 +407,7 @@ impl SerializeMap for Compound {
     }
     fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), DirectJsonError> {
         let key = self.pending_key.take().ok_or(DirectJsonError::InvalidKey)?;
-        let value = serialize_with_keys(value, &self.keys)?;
+        let value = serialize_with_parser(value, self.parse_raw)?;
         self.set(key, value)
     }
     fn serialize_entry<K: ?Sized + Serialize, V: ?Sized + Serialize>(
@@ -498,7 +437,7 @@ impl SerializeStruct for Compound {
             raw.replace(raw_text(value)?);
             return Ok(());
         }
-        let serialized = serialize_with_keys(value, &self.keys)?;
+        let serialized = serialize_with_parser(value, self.parse_raw)?;
         self.set_static(field, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
@@ -513,7 +452,7 @@ impl SerializeStructVariant for Compound {
         field: &'static str,
         value: &T,
     ) -> Result<(), DirectJsonError> {
-        let serialized = serialize_with_keys(value, &self.keys)?;
+        let serialized = serialize_with_parser(value, self.parse_raw)?;
         self.set_static(field, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {

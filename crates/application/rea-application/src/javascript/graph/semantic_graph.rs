@@ -468,6 +468,26 @@ pub struct NodeSpec<'a> {
     pub properties: Obj,
 }
 
+/// Identity and ownership fields needed before node admission.
+pub struct NodeAdmission<'a> {
+    /// Node kind.
+    pub kind: &'a str,
+    /// Role key.
+    pub role_key: JsString,
+    /// Source range or `null`.
+    pub location: Json,
+    /// Owning function node.
+    pub function_node_id: Option<JsString>,
+}
+
+/// Expensive node fields constructed only after identity admission succeeds.
+pub struct NodeDetails {
+    /// Display label.
+    pub label: Option<JsString>,
+    /// Node properties.
+    pub properties: Obj,
+}
+
 /// Semantic evidence for observed syntax (`observedSemanticEvidence`).
 pub fn observed_evidence(file: &Json, location: &Json) -> Json {
     EvidenceTemplate::for_file(file).observed(location)
@@ -531,23 +551,66 @@ fn admit_node(state: &mut ProjectionState, node: Json) -> Option<Json> {
 
 /// `retainSemanticGraphNode`.
 pub fn retain_node(state: &mut ProjectionState, file: &Json, spec: NodeSpec<'_>) -> Option<Json> {
-    let identity = node_identity(file, &spec.location, &spec.role_key);
-    let id = semantic_node_id(spec.kind, &identity);
+    let NodeSpec {
+        kind,
+        role_key,
+        location,
+        label,
+        function_node_id,
+        properties,
+    } = spec;
+
+    retain_node_lazy(
+        state,
+        file,
+        NodeAdmission {
+            kind,
+            role_key,
+            location,
+            function_node_id,
+        },
+        || NodeDetails { label, properties },
+    )
+}
+
+/// Retain a node while deferring labels and properties until admission is
+/// known to be necessary. Existing-node reuse and budget behavior match
+/// [`retain_node`].
+pub fn retain_node_lazy(
+    state: &mut ProjectionState,
+    file: &Json,
+    identity_spec: NodeAdmission<'_>,
+    construct: impl FnOnce() -> NodeDetails,
+) -> Option<Json> {
+    let NodeAdmission {
+        kind,
+        role_key,
+        location,
+        function_node_id,
+    } = identity_spec;
+
+    let identity = node_identity(file, &location, &role_key);
+    let id = semantic_node_id(kind, &identity);
+
     if let Some(existing) = state.nodes.get(&id) {
         return Some(existing.clone());
     }
+
     if state.file_node_budget == Some(0) {
         state.file_nodes_dropped = true;
         return None;
     }
-    let evidence = state.observed_evidence_reference(file, &spec.location);
+
+    let NodeDetails { label, properties } = construct();
+    let evidence = state.observed_evidence_reference(file, &location);
+
     let node: Json = Obj::new()
-        .with_static("kind", spec.kind)
+        .with_static("kind", kind)
         .with_static("identity", identity)
-        .with_static("function_node_id", spec.function_node_id)
+        .with_static("function_node_id", function_node_id)
         .with_static("application_node_ids", Json::array(Vec::new()))
-        .with_static("label", spec.label.map(|label| display_text(&label)))
-        .with_static("properties", spec.properties)
+        .with_static("label", label.map(|label| display_text(&label)))
+        .with_static("properties", properties)
         .with_static("evidence", evidence)
         .with_static("node_id", id)
         .into();
@@ -973,6 +1036,8 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
     use super::super::super::semantic::value_types::JsString;
     use super::*;
 
@@ -1242,6 +1307,79 @@ mod tests {
                 .at("occurrences")
                 .num(),
             2.0
+        );
+    }
+
+    #[test]
+    fn lazy_node_admission_constructs_only_new_admitted_nodes() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let location = test_location(1.0, 4.0);
+        let mut state = ProjectionState {
+            file_node_budget: Some(1),
+            ..ProjectionState::default()
+        };
+        let constructions = Cell::new(0);
+
+        let identity = || NodeAdmission {
+            kind: "expression",
+            role_key: JsString::from("operation:1"),
+            location: location.clone(),
+            function_node_id: None,
+        };
+        let node = retain_node_lazy(&mut state, &file, identity(), || {
+            constructions.set(constructions.get() + 1);
+            NodeDetails {
+                label: Some(JsString::from("first")),
+                properties: Obj::new(),
+            }
+        })
+        .expect("the first node should fit the budget");
+        assert_eq!(constructions.get(), 1);
+        assert_eq!(state.nodes.len(), 1);
+
+        state.file_node_budget = Some(0);
+        let evidence_contexts_before_reuse = state.evidence.contexts().len();
+        let reused = retain_node_lazy(&mut state, &file, identity(), || {
+            constructions.set(constructions.get() + 1);
+            NodeDetails {
+                label: Some(JsString::from("should not replace the first node")),
+                properties: Obj::new(),
+            }
+        })
+        .expect("an existing node should be reusable at an exhausted budget");
+        assert_eq!(reused, node);
+        assert_eq!(constructions.get(), 1);
+        assert!(!state.file_nodes_dropped);
+        assert_eq!(
+            state.evidence.contexts().len(),
+            evidence_contexts_before_reuse
+        );
+
+        let evidence_contexts_before_rejection = state.evidence.contexts().len();
+        let rejected = retain_node_lazy(
+            &mut state,
+            &file,
+            NodeAdmission {
+                kind: "expression",
+                role_key: JsString::from("operation:2"),
+                location,
+                function_node_id: None,
+            },
+            || {
+                constructions.set(constructions.get() + 1);
+                NodeDetails {
+                    label: Some(JsString::from("should not be constructed")),
+                    properties: Obj::new(),
+                }
+            },
+        );
+        assert!(rejected.is_none());
+        assert_eq!(constructions.get(), 1);
+        assert_eq!(state.nodes.len(), 1);
+        assert!(state.file_nodes_dropped);
+        assert_eq!(
+            state.evidence.contexts().len(),
+            evidence_contexts_before_rejection
         );
     }
 }

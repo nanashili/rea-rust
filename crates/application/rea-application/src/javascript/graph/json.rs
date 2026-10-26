@@ -7,25 +7,26 @@
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{self, Write as _};
 use std::ops::Index;
 use std::sync::Arc;
 
 use super::super::semantic::value_types::JsString;
+use rustc_hash::FxHashMap;
 use serde::de::{Deserialize, Deserializer, Error as _};
 use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
 
 thread_local! {
-    /// Static graph field names share one `JsString` allocation per worker
-    /// thread. The key set is bounded by compiled graph producers.
-    static STATIC_KEYS: RefCell<HashMap<&'static str, JsString>> =
-        RefCell::new(HashMap::new());
+    /// Compiled graph field and enum-variant names share one `JsString`
+    /// allocation per worker thread. The key set is bounded by producers.
+    static STATIC_STRINGS: RefCell<FxHashMap<&'static str, JsString>> =
+        RefCell::new(FxHashMap::default());
 }
 
-fn static_key(key: &'static str) -> JsString {
-    STATIC_KEYS.with(|keys| {
+pub(super) fn static_string(key: &'static str) -> JsString {
+    STATIC_STRINGS.with(|keys| {
         keys.borrow_mut()
             .entry(key)
             .or_insert_with(|| JsString::from(key))
@@ -122,9 +123,9 @@ impl Obj {
         self
     }
 
-    /// Assign a compiled graph field name using the bounded static-key pool.
+    /// Assign a compiled graph field name using the bounded compiled-string pool.
     pub fn set_static(&mut self, key: &'static str, value: impl Into<Json>) {
-        self.set(static_key(key), value);
+        self.set(static_string(key), value);
     }
 
     /// Spread another object's properties (`{...this, ...other}`).
