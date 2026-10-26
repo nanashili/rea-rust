@@ -139,7 +139,7 @@ fn admitted_analysis<'a>(analysis: &'a Json) -> Cow<'a, Json> {
             object.into()
         })
         .collect();
-    admitted.set("files", Json::Array(files));
+    admitted.set("files", Json::array(files));
     Cow::Owned(admitted.into())
 }
 

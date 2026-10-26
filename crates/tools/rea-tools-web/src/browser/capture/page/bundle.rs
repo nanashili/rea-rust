@@ -312,12 +312,12 @@ fn analyzed_result(key: &str, script: &Value, static_analysis: Value) -> Analysi
     });
     let mut observations = value_to_graph_json(&value["observations"]);
     if let GraphJson::Object(mut object) = observations {
-        object.set("routes", GraphJson::Array(routes));
+        object.set("routes", GraphJson::array(routes));
         object.set(
             "inferences",
-            GraphJson::Array(endpoint_inferences(&endpoint_candidates, script, key)),
+            GraphJson::array(endpoint_inferences(&endpoint_candidates, script, key)),
         );
-        object.set("webmcp_declarations", GraphJson::Array(webmcp_declarations));
+        object.set("webmcp_declarations", GraphJson::array(webmcp_declarations));
         observations = GraphJson::Object(object);
     }
     AnalysisResult {
@@ -532,7 +532,7 @@ fn endpoint_inferences(candidates: &[GraphJson], script: &Value, key: &str) -> V
                     .with("confidence", "low")
                     .with(
                         "basis",
-                        GraphJson::Array(vec![GraphJson::Object(
+                        GraphJson::array(vec![GraphJson::Object(
                             Obj::new()
                                 .with("script_key", key)
                                 .with("artifact_sha256", artifact_sha256)
@@ -787,10 +787,10 @@ fn build_analysis(
             .map(value_to_graph_json)
             .collect::<Vec<_>>();
         all_inferences.extend(exact_inferences);
-        root.set("inferences", GraphJson::Array(all_inferences));
+        root.set("inferences", GraphJson::array(all_inferences));
         if let Some(GraphJson::Object(mut observations)) = root.remove("observations") {
-            observations.set("routes", GraphJson::Array(exact_routes));
-            observations.set("webmcp_declarations", GraphJson::Array(exact_webmcp));
+            observations.set("routes", GraphJson::array(exact_routes));
+            observations.set("webmcp_declarations", GraphJson::array(exact_webmcp));
             root.set("observations", GraphJson::Object(observations));
         }
         exact = GraphJson::Object(root);
@@ -804,7 +804,7 @@ fn value_to_graph_json(value: &Value) -> GraphJson {
         Value::Bool(value) => GraphJson::Bool(*value),
         Value::Number(value) => GraphJson::Number(value.as_f64().unwrap_or_default()),
         Value::String(value) => GraphJson::from(value.clone()),
-        Value::Array(values) => GraphJson::Array(values.iter().map(value_to_graph_json).collect()),
+        Value::Array(values) => GraphJson::array(values.iter().map(value_to_graph_json).collect()),
         Value::Object(values) => GraphJson::Object(values.iter().fold(
             rea_application::javascript::graph::json::Obj::new(),
             |object, (key, value)| object.with(key.clone(), value_to_graph_json(value)),

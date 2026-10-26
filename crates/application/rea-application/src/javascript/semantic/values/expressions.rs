@@ -11,7 +11,7 @@ use super::super::limits::{
     SEMANTIC_EXPRESSION_DEPTH_LIMIT, SEMANTIC_PRIMITIVE_CANDIDATE_LIMIT,
     exceeds_primitive_addition_byte_budget, exceeds_template_byte_budget, resource_limit_reason,
 };
-use super::super::mutation_initializers::{BindingReadStatus, semantic_binding_at_read};
+use super::super::mutation_initializers::BindingReadStatus;
 use super::super::opaque_effects::opaque_binding_read_may_have_changed;
 use super::super::primitives::{semantic_primitive_candidates, semantic_primitive_set};
 use super::super::slots::semantic_slot_at_path;
@@ -98,9 +98,11 @@ where
     let mut properties = Vec::<Property>::new();
     let mut unknown_properties = false;
     let mut omitted_properties = Some(0usize);
+    let source_properties = node.field_list(source, Field::Properties);
     let demanded_property = demanded_key.and_then(|demanded| {
-        node.field_list(source, Field::Properties)
-            .into_iter()
+        source_properties
+            .iter()
+            .copied()
             .flatten()
             .rev()
             .find(|property| {
@@ -112,11 +114,7 @@ where
             .map(|property| property.key())
     });
 
-    for property in node
-        .field_list(source, Field::Properties)
-        .into_iter()
-        .flatten()
-    {
+    for property in source_properties.into_iter().flatten() {
         if property.babel_type() == "SpreadElement" {
             unknown_properties = true;
             omitted_properties = None;
@@ -172,7 +170,7 @@ where
 
     properties.sort_by(|left, right| compare_js_strings(&left.name, &right.name));
     SemanticValue::Object {
-        properties,
+        properties: properties.into(),
         coverage: if unknown_properties {
             Coverage::Unknown {
                 omitted: omitted_properties,
@@ -212,7 +210,7 @@ where
         });
     }
     SemanticValue::Array {
-        items,
+        items: items.into(),
         coverage: if unknown_items {
             Coverage::Unknown {
                 omitted: omitted_items,
@@ -713,24 +711,24 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
         let Some(name) = node.identifier_name() else {
             return unknown("Identifier has no name.");
         };
-        let Some(index) = self.state.resolve_binding(&node, name) else {
+        let state = self.state;
+        let Some(index) = state.resolve_binding(&node, name) else {
             return unknown(&format!("Unbound identifier {name}."));
         };
-        let binding = self.state.binding(index).clone();
+        let binding = state.binding(index);
 
         let has_assignment_definition = binding
             .definitions
             .iter()
             .any(|definition| definition.kind == DefinitionKind::Assignment);
-        let read = (binding.mutable && has_assignment_definition).then(|| {
-            semantic_binding_at_read(&binding, node, &self.state.parents, self.state.source)
-        });
+        let read = (binding.mutable && has_assignment_definition)
+            .then(|| state.semantic_binding_at_read(binding, node));
 
         if read
             .as_ref()
             .is_some_and(|selected| selected.status == BindingReadStatus::Unresolved)
         {
-            let value = self.evaluate_binding(&binding, point.nested(), true);
+            let value = self.evaluate_binding(binding, point.nested(), true);
             if matches!(
                 value,
                 SemanticValue::Unknown { .. }
@@ -746,14 +744,14 @@ impl<'s, 'a> super::Evaluation<'s, 'a> {
         }
 
         let capture_point = point.capture_point.unwrap_or(node);
-        if opaque_binding_read_may_have_changed(&self.opaque, self.state, &binding, capture_point) {
+        if opaque_binding_read_may_have_changed(self.opaque.as_ref(), state, binding, capture_point)
+        {
             return unknown("Direct eval may have changed this lexical binding.");
         }
 
         let at_read = read
             .as_ref()
-            .map(|selected| &selected.binding)
-            .unwrap_or(&binding);
+            .map_or(binding, |selected| selected.binding.as_ref());
         self.evaluate_binding(
             at_read,
             point.nested(),

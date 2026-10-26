@@ -9,7 +9,6 @@ use std::collections::{HashMap, HashSet};
 use crate::javascript::ast::{Field, Node, NodeKey};
 
 use super::ast_values::{runtime_function_parameters, unwrapped};
-use super::mutation_initializers::semantic_binding_at_read;
 use super::projection::{SemanticCallable, callable_id_for_node};
 use super::state::{BindingIndex, DefinitionKind, SemanticState};
 
@@ -142,7 +141,7 @@ impl<'s, 'a> ResolutionContext<'s, 'a> {
             return self.unresolved(format!("Unresolved call target {name}."));
         };
         let binding = self.state.binding(binding_index);
-        let read = semantic_binding_at_read(binding, node, &self.state.parents, self.state.source);
+        let read = self.state.semantic_binding_at_read(binding, node);
         let selects_all = !read.selection_changed;
 
         let candidates = if selects_all {
@@ -205,9 +204,8 @@ impl<'s, 'a> ResolutionContext<'s, 'a> {
             return self.unresolved(reason);
         }
 
-        let initializers = binding.initializers.clone();
-        let mut candidates = Vec::with_capacity(initializers.len());
-        for initializer in &initializers {
+        let mut candidates = Vec::with_capacity(binding.initializers.len());
+        for initializer in &binding.initializers {
             let key = initializer.record_id;
             debug_assert!(
                 key != 0,

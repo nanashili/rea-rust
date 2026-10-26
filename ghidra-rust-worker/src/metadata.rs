@@ -11,8 +11,8 @@ use crate::protocol::*;
 // v10: authenticate universal artifacts, then analyze a selected architecture slice.
 // v11: expose bounded source-backed image mapping and masked byte search.
 // v12: expose one structured decoder observation.
-// v13: combine these facts with named PE exports in the frozen inventory.
-pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v13";
+// v14: add decoded reachable function-body ranges to the worker protocol.
+pub const CACHE_ID: &str = "ghidra-rust-268c3a4-v14";
 
 pub fn engine() -> Value {
     json!({

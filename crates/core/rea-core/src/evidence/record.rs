@@ -6,7 +6,10 @@
 
 use crate::schema::{Issue, Parser, UnknownKeys};
 use crate::{JsonText, canonical_json, evidence::is_sha256};
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize, Serialize,
+    de::{DeserializeSeed, MapAccess, SeqAccess, Visitor},
+};
 use serde_json::{Value, json, value::RawValue};
 use std::{collections::BTreeMap, fmt, sync::OnceLock};
 
@@ -114,7 +117,11 @@ impl EvidenceRecord {
     /// Invalid envelopes, unsupported JSON values, and canonicalization
     /// failures are returned without producing a record.
     pub fn create_unsigned(input: &RawValue) -> Result<Self, EvidenceRecordError> {
-        let mut fields: BTreeMap<String, Box<RawValue>> = decode(input)?;
+        let borrowed_fields: BTreeMap<String, &RawValue> = decode(input)?;
+        let mut fields: BTreeMap<String, RecordField<'_>> = borrowed_fields
+            .into_iter()
+            .map(|(key, value)| (key, RecordField::Borrowed(value)))
+            .collect();
         if fields.contains_key("evidence_id") {
             return invalid("Unsigned Evidence input must omit evidence_id");
         }
@@ -122,24 +129,25 @@ impl EvidenceRecord {
         let placeholder = format!("ev_{}", "0".repeat(64));
         fields.insert(
             "evidence_id".into(),
-            serde_json::value::to_raw_value(&placeholder).map_err(EvidenceRecordError::Json)?,
+            RecordField::Owned(
+                serde_json::value::to_raw_value(&placeholder).map_err(EvidenceRecordError::Json)?,
+            ),
         );
-        let provisional =
-            serde_json::value::to_raw_value(&fields).map_err(EvidenceRecordError::Json)?;
-        let shape: RecordShape<'_> = decode(&provisional)?;
-        let (_, subject) = parse_subject(shape.subject)?;
-        let semantic = semantic_projection(&shape, subject.as_ref())?;
-        let digest =
-            canonical_json::digest_raw(&semantic).map_err(EvidenceRecordError::Canonical)?;
+        let digest = {
+            let shape = record_shape_from_fields(&fields)?;
+            let (_, subject) = parse_subject(shape.subject)?;
+            semantic_digest(&shape, subject.as_ref())?
+        };
 
         fields.insert(
             "evidence_id".into(),
-            serde_json::value::to_raw_value(&format!("ev_{digest}"))
-                .map_err(EvidenceRecordError::Json)?,
+            RecordField::Owned(
+                serde_json::value::to_raw_value(&format!("ev_{digest}"))
+                    .map_err(EvidenceRecordError::Json)?,
+            ),
         );
-        let completed =
-            serde_json::value::to_raw_value(&fields).map_err(EvidenceRecordError::Json)?;
-        Self::parse(&completed)
+        let canonical = canonicalize_record_fields(fields)?;
+        Self::parse_canonical(canonical)
     }
 
     /// Parse a strict Evidence record and verify its provider-neutral identity.
@@ -152,6 +160,10 @@ impl EvidenceRecord {
     /// semantic identifiers are rejected without changing source values.
     pub fn parse(input: &RawValue) -> Result<Self, EvidenceRecordError> {
         let raw = canonicalize(input)?;
+        Self::parse_canonical(raw)
+    }
+
+    fn parse_canonical(raw: Box<RawValue>) -> Result<Self, EvidenceRecordError> {
         validate_canonical_shape(&raw)?;
         let shape: RecordShape = decode(&raw)?;
 
@@ -229,11 +241,7 @@ impl EvidenceRecord {
             .map_err(EvidenceRecordError::Json)?;
         let limitation_count = decode::<Vec<&RawValue>>(shape.limitations)?.len();
 
-        let semantic = semantic_projection(&shape, subject_semantic.as_ref())?;
-        let calculated = format!(
-            "ev_{}",
-            canonical_json::digest_raw(&semantic).map_err(EvidenceRecordError::Canonical,)?
-        );
+        let calculated = { format!("ev_{}", semantic_digest(&shape, subject_semantic.as_ref())?) };
         if calculated != shape.evidence_id {
             return Err(EvidenceRecordError::SemanticIdMismatch);
         }
@@ -892,6 +900,18 @@ struct Semantic<'a> {
 }
 
 fn validate_canonical_shape(raw: &RawValue) -> Result<(), EvidenceRecordError> {
+    let source = raw.get().trim_start();
+    if !source.starts_with('{') {
+        return validate_value_shape(raw);
+    }
+
+    match validate_raw_object_shape(raw)? {
+        Some(issues) => Err(EvidenceRecordError::Shape(issues)),
+        None => Ok(()),
+    }
+}
+
+fn validate_value_shape(raw: &RawValue) -> Result<(), EvidenceRecordError> {
     match serde_json::from_str::<Value>(raw.get()) {
         Ok(input) => {
             EvidenceRecord::validate_input_shape(&input).map_err(EvidenceRecordError::Shape)
@@ -906,6 +926,188 @@ fn validate_canonical_shape(raw: &RawValue) -> Result<(), EvidenceRecordError> {
     }
 }
 
+fn validate_raw_object_shape(raw: &RawValue) -> Result<Option<Vec<Issue>>, EvidenceRecordError> {
+    let mut deserializer = serde_json::Deserializer::from_str(raw.get());
+    if serde::de::Deserializer::deserialize_any(&mut deserializer, CompatibilityVisitor).is_err() {
+        return Ok(None);
+    }
+
+    let fields: RawObjectFields<'_> = match serde_json::from_str(raw.get()) {
+        Ok(fields) => fields,
+        Err(_) => return Ok(None),
+    };
+    let mut projected = serde_json::Map::with_capacity(fields.0.len());
+
+    for (name, value) in fields.0 {
+        let schema = evidence_shape_schema()
+            .get("properties")
+            .and_then(Value::as_object)
+            .and_then(|properties| properties.get(&name));
+        let projected_value = if schema.is_some_and(is_outer_type_only_schema) {
+            raw_type_placeholder(value)?
+        } else {
+            match serde_json::from_str(value.get()) {
+                Ok(value) => value,
+                Err(_) => return Ok(None),
+            }
+        };
+        projected.insert(name, projected_value);
+    }
+
+    Ok(EvidenceRecord::validate_input_shape(&Value::Object(projected)).err())
+}
+
+struct RawObjectFields<'de>(Vec<(String, &'de RawValue)>);
+
+impl<'de> Deserialize<'de> for RawObjectFields<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct RawObjectFieldsVisitor;
+
+        impl<'de> Visitor<'de> for RawObjectFieldsVisitor {
+            type Value = RawObjectFields<'de>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a JSON object")
+            }
+
+            fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut fields = Vec::new();
+                while let Some((name, value)) = access.next_entry::<String, &'de RawValue>()? {
+                    fields.push((name, value));
+                }
+                Ok(RawObjectFields(fields))
+            }
+        }
+
+        deserializer.deserialize_map(RawObjectFieldsVisitor)
+    }
+}
+
+struct CompatibilitySeed;
+
+impl<'de> DeserializeSeed<'de> for CompatibilitySeed {
+    type Value = ();
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_any(CompatibilityVisitor)
+    }
+}
+
+struct CompatibilityVisitor;
+
+impl<'de> Visitor<'de> for CompatibilityVisitor {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("any JSON value")
+    }
+
+    fn visit_bool<E>(self, _value: bool) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_i64<E>(self, _value: i64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_u64<E>(self, _value: u64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_f64<E>(self, _value: f64) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_str<E>(self, _value: &str) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_borrowed_str<E>(self, _value: &'de str) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_none<E>(self) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_unit<E>(self) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_seq<A>(self, mut access: A) -> Result<(), A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        while access.next_element_seed(CompatibilitySeed)?.is_some() {}
+        Ok(())
+    }
+
+    fn visit_map<A>(self, mut access: A) -> Result<(), A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        while access.next_key::<String>()?.is_some() {
+            access.next_value_seed(CompatibilitySeed)?;
+        }
+        Ok(())
+    }
+}
+
+fn is_outer_type_only_schema(schema: &Value) -> bool {
+    let Some(schema) = schema.as_object() else {
+        return false;
+    };
+    if schema.len() != 1 {
+        return false;
+    }
+
+    let Some(type_value) = schema.get("type") else {
+        return false;
+    };
+    match type_value {
+        Value::String(name) => is_outer_json_type(name),
+        Value::Array(names) => names
+            .iter()
+            .all(|name| name.as_str().is_some_and(is_outer_json_type)),
+        _ => false,
+    }
+}
+
+fn is_outer_json_type(name: &str) -> bool {
+    matches!(
+        name,
+        "object" | "array" | "string" | "number" | "boolean" | "null"
+    )
+}
+
+fn raw_type_placeholder(raw: &RawValue) -> Result<Value, EvidenceRecordError> {
+    let source = raw.get().trim_start();
+    let value = match source.as_bytes().first() {
+        Some(b'{') => Value::Object(serde_json::Map::new()),
+        Some(b'[') => Value::Array(Vec::new()),
+        Some(b'"') => Value::String(String::new()),
+        Some(b't') => Value::Bool(true),
+        Some(b'f') => Value::Bool(false),
+        Some(b'n') => Value::Null,
+        Some(b'-' | b'0'..=b'9') => Value::Number(0.into()),
+        _ => {
+            return Err(EvidenceRecordError::Invalid(
+                "invalid canonical JSON value".into(),
+            ));
+        }
+    };
+    Ok(value)
+}
+
 fn canonicalize(input: &RawValue) -> Result<Box<RawValue>, EvidenceRecordError> {
     let mut bytes = Vec::new();
     canonical_json::write(input, &mut bytes).map_err(EvidenceRecordError::Canonical)?;
@@ -913,6 +1115,116 @@ fn canonicalize(input: &RawValue) -> Result<Box<RawValue>, EvidenceRecordError> 
         EvidenceRecordError::Invalid(format!("Canonical Evidence is not UTF-8: {error}"))
     })?;
     RawValue::from_string(text).map_err(EvidenceRecordError::Json)
+}
+
+fn canonicalize_record_fields<'a>(
+    fields: BTreeMap<String, RecordField<'a>>,
+) -> Result<Box<RawValue>, EvidenceRecordError> {
+    let mut bytes = Vec::new();
+    let field_values: Vec<_> = fields
+        .iter()
+        .map(|(name, value)| (name.as_str(), value.as_raw()))
+        .collect();
+    canonical_json::write_object_fields(&field_values, &mut bytes)
+        .map_err(EvidenceRecordError::Canonical)?;
+    drop(fields);
+    let text = String::from_utf8(bytes).map_err(|error| {
+        EvidenceRecordError::Invalid(format!("Canonical Evidence is not UTF-8: {error}"))
+    })?;
+    RawValue::from_string(text).map_err(EvidenceRecordError::Json)
+}
+
+enum RecordField<'a> {
+    Borrowed(&'a RawValue),
+    Owned(Box<RawValue>),
+}
+
+fn record_shape_from_fields<'a>(
+    fields: &'a BTreeMap<String, RecordField<'a>>,
+) -> Result<RecordShape<'a>, EvidenceRecordError> {
+    const FIELD_NAMES: [&str; 16] = [
+        "evidence_id",
+        "subject",
+        "provider",
+        "analysis_profile",
+        "predicate_type",
+        "operation",
+        "parameters",
+        "raw_result",
+        "normalized_result",
+        "confidence",
+        "authority",
+        "environment",
+        "limitations",
+        "relationship_coverage",
+        "locations",
+        "evidence_links",
+    ];
+
+    for key in fields.keys() {
+        if !FIELD_NAMES.contains(&key.as_str()) {
+            return invalid(format!("unknown Evidence field: {key}"));
+        }
+    }
+
+    let evidence_id = parse_field::<String>(fields, "evidence_id")?;
+    Ok(RecordShape {
+        evidence_id,
+        subject: field(fields, "subject")?,
+        provider: field(fields, "provider")?,
+        analysis_profile: field(fields, "analysis_profile")?,
+        predicate_type: field(fields, "predicate_type")?,
+        operation: field(fields, "operation")?,
+        parameters: field(fields, "parameters")?,
+        raw_result: field(fields, "raw_result")?,
+        normalized_result: field(fields, "normalized_result")?,
+        confidence: field(fields, "confidence")?,
+        authority: field(fields, "authority")?,
+        environment: field(fields, "environment")?,
+        limitations: field(fields, "limitations")?,
+        relationship_coverage: field(fields, "relationship_coverage")?,
+        locations: field(fields, "locations")?,
+        evidence_links: field(fields, "evidence_links")?,
+    })
+}
+
+fn field<'a>(
+    fields: &'a BTreeMap<String, RecordField<'a>>,
+    name: &str,
+) -> Result<&'a RawValue, EvidenceRecordError> {
+    fields
+        .get(name)
+        .map(RecordField::as_raw)
+        .ok_or_else(|| EvidenceRecordError::Invalid(format!("missing Evidence field: {name}")))
+}
+
+fn parse_field<'a, T: Deserialize<'a>>(
+    fields: &'a BTreeMap<String, RecordField<'a>>,
+    name: &str,
+) -> Result<T, EvidenceRecordError> {
+    let value = field(fields, name)?;
+    decode(value)
+}
+
+impl Serialize for RecordField<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Borrowed(value) => value.serialize(serializer),
+            Self::Owned(value) => value.serialize(serializer),
+        }
+    }
+}
+
+impl RecordField<'_> {
+    fn as_raw(&self) -> &RawValue {
+        match self {
+            Self::Borrowed(value) => value,
+            Self::Owned(value) => value,
+        }
+    }
 }
 
 fn copy_raw(raw: &RawValue) -> Result<Box<RawValue>, EvidenceRecordError> {
@@ -1082,13 +1394,35 @@ fn semantic_projection<'a>(
     shape: &'a RecordShape<'_>,
     subject: Option<&'a SubjectShape<'_>>,
 ) -> Result<Box<RawValue>, EvidenceRecordError> {
-    let semantic_subject = subject.map(|subject| SemanticSubject {
-        digest: subject.digest,
-        format: &subject.format,
-        architecture: subject.architecture,
-    });
-    let semantic = Semantic {
-        subject: semantic_subject,
+    let semantic = semantic_value(shape, subject);
+    serde_json::value::to_raw_value(&semantic).map_err(EvidenceRecordError::Json)
+}
+
+fn semantic_digest<'a>(
+    shape: &'a RecordShape<'_>,
+    subject: Option<&'a SubjectShape<'_>>,
+) -> Result<String, EvidenceRecordError> {
+    let semantic = semantic_value(shape, subject);
+    let subject = match &semantic.subject {
+        Some(subject) => {
+            serde_json::value::to_raw_value(subject).map_err(EvidenceRecordError::Json)?
+        }
+        None => RawValue::from_string("null".to_owned()).map_err(EvidenceRecordError::Json)?,
+    };
+    let fields = semantic_fields(&semantic, subject.as_ref());
+    canonical_json::digest_object_fields(&fields).map_err(EvidenceRecordError::Canonical)
+}
+
+fn semantic_value<'a>(
+    shape: &'a RecordShape<'_>,
+    subject: Option<&'a SubjectShape<'_>>,
+) -> Semantic<'a> {
+    Semantic {
+        subject: subject.map(|subject| SemanticSubject {
+            digest: subject.digest,
+            format: &subject.format,
+            architecture: subject.architecture,
+        }),
         provider: shape.provider,
         analysis_profile: shape.analysis_profile,
         predicate_type: shape.predicate_type,
@@ -1103,8 +1437,48 @@ fn semantic_projection<'a>(
         relationship_coverage: shape.relationship_coverage,
         locations: shape.locations,
         evidence_links: shape.evidence_links,
-    };
-    serde_json::value::to_raw_value(&semantic).map_err(EvidenceRecordError::Json)
+    }
+}
+
+fn semantic_fields<'a, 'value>(
+    semantic: &'a Semantic<'value>,
+    subject: &'a RawValue,
+) -> [(&'static str, &'a RawValue); 15] {
+    let Semantic {
+        subject: _,
+        provider,
+        analysis_profile,
+        predicate_type,
+        operation,
+        parameters,
+        raw_result,
+        normalized_result,
+        confidence,
+        authority,
+        environment,
+        limitations,
+        relationship_coverage,
+        locations,
+        evidence_links,
+    } = semantic;
+
+    [
+        ("subject", subject),
+        ("provider", provider),
+        ("analysis_profile", analysis_profile),
+        ("predicate_type", predicate_type),
+        ("operation", operation),
+        ("parameters", parameters),
+        ("raw_result", raw_result),
+        ("normalized_result", normalized_result),
+        ("confidence", confidence),
+        ("authority", authority),
+        ("environment", environment),
+        ("limitations", limitations),
+        ("relationship_coverage", relationship_coverage),
+        ("locations", locations),
+        ("evidence_links", evidence_links),
+    ]
 }
 
 fn semantic_bytes(raw: &RawValue) -> Result<Vec<u8>, EvidenceRecordError> {
@@ -1359,4 +1733,62 @@ fn invalid_text(error: impl fmt::Display) -> EvidenceRecordError {
 
 fn invalid<T>(message: impl Into<String>) -> Result<T, EvidenceRecordError> {
     Err(EvidenceRecordError::Invalid(message.into()))
+}
+
+#[cfg(test)]
+mod shape_projection_tests {
+    use super::*;
+
+    fn assert_shape_validation_matches_value(source: &str) {
+        let input = RawValue::from_string(source.to_owned()).expect("valid raw JSON");
+        let canonical = canonicalize(&input).expect("canonical JSON");
+        let expected = validate_value_shape(&canonical);
+        let actual = validate_canonical_shape(&canonical);
+
+        assert_eq!(
+            format!("{actual:?}"),
+            format!("{expected:?}"),
+            "shape validation changed for {source}"
+        );
+    }
+
+    #[test]
+    fn raw_shape_projection_preserves_string_errors_and_unknown_key_order() {
+        for source in [
+            r#"{"normalized_result":"\ud800","confidence":"invalid"}"#,
+            r#"{"normalized_result":"\udfff","confidence":"invalid"}"#,
+            r#"{"normalized_result":"\\uD800","confidence":"invalid"}"#,
+            r#"{"normalized_result":"\ud800\udc00","confidence":"invalid"}"#,
+            r#"{"\ud800":null,"confidence":"invalid"}"#,
+            r#"{"\ue000":null,"\ud800\udc00":null,"normalized_result":{"a":[1,null]}}"#,
+            r#"{"parameters":false,"raw_result":1.25,"normalized_result":[{"x":true}]}"#,
+            r#"{"locations":[{"kind":"file-offset","offset":-1}]}"#,
+        ] {
+            assert_shape_validation_matches_value(source);
+        }
+    }
+
+    #[test]
+    fn raw_shape_projection_preserves_whole_document_recursion_limit() {
+        for depth in [1, 125, 126, 127, 128, 129] {
+            let nested = format!("{}null{}", "[".repeat(depth), "]".repeat(depth));
+            let source = format!("{{\"normalized_result\":{nested},\"confidence\":\"invalid\"}}");
+            assert_shape_validation_matches_value(&source);
+        }
+    }
+
+    #[test]
+    fn projection_requires_an_outer_json_type_without_other_constraints() {
+        assert!(is_outer_type_only_schema(&json!({"type": "object"})));
+        assert!(!is_outer_type_only_schema(&json!({"type": "integer"})));
+        assert!(!is_outer_type_only_schema(
+            &json!({"type": ["integer", "null"]})
+        ));
+        assert!(!is_outer_type_only_schema(
+            &json!({"type": "string", "minLength": 1})
+        ));
+        assert!(!is_outer_type_only_schema(
+            &json!({"type": "object", "additionalProperties": false})
+        ));
+    }
 }

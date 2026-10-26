@@ -685,7 +685,11 @@ impl<'state, 'a> SymbolicBindings<'state, 'a> {
         let mut current = Some(environment.clone());
         let mut child = None;
         while let Some(candidate) = current {
-            if self.scope_contains(binding_scope, candidate.scope_id.as_deref()) {
+            if candidate
+                .scope_id
+                .as_deref()
+                .is_some_and(|scope| self.state.scope_is_within(binding_scope, scope))
+            {
                 if let Some(completed) = candidate.completed_at {
                     return Some(completed.span().end);
                 }
@@ -714,21 +718,6 @@ impl<'state, 'a> SymbolicBindings<'state, 'a> {
                 .span()
                 .start,
         )
-    }
-
-    fn scope_contains(&self, binding_scope: &str, environment_scope: Option<&str>) -> bool {
-        let mut scope = Some(binding_scope.to_owned());
-        while let Some(id) = scope {
-            if Some(id.as_str()) == environment_scope {
-                return true;
-            }
-            scope = self
-                .state
-                .scopes_by_id
-                .get(&id)
-                .and_then(|index| self.state.scope(*index).parent_scope_id.clone());
-        }
-        false
     }
 
     fn node_within(&self, node: Node<'a>, ancestor: Node<'a>) -> bool {

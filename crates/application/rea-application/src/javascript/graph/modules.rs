@@ -133,32 +133,32 @@ pub fn add_source_modules(context: &mut GraphContext<'_>) {
         };
         let coverage = semantic_coverage(ir);
         let properties = Obj::new()
-            .with("semantic_role", "source-module")
-            .with("source_sha256", file.at("sha256").clone())
-            .with("path", Json::String(path_js.clone()))
-            .with("logical_module_key", Json::String(path_js.clone()))
-            .with("module_format", module_format(&path_js, ir))
-            .with(
+            .with_static("semantic_role", "source-module")
+            .with_static("source_sha256", file.at("sha256").clone())
+            .with_static("path", Json::String(path_js.clone()))
+            .with_static("logical_module_key", Json::String(path_js.clone()))
+            .with_static("module_format", module_format(&path_js, ir))
+            .with_static(
                 "import_relationships",
                 links
                     .iter()
                     .filter(|link| matches!(link.at("kind").str(), "import" | "require"))
                     .count(),
             )
-            .with(
+            .with_static(
                 "type_relationships",
                 links
                     .iter()
                     .filter(|link| link.at("kind").str() == "type-import")
                     .count(),
             )
-            .with("export_relationships", exports.len())
-            .with("export_names", super::json::strings(dedup(&exports)))
-            .with(
+            .with_static("export_relationships", exports.len())
+            .with_static("export_names", super::json::strings(dedup(&exports)))
+            .with_static(
                 "type_export_names",
                 super::json::strings(dedup(&type_exports)),
             )
-            .with("omitted_export_names", 0.0);
+            .with_static("omitted_export_names", 0.0);
         let evidence = ast_observation(
             &EvidenceInput::new(
                 file.at("sha256").str(),
@@ -192,7 +192,7 @@ pub fn add_source_modules(context: &mut GraphContext<'_>) {
             file,
             program.at("location"),
             &coverage,
-            Obj::new().with(
+            Obj::new().with_static(
                 "logical_module_key",
                 Json::String(file.at("path").text().clone()),
             ),
@@ -246,10 +246,10 @@ pub fn add_module_relationships(context: &mut GraphContext<'_>) -> usize {
             } else if !link.at("specifier").is_null() {
                 let imported_name = link.at("importedName");
                 let origin = Obj::new()
-                    .with("specifier", link.at("specifier").clone())
-                    .with(
+                    .with_static("specifier", link.at("specifier").clone())
+                    .with_static(
                         "importedPath",
-                        Json::Array(if imported_name.is_null() {
+                        Json::array(if imported_name.is_null() {
                             Vec::new()
                         } else {
                             vec![imported_name.clone()]
@@ -277,13 +277,13 @@ fn add_export(
     let base = semantic_coverage(input.ir);
     let shapes = export_return_shapes(input.ir, input.link, &path, &base);
     let properties = Obj::new()
-        .with("semantic_role", "export-binding")
-        .with("module_path", Json::String(path.clone()))
-        .with("relationship_kind", input.link.at("kind").clone())
-        .with("exported_name", Json::String(exported.clone()))
-        .with("local_name", input.link.at("localName").clone())
-        .with("imported_name", input.link.at("importedName").clone())
-        .with("declared_specifier", input.link.at("specifier").clone());
+        .with_static("semantic_role", "export-binding")
+        .with_static("module_path", Json::String(path.clone()))
+        .with_static("relationship_kind", input.link.at("kind").clone())
+        .with_static("exported_name", Json::String(exported.clone()))
+        .with_static("local_name", input.link.at("localName").clone())
+        .with_static("imported_name", input.link.at("importedName").clone())
+        .with_static("declared_specifier", input.link.at("specifier").clone());
     let evidence = ast_observation(
         &EvidenceInput::new(sha, &path, "recover-module-export", base.clone())
             .range(input.link.at("location"))
@@ -441,9 +441,9 @@ fn unresolved_module_node(
 ) -> AppNode {
     let status = resolution.at("resolution_status").str();
     let mut properties = Obj::new()
-        .with("semantic_role", "module-reference")
-        .with("declared_specifier", Json::String(specifier.clone()))
-        .with("resolution_status", status);
+        .with_static("semantic_role", "module-reference")
+        .with_static("declared_specifier", Json::String(specifier.clone()))
+        .with_static("resolution_status", status);
     properties.extend_from(&resolution_properties(Some(resolution)));
     let evidence = static_inference(
         &EvidenceInput::new(
@@ -481,7 +481,7 @@ fn origin_for_export(ir: &Json, link: &Json) -> Option<Json> {
         let imported_name = link.at("importedName");
         origin.set(
             "importedPath",
-            Json::Array(if imported_name.is_null() {
+            Json::array(if imported_name.is_null() {
                 Vec::new()
             } else {
                 vec![imported_name.clone()]
@@ -500,7 +500,7 @@ fn origin_for_export(ir: &Json, link: &Json) -> Option<Json> {
 }
 
 fn relationship_properties(link: &Json, target: Option<&Target>, origin: Option<&Json>) -> Obj {
-    let mut properties = Obj::new().with("module_link_kind", link.at("kind").clone());
+    let mut properties = Obj::new().with_static("module_link_kind", link.at("kind").clone());
     properties.extend_from(&resolution_mode_properties(
         link.get("resolutionMode").map(Json::str),
     ));
@@ -525,7 +525,7 @@ fn relationship_properties(link: &Json, target: Option<&Target>, origin: Option<
     );
     properties.set(
         "imported_path",
-        imported_path.unwrap_or_else(|| Json::Array(Vec::new())),
+        imported_path.unwrap_or_else(|| Json::array(Vec::new())),
     );
     properties.set("local_name", link.at("localName").clone());
     properties.set("exported_name", link.at("exportedName").clone());

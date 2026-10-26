@@ -120,7 +120,7 @@ fn apply_exact_filter(value: &Json, paths: &[format::filter::FilterPath]) -> Jso
     {
         let key = JsString::from(key.as_str());
         return match value {
-            Json::Array(items) => Json::Array(
+            Json::Array(items) => Json::array(
                 items
                     .iter()
                     .map(|item| apply_exact_filter(item, paths))
@@ -138,7 +138,7 @@ fn apply_exact_filter(value: &Json, paths: &[format::filter::FilterPath]) -> Jso
     }
 
     if let Json::Array(items) = value {
-        return Json::Array(
+        return Json::array(
             items
                 .iter()
                 .map(|item| apply_exact_filter(item, paths))
@@ -182,7 +182,7 @@ fn merge_exact_filter(
             return;
         };
         let selected = exact_slice(items.as_slice(), *start, *end);
-        target.set(key, Json::Array(selected));
+        target.set(key, Json::array(selected));
         return;
     }
 

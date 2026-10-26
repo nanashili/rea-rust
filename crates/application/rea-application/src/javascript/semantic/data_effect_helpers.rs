@@ -8,7 +8,7 @@
 use crate::javascript::ast::{AstVisitor, Field, Node, traverse};
 
 use super::ast_values::{ExactLiteral, read_exact_literal, static_property_key, unwrapped};
-use super::mutation_initializers::{effect_timing, top_level_effect_follows_capture};
+use super::mutation_initializers::effect_timing;
 use super::projection::callable_id_for_node;
 use super::provenance::BindingProvenance;
 use super::require_origin::{require_exports_identity, require_origin};
@@ -383,6 +383,9 @@ pub fn builtin_data_effect_method<'a>(
     ) {
         return None;
     }
+    if !method_may_match_specifiers(&property, specifiers) {
+        return None;
+    }
     let object = callee
         .field(state.source, Field::Object)
         .map(|node| unwrapped(state.source, node))?;
@@ -467,6 +470,17 @@ fn builtin_method_allowed(specifier: &JsString, property: &JsString) -> bool {
     }
 }
 
+/// Reject member properties that no supplied built-in family can accept.
+///
+/// This is an optimistic filter: the resolved module origin and imported path
+/// still have to pass the authoritative checks in `builtin_data_effect_method`.
+fn method_may_match_specifiers(property: &JsString, specifiers: &[&str]) -> bool {
+    specifiers.iter().any(|candidate| {
+        let normalized = candidate.strip_prefix("node:").unwrap_or(candidate);
+        builtin_method_allowed(&JsString::from(normalized), property)
+    })
+}
+
 fn known_method(property: &JsString, candidates: &[&str]) -> bool {
     candidates.iter().any(|candidate| property == *candidate)
 }
@@ -490,7 +504,7 @@ fn has_prior_member_effect<'a>(
         .chain(binding.escaped_paths.iter())
         .any(|effect| {
             effect.node.is_some_and(|node| {
-                !top_level_effect_follows_capture(capture, Some(node), &state.parents, state.source)
+                !state.top_level_effect_follows_capture(capture, Some(node))
                     && effect.path.first().is_some_and(|key| {
                         matches!(key, super::property_paths::PropertyPathKey::String(value) if value == property)
                     })

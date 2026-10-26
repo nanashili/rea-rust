@@ -129,7 +129,7 @@ fn create_comparison_evidence(
     let right_id = right.evidence_id().to_owned();
     let links = vec![left_id.clone(), right_id.clone()];
     let provider = provider().evidence_provider();
-    let limitations = Json::Array(
+    let limitations = Json::array(
         std::iter::once(Json::from(SUBJECT_UNAVAILABLE))
             .chain(comparison.value.at("limitations").arr().iter().cloned())
             .collect(),

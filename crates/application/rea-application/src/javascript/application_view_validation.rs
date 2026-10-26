@@ -152,7 +152,7 @@ fn restore_defaults(
                 let item = parsed_items.get(index).unwrap_or(&Value::Null);
                 restored.push(restore_defaults(operation, original_item, item)?);
             }
-            Ok(Json::Array(restored))
+            Ok(Json::array(restored))
         }
         _ => Ok(original.clone()),
     }

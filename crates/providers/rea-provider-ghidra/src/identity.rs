@@ -42,7 +42,7 @@ pub(crate) fn limitations() -> Vec<String> {
 }
 
 /// `GHIDRA_RUST_OPERATIONS`, in the declared order.
-pub(crate) const OPERATIONS: [&str; 23] = [
+pub(crate) const OPERATIONS: [&str; 29] = [
     "list_segments",
     "list_procedures",
     "search_procedures",
@@ -66,6 +66,12 @@ pub(crate) const OPERATIONS: [&str; 23] = [
     "address_to_file_offset",
     "search_bytes",
     "inspect_native_instruction",
+    "procedure_info",
+    "resolve_containing_procedure",
+    "resolve_native_call_targets",
+    "inspect_native_load_image",
+    "current_address",
+    "get_navigation_context",
 ];
 
 /// One declared operation (or the internal health probe).
@@ -95,6 +101,12 @@ pub(crate) enum Operation {
     AddressToFileOffset,
     SearchBytes,
     InspectNativeInstruction,
+    ProcedureInfo,
+    ResolveContainingProcedure,
+    ResolveNativeCallTargets,
+    InspectNativeLoadImage,
+    CurrentAddress,
+    GetNavigationContext,
 }
 
 impl Operation {
@@ -124,6 +136,12 @@ impl Operation {
             "address_to_file_offset" => Self::AddressToFileOffset,
             "search_bytes" => Self::SearchBytes,
             "inspect_native_instruction" => Self::InspectNativeInstruction,
+            "procedure_info" => Self::ProcedureInfo,
+            "resolve_containing_procedure" => Self::ResolveContainingProcedure,
+            "resolve_native_call_targets" => Self::ResolveNativeCallTargets,
+            "inspect_native_load_image" => Self::InspectNativeLoadImage,
+            "current_address" => Self::CurrentAddress,
+            "get_navigation_context" => Self::GetNavigationContext,
             _ => return None,
         })
     }
@@ -154,6 +172,12 @@ impl Operation {
             Self::AddressToFileOffset => "address_to_file_offset",
             Self::SearchBytes => "search_bytes",
             Self::InspectNativeInstruction => "inspect_native_instruction",
+            Self::ProcedureInfo => "procedure_info",
+            Self::ResolveContainingProcedure => "resolve_containing_procedure",
+            Self::ResolveNativeCallTargets => "resolve_native_call_targets",
+            Self::InspectNativeLoadImage => "inspect_native_load_image",
+            Self::CurrentAddress => "current_address",
+            Self::GetNavigationContext => "get_navigation_context",
         }
     }
 }

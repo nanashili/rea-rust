@@ -4,10 +4,11 @@
 //! and provenance proofs belong to one query, so an earlier capture cannot
 //! publish a value into a live reader's cache.
 
+mod captured_cache;
 mod expressions;
+mod independent_cache;
 mod provenance;
 
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -15,9 +16,6 @@ use std::rc::Rc;
 use crate::javascript::ast::{Node, NodeKey};
 
 use super::dependencies::{SemanticDependencyProof, SemanticDependencyProofs};
-use super::mutation_initializers::{
-    semantic_binding_precedes_capture, semantic_capture_position, semantic_escape_follows_capture,
-};
 use super::mutation_values::{invalidate_escaped_path, invalidate_mutation_paths};
 use super::opaque_effects::{
     OpaqueEffects, binding_can_be_rebound, binding_may_have_opaque_effect, index_opaque_effects,
@@ -25,20 +23,19 @@ use super::opaque_effects::{
 use super::provenance::{BindingProvenance, semantic_ambiguous_provenance};
 use super::state::{BindingState, ProjectionKey, SemanticState};
 use super::value_types::{JsString, ResourceLimit, SemanticValue};
+use captured_cache::CapturedBindingCache;
+use independent_cache::{IndependentBindingCache, IndependentBindingValue};
 
 const CALLER_INDEPENDENT: isize = isize::MAX;
 const EVERY_CALLER: isize = -1;
+// Keep the projection-wide memo bounded. Missing entries are recomputed and
+// therefore cannot change semantic coverage or values.
+const MAX_SHARED_PROJECTION_SNAPSHOTS: usize = 256;
 
 #[derive(Clone)]
 struct Memoized<T> {
     value: T,
     dependencies: Option<SemanticDependencyProof>,
-}
-
-#[derive(Clone)]
-struct IndependentBindingValue {
-    evaluated: Memoized<SemanticValue>,
-    depth: usize,
 }
 
 #[derive(Clone)]
@@ -80,9 +77,9 @@ struct BindingEvaluation {
 pub(crate) struct ValueCaches {
     dependencies: Option<Rc<RefCell<SemanticDependencyProofs>>>,
     primitive_bindings: HashMap<String, SemanticValue>,
-    captured_bindings: HashMap<NodeKey, HashMap<String, SemanticValue>>,
+    captured_bindings: CapturedBindingCache,
     primitive_expressions: HashMap<NodeKey, SemanticValue>,
-    independent_bindings: HashMap<String, IndependentBindingValue>,
+    independent_bindings: IndependentBindingCache,
 }
 
 #[derive(Default)]
@@ -116,12 +113,26 @@ impl<'a> EvaluationPoint<'a> {
 
 struct Evaluation<'s, 'a> {
     state: &'s SemanticState<'a>,
-    opaque: Cow<'s, OpaqueEffects<'a>>,
+    opaque: OpaqueSource<'s, 'a>,
     bindings: HashMap<String, usize>,
     lowest: isize,
     memo: EvaluationMemo,
     dependencies: Rc<RefCell<SemanticDependencyProofs>>,
     demanded_member_path: Option<Vec<JsString>>,
+}
+
+enum OpaqueSource<'s, 'a> {
+    Borrowed(&'s OpaqueEffects<'a>),
+    Shared(Rc<OpaqueEffects<'a>>),
+}
+
+impl<'s, 'a> OpaqueSource<'s, 'a> {
+    fn as_ref(&self) -> &OpaqueEffects<'a> {
+        match self {
+            Self::Borrowed(effects) => effects,
+            Self::Shared(effects) => effects,
+        }
+    }
 }
 
 /// Discard values derived before member or escape effects changed.
@@ -138,12 +149,27 @@ pub fn evaluate_semantic_binding<'a>(
     state: &SemanticState<'a>,
 ) -> SemanticValue {
     let mut evaluation = Evaluation::new(state);
-    if binding_can_be_rebound(binding)
-        && binding_may_have_opaque_effect(&evaluation.opaque, state, binding, None, false)
-    {
-        return unknown("Direct eval may have changed this lexical binding.");
+    evaluation.evaluate_public_binding(binding)
+}
+
+/// Reuses one value evaluator memo across the immutable binding projection.
+///
+/// Provenance stays query-local because its memo is sensitive to effective
+/// read/capture context that is not part of the value snapshot key.
+pub(crate) struct ImmutableBindingEvaluator<'s, 'a> {
+    evaluation: Evaluation<'s, 'a>,
+}
+
+impl<'s, 'a> ImmutableBindingEvaluator<'s, 'a> {
+    pub(crate) fn new(state: &'s SemanticState<'a>) -> Self {
+        Self {
+            evaluation: Evaluation::new(state),
+        }
     }
-    evaluation.evaluate_binding(binding, EvaluationPoint::live(), true)
+
+    pub(crate) fn evaluate(&mut self, binding: &BindingState<'a>) -> SemanticValue {
+        self.evaluation.evaluate_public_binding(binding)
+    }
 }
 
 pub(crate) fn evaluate_semantic_binding_with_opaque_effects<'a>(
@@ -153,7 +179,7 @@ pub(crate) fn evaluate_semantic_binding_with_opaque_effects<'a>(
 ) -> SemanticValue {
     let mut evaluation = Evaluation::new_with_opaque(state, opaque);
     if binding_can_be_rebound(binding)
-        && binding_may_have_opaque_effect(&evaluation.opaque, state, binding, None, false)
+        && binding_may_have_opaque_effect(evaluation.opaque.as_ref(), state, binding, None, false)
     {
         return unknown("Direct eval may have changed this lexical binding.");
     }
@@ -197,16 +223,43 @@ pub fn evaluate_semantic_provenance<'a>(
     state: &SemanticState<'a>,
 ) -> BindingProvenance {
     let mut evaluation = Evaluation::new(state);
-    let provenance = evaluation.provenance_for_binding(binding, EvaluationPoint::live());
-    if binding_can_be_rebound(binding)
-        && binding_may_have_opaque_effect(&evaluation.opaque, state, binding, None, false)
-    {
-        semantic_ambiguous_provenance(
-            provenance.origins(),
-            "Direct eval may have changed this runtime value.",
-        )
-    } else {
-        provenance
+    evaluation.evaluate_public_provenance(binding)
+}
+
+impl<'s, 'a> Evaluation<'s, 'a> {
+    fn evaluate_public_binding(&mut self, binding: &BindingState<'a>) -> SemanticValue {
+        if binding_can_be_rebound(binding)
+            && binding_may_have_opaque_effect(
+                self.opaque.as_ref(),
+                self.state,
+                binding,
+                None,
+                false,
+            )
+        {
+            return unknown("Direct eval may have changed this lexical binding.");
+        }
+        self.evaluate_binding(binding, EvaluationPoint::live(), true)
+    }
+
+    fn evaluate_public_provenance(&mut self, binding: &BindingState<'a>) -> BindingProvenance {
+        let provenance = self.provenance_for_binding(binding, EvaluationPoint::live());
+        if binding_can_be_rebound(binding)
+            && binding_may_have_opaque_effect(
+                self.opaque.as_ref(),
+                self.state,
+                binding,
+                None,
+                false,
+            )
+        {
+            semantic_ambiguous_provenance(
+                provenance.origins(),
+                "Direct eval may have changed this runtime value.",
+            )
+        } else {
+            provenance
+        }
     }
 }
 
@@ -220,21 +273,20 @@ pub fn evaluate_semantic_provenance_at_read<'a>(
 
 impl<'s, 'a> Evaluation<'s, 'a> {
     fn new(state: &'s SemanticState<'a>) -> Self {
-        Self::new_with_opaque_owned(state, index_opaque_effects(state))
+        let opaque = {
+            let mut cache = state.opaque_effects_cache.borrow_mut();
+            cache
+                .get_or_insert_with(|| Rc::new(index_opaque_effects(state)))
+                .clone()
+        };
+        Self::new_with_opaque_value(state, OpaqueSource::Shared(opaque))
     }
 
     fn new_with_opaque(state: &'s SemanticState<'a>, opaque: &'s OpaqueEffects<'a>) -> Self {
-        Self::new_with_opaque_value(state, Cow::Borrowed(opaque))
+        Self::new_with_opaque_value(state, OpaqueSource::Borrowed(opaque))
     }
 
-    fn new_with_opaque_owned(state: &'s SemanticState<'a>, opaque: OpaqueEffects<'a>) -> Self {
-        Self::new_with_opaque_value(state, Cow::Owned(opaque))
-    }
-
-    fn new_with_opaque_value(
-        state: &'s SemanticState<'a>,
-        opaque: Cow<'s, OpaqueEffects<'a>>,
-    ) -> Self {
+    fn new_with_opaque_value(state: &'s SemanticState<'a>, opaque: OpaqueSource<'s, 'a>) -> Self {
         let dependencies = {
             let mut caches = state.value_caches.borrow_mut();
             caches
@@ -319,7 +371,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
     ) -> Option<SemanticValue> {
         let caches = self.state.value_caches.borrow();
         match point.capture_point {
-            Some(capture) => caches.captured_bindings.get(&capture.key())?.get(binding),
+            Some(capture) => caches.captured_bindings.get(capture.key(), binding),
             None => caches.primitive_bindings.get(binding),
         }
         .cloned()
@@ -332,11 +384,14 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         value: SemanticValue,
     ) {
         let mut caches = self.state.value_caches.borrow_mut();
-        let values = match point.capture_point {
-            Some(capture) => caches.captured_bindings.entry(capture.key()).or_default(),
-            None => &mut caches.primitive_bindings,
-        };
-        values.insert(binding.to_owned(), value);
+        match point.capture_point {
+            Some(capture) => caches
+                .captured_bindings
+                .admit(capture.key(), binding, value),
+            None => {
+                caches.primitive_bindings.insert(binding.to_owned(), value);
+            }
+        }
     }
 
     fn evaluate_binding(
@@ -356,12 +411,9 @@ impl<'s, 'a> Evaluation<'s, 'a> {
 
         if whole_binding
             && point.capture_point.is_some_and(|capture| {
-                !semantic_binding_precedes_capture(
-                    binding,
-                    capture,
-                    &self.state.parents,
-                    self.state.source,
-                )
+                !self
+                    .state
+                    .semantic_binding_precedes_capture(binding, capture)
             })
         {
             point.capture_point = None;
@@ -567,13 +619,8 @@ impl<'s, 'a> Evaluation<'s, 'a> {
                 break;
             }
             if point.capture_point.is_some_and(|capture| {
-                semantic_escape_follows_capture(
-                    binding,
-                    capture,
-                    escape.node,
-                    &self.state.parents,
-                    self.state.source,
-                )
+                self.state
+                    .semantic_escape_follows_capture(binding, capture, escape.node)
             }) {
                 continue;
             }
@@ -583,7 +630,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
             value,
             SemanticValue::Object { .. } | SemanticValue::Array { .. }
         ) && binding_may_have_opaque_effect(
-            &self.opaque,
+            self.opaque.as_ref(),
             self.state,
             binding,
             point.capture_point,
@@ -600,7 +647,11 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         point: EvaluationPoint<'a>,
         whole_binding: bool,
     ) -> Option<SnapshotKey> {
-        if whole_binding || binding.initializers.len() != 1 {
+        // Object and array literals can be evaluated demand-driven for a
+        // member read. Their result then depends on the active path, which
+        // is intentionally local evaluator state rather than binding state.
+        // Do not retain such a partial value under a path-independent key.
+        if whole_binding || self.demanded_member_path.is_some() || binding.initializers.len() != 1 {
             return None;
         }
         Some(SnapshotKey {
@@ -632,16 +683,11 @@ impl<'s, 'a> Evaluation<'s, 'a> {
                 .value_caches
                 .borrow_mut()
                 .independent_bindings
-                .insert(
-                    binding.binding_id.clone(),
-                    IndependentBindingValue {
-                        evaluated: result.evaluated.clone(),
-                        depth: point.depth,
-                    },
-                );
+                .admit(&binding.binding_id, &result.evaluated, point.depth);
         }
 
-        if let Some(key) = caches.snapshot_key
+        if self.memo.snapshots.len() < MAX_SHARED_PROJECTION_SNAPSHOTS
+            && let Some(key) = caches.snapshot_key
             && result.dependence != BindingDependence::ActiveCaller
             && !self
                 .dependencies
@@ -678,9 +724,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         node: Node<'a>,
         point: EvaluationPoint<'a>,
     ) -> Option<EvaluationPoint<'a>> {
-        if point.capture_point.is_some()
-            || semantic_capture_position(node, &self.state.parents, self.state.source).is_none()
-        {
+        if point.capture_point.is_some() || self.state.semantic_capture_position(node).is_none() {
             return None;
         }
         Some(EvaluationPoint {
@@ -755,4 +799,181 @@ fn can_capture_primitive(value: &SemanticValue) -> bool {
                 ..
             }
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::javascript::parser::parse_javascript_analysis_program;
+    use crate::javascript::semantic::analysis::prepare_state;
+    use crate::javascript::semantic::state::ResolutionMode;
+    use oxc_allocator::Allocator;
+
+    #[test]
+    fn demand_driven_member_values_are_not_snapshot_cached_by_path() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 };",
+            Some("demanded-member-cache.js"),
+        )
+        .expect("member cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+        let mut evaluation = Evaluation::new(state);
+
+        evaluation.demanded_member_path = Some(vec![JsString::from("first")]);
+        let first = evaluation.evaluate_binding(binding, EvaluationPoint::live(), false);
+        evaluation.demanded_member_path = Some(vec![JsString::from("second")]);
+        let second = evaluation.evaluate_binding(binding, EvaluationPoint::live(), false);
+
+        assert_eq!(object_property_number(&first, "first"), Some(1.0));
+        assert_eq!(object_property_number(&second, "second"), Some(2.0));
+    }
+
+    #[test]
+    fn independent_binding_recomputes_after_cache_entry_eviction() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 };",
+            Some("independent-cache-eviction.js"),
+        )
+        .expect("independent cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+
+        let first = evaluate_semantic_binding(binding, state);
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .independent_bindings
+                .get(&binding.binding_id)
+                .is_some(),
+            "independent evaluator should retain the first result"
+        );
+
+        for index in 0..independent_cache::MAX_CACHE_ENTRIES {
+            let evaluated = Memoized {
+                value: SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(index as f64),
+                },
+                dependencies: None,
+            };
+            state.value_caches.borrow_mut().independent_bindings.admit(
+                &format!("synthetic-{index}"),
+                &evaluated,
+                0,
+            );
+        }
+
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .independent_bindings
+                .get(&binding.binding_id)
+                .is_none(),
+            "the bounded cache should evict the original entry"
+        );
+
+        let recomputed = evaluate_semantic_binding(binding, state);
+        assert_eq!(recomputed, first);
+    }
+
+    #[test]
+    fn captured_binding_recomputes_at_the_same_point_after_cache_eviction() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 }; const captured = value;",
+            Some("captured-cache-eviction.js"),
+        )
+        .expect("captured cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+        let capture = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "captured")
+            .expect("captured binding exists")
+            .initializers[0]
+            .node;
+        let point = EvaluationPoint {
+            depth: 0,
+            capture_point: Some(capture),
+        };
+
+        let first = Evaluation::new(state).evaluate_binding(binding, point, true);
+        assert_eq!(object_property_number(&first, "first"), Some(1.0));
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .captured_bindings
+                .get(capture.key(), &binding.binding_id)
+                .is_some(),
+            "the evaluator should retain the captured result"
+        );
+
+        for index in 0..independent_cache::MAX_CACHE_ENTRIES {
+            state.value_caches.borrow_mut().captured_bindings.admit(
+                capture.key(),
+                &format!("synthetic-{index}"),
+                SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(index as f64),
+                },
+            );
+        }
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .captured_bindings
+                .get(capture.key(), &binding.binding_id)
+                .is_none(),
+            "the bounded cache should evict the captured result"
+        );
+
+        let recomputed = Evaluation::new(state).evaluate_binding(binding, point, true);
+        assert_eq!(recomputed, first);
+    }
+
+    fn object_property_number(value: &SemanticValue, name: &str) -> Option<f64> {
+        let SemanticValue::Object { properties, .. } = value else {
+            return None;
+        };
+        properties
+            .iter()
+            .find(|property| property.name == name)
+            .and_then(|property| match property.value {
+                SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(number),
+                } => Some(number),
+                _ => None,
+            })
+    }
 }

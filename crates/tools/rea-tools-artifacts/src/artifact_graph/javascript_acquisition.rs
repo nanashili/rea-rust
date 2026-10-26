@@ -125,11 +125,16 @@ impl JavaScriptReader for ProviderJavaScriptReader {
         bytes: Vec<u8>,
         cancellation: &Cancellation,
     ) -> Result<Option<Self>, Self::Error> {
-        let _ = (entry, cancellation);
-        Ok(Some(Self::new(
-            Box::new(super::asar::AsarArtifactReader::new(bytes)),
-            None,
-        )))
+        let _ = cancellation;
+        let nested_reader: Box<dyn ArtifactReader> = if entry.filesystem_backed {
+            Box::new(super::asar::AsarArtifactReader::from_path(
+                std::path::Path::new(&entry.adapter_key),
+                bytes.into(),
+            ))
+        } else {
+            Box::new(super::asar::AsarArtifactReader::new(bytes))
+        };
+        Ok(Some(Self::new(nested_reader, None)))
     }
 
     fn verify_container(

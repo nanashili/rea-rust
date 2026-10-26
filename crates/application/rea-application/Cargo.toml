@@ -18,10 +18,12 @@ oxc_parser.workspace = true
 oxc_semantic.workspace = true
 oxc_span.workspace = true
 regex.workspace = true
+rustc-hash.workspace = true
 flate2 = { workspace = true, features = ["runtime_detection"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 sha2.workspace = true
+smallvec.workspace = true
 toml_edit.workspace = true
 yaml-rust2.workspace = true
 sha1.workspace = true
@@ -32,6 +34,7 @@ unicode-normalization.workspace = true
 ada-url = { version = "=4.0.0", default-features = false, features = ["bundled", "std"] }
 # WHATWG HTML tokenizer and tree builder for inert HTML reference extraction.
 html5ever = "=0.35.0"
+indexmap.workspace = true
 tempfile.workspace = true
 ureq.workspace = true
 

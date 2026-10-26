@@ -4,6 +4,7 @@
 //! never performs the expensive parse in its own process when a worker is
 //! requested; it owns the child until the child exits or cleanup settles.
 
+use std::cell::RefCell;
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -12,6 +13,10 @@ use std::time::{Duration, Instant};
 use rea_host::process::launcher::{ChildLaunchSpec, OwnedChildProcess};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
+
+mod transport;
+
+use transport::{parse_checkpoint, parse_worker_response, write_checkpoint, write_worker_response};
 
 pub const WORKER_ARGUMENT: &str = "--rea-javascript-worker";
 const WORKER_HEAP_ARGUMENT_PREFIX: &str = "--rea-javascript-worker-max-heap-mb=";
@@ -71,16 +76,6 @@ pub struct WorkerResponse {
 pub struct WorkerSemanticFailure {
     pub phase: String,
     pub reason: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct WorkerCheckpoint {
-    static_analysis: Box<RawValue>,
-}
-
-#[derive(Serialize)]
-struct WorkerCheckpointFrame<'a> {
-    static_analysis: &'a RawValue,
 }
 
 #[derive(Clone, Debug)]
@@ -169,32 +164,89 @@ impl WorkerFailure {
     }
 }
 
+/// Resource policy shared by the subprocess job and its response admission.
+/// The decoded byte limit does not bound the parent's materialized JSON heap.
+struct WorkerMemoryPolicy {
+    job_memory_bytes: Option<u64>,
+    decoded_response_bytes: usize,
+}
+
+impl WorkerMemoryPolicy {
+    fn from_heap_limit(max_heap_mb: Option<u64>) -> Result<Self, WorkerFailure> {
+        let Some(megabytes) = max_heap_mb else {
+            return Ok(Self {
+                job_memory_bytes: None,
+                decoded_response_bytes: MAX_OUTPUT_BYTES,
+            });
+        };
+
+        let invalid = || {
+            WorkerFailure::Protocol(format!(
+                "invalid worker heap budget: max_heap_mb={megabytes} must be positive and addressable"
+            ))
+        };
+        if megabytes == 0 {
+            return Err(invalid());
+        }
+        let memory_bytes = megabytes.checked_mul(1024 * 1024).ok_or_else(invalid)?;
+        let decoded_response_bytes = usize::try_from(memory_bytes / 4).map_err(|_| invalid())?;
+
+        Ok(Self {
+            job_memory_bytes: Some(memory_bytes),
+            decoded_response_bytes,
+        })
+    }
+}
+
+/// Keep the first interruption authoritative through execution and finalization.
+struct WorkerBudget<'a> {
+    started: Instant,
+    timeout: Duration,
+    cancelled: &'a mut dyn FnMut() -> bool,
+    interruption: Option<WorkerFailure>,
+}
+
+impl<'a> WorkerBudget<'a> {
+    fn new(timeout: Duration, cancelled: &'a mut dyn FnMut() -> bool) -> Self {
+        Self {
+            started: Instant::now(),
+            timeout,
+            cancelled,
+            interruption: None,
+        }
+    }
+
+    fn interruption(&mut self) -> Option<WorkerFailure> {
+        if self.interruption.is_none() {
+            self.interruption = if (self.cancelled)() {
+                Some(WorkerFailure::Cancelled)
+            } else if self.started.elapsed() >= self.timeout {
+                Some(WorkerFailure::Timeout {
+                    timeout_ms: self.timeout.as_millis(),
+                })
+            } else {
+                None
+            };
+        }
+        self.interruption.clone()
+    }
+
+    fn check(&mut self) -> Result<(), WorkerFailure> {
+        self.interruption().map_or(Ok(()), Err)
+    }
+}
+
 /// Run one source through the standalone native worker.
 pub fn analyze_source_with_worker(
     request: &WorkerRequest,
     limits: &WorkerLimits,
     mut cancelled: impl FnMut() -> bool,
 ) -> Result<WorkerResponse, WorkerFailure> {
-    let started = Instant::now();
-    if started.elapsed() >= limits.timeout {
-        return Err(WorkerFailure::Timeout {
-            timeout_ms: limits.timeout.as_millis(),
-        });
-    }
-    if request.source.len() > MAX_INPUT_BYTES {
-        return Err(WorkerFailure::Protocol(
-            "JavaScript worker request exceeded the bounded input budget".to_owned(),
-        ));
-    }
-    let request_wire = WorkerRequestWire {
-        max_heap_mb: limits.max_heap_mb,
-        node_budget: request.node_budget,
-        unknown_budget: request.unknown_budget,
-        file: request.file.as_ref(),
-        source: &request.source,
-        path: request.path.as_deref(),
-    };
-    let request_bytes = serialize_bounded_request(&request_wire)?;
+    let mut budget = WorkerBudget::new(limits.timeout, &mut cancelled);
+    budget.check()?;
+    let memory = WorkerMemoryPolicy::from_heap_limit(limits.max_heap_mb)?;
+    let request_bytes = prepare_worker_request(request, limits.max_heap_mb)?;
+    budget.check()?;
 
     let executable =
         std::env::current_exe().map_err(|error| WorkerFailure::Launch(error.to_string()))?;
@@ -205,9 +257,7 @@ pub fn analyze_source_with_worker(
             working_directory: None::<PathBuf>,
             protocol_stdin: true,
             limits: rea_host::process::windows::job::WindowsJobLimits {
-                memory_bytes: limits
-                    .max_heap_mb
-                    .map(|value| value.saturating_mul(1024 * 1024)),
+                memory_bytes: memory.job_memory_bytes,
                 cpu_seconds: None,
             },
         },
@@ -215,132 +265,122 @@ pub fn analyze_source_with_worker(
     )
     .map_err(|error| WorkerFailure::Launch(error.to_string()))?;
 
-    if started.elapsed() >= limits.timeout {
+    let execution = send_worker_request(&mut child, request_bytes, &mut budget)
+        .and_then(|()| wait_for_worker_exit(&mut child, &mut budget));
+    let exit = match execution {
+        Ok(exit) => exit,
+        Err(failure) => return Err(interrupted_worker_failure(&mut child, 125, failure)),
+    };
+    if let Err(error) = child.wait() {
         return Err(interrupted_worker_failure(
             &mut child,
-            124,
-            WorkerFailure::Timeout {
-                timeout_ms: limits.timeout.as_millis(),
-            },
+            125,
+            WorkerFailure::Output(format!("worker settlement failed: {error}")),
         ));
     }
+
+    let output = {
+        let budget = RefCell::new(&mut budget);
+        child.drain_output_with(|| budget.borrow_mut().interruption().is_some())
+    }
+    .map_err(|error| WorkerFailure::Output(error.to_string()))?;
+    let result = budget.check().and_then(|()| {
+        validate_worker_output(&output, &exit, limits.max_heap_mb)?;
+        parse_worker_response(&output.stdout, memory.decoded_response_bytes, || {
+            budget.interruption()
+        })
+    });
+
+    result.map_err(|failure| with_checkpoint(failure, &output.stdout))
+}
+
+fn prepare_worker_request(
+    request: &WorkerRequest,
+    max_heap_mb: Option<u64>,
+) -> Result<Vec<u8>, WorkerFailure> {
+    if request.source.len() > MAX_INPUT_BYTES {
+        return Err(WorkerFailure::Protocol(
+            "JavaScript worker request exceeded the bounded input budget".to_owned(),
+        ));
+    }
+
+    serialize_bounded_request(&WorkerRequestWire {
+        max_heap_mb,
+        node_budget: request.node_budget,
+        unknown_budget: request.unknown_budget,
+        file: request.file.as_ref(),
+        source: &request.source,
+        path: request.path.as_deref(),
+    })
+}
+
+fn send_worker_request(
+    child: &mut OwnedChildProcess,
+    request_bytes: Vec<u8>,
+    budget: &mut WorkerBudget<'_>,
+) -> Result<(), WorkerFailure> {
     for chunk in request_bytes.chunks(64 * 1024) {
-        if started.elapsed() >= limits.timeout {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                124,
-                WorkerFailure::Timeout {
-                    timeout_ms: limits.timeout.as_millis(),
-                },
-            ));
-        }
-        if let Err(error) = child.write_input(chunk) {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                125,
-                WorkerFailure::Launch(error.to_string()),
-            ));
-        }
-        if cancelled() {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                125,
-                WorkerFailure::Cancelled,
-            ));
-        }
-        if started.elapsed() >= limits.timeout {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                124,
-                WorkerFailure::Timeout {
-                    timeout_ms: limits.timeout.as_millis(),
-                },
-            ));
-        }
+        budget.check()?;
+        child
+            .write_input(chunk)
+            .map_err(|error| WorkerFailure::Launch(error.to_string()))?;
+        budget.check()?;
     }
     child.close_input();
+    Ok(())
+}
 
-    if started.elapsed() >= limits.timeout {
-        return Err(interrupted_worker_failure(
-            &mut child,
-            124,
-            WorkerFailure::Timeout {
-                timeout_ms: limits.timeout.as_millis(),
-            },
-        ));
-    }
-
-    let exit = loop {
-        if cancelled() {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                125,
-                WorkerFailure::Cancelled,
-            ));
-        }
-        if started.elapsed() >= limits.timeout {
-            return Err(interrupted_worker_failure(
-                &mut child,
-                124,
-                WorkerFailure::Timeout {
-                    timeout_ms: limits.timeout.as_millis(),
-                },
-            ));
-        }
-        let status = match child.try_wait() {
-            Ok(status) => status,
-            Err(error) => {
-                return Err(interrupted_worker_failure(
-                    &mut child,
-                    125,
-                    WorkerFailure::Output(error.to_string()),
-                ));
-            }
-        };
+fn wait_for_worker_exit(
+    child: &mut OwnedChildProcess,
+    budget: &mut WorkerBudget<'_>,
+) -> Result<rea_host::process::launcher::ChildExit, WorkerFailure> {
+    loop {
+        budget.check()?;
+        let status = child
+            .try_wait()
+            .map_err(|error| WorkerFailure::Output(error.to_string()))?;
         if let Some(exit) = status {
-            break exit;
+            return Ok(exit);
         }
         std::thread::sleep(POLL_INTERVAL);
-    };
-    let output = child
-        .drain_output()
-        .map_err(|error| WorkerFailure::Output(error.to_string()))?;
+    }
+}
+
+fn validate_worker_output(
+    output: &rea_host::process::launcher::ChildOutput,
+    exit: &rea_host::process::launcher::ChildExit,
+    max_heap_mb: Option<u64>,
+) -> Result<(), WorkerFailure> {
     if output.stdout.len().saturating_add(output.stderr.len()) > MAX_OUTPUT_BYTES
         || output.output_incomplete
     {
-        return Err(with_checkpoint(
-            WorkerFailure::Output("worker response exceeded the bounded output budget".to_owned()),
-            &output.stdout,
+        return Err(WorkerFailure::Output(
+            "worker response exceeded the bounded output budget".to_owned(),
         ));
     }
     if exit.code == MEMORY_BUDGET_EXIT_CODE {
-        return Err(with_checkpoint(
-            WorkerFailure::ResourceConstraint {
-                requested_mb: limits.max_heap_mb.unwrap_or_default(),
-                reason: "native worker Rust heap budget was exhausted".to_owned(),
-            },
-            &output.stdout,
-        ));
+        return Err(WorkerFailure::ResourceConstraint {
+            requested_mb: max_heap_mb.unwrap_or_default(),
+            reason: "native worker Rust heap budget was exhausted".to_owned(),
+        });
     }
-    if exit.code != 0 {
-        let failure = WorkerFailure::Protocol(format!(
-            "worker exited with code {}{}",
-            exit.code,
-            exit.signal
-                .map(|signal| format!(" after signal {signal}"))
-                .unwrap_or_default()
-        ));
-        let failure = if output.stderr.is_empty() {
-            failure
-        } else {
-            WorkerFailure::Protocol(format!(
-                "{failure}; stderr: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ))
-        };
-        return Err(with_checkpoint(failure, &output.stdout));
+    if exit.code == 0 && exit.signal.is_none() {
+        return Ok(());
     }
-    parse_worker_response(&output.stdout)
+
+    let signal = exit
+        .signal
+        .map(|signal| format!(" after signal {signal}"))
+        .unwrap_or_default();
+    let stderr = if output.stderr.is_empty() {
+        String::new()
+    } else {
+        format!("; stderr: {}", String::from_utf8_lossy(&output.stderr))
+    };
+    Err(WorkerFailure::Protocol(format!(
+        "worker exited with code {}{signal}{stderr}",
+        exit.code
+    )))
 }
 
 fn interrupted_worker_failure(
@@ -380,25 +420,6 @@ fn with_checkpoint(failure: WorkerFailure, output: &[u8]) -> WorkerFailure {
     }
 }
 
-fn parse_checkpoint(output: &[u8]) -> Option<Box<RawValue>> {
-    output
-        .split(|byte| *byte == b'\n')
-        .filter_map(|line| serde_json::from_slice::<WorkerCheckpoint>(line).ok())
-        .next()
-        .map(|checkpoint| checkpoint.static_analysis)
-}
-
-fn parse_worker_response(output: &[u8]) -> Result<WorkerResponse, WorkerFailure> {
-    output
-        .split(|byte| *byte == b'\n')
-        .rev()
-        .find(|line| !line.is_empty())
-        .ok_or_else(|| WorkerFailure::Protocol("worker response was empty".to_owned()))
-        .and_then(|line| {
-            serde_json::from_slice(line).map_err(|error| WorkerFailure::Protocol(error.to_string()))
-        })
-}
-
 /// Entry point used by the production executable's private worker dispatch.
 pub fn run_worker_from_stdin() -> i32 {
     run_worker_from_stdin_with_limit(None, |_| {})
@@ -412,6 +433,13 @@ pub fn run_worker_from_stdin_with_limit(
     max_heap_mb: Option<u64>,
     setup: impl FnOnce(Option<u64>),
 ) -> i32 {
+    let memory = match WorkerMemoryPolicy::from_heap_limit(max_heap_mb) {
+        Ok(memory) => memory,
+        Err(error) => {
+            eprintln!("{error}");
+            return 2;
+        }
+    };
     let input = match read_worker_input(max_heap_mb, setup) {
         Ok(input) => input,
         Err(_) => return 2,
@@ -424,7 +452,11 @@ pub fn run_worker_from_stdin_with_limit(
         Ok(request) => request,
         Err(_) => return 2,
     };
-    let mut checkpoint_error = false;
+    // The request owns its decoded source. Release the wire buffer before
+    // building the AST and semantic facts within the same heap budget.
+    drop(input);
+
+    let mut checkpoint_error = None;
     let response = super::analysis::analyze_source_for_worker_with_checkpoint(
         &request.source,
         request.path.as_deref(),
@@ -434,27 +466,23 @@ pub fn run_worker_from_stdin_with_limit(
         |static_analysis| {
             let stdout = std::io::stdout();
             let mut stdout = stdout.lock();
-            let checkpoint_bytes = serde_json::to_vec(&WorkerCheckpointFrame { static_analysis });
-            if checkpoint_bytes
-                .ok()
-                .and_then(|bytes| stdout.write_all(&bytes).ok())
-                .and_then(|_| stdout.write_all(b"\n").ok())
-                .and_then(|_| stdout.flush().ok())
-                .is_none()
-            {
-                checkpoint_error = true;
+            if let Err(error) = write_checkpoint(&mut stdout, static_analysis) {
+                checkpoint_error = Some(error);
             }
         },
     );
-    if checkpoint_error {
+    if let Some(error) = checkpoint_error {
+        eprintln!("JavaScript worker checkpoint failed: {error}");
         return 2;
     }
-    match serde_json::to_vec(&response) {
-        Ok(bytes) => {
-            print!("{}", String::from_utf8_lossy(&bytes));
-            0
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    match write_worker_response(&mut stdout, &response, memory.decoded_response_bytes) {
+        Ok(()) => 0,
+        Err(error) => {
+            eprintln!("JavaScript worker response failed: {error}");
+            2
         }
-        Err(_) => 2,
     }
 }
 
@@ -545,10 +573,7 @@ struct CountingWriter {
 impl Write for CountingWriter {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         self.bytes_written = self.bytes_written.checked_add(bytes.len()).ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "worker request size overflow",
-            )
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "worker JSON size overflow")
         })?;
         Ok(bytes.len())
     }

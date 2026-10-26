@@ -5,6 +5,8 @@
 pub use rea_core::JsString;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::value::RawValue;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ResourceLimit {
@@ -23,6 +25,90 @@ pub struct Property {
     pub name: JsString,
     pub value: SemanticValue,
     pub presence: SlotPresence,
+}
+
+/// Shared property storage for object and array semantic values.
+///
+/// Cloning a value only clones the property vector's owner. Mutation obtains
+/// an owned vector through `Arc::make_mut`, preserving value independence.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PropertySlots(Arc<Vec<Property>>);
+
+impl PropertySlots {
+    pub fn as_slice(&self) -> &[Property] {
+        self.0.as_slice()
+    }
+}
+
+impl From<Vec<Property>> for PropertySlots {
+    fn from(properties: Vec<Property>) -> Self {
+        Self(Arc::new(properties))
+    }
+}
+
+impl FromIterator<Property> for PropertySlots {
+    fn from_iter<T: IntoIterator<Item = Property>>(iter: T) -> Self {
+        Self::from(iter.into_iter().collect::<Vec<_>>())
+    }
+}
+
+impl Deref for PropertySlots {
+    type Target = Vec<Property>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
+    }
+}
+
+impl DerefMut for PropertySlots {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        Arc::make_mut(&mut self.0)
+    }
+}
+
+impl IntoIterator for PropertySlots {
+    type Item = Property;
+    type IntoIter = std::vec::IntoIter<Property>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Arc::unwrap_or_clone(self.0).into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a PropertySlots {
+    type Item = &'a Property;
+    type IntoIter = std::slice::Iter<'a, Property>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.as_slice().iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut PropertySlots {
+    type Item = &'a mut Property;
+    type IntoIter = std::slice::IterMut<'a, Property>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.deref_mut().iter_mut()
+    }
+}
+
+impl Serialize for PropertySlots {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_slice().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PropertySlots {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Vec::<Property>::deserialize(deserializer).map(Self::from)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,11 +136,11 @@ pub enum SemanticValue {
         values: Vec<Primitive>,
     },
     Object {
-        properties: Vec<Property>,
+        properties: PropertySlots,
         coverage: Coverage,
     },
     Array {
-        items: Vec<Property>,
+        items: PropertySlots,
         coverage: Coverage,
     },
     Unknown {
@@ -175,25 +261,28 @@ impl<'de> Deserialize<'de> for SemanticValue {
                 values: decode_required(raw.values.0, "values")?,
             }),
             "object" => {
-                let properties = decode_required(raw.properties.0, "properties")?;
+                let properties: Vec<Property> = decode_required(raw.properties.0, "properties")?;
                 let unknown = decode_required(raw.unknown_properties.0, "unknownProperties")?;
                 let omitted = decode_optional(raw.omitted_properties.0)?;
                 let coverage =
                     decode_coverage(unknown, omitted).map_err(serde::de::Error::custom)?;
 
                 Ok(Self::Object {
-                    properties,
+                    properties: properties.into(),
                     coverage,
                 })
             }
             "array" => {
-                let items = decode_required(raw.items.0, "items")?;
+                let items: Vec<Property> = decode_required(raw.items.0, "items")?;
                 let unknown = decode_required(raw.unknown_items.0, "unknownItems")?;
                 let omitted = decode_optional(raw.omitted_items.0)?;
                 let coverage =
                     decode_coverage(unknown, omitted).map_err(serde::de::Error::custom)?;
 
-                Ok(Self::Array { items, coverage })
+                Ok(Self::Array {
+                    items: items.into(),
+                    coverage,
+                })
             }
             "unknown" => Ok(Self::Unknown {
                 reason: decode_required(raw.reason.0, "reason")?,
@@ -380,11 +469,13 @@ mod tests {
                             resource_limit: Some(ResourceLimit::GetterExpansion),
                         },
                         presence: SlotPresence::UnknownCoverage,
-                    }],
+                    }]
+                    .into(),
                     coverage: Coverage::Unknown { omitted: None },
                 },
                 presence: SlotPresence::Present,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Exact,
         };
         let encoded = serde_json::to_value(&value).expect("serialize nested value");
@@ -393,6 +484,79 @@ mod tests {
         assert_eq!(decoded, value);
         assert_eq!(
             serde_json::to_value(decoded).expect("serialize decoded value"),
+            encoded
+        );
+    }
+
+    #[test]
+    fn cloned_object_and_array_slots_mutate_independently() {
+        let original = SemanticValue::Object {
+            properties: vec![Property {
+                name: "items".into(),
+                value: SemanticValue::Array {
+                    items: vec![Property {
+                        name: "0".into(),
+                        value: SemanticValue::Literal {
+                            value: Primitive::Number(1.0),
+                        },
+                        presence: SlotPresence::Present,
+                    }]
+                    .into(),
+                    coverage: Coverage::Exact,
+                },
+                presence: SlotPresence::Present,
+            }]
+            .into(),
+            coverage: Coverage::Exact,
+        };
+        let mut clone = original.clone();
+
+        let SemanticValue::Object { properties, .. } = &mut clone else {
+            panic!("expected cloned object");
+        };
+        properties.push(Property {
+            name: "added".into(),
+            value: SemanticValue::Literal {
+                value: Primitive::Boolean(true),
+            },
+            presence: SlotPresence::Present,
+        });
+        let SemanticValue::Array { items, .. } = &mut properties[0].value else {
+            panic!("expected cloned array");
+        };
+        items[0].value = SemanticValue::Literal {
+            value: Primitive::Number(2.0),
+        };
+
+        let SemanticValue::Object {
+            properties: original_properties,
+            ..
+        } = &original
+        else {
+            panic!("expected original object");
+        };
+        assert_eq!(original_properties.len(), 1);
+        assert_eq!(properties.len(), 2);
+        let SemanticValue::Array {
+            items: original_items,
+            ..
+        } = &original_properties[0].value
+        else {
+            panic!("expected original array");
+        };
+        assert_eq!(
+            original_items[0].value,
+            SemanticValue::Literal {
+                value: Primitive::Number(1.0),
+            }
+        );
+
+        let encoded = serde_json::to_value(&clone).expect("serialize cloned slots");
+        let decoded: SemanticValue =
+            serde_json::from_value(encoded.clone()).expect("deserialize cloned slots");
+        assert_eq!(decoded, clone);
+        assert_eq!(
+            serde_json::to_value(decoded).expect("round-trip cloned slots"),
             encoded
         );
     }
@@ -433,7 +597,8 @@ mod tests {
                                 value: Primitive::String(JsString::from_utf16([0xd800, 0x0061])),
                             },
                             presence: SlotPresence::Present,
-                        }],
+                        }]
+                        .into(),
                         coverage: Coverage::Exact,
                     },
                     presence: SlotPresence::Present,
@@ -456,7 +621,8 @@ mod tests {
                     },
                     presence: SlotPresence::Present,
                 },
-            ],
+            ]
+            .into(),
             coverage: Coverage::Exact,
         };
 

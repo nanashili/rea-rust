@@ -4,16 +4,17 @@
 //! derives temporal facts from those records, preserving unknown ordering
 //! instead of treating it as a later write.
 
-use std::collections::HashSet;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
 
-use crate::javascript::ast::{Field, Node, NodeKey, NodeMap};
+use crate::javascript::ast::{Field, Node, NodeKey, NodeParents};
 
 use super::ast_values::{is_member, static_property_key, unwrapped};
 use super::evaluation_order::{
     IterationCardinality, branch_may_be_skipped, delayed_instance_field_value,
     iteration_cardinality,
 };
-use super::state::{BindingState, Initializer, SemanticState};
+use super::state::{BindingState, Initializer, ReferenceInitializer, SemanticState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StatementPosition {
@@ -23,17 +24,63 @@ pub struct StatementPosition {
     pub declarator_index: isize,
 }
 
+/// Per-analysis memo for source-order facts.
+///
+/// Node keys are only unique within one AST, so this cache is deliberately
+/// owned by the current analysis rather than shared globally. `None` entries
+/// are retained as well: an unresolved branch/loop context is a semantic fact
+/// and repeatedly recomputing it was the hot path in large applications.
+#[derive(Default)]
+pub struct StatementPositionCache {
+    indexed_bodies: HashSet<NodeKey>,
+    unindexed_bodies: HashSet<NodeKey>,
+    body_index_entries: usize,
+    body_index_entry_limit: Option<usize>,
+    positions: HashMap<NodeKey, CachedPosition>,
+    direct_mutations: HashMap<NodeKey, Option<StatementPosition>>,
+    direct_initializers: HashMap<NodeKey, Option<StatementPosition>>,
+    reference_initializers: HashMap<NodeKey, Option<StatementPosition>>,
+    binding_reads: HashMap<NodeKey, BindingReadPosition>,
+    top_level_positions: HashMap<NodeKey, Option<StatementPosition>>,
+    position_entries: usize,
+}
+
+const STATEMENT_POSITION_CACHE_ENTRY_LIMIT: usize = 16_384;
+
+impl StatementPositionCache {
+    fn admit_position(&mut self) {
+        if self.position_entries >= STATEMENT_POSITION_CACHE_ENTRY_LIMIT {
+            // These maps contain facts derived solely from the immutable AST.
+            // Rotate the bounded generation instead of permanently disabling
+            // admission for every later node in a large source file.
+            self.direct_mutations.clear();
+            self.direct_initializers.clear();
+            self.reference_initializers.clear();
+            self.binding_reads.clear();
+            self.top_level_positions.clear();
+            self.position_entries = 0;
+        }
+        self.position_entries += 1;
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BindingReadPosition {
     pub position: Option<StatementPosition>,
     pub repeating: bool,
 }
 
+#[derive(Clone, Copy)]
+struct CachedPosition {
+    index: isize,
+    declarator_index: isize,
+}
+
 #[derive(Clone, Debug)]
-pub struct SemanticBindingRead<'a> {
+pub struct SemanticBindingRead<'s, 'a> {
     pub status: BindingReadStatus,
     pub has_definite_initializer: bool,
-    pub binding: BindingState<'a>,
+    pub binding: Cow<'s, BindingState<'a>>,
     /// Consumers must use `binding` when temporal selection changed the
     /// initializer facts available at this read.
     pub selection_changed: bool,
@@ -110,7 +157,7 @@ fn is_identifier(node: &Node<'_>) -> bool {
 
 fn statement_position<'a>(
     statement: &Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     declarator: Option<&Node<'a>>,
     source: &str,
 ) -> Option<StatementPosition> {
@@ -138,6 +185,120 @@ fn statement_position<'a>(
     Some(StatementPosition {
         body: parent.key(),
         index,
+        declarator_index,
+    })
+}
+
+fn ensure_body_position_index<'a>(
+    cache: &mut StatementPositionCache,
+    parent: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let body_key = parent.key();
+    if cache.indexed_bodies.contains(&body_key) {
+        return true;
+    }
+    if cache.unindexed_bodies.contains(&body_key) {
+        return false;
+    }
+
+    let body = parent.field_list(source, Field::Body);
+    let declarations = body
+        .iter()
+        .flatten()
+        .filter(|statement| statement.babel_type() == "VariableDeclaration")
+        .flat_map(|statement| statement.field_list(source, Field::Declarations))
+        .flatten()
+        .count();
+    let body_entries = body.iter().flatten().count();
+    let required_entries = body_entries.saturating_add(declarations);
+    let entry_limit = *cache
+        .body_index_entry_limit
+        .get_or_insert_with(|| parents.len().saturating_mul(2));
+    if required_entries > entry_limit.saturating_sub(cache.body_index_entries) {
+        cache.unindexed_bodies.insert(body_key);
+        return false;
+    }
+
+    let mut positions = Vec::with_capacity(required_entries);
+    for (position, statement) in body.iter().enumerate() {
+        let Some(statement) = statement else {
+            continue;
+        };
+        let Ok(position) = isize::try_from(position) else {
+            cache.unindexed_bodies.insert(body_key);
+            return false;
+        };
+        let statement_index = position;
+        positions.push((
+            statement.key(),
+            CachedPosition {
+                index: statement_index,
+                declarator_index: -1,
+            },
+        ));
+        if statement.babel_type() != "VariableDeclaration" {
+            continue;
+        }
+        for (declarator_index, declarator) in statement
+            .field_list(source, Field::Declarations)
+            .iter()
+            .enumerate()
+        {
+            let Some(declarator) = declarator else {
+                continue;
+            };
+            let Ok(declarator_index) = isize::try_from(declarator_index) else {
+                cache.unindexed_bodies.insert(body_key);
+                return false;
+            };
+            positions.push((
+                declarator.key(),
+                CachedPosition {
+                    index: statement_index,
+                    declarator_index,
+                },
+            ));
+        }
+    }
+    cache.positions.extend(positions);
+    cache.body_index_entries = cache.body_index_entries.saturating_add(required_entries);
+    cache.indexed_bodies.insert(body_key);
+    true
+}
+
+fn cached_statement_position<'a>(
+    cache: &mut StatementPositionCache,
+    statement: &Node<'a>,
+    parents: &NodeParents<'a>,
+    declarator: Option<&Node<'a>>,
+    source: &str,
+) -> Option<StatementPosition> {
+    let parent = parents.get(&statement.key()).copied()?;
+    if !matches!(parent.babel_type(), "Program" | "BlockStatement") {
+        return None;
+    }
+    if !ensure_body_position_index(cache, parent, parents, source) {
+        return statement_position(statement, parents, declarator, source);
+    }
+
+    let cached = cache.positions.get(&statement.key())?;
+    let declarator_index = if statement.babel_type() == "VariableDeclaration" {
+        declarator
+            .filter(|declarator| {
+                parents
+                    .get(&declarator.key())
+                    .is_some_and(|parent| parent.key() == statement.key())
+            })
+            .and_then(|declarator| cache.positions.get(&declarator.key()))
+            .map_or(-1, |position| position.declarator_index)
+    } else {
+        -1
+    };
+    Some(StatementPosition {
+        body: parent.key(),
+        index: cached.index,
         declarator_index,
     })
 }
@@ -202,7 +363,7 @@ fn expression_children<'a>(node: Node<'a>, source: &'a str) -> Option<Vec<Node<'
 pub fn expression_evaluation_order<'a>(
     earlier: Node<'a>,
     later: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<bool> {
     let mut ancestors = Vec::new();
@@ -237,125 +398,181 @@ pub fn expression_evaluation_order<'a>(
     (earlier_index != later_index).then_some(earlier_index < later_index)
 }
 
-fn direct_mutation_position<'a>(
+fn cached_direct_mutation_position<'a>(
+    cache: &mut StatementPositionCache,
     node: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
-    if node.babel_type() == "ForOfStatement" {
-        return statement_position(&node, parents, None, source);
+    if let Some(position) = cache.direct_mutations.get(&node.key()) {
+        return *position;
     }
-    if node.babel_type() == "VariableDeclarator" {
-        let declaration = parents.get(&node.key())?;
-        return statement_position(declaration, parents, Some(&node), source);
-    }
-    if node.babel_type() == "SpreadElement" {
-        let array = parents.get(&node.key())?;
-        return (array.babel_type() == "ArrayExpression")
-            .then(|| semantic_capture_position(*array, parents, source))
-            .flatten();
-    }
-    let supported = matches!(
-        node.babel_type(),
-        "AssignmentExpression"
-            | "UpdateExpression"
-            | "CallExpression"
-            | "OptionalCallExpression"
-            | "NewExpression"
-            | "TaggedTemplateExpression"
-    ) || (node.babel_type() == "UnaryExpression"
-        && node.operator() == Some("delete"));
-    if !supported {
-        return None;
-    }
-    let mut current = node;
-    loop {
-        let parent = parents.get(&current.key())?;
-        if is_loop(parent) || is_function(parent) || branch_may_be_skipped(source, parent, &current)
-        {
-            return None;
+    let position = if node.babel_type() == "ForOfStatement" {
+        cached_statement_position(cache, &node, parents, None, source)
+    } else if node.babel_type() == "VariableDeclarator" {
+        parents.get(&node.key()).and_then(|declaration| {
+            cached_statement_position(cache, declaration, parents, Some(&node), source)
+        })
+    } else if node.babel_type() == "SpreadElement" {
+        parents.get(&node.key()).and_then(|array| {
+            (array.babel_type() == "ArrayExpression")
+                .then(|| cached_semantic_capture_position(cache, *array, parents, source))
+                .flatten()
+        })
+    } else {
+        let supported = matches!(
+            node.babel_type(),
+            "AssignmentExpression"
+                | "UpdateExpression"
+                | "CallExpression"
+                | "OptionalCallExpression"
+                | "NewExpression"
+                | "TaggedTemplateExpression"
+        ) || (node.babel_type() == "UnaryExpression"
+            && node.operator() == Some("delete"));
+        if !supported {
+            None
+        } else {
+            let mut current = node;
+            let mut result = None;
+            loop {
+                let Some(parent) = parents.get(&current.key()) else {
+                    break;
+                };
+                if is_loop(parent)
+                    || is_function(parent)
+                    || branch_may_be_skipped(source, parent, &current)
+                {
+                    break;
+                }
+                if is_statement(parent) {
+                    result = cached_statement_position(cache, parent, parents, None, source);
+                    break;
+                }
+                if parent.babel_type() == "VariableDeclarator" {
+                    let Some(declaration) = parents.get(&parent.key()) else {
+                        break;
+                    };
+                    result = cached_statement_position(
+                        cache,
+                        declaration,
+                        parents,
+                        Some(parent),
+                        source,
+                    );
+                    break;
+                }
+                current = *parent;
+            }
+            result
         }
-        if is_statement(parent) {
-            return statement_position(parent, parents, None, source);
-        }
-        if parent.babel_type() == "VariableDeclarator" {
-            let declaration = parents.get(&parent.key())?;
-            return statement_position(declaration, parents, Some(parent), source);
-        }
-        current = *parent;
-    }
+    };
+    cache.admit_position();
+    cache.direct_mutations.insert(node.key(), position);
+    position
 }
 
-fn direct_initializer_position<'a>(
+fn cached_direct_initializer_position<'a>(
+    cache: &mut StatementPositionCache,
     node: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
-    if node.babel_type() == "UpdateExpression"
+    if let Some(position) = cache.direct_initializers.get(&node.key()) {
+        return *position;
+    }
+    let position = if node.babel_type() == "UpdateExpression"
         || (node.babel_type() == "AssignmentExpression"
             && node
                 .field(source, Field::Left)
                 .is_some_and(|left| is_identifier(&left)))
     {
-        return direct_mutation_position(node, parents, source);
-    }
-    let parent = parents.get(&node.key())?;
-    if parent.babel_type() == "VariableDeclarator"
-        && parent
-            .field(source, Field::Init)
-            .is_some_and(|init| init.key() == node.key())
-    {
-        let declaration = parents.get(&parent.key())?;
-        return statement_position(declaration, parents, Some(parent), source);
-    }
-    if parent.babel_type() == "AssignmentExpression"
-        && parent
-            .field(source, Field::Right)
-            .is_some_and(|right| right.key() == node.key())
-        && parent
-            .field(source, Field::Left)
-            .is_some_and(|left| is_identifier(&left))
-    {
-        return direct_mutation_position(*parent, parents, source);
-    }
-    None
+        cached_direct_mutation_position(cache, node, parents, source)
+    } else {
+        let parent = parents.get(&node.key());
+        if parent.is_some_and(|parent| {
+            parent.babel_type() == "VariableDeclarator"
+                && parent
+                    .field(source, Field::Init)
+                    .is_some_and(|init| init.key() == node.key())
+        }) {
+            let declaration = parents.get(&parent.expect("checked above").key());
+            declaration.and_then(|declaration| {
+                cached_statement_position(
+                    cache,
+                    declaration,
+                    parents,
+                    Some(parent.expect("checked above")),
+                    source,
+                )
+            })
+        } else if parent.is_some_and(|parent| {
+            parent.babel_type() == "AssignmentExpression"
+                && parent
+                    .field(source, Field::Right)
+                    .is_some_and(|right| right.key() == node.key())
+                && parent
+                    .field(source, Field::Left)
+                    .is_some_and(|left| is_identifier(&left))
+        }) {
+            cached_direct_mutation_position(cache, *parent.expect("checked above"), parents, source)
+        } else {
+            None
+        }
+    };
+    cache.admit_position();
+    cache.direct_initializers.insert(node.key(), position);
+    position
 }
 
-fn reference_initializer_position<'a>(
+fn cached_reference_initializer_position<'a>(
+    cache: &mut StatementPositionCache,
     node: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
+    if let Some(position) = cache.reference_initializers.get(&node.key()) {
+        return *position;
+    }
     let mut current = node;
-    loop {
-        if let Some(position) = direct_initializer_position(current, parents, source) {
-            return Some(position);
+    let position = loop {
+        if let Some(position) = cached_direct_initializer_position(cache, current, parents, source)
+        {
+            break Some(position);
         }
-        let parent = parents.get(&current.key())?;
+        let Some(parent) = parents.get(&current.key()) else {
+            break None;
+        };
         if is_function(parent) {
-            let body = parent.field(source, Field::Body)?;
-            return Some(StatementPosition {
-                body: body.key(),
-                index: -1,
-                declarator_index: -1,
-            });
+            break parent
+                .field(source, Field::Body)
+                .map(|body| StatementPosition {
+                    body: body.key(),
+                    index: -1,
+                    declarator_index: -1,
+                });
         }
         if is_statement(parent)
             || delayed_instance_field_value(source, Some(parent), Some(&current))
         {
-            return None;
+            break None;
         }
         if parent.babel_type() == "VariableDeclarator" {
-            let declaration = parents.get(&parent.key())?;
-            return statement_position(declaration, parents, Some(parent), source);
+            break parents.get(&parent.key()).and_then(|declaration| {
+                cached_statement_position(cache, declaration, parents, Some(parent), source)
+            });
         }
         current = *parent;
-    }
+    };
+    cache.admit_position();
+    cache.reference_initializers.insert(node.key(), position);
+    position
 }
 
-fn initializer_position<'a>(
+fn cached_initializer_position<'a>(
+    cache: &mut StatementPositionCache,
     initializer: &Initializer<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     reference: bool,
     source: &str,
 ) -> Option<StatementPosition> {
@@ -368,20 +585,25 @@ fn initializer_position<'a>(
         })
         .or_else(|| {
             if reference {
-                reference_initializer_position(initializer.node, parents, source)
+                cached_reference_initializer_position(cache, initializer.node, parents, source)
             } else {
-                direct_initializer_position(initializer.node, parents, source)
+                cached_direct_initializer_position(cache, initializer.node, parents, source)
             }
         })
 }
 
-fn binding_read_position<'a>(
+fn cached_binding_read_position<'a>(
+    cache: &mut StatementPositionCache,
     read: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> BindingReadPosition {
+    if let Some(position) = cache.binding_reads.get(&read.key()) {
+        return *position;
+    }
+
     let mut current = read;
-    let mut path = Vec::new();
+    let mut path = Vec::with_capacity(8);
     let (mut result, stop) = loop {
         path.push(current);
         let Some(parent) = parents.get(&current.key()).copied() else {
@@ -425,11 +647,19 @@ fn binding_read_position<'a>(
         let position = if parent.babel_type() == "VariableDeclarator" {
             parents.get(&parent.key()).and_then(|declaration| {
                 (declaration.babel_type() == "VariableDeclaration")
-                    .then(|| statement_position(declaration, parents, Some(&parent), source))
+                    .then(|| {
+                        cached_statement_position(
+                            cache,
+                            declaration,
+                            parents,
+                            Some(&parent),
+                            source,
+                        )
+                    })
                     .flatten()
             })
         } else if is_statement(&parent) && !is_loop(&parent) && !is_function(&parent) {
-            statement_position(&parent, parents, None, source)
+            cached_statement_position(cache, &parent, parents, None, source)
         } else {
             None
         };
@@ -437,24 +667,27 @@ fn binding_read_position<'a>(
             result.position = position;
         }
     }
+    cache.admit_position();
+    cache.binding_reads.insert(read.key(), result);
     result
 }
 
 fn initializer_may_retain_entry<'a>(
-    initializer: &Initializer<'a>,
+    initializer_id: InitializerIdentity,
+    initializer_node: Node<'a>,
     binding: &BindingState<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
-    let parent = parents.get(&initializer.node.key()).copied();
-    let assignment = if initializer.node.babel_type() == "AssignmentExpression" {
-        Some(initializer.node)
+    let parent = parents.get(&initializer_node.key()).copied();
+    let assignment = if initializer_node.babel_type() == "AssignmentExpression" {
+        Some(initializer_node)
     } else {
         parent.filter(|node| {
             node.babel_type() == "AssignmentExpression"
                 && node
                     .field(source, Field::Right)
-                    .is_some_and(|right| right.key() == initializer.node.key())
+                    .is_some_and(|right| right.key() == initializer_node.key())
         })
     };
     let Some(assignment) = assignment else {
@@ -465,12 +698,12 @@ fn initializer_may_retain_entry<'a>(
     }
     let empty_local = assignment
         .field(source, Field::Right)
-        .is_some_and(|right| right.key() == initializer.node.key())
+        .is_some_and(|right| right.key() == initializer_node.key())
         && binding.kind == super::state::DefinitionKind::Variable
         && !binding.runtime_import
         && binding.initializers.len() == 1
-        && binding.initializers[0].record_id == initializer.record_id
-        && binding.initializers[0].node.key() == initializer.node.key()
+        && binding.initializers[0].record_id == initializer_id.0
+        && binding.initializers[0].node.key() == initializer_id.1
         && binding.reference_initializers.is_empty()
         && binding.direct_origins.is_empty()
         && binding
@@ -487,34 +720,34 @@ fn initializer_may_retain_entry<'a>(
 }
 
 fn retained_initializer_origins<'a>(
-    origins: &[(Initializer<'a>, Option<StatementPosition>)],
+    origins: &[OriginFact<'a>],
     binding: &BindingState<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> (HashSet<InitializerIdentity>, bool) {
     let mut latest = None;
-    for (initializer, position) in origins {
-        if initializer_may_retain_entry(initializer, binding, parents, source) {
+    for origin in origins {
+        if initializer_may_retain_entry(origin.identity, origin.node, binding, parents, source) {
             continue;
         }
-        if let Some(position) = position {
-            if latest.is_none_or(|current| precedes(current, *position)) {
-                latest = Some(*position);
+        if let Some(position) = origin.position {
+            if latest.is_none_or(|current| precedes(current, position)) {
+                latest = Some(position);
             }
         }
     }
     let retained = origins
         .iter()
-        .filter(|(_, position)| {
+        .filter(|origin| {
             latest.is_none_or(|latest| {
-                position.is_some_and(|position| {
+                origin.position.is_some_and(|position| {
                     (position.index == latest.index
                         && position.declarator_index == latest.declarator_index)
                         || precedes(latest, position)
                 })
             })
         })
-        .map(|(initializer, _)| initializer_identity(initializer))
+        .map(|origin| origin.identity)
         .collect();
     (retained, latest.is_some())
 }
@@ -531,100 +764,93 @@ fn initializer_identity<'a>(initializer: &Initializer<'a>) -> InitializerIdentit
     (initializer.record_id, initializer.node.key())
 }
 
-/// Select the binding facts that can reach one read site.
-pub fn semantic_binding_at_read<'a>(
-    binding: &BindingState<'a>,
+#[derive(Clone, Copy)]
+struct OriginFact<'a> {
+    identity: InitializerIdentity,
+    node: Node<'a>,
+    position: Option<StatementPosition>,
+}
+
+/// Select binding facts using the cache owned by the current semantic
+/// analysis. The cache is valid for the immutable AST and parent map.
+pub(crate) fn semantic_binding_at_read_cached<'s, 'a>(
+    cache: &mut StatementPositionCache,
+    binding: &'s BindingState<'a>,
     read: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
-) -> SemanticBindingRead<'a> {
+) -> SemanticBindingRead<'s, 'a> {
+    let borrowed = |status, has_definite_initializer| SemanticBindingRead {
+        status,
+        has_definite_initializer,
+        binding: Cow::Borrowed(binding),
+        selection_changed: false,
+    };
     if binding.initializers.is_empty() && binding.reference_initializers.is_empty() {
-        return SemanticBindingRead {
-            status: BindingReadStatus::Ordered,
-            has_definite_initializer: false,
-            binding: binding.clone(),
-            selection_changed: false,
-        };
+        return borrowed(BindingReadStatus::Ordered, false);
     }
-    let read_position = binding_read_position(read, parents, source);
-    let mut origins = Vec::new();
-    for initializer in &binding.initializers {
-        origins.push((
-            initializer.clone(),
-            initializer_position(initializer, parents, false, source),
-        ));
-    }
-    for reference in &binding.reference_initializers {
-        origins.push((
-            Initializer {
-                record_id: 0,
-                node: reference.node,
-                projection: reference.projection.clone(),
-                entry_body: None,
-            },
-            reference_initializer_position(reference.node, parents, source),
-        ));
-    }
+    let read_position = cached_binding_read_position(cache, read, parents, source);
     let has_definite_initializer = read_position.position.is_some_and(|read_position| {
         binding.initializers.iter().any(|initializer| {
-            initializer_position(initializer, parents, false, source)
+            cached_initializer_position(cache, initializer, parents, false, source)
                 .is_some_and(|position| precedes(position, read_position))
-                && !initializer_may_retain_entry(initializer, binding, parents, source)
+                && !initializer_may_retain_entry(
+                    initializer_identity(initializer),
+                    initializer.node,
+                    binding,
+                    parents,
+                    source,
+                )
         })
     });
     if read_position.repeating || read_position.position.is_none() {
-        return SemanticBindingRead {
-            status: BindingReadStatus::Unresolved,
-            has_definite_initializer,
-            binding: binding.clone(),
-            selection_changed: false,
-        };
+        return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
+    }
+    let mut origins = Vec::with_capacity(
+        binding
+            .initializers
+            .len()
+            .saturating_add(binding.reference_initializers.len()),
+    );
+    for initializer in &binding.initializers {
+        origins.push(OriginFact {
+            identity: initializer_identity(initializer),
+            node: initializer.node,
+            position: cached_initializer_position(cache, initializer, parents, false, source),
+        });
+    }
+    for reference in &binding.reference_initializers {
+        origins.push(OriginFact {
+            identity: (0, reference.node.key()),
+            node: reference.node,
+            position: cached_reference_initializer_position(cache, reference.node, parents, source),
+        });
     }
     let read_position = read_position.position.expect("checked above");
-    let mut preceding = Vec::new();
-    for (initializer, position) in origins {
-        let Some(position) = position else {
-            return SemanticBindingRead {
-                status: BindingReadStatus::Unresolved,
-                has_definite_initializer,
-                binding: binding.clone(),
-                selection_changed: false,
-            };
+    let origin_count = origins.len();
+    let mut preceding = Vec::with_capacity(origin_count);
+    for origin in origins {
+        let Some(position) = origin.position else {
+            return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
         };
         if position.body != read_position.body {
-            return SemanticBindingRead {
-                status: BindingReadStatus::Unresolved,
-                has_definite_initializer,
-                binding: binding.clone(),
-                selection_changed: false,
-            };
+            return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
         }
         if precedes(position, read_position) {
-            preceding.push((initializer, Some(position)));
+            preceding.push(origin);
         } else if position.index == read_position.index
             && position.declarator_index == read_position.declarator_index
         {
-            match expression_evaluation_order(
-                position_node(&initializer, source),
-                read,
-                parents,
-                source,
-            ) {
-                Some(true) => preceding.push((initializer, Some(position))),
+            match expression_evaluation_order(origin.node, read, parents, source) {
+                Some(true) => preceding.push(origin),
                 _ => {
-                    return SemanticBindingRead {
-                        status: BindingReadStatus::Unresolved,
-                        has_definite_initializer,
-                        binding: binding.clone(),
-                        selection_changed: false,
-                    };
+                    return borrowed(BindingReadStatus::Unresolved, has_definite_initializer);
                 }
             }
         }
     }
     let (retained, replaces_entry) =
         retained_initializer_origins(&preceding, binding, parents, source);
-    let mut selected = binding.clone();
     let selection_changed = binding
         .initializers
         .iter()
@@ -633,6 +859,13 @@ pub fn semantic_binding_at_read<'a>(
             .reference_initializers
             .iter()
             .any(|initializer| !retained.contains(&(0, initializer.node.key())));
+    if !selection_changed {
+        return borrowed(
+            BindingReadStatus::Ordered,
+            has_definite_initializer || replaces_entry,
+        );
+    }
+    let mut selected = binding.clone();
     selected
         .initializers
         .retain(|initializer| retained.contains(&initializer_identity(initializer)));
@@ -650,13 +883,9 @@ pub fn semantic_binding_at_read<'a>(
     SemanticBindingRead {
         status: BindingReadStatus::Ordered,
         has_definite_initializer: has_definite_initializer || replaces_entry,
-        binding: selected,
+        binding: Cow::Owned(selected),
         selection_changed,
     }
-}
-
-fn position_node<'a>(initializer: &Initializer<'a>, _source: &str) -> Node<'a> {
-    initializer.node
 }
 
 #[cfg(test)]
@@ -670,7 +899,7 @@ mod tests {
     use std::ops::ControlFlow;
 
     struct Nodes<'a> {
-        parents: NodeMap<Node<'a>>,
+        parents: NodeParents<'a>,
         nodes: Vec<Node<'a>>,
     }
 
@@ -688,7 +917,7 @@ mod tests {
             parse_javascript_analysis_program(allocator, source, Some("timing.js")).expect("parse");
         let context = AstContext::new(parsed.program);
         let mut nodes = Nodes {
-            parents: NodeMap::default(),
+            parents: NodeParents::default(),
             nodes: Vec::new(),
         };
         assert!(matches!(
@@ -793,9 +1022,9 @@ mod tests {
             .iter()
             .find(|binding| binding.name == "value")
             .expect("value binding");
-        let capture = state
-            .parents
-            .values()
+        let capture = nodes
+            .nodes
+            .iter()
             .copied()
             .find(|node| {
                 node.babel_type() == "ObjectExpression"
@@ -805,9 +1034,9 @@ mod tests {
                         .starts_with("{ child: {} }")
             })
             .expect("capture");
-        let effect = state
-            .parents
-            .values()
+        let effect = nodes
+            .nodes
+            .iter()
             .copied()
             .find(|node| node.babel_type() == "AssignmentExpression")
             .expect("effect");
@@ -834,7 +1063,9 @@ mod tests {
             &state.parents,
             source,
         ));
-        let selected = semantic_binding_at_read(binding, read, &state.parents, source);
+        let mut cache = StatementPositionCache::default();
+        let selected =
+            semantic_binding_at_read_cached(&mut cache, binding, read, &state.parents, source);
         assert_eq!(selected.status, BindingReadStatus::Ordered);
         assert!(selected.has_definite_initializer);
     }
@@ -893,7 +1124,9 @@ mod tests {
             })
             .expect("read");
 
-        let selected = semantic_binding_at_read(&binding, read, &nodes.parents, source);
+        let mut cache = StatementPositionCache::default();
+        let selected =
+            semantic_binding_at_read_cached(&mut cache, &binding, read, &nodes.parents, source);
 
         assert_eq!(selected.status, BindingReadStatus::Ordered);
         assert!(selected.selection_changed);
@@ -981,23 +1214,209 @@ mod tests {
             runtime_import: false,
         };
 
-        let selected = semantic_binding_at_read(&binding, read, &nodes.parents, source);
+        let mut cache = StatementPositionCache::default();
+        let selected =
+            semantic_binding_at_read_cached(&mut cache, &binding, read, &nodes.parents, source);
 
         assert_eq!(selected.status, BindingReadStatus::Ordered);
         assert!(selected.has_definite_initializer);
         assert_eq!(selected.binding.initializers.len(), 1);
+    }
+
+    #[test]
+    fn statement_position_cache_is_scoped_to_one_ast_and_preserves_loop_unknowns() {
+        let first_source = "let value = {}; value.child = 1;";
+        let first_allocator = Allocator::default();
+        let (_first_context, first_nodes) = parse(&first_allocator, first_source);
+        let first_mutation = first(&first_nodes, "AssignmentExpression");
+        let mut first_cache = StatementPositionCache::default();
+        let first_position = cached_direct_mutation_position(
+            &mut first_cache,
+            first_mutation,
+            &first_nodes.parents,
+            first_source,
+        );
+        assert!(first_position.is_some());
+        assert_eq!(
+            first_position,
+            cached_direct_mutation_position(
+                &mut first_cache,
+                first_mutation,
+                &first_nodes.parents,
+                first_source,
+            )
+        );
+
+        let second_source = "let value = {}; if (value) value.child = 1;";
+        let second_allocator = Allocator::default();
+        let (_second_context, second_nodes) = parse(&second_allocator, second_source);
+        let second_mutation = first(&second_nodes, "AssignmentExpression");
+        let mut second_cache = StatementPositionCache::default();
+        assert!(
+            cached_direct_mutation_position(
+                &mut second_cache,
+                second_mutation,
+                &second_nodes.parents,
+                second_source,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn body_position_index_matches_legacy_positions_for_nested_declarations() {
+        let source = "const first = 1, second = 2; if (flag) { let nested = 3; nested; }";
+        let allocator = Allocator::default();
+        let (_context, nodes) = parse(&allocator, source);
+        let mut cache = StatementPositionCache::default();
+
+        for node in &nodes.nodes {
+            if is_statement(node) {
+                assert_eq!(
+                    cached_statement_position(&mut cache, node, &nodes.parents, None, source),
+                    statement_position(node, &nodes.parents, None, source)
+                );
+            }
+            if node.babel_type() != "VariableDeclarator" {
+                continue;
+            }
+            let declaration = nodes
+                .parents
+                .get(&node.key())
+                .copied()
+                .expect("declaration parent");
+            assert_eq!(
+                cached_statement_position(
+                    &mut cache,
+                    &declaration,
+                    &nodes.parents,
+                    Some(node),
+                    source
+                ),
+                statement_position(&declaration, &nodes.parents, Some(node), source)
+            );
+
+            for other_statement in nodes.nodes.iter().filter(|node| is_statement(node)) {
+                assert_eq!(
+                    cached_statement_position(
+                        &mut cache,
+                        other_statement,
+                        &nodes.parents,
+                        Some(node),
+                        source,
+                    ),
+                    statement_position(other_statement, &nodes.parents, Some(node), source),
+                    "a declarator must retain its containing statement identity",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn body_position_index_falls_back_when_its_budget_is_exhausted() {
+        let source = "const value = 1; value;";
+        let allocator = Allocator::default();
+        let (_context, nodes) = parse(&allocator, source);
+        let statement = nodes
+            .nodes
+            .iter()
+            .copied()
+            .find(|node| node.babel_type() == "ExpressionStatement")
+            .expect("expression statement");
+        let mut cache = StatementPositionCache {
+            body_index_entry_limit: Some(0),
+            ..StatementPositionCache::default()
+        };
+
+        assert_eq!(
+            cached_statement_position(&mut cache, &statement, &nodes.parents, None, source),
+            statement_position(&statement, &nodes.parents, None, source)
+        );
+        assert!(cache.indexed_bodies.is_empty());
+        assert!(
+            cache.unindexed_bodies.contains(
+                &nodes
+                    .parents
+                    .get(&statement.key())
+                    .expect("statement parent")
+                    .key()
+            )
+        );
+    }
+
+    #[test]
+    fn position_cache_rotates_without_dropping_unresolved_facts_permanently() {
+        let source = "const value = 1; for (;;) value;";
+        let allocator = Allocator::default();
+        let (_context, nodes) = parse(&allocator, source);
+        let initializer = first(&nodes, "NumericLiteral");
+        let read = nodes
+            .nodes
+            .iter()
+            .copied()
+            .rev()
+            .find(|node| is_identifier(node) && node.identifier_name() == Some("value"))
+            .expect("loop read");
+
+        let mut cache = StatementPositionCache::default();
+        let expected_initializer = cached_direct_initializer_position(
+            &mut StatementPositionCache::default(),
+            initializer,
+            &nodes.parents,
+            source,
+        );
+        let actual_initializer =
+            cached_direct_initializer_position(&mut cache, initializer, &nodes.parents, source);
+        assert_eq!(actual_initializer, expected_initializer);
+        assert!(!cache.indexed_bodies.is_empty());
+        let body_index_count = cache.indexed_bodies.len();
+
+        cache.position_entries = STATEMENT_POSITION_CACHE_ENTRY_LIMIT;
+        let expected_read = cached_binding_read_position(
+            &mut StatementPositionCache::default(),
+            read,
+            &nodes.parents,
+            source,
+        );
+        let actual_read = cached_binding_read_position(&mut cache, read, &nodes.parents, source);
+
+        assert_eq!(actual_read, expected_read);
+        assert!(actual_read.position.is_none());
+        assert!(actual_read.repeating);
+        assert_eq!(cache.indexed_bodies.len(), body_index_count);
+        assert!(cache.direct_mutations.is_empty());
+        assert!(cache.binding_reads.contains_key(&read.key()));
+
+        let loop_node = first(&nodes, "ForStatement");
+        assert!(cached_top_level_position(&mut cache, loop_node, &nodes.parents, source).is_none());
+        assert_eq!(cache.top_level_positions.get(&loop_node.key()), Some(&None));
+
+        cache.position_entries = STATEMENT_POSITION_CACHE_ENTRY_LIMIT;
+        let _ = cached_top_level_position(&mut cache, initializer, &nodes.parents, source);
+        assert!(!cache.top_level_positions.contains_key(&loop_node.key()));
     }
 }
 
 /// Locate an unconditional capture through object and array literal wrappers.
 pub fn semantic_capture_position<'a>(
     node: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<StatementPosition> {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_capture_position(&mut cache, node, parents, source)
+}
+
+pub(crate) fn cached_semantic_capture_position<'a>(
+    cache: &mut StatementPositionCache,
+    node: Node<'a>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
     let mut current = node;
     loop {
-        if let Some(position) = direct_initializer_position(current, parents, source) {
+        if let Some(position) = cached_direct_initializer_position(cache, current, parents, source)
+        {
             return Some(position);
         }
         let parent = parents.get(&current.key())?;
@@ -1023,7 +1442,18 @@ pub fn semantic_capture_position<'a>(
 pub fn semantic_binding_precedes_capture<'a>(
     binding: &BindingState<'a>,
     capture: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_binding_precedes_capture(&mut cache, binding, capture, parents, source)
+}
+
+pub(crate) fn cached_semantic_binding_precedes_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
     if binding.initializers.len() != 1 {
@@ -1032,10 +1462,13 @@ pub fn semantic_binding_precedes_capture<'a>(
     let Some(initializer) = binding.initializers.first() else {
         return false;
     };
-    let Some(source_position) = initializer_position(initializer, parents, false, source) else {
+    let Some(source_position) =
+        cached_initializer_position(cache, initializer, parents, false, source)
+    else {
         return false;
     };
-    let Some(capture_position) = semantic_capture_position(capture, parents, source) else {
+    let Some(capture_position) = cached_semantic_capture_position(cache, capture, parents, source)
+    else {
         return false;
     };
     precedes(source_position, capture_position)
@@ -1045,16 +1478,30 @@ pub fn semantic_binding_effect_follows_capture<'a>(
     binding: &BindingState<'a>,
     capture: Node<'a>,
     effect: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
-    if !semantic_binding_precedes_capture(binding, capture, parents, source) {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_binding_effect_follows_capture(
+        &mut cache, binding, capture, effect, parents, source,
+    )
+}
+
+pub(crate) fn cached_semantic_binding_effect_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    effect: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    if !cached_semantic_binding_precedes_capture(cache, binding, capture, parents, source) {
         return false;
     }
-    let Some(captured) = semantic_capture_position(capture, parents, source) else {
+    let Some(captured) = cached_semantic_capture_position(cache, capture, parents, source) else {
         return false;
     };
-    let Some(written) = direct_mutation_position(effect, parents, source) else {
+    let Some(written) = cached_direct_mutation_position(cache, effect, parents, source) else {
         return false;
     };
     precedes(captured, written)
@@ -1064,12 +1511,24 @@ pub fn semantic_escape_follows_capture<'a>(
     binding: &BindingState<'a>,
     capture: Node<'a>,
     escape: Option<Node<'a>>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_escape_follows_capture(&mut cache, binding, capture, escape, parents, source)
+}
+
+pub(crate) fn cached_semantic_escape_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    capture: Node<'a>,
+    escape: Option<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
     let Some(escape) = escape else { return false };
     if binding.initializers.len() != 1
-        || !semantic_binding_precedes_capture(binding, capture, parents, source)
+        || !cached_semantic_binding_precedes_capture(cache, binding, capture, parents, source)
     {
         return false;
     }
@@ -1085,10 +1544,12 @@ pub fn semantic_escape_follows_capture<'a>(
     {
         return false;
     }
-    let Some(capture_position) = semantic_capture_position(capture, parents, source) else {
+    let Some(capture_position) = cached_semantic_capture_position(cache, capture, parents, source)
+    else {
         return false;
     };
-    let Some(escape_position) = direct_mutation_position(escape, parents, source) else {
+    let Some(escape_position) = cached_direct_mutation_position(cache, escape, parents, source)
+    else {
         return false;
     };
     precedes(capture_position, escape_position)
@@ -1098,12 +1559,23 @@ pub fn semantic_escape_follows_capture<'a>(
 pub fn top_level_effect_follows_capture<'a>(
     capture: Node<'a>,
     effect: Option<Node<'a>>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_top_level_effect_follows_capture(&mut cache, capture, effect, parents, source)
+}
+
+pub(crate) fn cached_top_level_effect_follows_capture<'a>(
+    cache: &mut StatementPositionCache,
+    capture: Node<'a>,
+    effect: Option<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
     let Some(effect) = effect else { return false };
-    let before = top_level_position(capture, parents, source);
-    let after = top_level_position(effect, parents, source);
+    let before = cached_top_level_position(cache, capture, parents, source);
+    let after = cached_top_level_position(cache, effect, parents, source);
     match (before, after) {
         (Some(before), Some(after)) if before.body == after.body => {
             if precedes(before, after) {
@@ -1120,9 +1592,26 @@ pub fn top_level_effect_follows_capture<'a>(
     }
 }
 
-fn top_level_position<'a>(
+fn cached_top_level_position<'a>(
+    cache: &mut StatementPositionCache,
     node: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<StatementPosition> {
+    if let Some(position) = cache.top_level_positions.get(&node.key()) {
+        return *position;
+    }
+
+    let position = uncached_top_level_position(cache, node, parents, source);
+    cache.admit_position();
+    cache.top_level_positions.insert(node.key(), position);
+    position
+}
+
+fn uncached_top_level_position<'a>(
+    cache: &mut StatementPositionCache,
+    node: Node<'a>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> Option<StatementPosition> {
     let mut selected = None;
@@ -1140,7 +1629,8 @@ fn top_level_position<'a>(
             declarator = Some(node);
         }
         if is_statement(&node) {
-            selected = statement_position(&node, parents, declarator.as_ref(), source);
+            selected =
+                cached_statement_position(cache, &node, parents, declarator.as_ref(), source);
         }
         if node.babel_type() == "Program" {
             return selected;
@@ -1153,6 +1643,22 @@ fn top_level_position<'a>(
 
 /// Classify an effect relative to a read site. Unknown remains unknown.
 pub fn effect_timing<'a>(
+    site: Node<'a>,
+    effect: Option<Node<'a>>,
+    state: &SemanticState<'a>,
+    source: &str,
+) -> EffectTiming {
+    cached_effect_timing(
+        &mut state.statement_position_cache.borrow_mut(),
+        site,
+        effect,
+        state,
+        source,
+    )
+}
+
+pub(crate) fn cached_effect_timing<'a>(
+    cache: &mut StatementPositionCache,
     site: Node<'a>,
     effect: Option<Node<'a>>,
     state: &SemanticState<'a>,
@@ -1201,8 +1707,10 @@ pub fn effect_timing<'a>(
             IterationCardinality::Unknown => {}
         }
     }
-    let follows_site = semantic_effect_follows_reference(site, effect, &state.parents, source);
-    let follows_effect = semantic_effect_follows_reference(effect, site, &state.parents, source);
+    let follows_site =
+        cached_semantic_effect_follows_reference(cache, site, effect, &state.parents, source);
+    let follows_effect =
+        cached_semantic_effect_follows_reference(cache, effect, site, &state.parents, source);
     match (follows_site, follows_effect) {
         (true, false) => EffectTiming::After,
         (false, true) => EffectTiming::Before,
@@ -1210,7 +1718,7 @@ pub fn effect_timing<'a>(
     }
 }
 
-fn enclosing_iteration<'a>(node: Node<'a>, parents: &NodeMap<Node<'a>>) -> Option<Node<'a>> {
+fn enclosing_iteration<'a>(node: Node<'a>, parents: &NodeParents<'a>) -> Option<Node<'a>> {
     let mut current = Some(node);
     while let Some(node) = current {
         if matches!(node.babel_type(), "ForInStatement" | "ForOfStatement") {
@@ -1227,7 +1735,18 @@ fn enclosing_iteration<'a>(node: Node<'a>, parents: &NodeMap<Node<'a>>) -> Optio
 pub fn semantic_effect_follows_reference<'a>(
     reference: Node<'a>,
     effect: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> bool {
+    let mut cache = StatementPositionCache::default();
+    cached_semantic_effect_follows_reference(&mut cache, reference, effect, parents, source)
+}
+
+fn cached_semantic_effect_follows_reference<'a>(
+    cache: &mut StatementPositionCache,
+    reference: Node<'a>,
+    effect: Node<'a>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> bool {
     if reference.key() == effect.key() {
@@ -1286,58 +1805,99 @@ pub fn semantic_effect_follows_reference<'a>(
                 | "OptionalCallExpression"
                 | "NewExpression"
         ) || loop_input))
-        || top_level_effect_follows_capture(reference, Some(effect), parents, source)
+        || cached_top_level_effect_follows_capture(cache, reference, Some(effect), parents, source)
 }
 
 /// Keep only initializer origins proven to precede a mutation.
 pub fn mutation_initializers<'a>(
     binding: &BindingState<'a>,
     mutation: Node<'a>,
-    parents: &NodeMap<Node<'a>>,
+    parents: &NodeParents<'a>,
     source: &str,
 ) -> BindingState<'a> {
-    let Some(mutation_position) = direct_mutation_position(mutation, parents, source)
-        .or_else(|| reference_initializer_position(mutation, parents, source))
+    let Some((initializers, reference_initializers, replaces_entry)) =
+        selected_initializer_origins(binding, mutation, parents, source)
     else {
         return binding.clone();
     };
-    let mut origins = Vec::new();
-    for initializer in &binding.initializers {
-        origins.push((
-            initializer.clone(),
-            initializer_position(initializer, parents, false, source),
-        ));
-    }
-    for initializer in &binding.reference_initializers {
-        origins.push((
-            Initializer {
-                record_id: 0,
-                node: initializer.node,
-                projection: initializer.projection.clone(),
-                entry_body: None,
-            },
-            reference_initializer_position(initializer.node, parents, source),
-        ));
-    }
-    for (_, position) in &origins {
-        let Some(position) = position else {
-            return binding.clone();
-        };
-        if position.body != mutation_position.body || !precedes(*position, mutation_position) {
-            return binding.clone();
-        }
-    }
-    let (retained, replaces_entry) =
-        retained_initializer_origins(&origins, binding, parents, source);
+
     let mut result = binding.clone();
     if replaces_entry {
         result.direct_origins.clear();
     }
+    result.initializers = initializers;
+    result.reference_initializers = reference_initializers;
     result
+}
+
+/// Select mutation-visible origins without cloning unrelated binding state.
+/// Member mutation collection only needs these two origin lists, so keeping
+/// this projection separate avoids copying definitions and effect history.
+pub fn selected_initializer_origins<'a>(
+    binding: &BindingState<'a>,
+    mutation: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<(Vec<Initializer<'a>>, Vec<ReferenceInitializer<'a>>, bool)> {
+    let mut cache = StatementPositionCache::default();
+    selected_initializer_origins_cached(&mut cache, binding, mutation, parents, source)
+}
+
+/// Cached form used by the member-mutation collector for one complete
+/// analysis. The public wrapper above preserves the existing call contract.
+pub fn selected_initializer_origins_cached<'a>(
+    cache: &mut StatementPositionCache,
+    binding: &BindingState<'a>,
+    mutation: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<(Vec<Initializer<'a>>, Vec<ReferenceInitializer<'a>>, bool)> {
+    let Some(mutation_position) = cached_direct_mutation_position(cache, mutation, parents, source)
+        .or_else(|| cached_reference_initializer_position(cache, mutation, parents, source))
+    else {
+        return None;
+    };
+    let mut origins = Vec::new();
+    for initializer in &binding.initializers {
+        origins.push(OriginFact {
+            identity: initializer_identity(initializer),
+            node: initializer.node,
+            position: cached_initializer_position(cache, initializer, parents, false, source),
+        });
+    }
+    for initializer in &binding.reference_initializers {
+        origins.push(OriginFact {
+            identity: (0, initializer.node.key()),
+            node: initializer.node,
+            position: cached_reference_initializer_position(
+                cache,
+                initializer.node,
+                parents,
+                source,
+            ),
+        });
+    }
+    for origin in &origins {
+        let Some(position) = origin.position else {
+            return None;
+        };
+        if position.body != mutation_position.body || !precedes(position, mutation_position) {
+            return None;
+        }
+    }
+    let (retained, replaces_entry) =
+        retained_initializer_origins(&origins, binding, parents, source);
+    let initializers = binding
         .initializers
-        .retain(|initializer| retained.contains(&initializer_identity(initializer)));
-    result
+        .iter()
+        .filter(|initializer| retained.contains(&initializer_identity(initializer)))
+        .cloned()
+        .collect();
+    let reference_initializers = binding
         .reference_initializers
-        .retain(|initializer| retained.contains(&(0, initializer.node.key())));
-    result
+        .iter()
+        .filter(|initializer| retained.contains(&(0, initializer.node.key())))
+        .cloned()
+        .collect();
+    Some((initializers, reference_initializers, replaces_entry))
 }

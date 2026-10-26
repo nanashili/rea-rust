@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -19,10 +20,18 @@ pub struct JsString {
     storage: Option<Arc<JsStringStorage>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct JsStringStorage {
-    units: Vec<u16>,
-    valid_utf8: Option<String>,
+    source: JsStringSource,
+    units: OnceLock<Vec<u16>>,
+    unit_len: OnceLock<usize>,
+    valid_utf8: OnceLock<Option<String>>,
+}
+
+#[derive(Debug)]
+enum JsStringSource {
+    Utf16(Vec<u16>),
+    Utf8(String),
 }
 
 impl Default for JsString {
@@ -33,6 +42,10 @@ impl Default for JsString {
 
 impl PartialEq for JsString {
     fn eq(&self, other: &Self) -> bool {
+        if let (Some(left), Some(right)) = (self.source_str(), other.source_str()) {
+            return left == right;
+        }
+
         self.units() == other.units()
     }
 }
@@ -66,38 +79,80 @@ impl JsString {
     /// Construct a JavaScript string from exact UTF-16 code units.
     pub fn from_utf16(units: impl Into<Vec<u16>>) -> Self {
         let units = units.into();
-        let valid_utf8 = String::from_utf16(&units).ok();
         if units.is_empty() {
             Self::new_const()
         } else {
             Self {
-                storage: Some(Arc::new(JsStringStorage { units, valid_utf8 })),
+                storage: Some(Arc::new(JsStringStorage {
+                    source: JsStringSource::Utf16(units),
+                    units: OnceLock::new(),
+                    unit_len: OnceLock::new(),
+                    valid_utf8: OnceLock::new(),
+                })),
             }
         }
     }
 
     /// Borrow the exact UTF-16 code units.
     pub fn units(&self) -> &[u16] {
-        self.storage
-            .as_deref()
-            .map_or(&[][..], |storage| storage.units.as_slice())
+        let Some(storage) = self.storage.as_deref() else {
+            return &[];
+        };
+
+        match &storage.source {
+            JsStringSource::Utf16(units) => units,
+            JsStringSource::Utf8(text) => {
+                storage.units.get_or_init(|| text.encode_utf16().collect())
+            }
+        }
     }
 
     /// Return whether the string contains no UTF-16 code units.
     pub fn is_empty(&self) -> bool {
         self.storage
-            .as_ref()
-            .is_none_or(|storage| storage.units.is_empty())
+            .as_deref()
+            .is_none_or(|storage| match &storage.source {
+                JsStringSource::Utf16(units) => units.is_empty(),
+                JsStringSource::Utf8(value) => value.is_empty(),
+            })
     }
 
     /// Return the number of UTF-16 code units in the string.
     pub fn len(&self) -> usize {
-        self.units().len()
+        let Some(storage) = self.storage.as_deref() else {
+            return 0;
+        };
+
+        *storage.unit_len.get_or_init(|| match &storage.source {
+            JsStringSource::Utf16(units) => units.len(),
+            JsStringSource::Utf8(text) => text.encode_utf16().count(),
+        })
     }
 
     /// Iterate over the exact UTF-16 code units.
     pub fn encode_utf16(&self) -> impl Iterator<Item = u16> + '_ {
-        self.units().iter().copied()
+        let storage = self.storage.as_deref();
+        let mut utf8 = None;
+        let mut index = 0;
+
+        std::iter::from_fn(move || {
+            let Some(storage) = storage else {
+                return None;
+            };
+
+            match &storage.source {
+                JsStringSource::Utf16(units) => {
+                    let unit = units.get(index).copied();
+                    if unit.is_some() {
+                        index += 1;
+                    }
+                    unit
+                }
+                JsStringSource::Utf8(text) => {
+                    utf8.get_or_insert_with(|| text.encode_utf16()).next()
+                }
+            }
+        })
     }
 
     /// Append another JavaScript string without replacing unpaired surrogates.
@@ -106,22 +161,52 @@ impl JsString {
             return;
         }
 
-        let storage = self.storage.get_or_insert_with(|| {
-            Arc::new(JsStringStorage {
-                units: Vec::new(),
-                valid_utf8: Some(String::new()),
-            })
-        });
-        let storage = Arc::make_mut(storage);
-        storage.units.extend_from_slice(other.units());
-        storage.valid_utf8 = String::from_utf16(&storage.units).ok();
+        if let (Some(left), Some(right)) = (self.source_str(), other.source_str()) {
+            let mut combined = String::with_capacity(left.len() + right.len());
+            combined.push_str(left);
+            combined.push_str(right);
+            *self = Self::from(combined);
+            return;
+        }
+
+        let mut units = Vec::with_capacity(self.len() + other.len());
+        units.extend_from_slice(self.units());
+        units.extend_from_slice(other.units());
+        *self = Self::from_utf16(units);
     }
 
     /// Return the concatenation of two JavaScript strings.
     pub fn concat(&self, other: &Self) -> Self {
+        if let (Some(left), Some(right)) = (self.source_str(), other.source_str()) {
+            let mut combined = String::with_capacity(left.len() + right.len());
+            combined.push_str(left);
+            combined.push_str(right);
+            return Self::from(combined);
+        }
+
         let mut units = Vec::with_capacity(self.len() + other.len());
         units.extend_from_slice(self.units());
         units.extend_from_slice(other.units());
+        Self::from_utf16(units)
+    }
+
+    /// Return this string with ordinary UTF-8 text prepended.
+    ///
+    /// Building the final representation directly avoids creating a separate
+    /// owned copy of `self` before concatenation. The UTF-16 branch remains
+    /// exact for strings containing unpaired surrogates.
+    pub fn prefixed(&self, prefix: &str) -> Self {
+        if let Some(value) = self.source_str() {
+            let mut combined = String::with_capacity(prefix.len() + value.len());
+            combined.push_str(prefix);
+            combined.push_str(value);
+            return Self::from(combined);
+        }
+
+        let prefix_units = prefix.encode_utf16().count();
+        let mut units = Vec::with_capacity(prefix_units + self.len());
+        units.extend(prefix.encode_utf16());
+        units.extend_from_slice(self.units());
         Self::from_utf16(units)
     }
 
@@ -153,21 +238,46 @@ impl JsString {
 
     /// Decode only when every UTF-16 code unit belongs to a Unicode scalar value.
     pub fn try_to_string(&self) -> Result<String, std::string::FromUtf16Error> {
-        match self
-            .storage
-            .as_deref()
-            .and_then(|storage| storage.valid_utf8.as_ref())
-        {
-            Some(value) => Ok(value.clone()),
-            None => String::from_utf16(self.units()),
+        let Some(storage) = self.storage.as_deref() else {
+            return Ok(String::new());
+        };
+
+        match &storage.source {
+            JsStringSource::Utf8(value) => Ok(value.clone()),
+            JsStringSource::Utf16(units) => match storage
+                .valid_utf8
+                .get_or_init(|| String::from_utf16(units).ok())
+            {
+                Some(value) => Ok(value.clone()),
+                None => String::from_utf16(units),
+            },
         }
     }
 
     /// Borrow the UTF-8 view when all units are Unicode scalar values.
     pub fn as_str(&self) -> Option<&str> {
-        self.storage
-            .as_deref()
-            .map_or(Some(""), |storage| storage.valid_utf8.as_deref())
+        let Some(storage) = self.storage.as_deref() else {
+            return Some("");
+        };
+
+        match &storage.source {
+            JsStringSource::Utf8(value) => Some(value),
+            JsStringSource::Utf16(units) => storage
+                .valid_utf8
+                .get_or_init(|| String::from_utf16(units).ok())
+                .as_deref(),
+        }
+    }
+
+    fn source_str(&self) -> Option<&str> {
+        let Some(storage) = self.storage.as_deref() else {
+            return Some("");
+        };
+
+        match &storage.source {
+            JsStringSource::Utf8(value) => Some(value),
+            JsStringSource::Utf16(_) => None,
+        }
     }
 
     /// Decode UTF-16 units into JavaScript code points for ordering.
@@ -250,11 +360,12 @@ impl From<String> for JsString {
             return Self::new_const();
         }
 
-        let units = value.encode_utf16().collect();
         Self {
             storage: Some(Arc::new(JsStringStorage {
-                units,
-                valid_utf8: Some(value),
+                source: JsStringSource::Utf8(value),
+                units: OnceLock::new(),
+                unit_len: OnceLock::new(),
+                valid_utf8: OnceLock::new(),
             })),
         }
     }
@@ -287,6 +398,10 @@ impl fmt::Display for JsString {
 
 impl PartialEq<str> for JsString {
     fn eq(&self, other: &str) -> bool {
+        if let Some(value) = self.source_str() {
+            return value == other;
+        }
+
         self.encode_utf16().eq(other.encode_utf16())
     }
 }
@@ -320,6 +435,10 @@ impl Serialize for JsString {
     where
         S: Serializer,
     {
+        if let Some(value) = self.as_str() {
+            return serializer.serialize_str(value);
+        }
+
         let text = JsonText::from_utf16_units(self.units()).map_err(serde::ser::Error::custom)?;
         text.serialize(serializer)
     }
@@ -331,14 +450,19 @@ impl<'de> Deserialize<'de> for JsString {
         D: Deserializer<'de>,
     {
         let text = JsonText::deserialize(deserializer).map_err(serde::de::Error::custom)?;
-        let units = text.utf16_units().map_err(serde::de::Error::custom)?;
-        Ok(Self::from_utf16(units))
+        match text
+            .into_string_or_units()
+            .map_err(serde::de::Error::custom)?
+        {
+            Ok(value) => Ok(Self::from(value)),
+            Err(units) => Ok(Self::from_utf16(units)),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::JsString;
+    use super::{JsString, JsStringSource};
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
@@ -364,6 +488,116 @@ mod tests {
         assert_eq!(clone.units(), &[b'a' as u16, 0xd800, b'b' as u16]);
         assert_eq!(original.as_str(), None);
         assert_eq!(clone.as_str(), None);
+    }
+
+    #[test]
+    fn ordinary_text_keeps_utf8_without_materializing_utf16() {
+        let text = JsString::from("large source text 🚀");
+        let storage = text.storage.as_deref().expect("non-empty text has storage");
+
+        assert!(matches!(&storage.source, JsStringSource::Utf8(_)));
+        assert!(storage.units.get().is_none());
+        assert_eq!(text.len(), text.encode_utf16().count());
+        assert!(storage.units.get().is_none());
+        assert_eq!(
+            text.encode_utf16().collect::<Vec<_>>(),
+            "large source text 🚀".encode_utf16().collect::<Vec<_>>()
+        );
+        assert!(storage.units.get().is_none());
+        assert_eq!(
+            serde_json::to_string(&text).expect("serializes"),
+            "\"large source text 🚀\""
+        );
+        assert!(storage.units.get().is_none());
+    }
+
+    #[test]
+    fn prefixed_preserves_unpaired_surrogates() {
+        let value = JsString::from_utf16([0xd800, b'x' as u16]);
+
+        assert_eq!(
+            value.prefixed("string:").units(),
+            &[
+                b's' as u16,
+                b't' as u16,
+                b'r' as u16,
+                b'i' as u16,
+                b'n' as u16,
+                b'g' as u16,
+                b':' as u16,
+                0xd800,
+                b'x' as u16,
+            ]
+        );
+    }
+
+    #[test]
+    fn utf16_and_unpaired_serialization_remain_exact() {
+        let paired = JsString::from_utf16([0xd83d, 0xde80]);
+        let unpaired = JsString::from_utf16([b'a' as u16, 0xd800, b'b' as u16]);
+
+        assert_eq!(
+            serde_json::to_string(&paired).expect("serializes"),
+            "\"🚀\""
+        );
+        assert_eq!(
+            serde_json::to_string(&unpaired).expect("serializes"),
+            "\"a\\ud800b\""
+        );
+        assert_eq!(unpaired.units(), &[b'a' as u16, 0xd800, b'b' as u16]);
+        assert_eq!(unpaired.as_str(), None);
+    }
+
+    #[test]
+    fn lazy_and_exact_sources_have_identical_value_semantics() {
+        let text = "café 🚀";
+        let from_utf8 = JsString::from(text);
+        let from_utf16 = JsString::from_utf16(text.encode_utf16().collect::<Vec<_>>());
+
+        assert_eq!(from_utf8, from_utf16);
+        assert_eq!(from_utf8.hash_value(), from_utf16.hash_value());
+        assert_eq!(from_utf8.cmp(&from_utf16), std::cmp::Ordering::Equal);
+        assert_eq!(
+            from_utf8.code_points().collect::<Vec<_>>(),
+            from_utf16.code_points().collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn utf8_equality_does_not_materialize_utf16_units() {
+        let left = JsString::from("café 🚀");
+        let right = JsString::from("café 🚀");
+
+        assert_eq!(left, right);
+        assert_eq!(left, "café 🚀");
+        assert!(
+            left.storage
+                .as_deref()
+                .expect("non-empty text has storage")
+                .units
+                .get()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn deserialization_keeps_unicode_text_owned_as_utf8() {
+        let text: JsString = serde_json::from_str(r#""café 🚀""#).expect("valid JSON text");
+        let storage = text.storage.as_deref().expect("non-empty text has storage");
+
+        assert!(matches!(&storage.source, JsStringSource::Utf8(_)));
+        assert!(storage.units.get().is_none());
+        assert_eq!(text, "café 🚀");
+    }
+
+    #[test]
+    fn deserialization_preserves_escaped_surrogates_exactly() {
+        let paired: JsString = serde_json::from_str(r#""\ud83d\ude80""#).expect("valid pair");
+        let unpaired: JsString = serde_json::from_str(r#""a\ud800b""#).expect("valid escape");
+
+        assert_eq!(paired, JsString::from("🚀"));
+        assert_eq!(unpaired.units(), &[b'a' as u16, 0xd800, b'b' as u16]);
+        assert_eq!(unpaired.as_str(), None);
     }
 
     trait HashValue {

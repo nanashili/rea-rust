@@ -139,7 +139,7 @@ pub fn compare_artifacts(
         .with("left_manifest_id", left.manifest["manifest_id"].clone())
         .with("right_manifest_id", right.manifest["manifest_id"].clone())
         .with("summary", summary)
-        .with("changes", Json::Array(changes))
+        .with("changes", Json::array(changes))
         .with(
             "limitations",
             rea_application::javascript::graph::json::strings(limitations),
@@ -217,14 +217,14 @@ fn compare_occurrences(
                 Obj::new()
                     .with("logical_path", path.clone())
                     .with("classification", "unknown")
-                    .with("dimensions", Json::Array(vec![Json::from("availability")]))
+                    .with("dimensions", Json::array(vec![Json::from("availability")]))
                     .with("left_occurrence_id", Json::Null)
                     .with("right_occurrence_id", Json::Null)
                     .with("left_artifact_id", Json::Null)
                     .with("right_artifact_id", Json::Null)
                     .with(
                         "evidence_links",
-                        Json::Array(evidence_links.iter().cloned().map(Json::from).collect()),
+                        Json::array(evidence_links.iter().cloned().map(Json::from).collect()),
                     )
                     .into(),
             );
@@ -308,7 +308,7 @@ fn build_change_base(input: &ClassifyPathInput<'_>) -> Obj {
     );
     object.set(
         "evidence_links",
-        Json::Array(
+        Json::array(
             input
                 .evidence_links
                 .iter()
@@ -338,7 +338,7 @@ fn classify_presence(input: &ClassifyPathInput<'_>) -> Option<Json> {
         base.set("classification", if covered { "added" } else { "unknown" });
         base.set(
             "dimensions",
-            Json::Array(vec![Json::from(if covered {
+            Json::array(vec![Json::from(if covered {
                 "content"
             } else {
                 "availability"
@@ -354,7 +354,7 @@ fn classify_presence(input: &ClassifyPathInput<'_>) -> Option<Json> {
         );
         base.set(
             "dimensions",
-            Json::Array(vec![Json::from(if covered {
+            Json::array(vec![Json::from(if covered {
                 "content"
             } else {
                 "availability"
@@ -375,7 +375,7 @@ fn classify_integrity(input: &ClassifyPathInput<'_>, base: &Obj) -> Option<Json>
     {
         let mut object = base.clone();
         object.set("classification", "contradiction");
-        object.set("dimensions", Json::Array(vec![Json::from("integrity")]));
+        object.set("dimensions", Json::array(vec![Json::from("integrity")]));
         return Some(object.into());
     }
     None
@@ -389,7 +389,7 @@ fn classify_availability(input: &ClassifyPathInput<'_>, base: &Obj) -> Option<Js
     {
         let mut object = base.clone();
         object.set("classification", "unknown");
-        object.set("dimensions", Json::Array(vec![Json::from("availability")]));
+        object.set("dimensions", Json::array(vec![Json::from("availability")]));
         return Some(object.into());
     }
     None
@@ -414,7 +414,7 @@ fn classify_path(input: ClassifyPathInput<'_>) -> Option<Json> {
     object.set("classification", "changed");
     object.set(
         "dimensions",
-        Json::Array(dimensions.into_iter().map(Json::from).collect()),
+        Json::array(dimensions.into_iter().map(Json::from).collect()),
     );
     Some(object.into())
 }
@@ -481,7 +481,7 @@ fn optional_value(occurrence: Option<&Json>, key: &str) -> Json {
 
 /// `JSON.stringify` of a slice of JSON values (preserves key order).
 fn json_string(values: &[Json]) -> String {
-    Json::Array(values.to_vec()).stringify()
+    Json::array(values.to_vec()).stringify()
 }
 
 /// `JSON.stringify` of a JSON value. The TS inputs here are always present
@@ -662,11 +662,11 @@ fn apply_root_hash_change(
         object.set("classification", "changed");
         object.set(
             "dimensions",
-            Json::Array(new_dimensions.into_iter().map(Json::from).collect()),
+            Json::array(new_dimensions.into_iter().map(Json::from).collect()),
         );
         object.set(
             "evidence_links",
-            Json::Array(links.into_iter().map(Json::from).collect()),
+            Json::array(links.into_iter().map(Json::from).collect()),
         );
         changes[index] = object.into();
         return Ok(());
@@ -683,7 +683,7 @@ fn apply_root_hash_change(
         Obj::new()
             .with("classification", "changed")
             .with("logical_path", ".")
-            .with("dimensions", Json::Array(vec![Json::from("content")]))
+            .with("dimensions", Json::array(vec![Json::from("content")]))
             .with(
                 "left_occurrence_id",
                 left_root.map(|occurrence| occurrence["occurrence_id"].clone()),
@@ -702,7 +702,7 @@ fn apply_root_hash_change(
             )
             .with(
                 "evidence_links",
-                Json::Array(evidence_links.iter().cloned().map(Json::from).collect()),
+                Json::array(evidence_links.iter().cloned().map(Json::from).collect()),
             )
             .into(),
     );

@@ -14,7 +14,9 @@ use crate::javascript::ast::{AstContext, NodeSet};
 use crate::javascript::contracts::semantic_ir::{
     SemanticCallable as ContractCallable, SemanticIr, SemanticReference,
 };
-use crate::javascript::parser::{RawDiagnostic, parse_javascript_analysis_program};
+use crate::javascript::parser::{
+    ParsedJavaScriptProgram, RawDiagnostic, parse_javascript_analysis_program,
+};
 
 use super::ambient_writes::index_ambient_writes;
 use super::async_effects::collect_semantic_async_effects;
@@ -43,8 +45,8 @@ struct PrimaryPhase<'a> {
     links: CollectedModuleLinks<'a>,
 }
 
-struct CallablePhase<'a> {
-    returns: Vec<super::returns::SemanticCallableReturns<'a>>,
+struct CallablePhase {
+    return_sites: HashMap<String, HashMap<String, String>>,
     callables: Vec<ContractCallable>,
     module_links: Vec<crate::javascript::contracts::semantic_ir::SemanticModuleLink>,
 }
@@ -57,7 +59,112 @@ struct DerivedPhase {
     data_effects: super::data_effects::DataEffectAnalysis,
     resources: Vec<crate::javascript::contracts::semantic_ir::SemanticResourceOperation>,
     objects: Vec<crate::javascript::contracts::semantic_ir::SemanticObjectOperation>,
-    fingerprints: Vec<crate::javascript::contracts::semantic_ir::SemanticFunctionFingerprint>,
+}
+
+/// Owns the ordered producer phases shared by static and semantic analysis.
+/// Replaying member mutation collection would duplicate effects.
+pub(crate) struct PreparedSemanticState<'a> {
+    state: super::state::SemanticState<'a>,
+    phase: PreparedPhase,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PreparedPhase {
+    Definitions,
+    AmbientWrites,
+    MemberMutations,
+}
+
+impl<'a> PreparedSemanticState<'a> {
+    /// End semantic evaluation while keeping the syntax view for fingerprints.
+    /// The remaining fields, including derived caches, drop on return.
+    fn into_context(self) -> AstContext<'a> {
+        self.state.context
+    }
+
+    pub(crate) fn state(&self) -> &super::state::SemanticState<'a> {
+        &self.state
+    }
+
+    pub(crate) fn ensure_ambient_writes(&mut self) {
+        if self.phase == PreparedPhase::Definitions {
+            index_ambient_writes(&mut self.state);
+            self.phase = PreparedPhase::AmbientWrites;
+        }
+    }
+
+    pub(crate) fn ensure_member_mutations(&mut self) {
+        self.ensure_ambient_writes();
+        if self.phase == PreparedPhase::AmbientWrites {
+            collect_semantic_member_mutations(&mut self.state);
+            self.phase = PreparedPhase::MemberMutations;
+        }
+    }
+
+    pub(crate) fn inspect<T>(
+        &self,
+        inspect: impl FnOnce(&super::state::SemanticState<'a>) -> T,
+    ) -> T {
+        let _observations = InspectorObservations::new(&self.state);
+        inspect(&self.state)
+    }
+}
+
+/// Static inspectors may evaluate expressions the semantic pass never visits.
+/// Keep their warnings in the static result without leaking them or their
+/// memoized values into semantic coverage. Producer observations stay intact.
+struct InspectorObservations<'state, 'source> {
+    state: &'state super::state::SemanticState<'source>,
+    widenings: Vec<crate::javascript::parser::SourceRange>,
+    getter_limits: Vec<super::value_types::ResourceLimit>,
+    value_limits: Vec<super::value_types::ResourceLimit>,
+}
+
+impl<'state, 'source> InspectorObservations<'state, 'source> {
+    fn new(state: &'state super::state::SemanticState<'source>) -> Self {
+        Self {
+            state,
+            widenings: state.returned_reference_widenings.borrow().clone(),
+            getter_limits: state.getter_resource_limits.borrow().clone(),
+            value_limits: state.value_resource_limits.borrow().clone(),
+        }
+    }
+}
+
+impl Drop for InspectorObservations<'_, '_> {
+    fn drop(&mut self) {
+        *self.state.returned_reference_widenings.borrow_mut() = std::mem::take(&mut self.widenings);
+        *self.state.getter_resource_limits.borrow_mut() = std::mem::take(&mut self.getter_limits);
+        *self.state.value_resource_limits.borrow_mut() = std::mem::take(&mut self.value_limits);
+        super::values::clear_semantic_value_caches(self.state);
+    }
+}
+
+pub(crate) fn prepare_state<'a>(
+    parsed: &ParsedJavaScriptProgram<'a>,
+    static_import_resolution_mode: ResolutionMode,
+) -> PreparedSemanticState<'a> {
+    match prepare_state_with_checkpoint(parsed, static_import_resolution_mode, || {
+        ControlFlow::<()>::Continue(())
+    }) {
+        ControlFlow::Continue(prepared) => prepared,
+        ControlFlow::Break(()) => unreachable!("the default checkpoint never cancels"),
+    }
+}
+
+fn prepare_state_with_checkpoint<'a, B>(
+    parsed: &ParsedJavaScriptProgram<'a>,
+    static_import_resolution_mode: ResolutionMode,
+    mut checkpoint: impl FnMut() -> ControlFlow<B>,
+) -> ControlFlow<B, PreparedSemanticState<'a>> {
+    let context = AstContext::new(parsed.program);
+    let state = collect_definitions(context, static_import_resolution_mode, &mut checkpoint)?;
+    checkpoint()?;
+
+    ControlFlow::Continue(PreparedSemanticState {
+        state,
+        phase: PreparedPhase::Definitions,
+    })
 }
 
 /// Result of the internal source analysis.  The parsed arena and state do not
@@ -106,49 +213,78 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
         Ok(parsed) => parsed,
         Err(diagnostics) => return ControlFlow::Continue(Err(diagnostics)),
     };
+
+    let prepared =
+        prepare_state_with_checkpoint(&parsed, static_import_resolution_mode, &mut checkpoint)?;
     let parser_partial = !parsed.errors.is_empty();
-    let context = AstContext::new(parsed.program);
+    drop(parsed);
+    analyze_prepared_source_with_checkpoint(parser_partial, prepared, checkpoint)
+}
 
-    let mut state = collect_definitions(context, static_import_resolution_mode, &mut checkpoint)?;
+/// Continue semantic analysis from state prepared by the static phase.
+///
+/// The parser's semantic model has already been consumed by the static phase;
+/// only its partial-parse status crosses this phase boundary. The caller owns
+/// the phase boundary and may have already populated the mutation facts.
+pub(crate) fn analyze_prepared_source_with_checkpoint<'a, B>(
+    parser_partial: bool,
+    mut prepared: PreparedSemanticState<'a>,
+    mut checkpoint: impl FnMut() -> ControlFlow<B>,
+) -> ControlFlow<B, Result<SemanticIr, Vec<RawDiagnostic>>> {
+    let mut ir = collect_semantic_facts(parser_partial, &mut prepared, &mut checkpoint)?;
+    let context = prepared.into_context();
+
+    ir.function_fingerprints = collect_semantic_fingerprints(
+        &context,
+        &SemanticFingerprintInputs {
+            callables: &ir.callables,
+            call_sites: &ir.call_sites,
+            closure_captures: &ir.closure_captures,
+            promises: &ir.promise_operations,
+            events: &ir.event_operations,
+            timers: &ir.timer_operations,
+            child_process_spawns: &ir.child_process_spawns,
+            child_process_interactions: &ir.child_process_interactions,
+            requests: &ir.request_operations,
+            resources: &ir.resource_operations,
+        },
+        parser_partial,
+    );
     checkpoint()?;
 
-    collect_primary_state_phase(&mut state, &mut checkpoint)?;
+    ControlFlow::Continue(Ok(ir))
+}
 
-    let public_call_writes = collect_public_call_writes(&state);
-    let commonjs_receivers = index_commonjs_export_receivers(&state, &public_call_writes);
-    let links = collect_semantic_module_links_with_facts(&state, &commonjs_receivers);
+/// Finish state-dependent producers before releasing their lookup indexes.
+/// Only owned contract data leaves this phase; syntax hashing runs afterward.
+fn collect_semantic_facts<'a, B>(
+    parser_partial: bool,
+    prepared: &mut PreparedSemanticState<'a>,
+    checkpoint: &mut impl FnMut() -> ControlFlow<B>,
+) -> ControlFlow<B, SemanticIr> {
+    collect_primary_state_phase(prepared, checkpoint)?;
+    let state = &prepared.state;
+
+    let public_call_writes = collect_public_call_writes(state);
+    let commonjs_receivers = index_commonjs_export_receivers(state, &public_call_writes);
+    let links = collect_semantic_module_links_with_facts(state, &commonjs_receivers);
+    drop(commonjs_receivers);
+    drop(public_call_writes);
     checkpoint()?;
 
-    let primary = collect_primary_projection_phase(&state, links, &mut checkpoint)?;
-    let callable_phase = collect_callable_phase(&state, &primary, parser_partial, &mut checkpoint)?;
+    let primary = collect_primary_projection_phase(state, links, checkpoint)?;
+    let callable_phase = collect_callable_phase(state, &primary, parser_partial, checkpoint)?;
     let derived = collect_derived_phase(
-        &state,
+        state,
         &primary,
         &callable_phase,
         &callable_phase.callables,
-        parser_partial,
-        &mut checkpoint,
+        checkpoint,
     )?;
 
-    let mut resource_limits = state.getter_resource_limits.borrow().clone();
-    resource_limits.extend(state.value_resource_limits.borrow().iter().cloned());
-    resource_limits.sort_by_key(|limit| format!("{limit:?}"));
-    resource_limits.dedup();
-    let limitations = limitations(&state, parser_partial, &resource_limits);
-    let widened_returned_references = state
-        .returned_reference_widenings
-        .borrow()
-        .iter()
-        .cloned()
-        .map(Into::into)
-        .collect();
-    let coverage = super::coverage::SemanticCoverage::from_observations(
-        parser_partial,
-        resource_limits,
-        widened_returned_references,
-    );
+    let (coverage, limitations) = semantic_observations(state, parser_partial);
 
-    ControlFlow::Continue(Ok(SemanticIr {
+    ControlFlow::Continue(SemanticIr {
         schema: "JavaScriptSemanticIR".to_owned(),
         scopes: primary.scopes,
         bindings: primary.bindings,
@@ -170,21 +306,46 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
         boundary_operations: derived.data_effects.boundary_operations,
         resource_operations: derived.resources,
         object_operations: derived.objects,
-        function_fingerprints: derived.fingerprints,
+        function_fingerprints: Vec::new(),
         frontiers: derived.calls.frontiers,
         coverage,
         limitations,
-    }))
+    })
+}
+
+fn semantic_observations(
+    state: &super::state::SemanticState<'_>,
+    parser_partial: bool,
+) -> (super::coverage::SemanticCoverage, Vec<String>) {
+    let mut resource_limits = state.getter_resource_limits.borrow().clone();
+    resource_limits.extend(state.value_resource_limits.borrow().iter().cloned());
+    resource_limits.sort_by_key(|limit| format!("{limit:?}"));
+    resource_limits.dedup();
+    let limitations = limitations(state, parser_partial, &resource_limits);
+    let widened_returned_references = state
+        .returned_reference_widenings
+        .borrow()
+        .iter()
+        .cloned()
+        .map(Into::into)
+        .collect();
+    let coverage = super::coverage::SemanticCoverage::from_observations(
+        parser_partial,
+        resource_limits,
+        widened_returned_references,
+    );
+
+    (coverage, limitations)
 }
 
 fn collect_primary_state_phase<'a, B>(
-    state: &mut super::state::SemanticState<'a>,
+    prepared: &mut PreparedSemanticState<'a>,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
 ) -> ControlFlow<B, ()> {
-    index_ambient_writes(state);
+    prepared.ensure_ambient_writes();
     checkpoint()?;
 
-    collect_semantic_member_mutations(state);
+    prepared.ensure_member_mutations();
     checkpoint()?;
 
     ControlFlow::Continue(())
@@ -223,18 +384,20 @@ fn collect_primary_projection_phase<'a, B>(
 }
 
 fn collect_derived_phase<'a, B>(
-    state: &'a super::state::SemanticState<'a>,
+    state: &super::state::SemanticState<'a>,
     primary: &PrimaryPhase<'a>,
-    callable_phase: &CallablePhase<'a>,
+    callable_phase: &CallablePhase,
     callables: &[ContractCallable],
-    parser_partial: bool,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
 ) -> ControlFlow<B, DerivedPhase> {
     let calls = collect_semantic_calls(state, callables);
     checkpoint()?;
 
-    let return_sites = return_site_index(&callable_phase.returns);
-    let promises = collect_semantic_promises(state, &primary.internal_callables, &return_sites);
+    let promises = collect_semantic_promises(
+        state,
+        &primary.internal_callables,
+        &callable_phase.return_sites,
+    );
     checkpoint()?;
 
     let async_effects = collect_semantic_async_effects(state.program, state, callables);
@@ -252,24 +415,6 @@ fn collect_derived_phase<'a, B>(
     let objects = collect_semantic_objects(state, &primary.internal_callables);
     checkpoint()?;
 
-    let fingerprints = collect_semantic_fingerprints(
-        state,
-        &SemanticFingerprintInputs {
-            callables,
-            call_sites: &calls.call_sites,
-            closure_captures: &calls.closure_captures,
-            promises: &promises,
-            events: &async_effects.event_operations,
-            timers: &async_effects.timer_operations,
-            child_process_spawns: &child_processes.child_process_spawns,
-            child_process_interactions: &child_processes.child_process_interactions,
-            requests: &data_effects.request_operations,
-            resources: &resources,
-        },
-        parser_partial,
-    );
-    checkpoint()?;
-
     ControlFlow::Continue(DerivedPhase {
         calls,
         promises,
@@ -278,7 +423,6 @@ fn collect_derived_phase<'a, B>(
         data_effects,
         resources,
         objects,
-        fingerprints,
     })
 }
 
@@ -287,12 +431,12 @@ fn collect_callable_phase<'a, B>(
     primary: &PrimaryPhase<'a>,
     parser_partial: bool,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
-) -> ControlFlow<B, CallablePhase<'a>> {
+) -> ControlFlow<B, CallablePhase> {
     let returns =
         collect_semantic_returns_with_values(state, &primary.internal_callables, parser_partial);
+    let return_sites = return_site_index(&returns);
     let callables = returns
-        .iter()
-        .cloned()
+        .into_iter()
         .map(Into::into)
         .collect::<Vec<ContractCallable>>();
     let admitted_callable_ids = callables
@@ -307,7 +451,7 @@ fn collect_callable_phase<'a, B>(
     checkpoint()?;
 
     ControlFlow::Continue(CallablePhase {
-        returns,
+        return_sites,
         callables,
         module_links,
     })
@@ -419,4 +563,85 @@ fn limitations(
     .map(str::to_owned));
 
     limitations
+}
+
+#[cfg(test)]
+mod shared_pipeline_tests {
+    use super::*;
+    use crate::javascript::static_analysis::analyze::analyze_source_with_prepared_state;
+
+    #[test]
+    fn semantic_output_matches_an_independent_pass_after_static_inspection() {
+        let sources = [
+            r#"import { helper } from "./dep.js";
+                export function run() { return helper(); }"#,
+            r#"const options = { url: "https://first.test" };
+                options.url = "https://second.test";
+                fetch(options.url);
+                export function endpoint() { return options.url; }"#,
+            r#"const { BrowserWindow } = require("electron");
+                const preferences = { nodeIntegration: false };
+                preferences.contextIsolation = true;
+                new BrowserWindow({ webPreferences: preferences });"#,
+            r#"const cyclic = { get url() { return cyclic.url; } };
+                fetch(cyclic.url);
+                export function read() { return cyclic.url; }"#,
+            r#"const first = {}; const second = {};
+                first.next = second; second.next = first;
+                first.value = globalThis.URL;
+                second[unknownKey] = globalThis.Location;
+                consume(first);"#,
+        ];
+
+        for source in sources {
+            let expected = analyze_source(source, Some("shared.js")).expect("standalone analysis");
+            let allocator = Allocator::default();
+            let parsed = parse_javascript_analysis_program(&allocator, source, Some("shared.js"))
+                .expect("parse source");
+            let parser_partial = !parsed.errors.is_empty();
+            let prepared = prepare_state(&parsed, ResolutionMode::Import);
+            let (_, prepared) =
+                analyze_source_with_prepared_state(source, Some("shared.js"), &parsed, prepared);
+            drop(parsed);
+            let ControlFlow::Continue(Ok(actual)) =
+                analyze_prepared_source_with_checkpoint(parser_partial, prepared, || {
+                    ControlFlow::<()>::Continue(())
+                })
+            else {
+                panic!("shared analysis did not complete");
+            };
+
+            assert_eq!(
+                serde_json::to_value(actual).expect("serialize shared IR"),
+                serde_json::to_value(expected).expect("serialize standalone IR"),
+                "static inspection changed semantic output for {source}",
+            );
+        }
+    }
+
+    #[test]
+    fn source_analysis_honors_every_cancellation_checkpoint() {
+        let source = "let value = 1; value = 2; export function read() { return value; }";
+        let mut checkpoint_count = 0;
+        let completed = analyze_source_with_checkpoint(source, Some("cancel.js"), || {
+            checkpoint_count += 1;
+            ControlFlow::<usize>::Continue(())
+        });
+        assert!(matches!(completed, ControlFlow::Continue(Ok(_))));
+        assert!(checkpoint_count > 2);
+
+        for stop_at in 1..=checkpoint_count {
+            let mut observed = 0;
+            let cancelled = analyze_source_with_checkpoint(source, Some("cancel.js"), || {
+                observed += 1;
+                if observed == stop_at {
+                    ControlFlow::Break(stop_at)
+                } else {
+                    ControlFlow::Continue(())
+                }
+            });
+            assert!(matches!(cancelled, ControlFlow::Break(checkpoint) if checkpoint == stop_at));
+            assert_eq!(observed, stop_at);
+        }
+    }
 }

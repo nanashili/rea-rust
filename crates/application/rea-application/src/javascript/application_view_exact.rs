@@ -55,7 +55,7 @@ pub fn project_exact(record: &Json, view: &Json) -> Result<Json, AnalysisError> 
             let mut output = shared;
             output.set("kind", "javascript");
             output.set("view", view);
-            output.set("rows", Json::Array(rows.clone()));
+            output.set("rows", Json::array(rows.clone()));
             output.set("source_coverage", coverage);
             output.set("coverage", page_coverage(&view, rows.len(), total));
             Ok(output.into())
@@ -65,7 +65,7 @@ pub fn project_exact(record: &Json, view: &Json) -> Result<Json, AnalysisError> 
             let mut output = shared;
             output.set("kind", "javascript-facts");
             output.set("view", view);
-            output.set("rows", Json::Array(rows.clone()));
+            output.set("rows", Json::array(rows.clone()));
             output.set("source_coverage", coverage);
             output.set("coverage", page_coverage(&view, rows.len(), total));
             Ok(output.into())
@@ -98,7 +98,7 @@ pub fn project_exact(record: &Json, view: &Json) -> Result<Json, AnalysisError> 
             let mut output = Obj::new()
                 .with("kind", "page")
                 .with("view", view)
-                .with("items", Json::Array(items.clone()))
+                .with("items", Json::array(items.clone()))
                 .with("coverage", page_coverage(&view, items.len(), total));
             output.extend_from(&shared);
             Ok(output.into())
@@ -184,7 +184,7 @@ fn build_view_evidence(record: &Json, view: &Json, result: Json) -> Json {
         .with("locations", locations)
         .with(
             "evidence_links",
-            Json::Array(vec![record.at("evidence_id").clone()]),
+            Json::array(vec![record.at("evidence_id").clone()]),
         )
         .into()
 }
@@ -193,7 +193,7 @@ fn view_limitations(result: &Json) -> Json {
     result
         .get("limitations")
         .cloned()
-        .unwrap_or_else(|| Json::Array(Vec::new()))
+        .unwrap_or_else(|| Json::array(Vec::new()))
 }
 
 fn view_locations(result: &Json) -> Json {
@@ -202,14 +202,14 @@ fn view_locations(result: &Json) -> Json {
         .and_then(|artifact| artifact.get("path"))
         .filter(|path| path.as_js_string().is_some_and(|path| !path.is_empty()))
         .map(|path| {
-            Json::Array(vec![
+            Json::array(vec![
                 Obj::new()
                     .with("kind", "artifact-path")
                     .with("path", path.clone())
                     .into(),
             ])
         })
-        .unwrap_or_else(|| Json::Array(Vec::new()))
+        .unwrap_or_else(|| Json::array(Vec::new()))
 }
 
 fn view_confidence(result: &Json) -> &'static str {
@@ -450,10 +450,10 @@ fn module_item(node: &Json) -> Json {
         .with("kind", node.at("kind"))
         .with("path", module_path(node))
         .with("identity", node.at("identity"))
-        .with("hashes", Json::Array(node_hashes(node)))
-        .with("exports", Json::Array(export_names(node)))
-        .with("source_ranges", Json::Array(source_ranges(node)))
-        .with("observations", Json::Array(observations))
+        .with("hashes", Json::array(node_hashes(node)))
+        .with("exports", Json::array(export_names(node)))
+        .with("source_ranges", Json::array(source_ranges(node)))
+        .with("observations", Json::array(observations))
         .into()
 }
 
@@ -568,7 +568,7 @@ fn module_reference(entry: ModuleEntry<'_>) -> Json {
         .with("path", entry.path)
         .with("identity", node.at("identity"))
         .with("retained_source_range_count", ranges)
-        .with("basis", Json::Array(support))
+        .with("basis", Json::array(support))
         .into()
 }
 
@@ -651,7 +651,7 @@ fn fact_row(node: &Json, observation: &Json, keys: &[JsString], include_availabl
         available.sort_by(json::compare_utf16);
         output.set(
             "available_property_keys",
-            Json::Array(available.into_iter().map(Json::from).collect()),
+            Json::array(available.into_iter().map(Json::from).collect()),
         );
     }
     let mut selected = Obj::new();
@@ -752,8 +752,8 @@ fn parent_fields(record: &Json, analysis: &Json, coverage: &Json) -> Obj {
                 .with("path", owned(analysis.get("input_path")))
                 .with("sha256", owned(analysis.get("root_artifact_sha256"))),
         )
-        .with("limitations", Json::Array(limitations.clone()))
-        .with("unknowns", Json::Array(unknowns))
+        .with("limitations", Json::array(limitations.clone()))
+        .with("unknowns", Json::array(unknowns))
         .into()
 }
 
@@ -850,7 +850,7 @@ fn summary_object(analysis: &Json, graph: &Json, coverage: &Json) -> Json {
             mapped.into()
         })
         .collect::<Vec<_>>();
-    semantic.set("families", Json::Array(families));
+    semantic.set("families", Json::array(families));
     let mut result = Obj::new()
         .with("input_path", owned(analysis.get("input_path")))
         .with("format", owned(analysis.get("format")))
@@ -915,11 +915,11 @@ mod tests {
                     .with("strategy", "canonical-path")
                     .with("path", path),
             )
-            .with("observations", Json::Array(vec![observation.into()]));
+            .with("observations", Json::array(vec![observation.into()]));
         let graph = Obj::new()
-            .with("nodes", Json::Array(vec![node.into()]))
+            .with("nodes", Json::array(vec![node.into()]))
             .with("coverage", Obj::new().with("status", "complete"))
-            .with("limitations", Json::Array(Vec::new()));
+            .with("limitations", Json::array(Vec::new()));
         Obj::new()
             .with("evidence_id", "ev_exact")
             .with(
@@ -938,13 +938,13 @@ mod tests {
                         "root_artifact_sha256",
                         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     )
-                    .with("limitations", Json::Array(Vec::new()))
+                    .with("limitations", Json::array(Vec::new()))
                     .with("graph", graph)
                     .with(
                         "semantic_graph",
                         Obj::new()
                             .with("coverage", Obj::new())
-                            .with("unknowns", Json::Array(Vec::new())),
+                            .with("unknowns", Json::array(Vec::new())),
                     ),
             )
             .into()
@@ -989,7 +989,7 @@ mod tests {
         );
         let view = Obj::new()
             .with("kind", "javascript-facts")
-            .with("property_keys", Json::Array(vec![key.into()]))
+            .with("property_keys", Json::array(vec![key.into()]))
             .with("limit", 10usize);
         let view: Json = view.into();
         let result = project_exact(&record, &view).expect("exact facts");
@@ -1037,9 +1037,9 @@ mod tests {
                 .with("kind", "javascript-facts")
                 .with(
                     "where",
-                    Obj::new().with("paths", Json::Array(vec![path.into()])),
+                    Obj::new().with("paths", Json::array(vec![path.into()])),
                 )
-                .with("property_keys", Json::Array(vec![key.into()]))
+                .with("property_keys", Json::array(vec![key.into()]))
                 .with("offset", 0usize)
                 .with("limit", 1usize)
                 .into(),

@@ -9,7 +9,7 @@ fn serialized<T: serde::Serialize>(value: &T) -> Json {
 }
 
 fn string_array(values: impl IntoIterator<Item = String>) -> Json {
-    Json::Array(values.into_iter().map(Json::from).collect())
+    Json::array(values.into_iter().map(Json::from).collect())
 }
 
 fn object_id(prefix: &str, semantic: &Json) -> Json {

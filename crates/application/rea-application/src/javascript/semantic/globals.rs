@@ -46,12 +46,28 @@ pub fn is_unmodified_global_reference<'a>(
     callee: &Node<'a>,
     name: &str,
 ) -> bool {
-    let (root, members) = member_path(state.source, *callee);
-    if members.is_empty() && state.is_unshadowed_global(&root, name) {
-        return true;
+    let callee = unwrapped(state.source, *callee);
+    if !is_member(&callee) {
+        return state.is_unshadowed_global(&callee, name);
     }
-    GLOBAL_OBJECT_NAMES
-        .into_iter()
-        .any(|namespace| state.is_unshadowed_global(&root, namespace))
-        && matches!(members.as_slice(), [Some(member)] if member == name)
+
+    let Some(object) = callee.field(state.source, Field::Object) else {
+        return false;
+    };
+    let object = unwrapped(state.source, object);
+    let Some(namespace) = object.identifier_name() else {
+        return false;
+    };
+    if !GLOBAL_OBJECT_NAMES.contains(&namespace) {
+        return false;
+    }
+
+    let Some(property) = callee.field(state.source, Field::Property) else {
+        return false;
+    };
+    let Some(property_name) = static_property_key(state.source, property, callee.computed()) else {
+        return false;
+    };
+
+    property_name == name && state.is_unshadowed_global(&object, namespace)
 }

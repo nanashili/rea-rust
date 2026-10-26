@@ -89,7 +89,7 @@ pub fn invalidate_mutation_paths(value: SemanticValue, paths: &[PropertyPath]) -
     };
     let mut base = match (value, reset) {
         (SemanticValue::Array { .. }, Some(_)) => SemanticValue::Array {
-            items: Vec::new(),
+            items: Vec::new().into(),
             coverage: Coverage::Unknown { omitted: None },
         },
         (value, _) => value,
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn coverage_serializes_to_the_typescript_contract() {
         let value = SemanticValue::Object {
-            properties: Vec::new(),
+            properties: Vec::new().into(),
             coverage: Coverage::Exact,
         };
         let encoded = serde_json::to_value(value).expect("serialize exact coverage");

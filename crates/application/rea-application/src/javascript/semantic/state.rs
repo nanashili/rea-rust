@@ -8,12 +8,17 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-use crate::javascript::ast::{AstContext, Field, Node, NodeKey, NodeMap, NodeSet};
+use indexmap::IndexMap;
+
+use crate::javascript::ast::{AstContext, Field, Node, NodeKey, NodeMap, NodeParents, NodeSet};
 use crate::javascript::parser::SourceRange;
+use crate::javascript::static_analysis::semantics::BindingFacts;
 
 use super::ast_values::{is_identifier_named, property_key_of, static_property_key, unwrapped};
 use super::bundled_require_origin::BundledRequireProofCache;
+use super::opaque_effects::OpaqueEffects;
 use super::property_paths::PropertyPath;
 use super::value_types::JsString;
 
@@ -21,36 +26,28 @@ use super::value_types::JsString;
 /// fixes a key's position; setting it again replaces the value in place.
 #[derive(Clone, Debug)]
 pub struct InsertionMap<V> {
-    index: HashMap<String, usize>,
-    entries: Vec<(String, V)>,
+    entries: IndexMap<String, V>,
 }
 
 impl<V> Default for InsertionMap<V> {
     fn default() -> Self {
         Self {
-            index: HashMap::new(),
-            entries: Vec::new(),
+            entries: IndexMap::new(),
         }
     }
 }
 
 impl<V> InsertionMap<V> {
     pub fn get(&self, key: &str) -> Option<&V> {
-        self.index.get(key).map(|&slot| &self.entries[slot].1)
+        self.entries.get(key)
     }
 
     pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
-        self.index.get(key).map(|&slot| &mut self.entries[slot].1)
+        self.entries.get_mut(key)
     }
 
     pub fn set(&mut self, key: String, value: V) {
-        match self.index.get(&key) {
-            Some(&slot) => self.entries[slot].1 = value,
-            None => {
-                self.index.insert(key.clone(), self.entries.len());
-                self.entries.push((key, value));
-            }
-        }
+        self.entries.insert(key, value);
     }
 
     pub fn len(&self) -> usize {
@@ -73,7 +70,7 @@ impl<V> InsertionMap<V> {
 
     /// The entry for `key`, inserted with `default` when missing.
     pub fn entry_or(&mut self, key: &str, default: impl FnOnce() -> V) -> &mut V {
-        if !self.index.contains_key(key) {
+        if !self.entries.contains_key(key) {
             self.set(key.to_owned(), default());
         }
         self.get_mut(key).expect("inserted")
@@ -194,7 +191,7 @@ pub struct Initializer<'a> {
 }
 
 /// `copyKind` of a reference initializer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CopyKind {
     ObjectRest,
     ArrayRest,
@@ -325,7 +322,9 @@ pub enum RequiredModuleEffectKind {
 #[derive(Clone, Debug)]
 pub struct ScopeState<'a> {
     pub scope_id: String,
-    pub parent_scope_id: Option<String>,
+    /// The owner index is used for ancestry. Public scope IDs are derived
+    /// from the indexed scope only when projecting the analysis result.
+    pub parent_scope: Option<ScopeIndex>,
     pub kind: ScopeKind,
     pub location: SourceRange,
     pub bindings_complete: bool,
@@ -343,7 +342,7 @@ pub struct SemanticState<'a> {
     /// Babel `program.sourceType === "script"`.
     pub script: bool,
     pub static_import_resolution_mode: ResolutionMode,
-    pub parents: NodeMap<Node<'a>>,
+    pub parents: NodeParents<'a>,
     pub scopes: Vec<ScopeState<'a>>,
     pub scopes_by_id: InsertionMap<ScopeIndex>,
     /// Scope boundaries plus descendants resolved on demand (memo).
@@ -380,6 +379,25 @@ pub struct SemanticState<'a> {
     /// before semantic consumers run, and later semantic passes only append
     /// member effects; neither changes the inputs used by this cache.
     pub(crate) global_eval_sites_cache: RefCell<Option<std::rc::Rc<Vec<Node<'a>>>>>,
+    /// Direct-eval indexes are immutable after definitions and shared by all
+    /// value and provenance queries in this semantic state.
+    pub(crate) opaque_effects_cache: RefCell<Option<Rc<OpaqueEffects<'a>>>>,
+    /// Binding facts are immutable after the definitions pass.  Consumers
+    /// such as bundled-loader proof may ask for them from many AST nodes; the
+    /// owner keeps one shared map instead of rebuilding and cloning every
+    /// binding record for each proof attempt.
+    pub(crate) state_facts_cache: RefCell<Option<Rc<HashMap<String, BindingFacts>>>>,
+    /// Scope lookup results are enabled only after definitions have finished
+    /// mutating the scope and binding tables.
+    pub(crate) binding_lookup_cache: RefCell<BindingLookupCache>,
+    /// Pure direct return/yield syntax facts, shared by semantic consumers.
+    pub(crate) callable_result_cache:
+        RefCell<HashMap<NodeKey, Rc<Vec<super::callable_results::CallableResultExpression<'a>>>>>,
+    /// Source-order facts are immutable after definitions; all semantic
+    /// consumers in this analysis share the owner cache instead of rebuilding
+    /// ancestry walks for each initializer read.
+    pub(crate) statement_position_cache:
+        RefCell<super::mutation_initializers::StatementPositionCache>,
     /// Getter expansion limits recorded in first-observed order.
     pub getter_resource_limits: RefCell<Vec<super::value_types::ResourceLimit>>,
     /// Value interpretation limits recorded in first-observed order.
@@ -397,6 +415,94 @@ pub struct SemanticState<'a> {
     pub(crate) next_initializer_id: usize,
 }
 
+const MAX_BINDING_LOOKUP_CACHE_ENTRIES: usize = 65_536;
+const MAX_BINDING_LOOKUP_CACHE_BYTES: usize = 8 * 1024 * 1024;
+const BINDING_LOOKUP_CACHE_ENTRY_OVERHEAD: usize = 64;
+
+#[derive(Debug, Default)]
+pub(crate) struct BindingLookupCache {
+    enabled: bool,
+    entries: HashMap<Option<ScopeIndex>, HashMap<String, CachedBindingLookup>>,
+    entry_count: usize,
+    estimated_bytes: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CachedBindingLookup {
+    prototype_require_mutation_observed: Option<bool>,
+    result: BindingLookup,
+}
+
+impl BindingLookupCache {
+    fn enable(&mut self) {
+        self.enabled = true;
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.entry_count = 0;
+        self.estimated_bytes = 0;
+    }
+
+    fn get(
+        &self,
+        scope: Option<ScopeIndex>,
+        name: &str,
+        prototype_require_mutation_observed: Option<bool>,
+    ) -> Option<BindingLookup> {
+        if !self.enabled {
+            return None;
+        }
+        self.entries.get(&scope).and_then(|entries| {
+            entries.get(name).and_then(|cached| {
+                (cached.prototype_require_mutation_observed == prototype_require_mutation_observed)
+                    .then_some(cached.result)
+            })
+        })
+    }
+
+    fn insert(
+        &mut self,
+        scope: Option<ScopeIndex>,
+        name: &str,
+        prototype_require_mutation_observed: Option<bool>,
+        result: BindingLookup,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        if let Some(entries) = self.entries.get_mut(&scope)
+            && let Some(cached) = entries.get_mut(name)
+        {
+            cached.prototype_require_mutation_observed = prototype_require_mutation_observed;
+            cached.result = result;
+            return;
+        }
+
+        let entry_bytes = BINDING_LOOKUP_CACHE_ENTRY_OVERHEAD.saturating_add(name.len());
+        if entry_bytes > MAX_BINDING_LOOKUP_CACHE_BYTES {
+            return;
+        }
+        if self.entry_count >= MAX_BINDING_LOOKUP_CACHE_ENTRIES
+            || self.estimated_bytes.saturating_add(entry_bytes) > MAX_BINDING_LOOKUP_CACHE_BYTES
+        {
+            self.clear();
+        }
+
+        let entries = self.entries.entry(scope).or_default();
+        entries.insert(
+            name.to_owned(),
+            CachedBindingLookup {
+                prototype_require_mutation_observed,
+                result,
+            },
+        );
+        self.entry_count += 1;
+        self.estimated_bytes = self.estimated_bytes.saturating_add(entry_bytes);
+    }
+}
+
 #[derive(Debug)]
 pub enum ModuleRequireWritesCache<'a> {
     Empty,
@@ -405,6 +511,119 @@ pub enum ModuleRequireWritesCache<'a> {
 }
 
 impl<'a> SemanticState<'a> {
+    pub(crate) fn enable_binding_lookup_cache(&self) {
+        self.binding_lookup_cache.borrow_mut().enable();
+    }
+
+    pub(crate) fn invalidate_binding_lookup_cache(&mut self) {
+        self.binding_lookup_cache.borrow_mut().clear();
+    }
+
+    pub(crate) fn callable_result_expressions(
+        &self,
+        callable: &Node<'a>,
+    ) -> Rc<Vec<super::callable_results::CallableResultExpression<'a>>> {
+        if let Some(results) = self.callable_result_cache.borrow().get(&callable.key()) {
+            return Rc::clone(results);
+        }
+        let results = Rc::new(super::callable_results::callable_result_expressions(
+            self.source,
+            callable,
+        ));
+        self.callable_result_cache
+            .borrow_mut()
+            .insert(callable.key(), Rc::clone(&results));
+        results
+    }
+
+    /// Select binding facts at a read site using this analysis' shared
+    /// source-order cache.
+    pub(crate) fn semantic_binding_at_read<'b>(
+        &self,
+        binding: &'b BindingState<'a>,
+        read: Node<'a>,
+    ) -> super::mutation_initializers::SemanticBindingRead<'b, 'a> {
+        super::mutation_initializers::semantic_binding_at_read_cached(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            read,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_capture_position(
+        &self,
+        node: Node<'a>,
+    ) -> Option<super::mutation_initializers::StatementPosition> {
+        super::mutation_initializers::cached_semantic_capture_position(
+            &mut self.statement_position_cache.borrow_mut(),
+            node,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_binding_precedes_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_binding_precedes_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_escape_follows_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+        escape: Option<Node<'a>>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_escape_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            escape,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn semantic_binding_effect_follows_capture(
+        &self,
+        binding: &BindingState<'a>,
+        capture: Node<'a>,
+        effect: Node<'a>,
+    ) -> bool {
+        super::mutation_initializers::cached_semantic_binding_effect_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            binding,
+            capture,
+            effect,
+            &self.parents,
+            self.source,
+        )
+    }
+
+    pub(crate) fn top_level_effect_follows_capture(
+        &self,
+        capture: Node<'a>,
+        effect: Option<Node<'a>>,
+    ) -> bool {
+        super::mutation_initializers::cached_top_level_effect_follows_capture(
+            &mut self.statement_position_cache.borrow_mut(),
+            capture,
+            effect,
+            &self.parents,
+            self.source,
+        )
+    }
+
     /// Record a value resource limit once, preserving observation order.
     pub fn record_value_resource_limit(&self, limit: super::value_types::ResourceLimit) {
         let mut limits = self.value_resource_limits.borrow_mut();
@@ -522,10 +741,26 @@ impl<'a> SemanticState<'a> {
 
     /// `state.scopesById.get(scope.parentScopeId)`.
     pub fn parent_scope(&self, index: ScopeIndex) -> Option<ScopeIndex> {
-        self.scopes[index]
-            .parent_scope_id
-            .as_deref()
-            .and_then(|id| self.scopes_by_id.get(id).copied())
+        self.scopes[index].parent_scope
+    }
+
+    /// Whether a scope is the named ancestor or one of its descendants.
+    pub fn scope_is_within(&self, scope_id: &str, ancestor_id: &str) -> bool {
+        if scope_id == ancestor_id {
+            return true;
+        }
+
+        let mut current = self
+            .scopes_by_id
+            .get(scope_id)
+            .and_then(|index| self.parent_scope(*index));
+        while let Some(index) = current {
+            if self.scope(index).scope_id == ancestor_id {
+                return true;
+            }
+            current = self.parent_scope(index);
+        }
+        false
     }
 
     pub fn parent_of(&self, node: &Node<'a>) -> Option<Node<'a>> {
@@ -556,6 +791,33 @@ impl<'a> SemanticState<'a> {
     /// `semanticBindingLookupFromScope`: certain and possible owners without
     /// discarding `with` uncertainty.
     pub fn lookup_from_scope(&self, scope: Option<ScopeIndex>, name: &str) -> BindingLookup {
+        // A local declaration wins even in an incomplete object environment.
+        // Read it directly instead of maintaining a second cached copy of
+        // the scope's own binding table for every identifier in a large file.
+        if let Some(binding) = scope.and_then(|index| self.scopes[index].bindings.get(name)) {
+            return BindingLookup::Binding(*binding);
+        }
+
+        let prototype_require_mutation_observed = self.prototype_require_mutation_observed;
+        if let Some(result) =
+            self.binding_lookup_cache
+                .borrow()
+                .get(scope, name, prototype_require_mutation_observed)
+        {
+            return result;
+        }
+
+        let result = self.lookup_from_scope_uncached(scope, name);
+        self.binding_lookup_cache.borrow_mut().insert(
+            scope,
+            name,
+            prototype_require_mutation_observed,
+            result,
+        );
+        result
+    }
+
+    fn lookup_from_scope_uncached(&self, scope: Option<ScopeIndex>, name: &str) -> BindingLookup {
         let mut uncertain = false;
         let mut scope = scope;
         while let Some(index) = scope {

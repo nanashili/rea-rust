@@ -22,19 +22,19 @@ pub fn truncated_coverage(limits: Vec<Json>, omitted: Option<f64>) -> Json {
 
 fn coverage(status: &str, truncated: bool, omitted: Json, limits: Vec<Json>) -> Json {
     Obj::new()
-        .with("status", status)
-        .with("truncated", truncated)
-        .with("omitted_count", omitted)
-        .with("limits", Json::Array(limits))
+        .with_static("status", status)
+        .with_static("truncated", truncated)
+        .with_static("omitted_count", omitted)
+        .with_static("limits", Json::array(limits))
         .into()
 }
 
 /// One coverage limit record.
 pub fn limit(name: &str, value: f64, unit: &str) -> Json {
     Obj::new()
-        .with("name", name)
-        .with("value", value)
-        .with("unit", unit)
+        .with_static("name", name)
+        .with_static("value", value)
+        .with_static("unit", unit)
         .into()
 }
 
@@ -92,29 +92,29 @@ impl<'a> EvidenceInput<'a> {
 
 fn artifact_reference(sha256: &str) -> Json {
     Obj::new()
-        .with("available", true)
-        .with("artifact_id", format!("art_{sha256}"))
-        .with("sha256", sha256)
+        .with_static("available", true)
+        .with_static("artifact_id", format!("art_{sha256}"))
+        .with_static("sha256", sha256)
         .into()
 }
 
 fn extractor(operation: &str) -> Json {
     Obj::new()
-        .with("name", EXTRACTOR_NAME)
-        .with("version", "1")
-        .with("executable_sha256", Json::Null)
-        .with("operation", operation)
+        .with_static("name", EXTRACTOR_NAME)
+        .with_static("version", "1")
+        .with_static("executable_sha256", Json::Null)
+        .with_static("operation", operation)
         .into()
 }
 
 fn artifact_path_location(path: &JsString) -> Json {
     Obj::new()
-        .with("available", true)
-        .with(
+        .with_static("available", true)
+        .with_static(
             "value",
             Obj::new()
-                .with("kind", "artifact-path")
-                .with("path", Json::String(path.clone())),
+                .with_static("kind", "artifact-path")
+                .with_static("path", Json::String(path.clone())),
         )
         .into()
 }
@@ -122,14 +122,14 @@ fn artifact_path_location(path: &JsString) -> Json {
 /// `{ kind: "source-range", source, ...range }` location reference.
 pub fn source_range_location(source: &JsString, range: &Json) -> Json {
     let mut value = Obj::new()
-        .with("kind", "source-range")
-        .with("source", Json::String(source.clone()));
+        .with_static("kind", "source-range")
+        .with_static("source", Json::String(source.clone()));
     if let Some(range) = range.as_obj() {
         value.extend_from(range);
     }
     Obj::new()
-        .with("available", true)
-        .with("value", value)
+        .with_static("available", true)
+        .with_static("value", value)
         .into()
 }
 
@@ -142,15 +142,15 @@ fn evidence(
     limitations: Vec<JsString>,
 ) -> Json {
     Obj::new()
-        .with("authority", authority)
-        .with("state", state)
-        .with("confidence", confidence)
-        .with("artifact", artifact_reference(input.sha256))
-        .with("location", location)
-        .with("extractor", extractor(input.operation))
-        .with("coverage", input.coverage.clone())
-        .with("limitations", super::json::strings(limitations))
-        .with("evidence_ids", Json::Array(Vec::new()))
+        .with_static("authority", authority)
+        .with_static("state", state)
+        .with_static("confidence", confidence)
+        .with_static("artifact", artifact_reference(input.sha256))
+        .with_static("location", location)
+        .with_static("extractor", extractor(input.operation))
+        .with_static("coverage", input.coverage.clone())
+        .with_static("limitations", super::json::strings(limitations))
+        .with_static("evidence_ids", Json::array(Vec::new()))
         .into()
 }
 

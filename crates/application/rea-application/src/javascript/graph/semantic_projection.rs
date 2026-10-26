@@ -6,13 +6,14 @@ use super::super::semantic::value_types::JsString;
 use super::evidence::partial_coverage;
 use super::json::{Json, Obj, js_int, strings, utf16_len};
 use super::leaves::{
-    container, property_pointer_js, semantic_resource_limit_coverage,
-    semantic_resource_limit_reason, slot_at_path,
+    SlotFact, container, property_pointer_js, semantic_resource_limit_coverage,
+    semantic_resource_limit_reason, slot_at_value,
 };
 use super::semantic_graph::{
-    NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation, add_unknown,
-    inferred_evidence_at, observed_evidence, retain_node, unknown_evidence,
+    NodeAdmission, NodeDetails, NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation,
+    add_unknown, inferred_evidence_at, retain_node, retain_node_lazy, unknown_evidence,
 };
+use super::semantic_ir_view::{BindingValueLookup, SemanticCollection, SemanticIrView};
 use super::semantic_lookup::{CallableOwnerLookup, NodeRangeLookup, range_key};
 
 /// File-local projection context.
@@ -20,7 +21,7 @@ pub struct FileContext<'s> {
     /// Source file.
     pub file: Json,
     /// Semantic IR.
-    pub ir: Json,
+    pub ir: SemanticIrView,
     /// Projection state.
     pub state: &'s mut ProjectionState,
     /// Module node.
@@ -35,8 +36,6 @@ pub struct FileContext<'s> {
     pub return_site_nodes: HashMap<String, Json>,
     /// Argument nodes by call-site and index.
     pub argument_nodes: HashMap<String, Json>,
-    /// Reference nodes in producer order.
-    pub reference_nodes: Vec<Json>,
     /// Call resolutions by call-site id.
     pub call_resolutions: HashMap<String, &'static str>,
     /// Callable owner lookup.
@@ -85,6 +84,18 @@ impl FileContext<'_> {
         retain_node(self.state, &self.file, spec)
     }
 
+    fn observed_evidence(&mut self, location: &Json) -> Json {
+        self.state.observed_evidence(&self.file, location)
+    }
+
+    fn inferred_evidence(&mut self, location: &Json) -> Json {
+        self.state.inferred_evidence(&self.file, location)
+    }
+
+    fn unknown_evidence(&mut self, location: &Json) -> Json {
+        self.state.unknown_evidence(&self.file, location)
+    }
+
     fn relate(
         &mut self,
         source: Option<&Json>,
@@ -131,12 +142,21 @@ fn owner_id(context: &FileContext<'_>, owner: &Json) -> Option<String> {
 
 /// `projectSemanticValues`.
 pub fn project_values(context: &mut FileContext<'_>) {
-    let bindings = context.ir.at("bindings").arr().to_vec();
-    for binding in &bindings {
-        let Some(node) = context.binding(binding.at("bindingId")) else {
+    let ir = context.ir.clone();
+    let retained_bindings =
+        ir.binding_indices_matching(|id| context.binding_nodes.contains_key(id));
+    for index in retained_bindings {
+        let Some(binding) = ir.binding_header_at(index) else {
             continue;
         };
-        project_value(context, binding, binding.at("value"), Some(node), &[]);
+        let binding_id = binding.at("bindingId");
+        let Some(node) = context.binding(binding_id) else {
+            continue;
+        };
+        let Some(value) = ir.binding_value_at(index) else {
+            continue;
+        };
+        project_value(context, &binding, &value, Some(node), &[]);
     }
 }
 
@@ -181,7 +201,7 @@ fn project_value(
                     context,
                     binding.at("bindingId").str(),
                     &property_path,
-                    property,
+                    &SlotFact::Observed(property),
                 );
                 let presence = property.at("presence").str();
                 if presence == "absent" {
@@ -212,7 +232,7 @@ fn project_value(
                         format!("; {} omitted", js_int(omitted.num()))
                     }
                 );
-                let evidence = unknown_evidence(&context.file, &location);
+                let evidence = context.unknown_evidence(&location);
                 let id = target.at("node_id").str().to_owned();
                 context.unknown(UnknownSpec {
                     node_id: Some(id.clone()),
@@ -226,11 +246,11 @@ fn project_value(
             }
         }
         "unknown" | "ambiguous" | "cycle" => {
-            let mut evidence = observed_evidence(&context.file, &location).obj();
+            let mut evidence = context.observed_evidence(&location).obj();
             evidence.set("authority", "unknown");
             evidence.set("state", "unknown");
             evidence.set("confidence", "unknown");
-            evidence.set("limitations", Json::Array(vec![value.at("reason").clone()]));
+            evidence.set("limitations", Json::array(vec![value.at("reason").clone()]));
             let id = target.at("node_id").str().to_owned();
             context.unknown(UnknownSpec {
                 node_id: Some(id.clone()),
@@ -291,7 +311,7 @@ fn literal_node(
         location,
         label: Some(label.into()),
         function_node_id: function.map(Into::into),
-        properties: Obj::new().with("value", value.clone()),
+        properties: Obj::new().with_static("value", value.clone()),
     })
 }
 
@@ -300,7 +320,7 @@ fn property_slot(
     context: &mut FileContext<'_>,
     binding_id: &str,
     path: &[JsString],
-    fact: &Json,
+    fact: &SlotFact<'_>,
 ) -> Option<Json> {
     let function = context
         .binding_nodes
@@ -309,78 +329,80 @@ fn property_slot(
         .map(str::to_owned);
     let role_key = format!(
         "property:{}",
-        Json::Array(vec![
+        Json::array(vec![
             binding_id.into(),
-            Json::Array(path.iter().cloned().map(Json::from).collect()),
+            Json::array(path.iter().cloned().map(Json::from).collect()),
         ])
         .stringify()
     );
-    let coverage = container(fact.at("value")).map_or(Json::Null, |inventory| inventory.coverage);
-    context.retain(NodeSpec {
-        kind: "property-slot",
-        role_key: role_key.into(),
-        location: Json::Null,
-        label: Some(fact.at("name").text().clone()),
-        function_node_id: function.map(Into::into),
-        properties: Obj::new()
-            .with("name", fact.at("name").clone())
-            .with(
-                "property_path",
-                Json::Array(path.iter().cloned().map(Json::from).collect()),
-            )
-            .with("property_pointer", property_pointer_js(path))
-            .with("object_binding_id", binding_id)
-            .with("presence", fact.at("presence").clone())
-            .with("value_status", fact.at("value").at("status").clone())
-            .with("value_coverage", coverage),
-    })
+    retain_node_lazy(
+        context.state,
+        &context.file,
+        NodeAdmission {
+            kind: "property-slot",
+            role_key: role_key.into(),
+            location: Json::Null,
+            function_node_id: function.map(Into::into),
+        },
+        || NodeDetails {
+            label: Some(fact.name()),
+            properties: Obj::new()
+                .with_static("name", fact.raw_name())
+                .with_static(
+                    "property_path",
+                    Json::array(path.iter().cloned().map(Json::from).collect()),
+                )
+                .with_static("property_pointer", property_pointer_js(path))
+                .with_static("object_binding_id", binding_id)
+                .with_static("presence", fact.raw_presence())
+                .with_static("value_status", fact.value_status())
+                .with_static("value_coverage", fact.value_coverage()),
+        },
+    )
 }
 
 // ---------------------------------------------------------------- objects
 
 /// `projectSemanticObjects`.
 pub fn project_objects(context: &mut FileContext<'_>) {
-    let values: HashMap<String, Json> = context
-        .ir
-        .at("bindings")
-        .arr()
-        .iter()
-        .map(|binding| {
-            (
-                binding.at("bindingId").str().to_owned(),
-                binding.at("value").clone(),
-            )
-        })
-        .collect();
-    let operations = context.ir.at("objectOperations").arr().to_vec();
-    for operation in &operations {
+    let ir = context.ir.clone();
+    let values = ir.binding_values();
+    for operation in ir.records(SemanticCollection::ObjectOperations) {
         let kind = operation.at("kind").str();
         let path = operation.at("propertyPath");
-        let label = if path.is_null() {
-            JsString::from(kind)
-        } else {
-            JsString::from(kind)
-                .concat_str(":")
-                .concat(&property_pointer_js(&js_string_path(path)))
-        };
         let function = owner_id(context, operation.at("ownerCallableId"));
-        let occurrence = context.retain(NodeSpec {
-            kind: "expression",
-            role_key: operation.at("objectOperationId").str().to_owned().into(),
-            location: operation.at("location").clone(),
-            label: Some(label),
-            function_node_id: function.map(Into::into),
-            properties: Obj::new().with("operation_kind", kind).with(
-                "property_path",
-                if path.is_null() {
-                    Json::Null
+        let occurrence = retain_node_lazy(
+            context.state,
+            &context.file,
+            NodeAdmission {
+                kind: "expression",
+                role_key: operation.at("objectOperationId").str().to_owned().into(),
+                location: operation.at("location").clone(),
+                function_node_id: function.map(Into::into),
+            },
+            || {
+                let label = if path.is_null() {
+                    JsString::from(kind)
                 } else {
-                    path.clone()
-                },
-            ),
-        });
+                    JsString::from(kind)
+                        .concat_str(":")
+                        .concat(&property_pointer_js(&js_string_path(path)))
+                };
+                NodeDetails {
+                    label: Some(label),
+                    properties: Obj::new().with_static("operation_kind", kind).with_static(
+                        "property_path",
+                        if path.is_null() {
+                            Json::Null
+                        } else {
+                            path.clone()
+                        },
+                    ),
+                }
+            },
+        );
         let (object_node, slot, presence, receiver_resolved) =
-            object_target(context, &values, operation);
+            object_target(context, &values, &operation);
         let (source, target) = match kind {
             "read" => (slot.clone(), occurrence.clone()),
             "write" => (occurrence.clone(), slot.clone()),
@@ -425,7 +447,7 @@ pub fn project_objects(context: &mut FileContext<'_>) {
                 .concat_str("; object identity is ")
                 .concat_str(operation.at("resolution").str())
                 .concat_str(".");
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(node.as_ref()),
                 family: "object-flow",
@@ -450,26 +472,27 @@ fn object_relation(kind: &str) -> &'static str {
 
 fn object_target(
     context: &mut FileContext<'_>,
-    values: &HashMap<String, Json>,
+    values: &BindingValueLookup<'_>,
     operation: &Json,
 ) -> (Option<Json>, Option<Json>, String, bool) {
     let object_id = operation.at("objectBindingId");
     let binding = context.binding(object_id);
-    let value = object_id.as_str().and_then(|id| values.get(id));
     let path = operation.at("propertyPath");
-    let (Some(object_id), false, Some(value)) = (object_id.as_str(), path.is_null(), value) else {
+    let (Some(object_id), false) = (object_id.as_str(), path.is_null()) else {
         return (binding, None, "unknown-coverage".to_owned(), false);
     };
     let path = js_string_path(path);
-    let fact = slot_at_path(value, &path);
-    let presence = fact.at("presence").str().to_owned();
+    let Some(value) = values.value(object_id) else {
+        return (binding, None, "unknown-coverage".to_owned(), false);
+    };
+    let fact = slot_at_value(value, &path);
+    let presence = fact.presence().to_owned();
     if path.is_empty() {
-        return (binding, None, presence, container(value).is_some());
+        return (binding, None, presence, fact.is_container());
     }
     let slot = property_slot(context, object_id, &path, &fact);
-    let receiver = slot_at_path(value, &path[..path.len().saturating_sub(1)]);
-    let receiver_resolved =
-        receiver.at("presence").str() == "present" && container(receiver.at("value")).is_some();
+    let receiver = slot_at_value(value, &path[..path.len().saturating_sub(1)]);
+    let receiver_resolved = receiver.presence() == "present" && receiver.is_container();
     (slot.clone(), slot, presence, receiver_resolved)
 }
 
@@ -477,8 +500,11 @@ fn object_target(
 
 /// `projectCalls`.
 pub fn project_calls(context: &mut FileContext<'_>) {
-    let calls = context.ir.at("callSites").arr().to_vec();
-    for call in &calls {
+    let ir = context.ir.clone();
+    let retained_calls =
+        ir.call_site_indices_matching(|id| context.call_site_nodes.contains_key(id));
+    for index in retained_calls {
+        let call = ir.call_site_at(index).expect("selected call site exists");
         let call_id = call.at("callSiteId").str();
         let Some(call_node) = context.call_site_nodes.get(call_id).cloned() else {
             continue;
@@ -526,8 +552,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             }
         }
     }
-    let flows = context.ir.at("argumentFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::ArgumentFlows) {
         let argument = context
             .argument_nodes
             .get(&format!(
@@ -549,8 +575,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             resolution,
         );
     }
-    let flows = context.ir.at("callReturnFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::CallReturnFlows) {
         let source = context
             .return_site_nodes
             .get(flow.at("returnSiteId").str())
@@ -571,8 +597,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             resolution,
         );
     }
-    let flows = context.ir.at("callResultFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::CallResultFlows) {
         let source = context
             .call_site_nodes
             .get(flow.at("callSiteId").str())
@@ -589,20 +615,28 @@ pub fn project_calls(context: &mut FileContext<'_>) {
 }
 
 fn project_return_values(context: &mut FileContext<'_>) {
-    let callables = context.ir.at("callables").arr().to_vec();
-    for callable in &callables {
+    let ir = context.ir.clone();
+    let retained_callables =
+        ir.callable_indices_with_returns(|id| context.return_site_nodes.contains_key(id));
+    for index in retained_callables {
+        let Some(callable) = ir.callable_header_at(index) else {
+            continue;
+        };
         for site in callable.at("returnSites").arr() {
-            let return_node = context
+            let Some(return_node) = context
                 .return_site_nodes
                 .get(site.at("returnSiteId").str())
-                .cloned();
+                .cloned()
+            else {
+                continue;
+            };
             let identity = site.at("identityReferenceLocation");
             for reference in context.references_within(site.at("location")) {
                 let exact =
                     !identity.is_null() && reference.at("identity").at("source_range") == identity;
                 context.relate(
                     Some(&reference),
-                    return_node.as_ref(),
+                    Some(&return_node),
                     "aliases",
                     resolution(exact),
                 );
@@ -615,9 +649,9 @@ fn project_return_values(context: &mut FileContext<'_>) {
 
 /// `projectSemanticPromises`.
 pub fn project_promises(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("promiseOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::PromiseOperations) {
         let kind = operation.at("kind").str();
         let label = if kind == "awaited-expression" {
             "awaited expression".to_owned()
@@ -636,10 +670,10 @@ pub fn project_promises(context: &mut FileContext<'_>) {
             label: Some(label.into()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("method", operation.at("method").clone())
-                .with("operation_kind", kind)
-                .with("ownership", operation.at("ownership").clone())
-                .with(
+                .with_static("method", operation.at("method").clone())
+                .with_static("operation_kind", kind)
+                .with_static("ownership", operation.at("ownership").clone())
+                .with_static(
                     "source_resolution",
                     operation.at("sourceResolution").clone(),
                 ),
@@ -648,7 +682,7 @@ pub fn project_promises(context: &mut FileContext<'_>) {
             nodes.insert(operation.at("promiseId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::PromiseOperations) {
         let Some(promise) = nodes.get(operation.at("promiseId").str()).cloned() else {
             continue;
         };
@@ -712,7 +746,7 @@ pub fn project_promises(context: &mut FileContext<'_>) {
                 .iter()
                 .filter_map(|id| node_id(nodes.get(id.str())))
                 .collect();
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(Some(&promise)),
                 family: "promise-ownership",
@@ -742,9 +776,9 @@ pub fn project_promises(context: &mut FileContext<'_>) {
 
 /// `projectSemanticEvents`.
 pub fn project_events(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("eventOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut events: HashMap<JsString, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::EventOperations) {
         let name = operation.at("eventName");
         let key = match name.as_js_string() {
             None => operation.at("eventId").text().clone(),
@@ -775,8 +809,8 @@ pub fn project_events(context: &mut FileContext<'_>) {
                     label,
                     function_node_id: None,
                     properties: Obj::new()
-                        .with("emitter_key", operation.at("emitterKey").clone())
-                        .with("event_name", name.clone()),
+                        .with_static("emitter_key", operation.at("emitterKey").clone())
+                        .with_static("event_name", name.clone()),
                 })
             }
         };
@@ -822,9 +856,9 @@ pub fn project_events(context: &mut FileContext<'_>) {
                 label: Some(label.into()),
                 function_node_id: function.map(Into::into),
                 properties: Obj::new()
-                    .with("emitter_key", operation.at("emitterKey").clone())
-                    .with("event_name", name.clone())
-                    .with("method", method),
+                    .with_static("emitter_key", operation.at("emitterKey").clone())
+                    .with_static("event_name", name.clone())
+                    .with_static("method", method),
             });
             context.relate(
                 Some(&event),
@@ -845,7 +879,7 @@ pub fn project_events(context: &mut FileContext<'_>) {
                     operation.at("method").str()
                 )
             };
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(Some(&event)),
                 family: "event",
@@ -869,18 +903,18 @@ fn projected_bindings(context: &mut FileContext<'_>, source: Option<&Json>, oper
             resolution(is_complete(projected.at("resolution"))),
         );
         spec.properties = Obj::new()
-            .with("projection_path", projected.at("projectionPath").clone())
-            .with("projection_resolution", projected.at("resolution").clone());
+            .with_static("projection_path", projected.at("projectionPath").clone())
+            .with_static("projection_resolution", projected.at("resolution").clone());
         add_relation(context.state, spec);
     }
 }
 
 /// `projectSemanticTimers`.
 pub fn project_timers(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("timerOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut timers: HashMap<String, Json> = HashMap::new();
-    for operation in operations
-        .iter()
+    for operation in ir
+        .records(SemanticCollection::TimerOperations)
         .filter(|operation| operation.at("kind").str() == "schedule")
     {
         let function = owner_id(context, operation.at("ownerCallableId"));
@@ -891,22 +925,22 @@ pub fn project_timers(context: &mut FileContext<'_>) {
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with(
+                .with_static(
                     "delay_milliseconds",
                     operation.at("delayMilliseconds").clone(),
                 )
-                .with("method", operation.at("method").clone()),
+                .with_static("method", operation.at("method").clone()),
         });
         if let Some(timer) = timer {
             timers.insert(operation.at("timerId").str().to_owned(), timer);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::TimerOperations) {
         let call = context.call_site_at(operation.at("location"));
         if operation.at("kind").str() == "schedule" {
             let timer = timers.get(operation.at("timerId").str()).cloned();
             context.relate(call.as_ref(), timer.as_ref(), "schedules-timer", "resolved");
-            projected_bindings(context, timer.as_ref(), operation);
+            projected_bindings(context, timer.as_ref(), &operation);
             continue;
         }
         let target = operation
@@ -924,7 +958,7 @@ pub fn project_timers(context: &mut FileContext<'_>) {
         if complete {
             continue;
         }
-        let evidence = unknown_evidence(&context.file, operation.at("location"));
+        let evidence = context.unknown_evidence(operation.at("location"));
         context.unknown(UnknownSpec {
             node_id: node_id(call.as_ref()),
             family: "timer",
@@ -946,9 +980,9 @@ pub fn project_timers(context: &mut FileContext<'_>) {
 
 /// `projectSemanticChildProcesses`.
 pub fn project_child_processes(context: &mut FileContext<'_>) {
-    let spawns = context.ir.at("childProcessSpawns").arr().to_vec();
+    let ir = context.ir.clone();
     let mut processes: HashMap<String, Json> = HashMap::new();
-    for spawn in &spawns {
+    for spawn in ir.records(SemanticCollection::ChildProcessSpawns) {
         let function = owner_id(context, spawn.at("ownerCallableId"));
         let label = spawn
             .at("command")
@@ -962,31 +996,32 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             label: Some(label),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("argv_count", spawn.at("argvCount").clone())
-                .with("command", spawn.at("command").clone())
-                .with(
+                .with_static("argv_count", spawn.at("argvCount").clone())
+                .with_static("command", spawn.at("command").clone())
+                .with_static(
                     "environment_supplied",
                     spawn.at("environmentSupplied").clone(),
                 )
-                .with("method", spawn.at("method").clone())
-                .with("stdio_mode", spawn.at("stdioMode").clone()),
+                .with_static("method", spawn.at("method").clone())
+                .with_static("stdio_mode", spawn.at("stdioMode").clone()),
         });
         if let Some(node) = node {
             processes.insert(spawn.at("processId").str().to_owned(), node);
         }
     }
-    for spawn in &spawns {
+    for spawn in ir.records(SemanticCollection::ChildProcessSpawns) {
         let Some(child) = processes.get(spawn.at("processId").str()).cloned() else {
             continue;
         };
         let call = context.call_site_at(spawn.at("location"));
         let complete = is_complete(spawn.at("resolution"));
         context.relate(call.as_ref(), Some(&child), "spawns", resolution(complete));
-        projected_bindings(context, Some(&child), spawn);
+        projected_bindings(context, Some(&child), &spawn);
         if !spawn.at("argvCount").is_null() {
             let mut spec =
                 RelationSpec::new(call.as_ref(), Some(&child), "supplies-argv", "resolved");
-            spec.properties = Obj::new().with("argument_count", spawn.at("argvCount").clone());
+            spec.properties =
+                Obj::new().with_static("argument_count", spawn.at("argvCount").clone());
             add_relation(context.state, spec);
         }
         if spawn.at("environmentSupplied").as_bool() == Some(true) {
@@ -999,7 +1034,7 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             location: spawn.at("location").clone(),
             label: Some(mode.to_owned().into()),
             function_node_id: child.at("function_node_id").as_js_string().cloned(),
-            properties: Obj::new().with("mode", mode),
+            properties: Obj::new().with_static("mode", mode),
         });
         context.relate(
             Some(&child),
@@ -1035,8 +1070,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             );
         }
     }
-    let interactions = context.ir.at("childProcessInteractions").arr().to_vec();
-    for interaction in &interactions {
+    let ir = context.ir.clone();
+    for interaction in ir.records(SemanticCollection::ChildProcessInteractions) {
         let children: Vec<Json> = interaction
             .at("linkedProcessIds")
             .arr()
@@ -1058,8 +1093,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
                 label: interaction.at("eventName").as_js_string().cloned(),
                 function_node_id: function.map(Into::into),
                 properties: Obj::new()
-                    .with("event_name", interaction.at("eventName").clone())
-                    .with("method", interaction.at("method").clone()),
+                    .with_static("event_name", interaction.at("eventName").clone())
+                    .with_static("method", interaction.at("method").clone()),
             })
         } else {
             context.retain(NodeSpec {
@@ -1068,7 +1103,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
                 location: interaction.at("location").clone(),
                 label: interaction.at("signalName").as_js_string().cloned(),
                 function_node_id: function.map(Into::into),
-                properties: Obj::new().with("signal_name", interaction.at("signalName").clone()),
+                properties: Obj::new()
+                    .with_static("signal_name", interaction.at("signalName").clone()),
             })
         };
         let relation = if interaction.at("kind").str() == "signal" {
@@ -1115,7 +1151,7 @@ fn child_unknown(
     detail: String,
     candidates: Vec<String>,
 ) {
-    let evidence = unknown_evidence(&context.file, location);
+    let evidence = context.unknown_evidence(location);
     context.unknown(UnknownSpec {
         node_id: node_id(node),
         family: "child-process",
@@ -1156,7 +1192,7 @@ fn data_unknown(
     location: &Json,
     input: DataUnknown<'_>,
 ) {
-    let evidence = unknown_evidence(&context.file, location);
+    let evidence = context.unknown_evidence(location);
     context.unknown(UnknownSpec {
         node_id: node_id(Some(node)),
         family: input.family,
@@ -1179,14 +1215,14 @@ fn configuration_relation(kind: &str) -> &'static str {
 
 /// `projectSemanticConfiguration`.
 pub fn project_configuration(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("configurationOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ConfigurationOperations) {
         let function = owner_id(context, operation.at("ownerCallableId"));
         let mut properties = Obj::new()
-            .with("key", operation.at("key").clone())
-            .with("source_kind", operation.at("kind").clone())
-            .with("value", operation.at("value").clone());
+            .with_static("key", operation.at("key").clone())
+            .with_static("source_kind", operation.at("kind").clone())
+            .with_static("value", operation.at("value").clone());
         if let Some(limit) = operation.get("valueResourceLimit") {
             properties.set("value_resource_limit", limit.clone());
         }
@@ -1208,7 +1244,7 @@ pub fn project_configuration(context: &mut FileContext<'_>) {
             nodes.insert(operation.at("configId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ConfigurationOperations) {
         let Some(config) = nodes.get(operation.at("configId").str()).cloned() else {
             continue;
         };
@@ -1265,9 +1301,9 @@ pub fn project_configuration(context: &mut FileContext<'_>) {
 
 /// `projectSemanticRequests`.
 pub fn project_requests(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("requestOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::RequestOperations) {
         let method = operation.at("method").str();
         let label = match operation.at("endpoint").as_js_string() {
             Some(endpoint) if endpoint.len() <= utf16_len(method) => endpoint.clone(),
@@ -1285,15 +1321,15 @@ pub fn project_requests(context: &mut FileContext<'_>) {
             label: Some(label),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("endpoint", operation.at("endpoint").clone())
-                .with("method", method)
-                .with("operation_kind", operation.at("kind").clone()),
+                .with_static("endpoint", operation.at("endpoint").clone())
+                .with_static("method", method)
+                .with_static("operation_kind", operation.at("kind").clone()),
         });
         if let Some(node) = node {
             nodes.insert(operation.at("requestId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::RequestOperations) {
         let Some(request) = nodes.get(operation.at("requestId").str()).cloned() else {
             continue;
         };
@@ -1307,7 +1343,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                 "constructs-request",
                 resolution(complete),
             );
-            projected_bindings(context, Some(&request), operation);
+            projected_bindings(context, Some(&request), &operation);
             for field in operation.at("fields").arr() {
                 let source = if field.at("sourceBindingId").is_null() {
                     call.clone()
@@ -1324,7 +1360,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                         "resolved"
                     },
                 );
-                spec.properties = Obj::new().with("field", field.at("name").clone());
+                spec.properties = Obj::new().with_static("field", field.at("name").clone());
                 add_relation(context.state, spec);
             }
         } else {
@@ -1334,7 +1370,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                 "consumed-by",
                 resolution(complete),
             );
-            spec.properties = Obj::new().with("method", operation.at("method").clone());
+            spec.properties = Obj::new().with_static("method", operation.at("method").clone());
             add_relation(context.state, spec);
         }
         if !complete {
@@ -1368,8 +1404,8 @@ pub fn project_requests(context: &mut FileContext<'_>) {
 
 /// `projectSemanticBoundaries`.
 pub fn project_boundaries(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("boundaryOperations").arr().to_vec();
-    for operation in &operations {
+    let ir = context.ir.clone();
+    for operation in ir.records(SemanticCollection::BoundaryOperations) {
         let function = owner_id(context, operation.at("ownerCallableId"));
         let Some(boundary) = context.retain(NodeSpec {
             kind: "boundary",
@@ -1378,9 +1414,9 @@ pub fn project_boundaries(context: &mut FileContext<'_>) {
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("boundary_kind", operation.at("kind").clone())
-                .with("field", operation.at("method").clone())
-                .with("method", operation.at("method").clone()),
+                .with_static("boundary_kind", operation.at("kind").clone())
+                .with_static("field", operation.at("method").clone())
+                .with_static("method", operation.at("method").clone()),
         }) else {
             continue;
         };
@@ -1422,10 +1458,10 @@ pub fn project_boundaries(context: &mut FileContext<'_>) {
 
 /// `projectSemanticResources`.
 pub fn project_resources(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("resourceOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut resources: HashMap<String, Json> = HashMap::new();
-    for operation in operations
-        .iter()
+    for operation in ir
+        .records(SemanticCollection::ResourceOperations)
         .filter(|operation| operation.at("kind").str() == "acquire")
     {
         let function = owner_id(context, operation.at("ownerCallableId"));
@@ -1435,13 +1471,13 @@ pub fn project_resources(context: &mut FileContext<'_>) {
             location: operation.at("location").clone(),
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
-            properties: Obj::new().with("method", operation.at("method").clone()),
+            properties: Obj::new().with_static("method", operation.at("method").clone()),
         });
         if let Some(node) = node {
             resources.insert(operation.at("resourceId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ResourceOperations) {
         let call = context.call_site_at(operation.at("location"));
         if operation.at("kind").str() == "acquire" {
             let target = resources.get(operation.at("resourceId").str()).cloned();
@@ -1466,7 +1502,7 @@ pub fn project_resources(context: &mut FileContext<'_>) {
         if complete {
             continue;
         }
-        let evidence = unknown_evidence(&context.file, operation.at("location"));
+        let evidence = context.unknown_evidence(operation.at("location"));
         context.unknown(UnknownSpec {
             node_id: node_id(call.as_ref()),
             family: "resource-lifecycle",
@@ -1490,33 +1526,34 @@ pub fn project_resources(context: &mut FileContext<'_>) {
 
 /// `projectSemanticClosureCaptures`.
 pub fn project_closure_captures(context: &mut FileContext<'_>) {
-    let captures = context.ir.at("closureCaptures").arr().to_vec();
-    for capture in &captures {
+    let ir = context.ir.clone();
+    for capture in ir.records(SemanticCollection::ClosureCaptures) {
         let source = context.binding(capture.at("bindingId"));
         let target = context.callable(capture.at("callableId"));
         let mut spec = RelationSpec::new(source.as_ref(), target.as_ref(), "captures", "resolved");
-        spec.evidence = Some(inferred_evidence_at(
-            &context.file,
-            capture.at("referenceLocation"),
-        ));
+        spec.evidence = Some(context.inferred_evidence(capture.at("referenceLocation")));
         add_relation(context.state, spec);
     }
 }
 
 /// `projectSemanticFrontiers`.
 pub fn project_frontiers(context: &mut FileContext<'_>) {
-    let frontiers = context.ir.at("frontiers").arr().to_vec();
-    for frontier in &frontiers {
-        let kind = frontier.at("kind").str();
+    let ir = context.ir.clone();
+    for (index, kind) in ir.frontier_kinds().enumerate() {
         let (family, relations): (&str, &[&str]) = match kind {
             "dynamic-call" => ("call-flow", &["calls"]),
             "dynamic-scope" => ("data-flow", &["reads", "writes"]),
             _ => ("object-flow", &["reads-property", "writes-property"]),
         };
+        if context.state.unknown_capacity_reached() {
+            context.state.record_unknown_capacity_omission(family, kind);
+            continue;
+        }
+        let frontier = ir.frontier_at(index).expect("selected frontier exists");
         let node = context
             .callable_node_id(frontier.at("callableId"))
             .unwrap_or_else(|| context.module_node.at("node_id").str().to_owned());
-        let evidence = unknown_evidence(&context.file, frontier.at("location"));
+        let evidence = context.unknown_evidence(frontier.at("location"));
         context.unknown(UnknownSpec {
             node_id: Some(node),
             family,
@@ -1533,48 +1570,49 @@ pub fn project_frontiers(context: &mut FileContext<'_>) {
 
 /// `projectSemanticFunctionFingerprints`.
 pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
-    let fingerprints = context.ir.at("functionFingerprints").arr().to_vec();
+    let ir = context.ir.clone();
     let mut output = Vec::new();
-    for fingerprint in &fingerprints {
+    let retained_fingerprints =
+        ir.fingerprint_indices_matching(|id| context.callable_nodes.contains_key(id));
+    for index in retained_fingerprints {
+        let fingerprint = ir
+            .fingerprint_at(index)
+            .expect("selected fingerprint exists");
         let Some(callable) = context.callable(fingerprint.at("callableId")) else {
             continue;
         };
+        let evidence = context
+            .state
+            .observed_evidence_reference(&context.file, callable.at("identity").at("source_range"));
         let components = fingerprint.at("components");
         let input = Obj::new()
-            .with("function_node_id", callable.at("node_id").clone())
-            .with("algorithm", "rea.javascript-semantic-function")
-            .with("status", fingerprint.at("status").clone())
-            .with(
+            .with_static("function_node_id", callable.at("node_id").clone())
+            .with_static("algorithm", "rea.javascript-semantic-function")
+            .with_static("status", fingerprint.at("status").clone())
+            .with_static(
                 "components",
                 Obj::new()
-                    .with("parameter_arity", components.at("parameterArity").clone())
-                    .with(
+                    .with_static("parameter_arity", components.at("parameterArity").clone())
+                    .with_static(
                         "normalized_ast_sha256",
                         components.at("normalizedAstSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "control_flow_sha256",
                         components.at("controlFlowSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "relation_shape_sha256",
                         components.at("relationShapeSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "literal_set_sha256",
                         components.at("literalSetSha256").clone(),
                     )
-                    .with("effects", components.at("effects").clone()),
+                    .with_static("effects", components.at("effects").clone()),
             )
-            .with("limitations", fingerprint.at("limitations").clone())
-            .with(
-                "evidence",
-                observed_evidence(&context.file, callable.at("identity").at("source_range")),
-            );
-        output.push(super::semantic_graph::create_fingerprint(
-            context.state,
-            input,
-        ));
+            .with_static("limitations", fingerprint.at("limitations").clone());
+        output.push(super::semantic_graph::create_fingerprint(input, evidence));
     }
     output
 }
@@ -1583,10 +1621,10 @@ pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
 pub fn project_resource_limits(
     state: &mut ProjectionState,
     file: &Json,
-    ir: &Json,
+    coverage: &Json,
     module_node: &Json,
 ) {
-    for limit in super::leaves::semantic_resource_limits(ir.at("coverage")) {
+    for limit in super::leaves::semantic_resource_limits(coverage) {
         if limit != "getter-expansion" {
             continue;
         }
@@ -1625,8 +1663,8 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
         for (index, step) in path.at("steps").arr().iter().enumerate() {
             let step_kind = step.at("kind").str();
             let mut properties = Obj::new()
-                .with("path_id", path_id.as_str())
-                .with("entry", path.at("entry").clone());
+                .with_static("path_id", path_id.as_str())
+                .with_static("entry", path.at("entry").clone());
             if let Some(entry_path) = &entry_path {
                 properties.set("entry_path", entry_path.clone());
             }
@@ -1636,19 +1674,19 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
             properties.set("resolution", "candidate");
             properties.set(
                 "conditions",
-                Json::Array(
+                Json::array(
                     path.at("conditions")
                         .arr()
                         .iter()
                         .map(|condition| {
                             let location = condition.at("location");
                             Obj::new()
-                                .with("expression", condition.at("expression").clone())
-                                .with(
+                                .with_static("expression", condition.at("expression").clone())
+                                .with_static(
                                     "location",
                                     Obj::new()
-                                        .with("start", location.at("start").clone())
-                                        .with("end", location.at("end").clone()),
+                                        .with_static("start", location.at("start").clone())
+                                        .with_static("end", location.at("end").clone()),
                                 )
                                 .into()
                         })
@@ -1682,8 +1720,8 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
                 _ => "calls",
             };
             let mut relation_properties = Obj::new()
-                .with("path_id", path_id.as_str())
-                .with("entry", path.at("entry").clone());
+                .with_static("path_id", path_id.as_str())
+                .with_static("entry", path.at("entry").clone());
             if let Some(entry_path) = &entry_path {
                 relation_properties.set("entry_path", entry_path.clone());
             }
@@ -1706,7 +1744,7 @@ mod tests {
 
     #[test]
     fn property_path_keeps_unpaired_units_and_pointer_escaping() {
-        let path: Json = Json::Array(vec![
+        let path: Json = Json::array(vec![
             Json::from(JsString::from_utf16(vec![0x0078, 0xd800, 0x0079])),
             Json::from(JsString::from("a/b~c")),
         ]);

@@ -6,9 +6,10 @@
 //! producer has not established one yet.
 
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::javascript::ast::Node;
+use crate::javascript::ast::{AstVisitor, traverse};
 use crate::javascript::contracts::semantic_ir::SemanticModuleLink;
 use crate::javascript::parser::SourceRange;
 use crate::javascript::resolution::mode::ModuleResolutionMode;
@@ -17,7 +18,7 @@ use super::call_resolution::{
     LocalCallableResolution, callable_nodes, resolve_local_callable_binding,
     resolve_local_callables,
 };
-use super::callable_results::{CallableResultKind, callable_result_expressions};
+use super::callable_results::CallableResultKind;
 use super::coverage::SemanticReturnCoverage;
 use super::module_links::CollectedModuleLinks;
 use super::projection::SemanticCallable;
@@ -99,10 +100,12 @@ pub fn collect_semantic_returns<'a, F>(
 where
     F: FnMut(Node<'a>) -> SemanticValue,
 {
+    let callable_nodes = callable_node_index(state);
+
     callables
         .iter()
         .map(|callable| {
-            let Some(node) = callable_node(state, callable) else {
+            let Some(node) = callable_nodes.get(&callable.callable_id).copied() else {
                 return SemanticCallableReturns {
                     callable: callable.clone(),
                     return_sites: Vec::new(),
@@ -115,8 +118,9 @@ where
             };
 
             let return_sites =
-                callable_result_expressions(state.source, &node)
-                    .into_iter()
+                state
+                    .callable_result_expressions(&node)
+                    .iter()
                     .filter(|result| result.kind == CallableResultKind::Return)
                     .map(|result| {
                         let value = result.node.map(&mut evaluate).unwrap_or_else(|| {
@@ -306,35 +310,31 @@ pub fn resolve_semantic_module_callables_from_state<'a>(
         .collect()
 }
 
-fn callable_node<'a>(state: &SemanticState<'a>, callable: &SemanticCallable) -> Option<Node<'a>> {
-    let start = callable.location.start.offset;
-    let end = callable.location.end.offset;
-    find_callable_node(
-        state,
-        state.program,
-        callable.callable_id.as_str(),
-        start,
-        end,
-    )
-}
-
-fn find_callable_node<'a>(
-    state: &SemanticState<'a>,
-    node: Node<'a>,
-    callable_id: &str,
-    start: u32,
-    end: u32,
-) -> Option<Node<'a>> {
-    if state.context.start(&node) == start
-        && state.context.end(&node) == end
-        && super::projection::callable_id_for_node(&state.context, &node).as_deref()
-            == Some(callable_id)
-    {
-        return Some(node);
+fn callable_node_index<'a>(state: &SemanticState<'a>) -> HashMap<String, Node<'a>> {
+    // The visitor needs the parser context to produce stable IDs. Keep the
+    // context outside the visitor so the index remains a single source-order
+    // traversal rather than one traversal per callable.
+    struct ContextualCallableNodes<'s, 'a> {
+        context: &'s crate::javascript::ast::AstContext<'a>,
+        nodes: HashMap<String, Node<'a>>,
     }
-    node.children(state.source)
-        .into_iter()
-        .find_map(|child| find_callable_node(state, child, callable_id, start, end))
+
+    impl<'a> AstVisitor<'a> for ContextualCallableNodes<'_, 'a> {
+        fn enter(&mut self, node: &Node<'a>, _parent: Option<&Node<'a>>, _ancestors: &[Node<'a>]) {
+            if let Some(callable_id) = super::projection::callable_id_for_node(self.context, node) {
+                self.nodes.entry(callable_id).or_insert(*node);
+            }
+        }
+    }
+
+    let mut collector = ContextualCallableNodes {
+        context: &state.context,
+        nodes: HashMap::new(),
+    };
+    let _ = traverse(state.program, state.source, &mut collector, || {
+        std::ops::ControlFlow::<()>::Continue(())
+    });
+    collector.nodes
 }
 
 fn return_site_id(callable_id: &str, location: SourceRange) -> String {
@@ -510,9 +510,11 @@ mod tests {
     use crate::javascript::ast::AstContext;
     use crate::javascript::parser::parse_javascript_analysis_program;
     use crate::javascript::semantic::definitions::collect_definitions;
+    use crate::javascript::semantic::module_interop::StateFacts;
     use crate::javascript::semantic::projection::collect_semantic_projection;
     use crate::javascript::semantic::state::ResolutionMode;
     use crate::javascript::semantic::value_types::{JsString, Property};
+    use crate::javascript::static_analysis::semantics::StaticSemantics;
 
     #[test]
     fn flatten_escapes_pointers_and_retains_container_coverage() {
@@ -523,7 +525,8 @@ mod tests {
                     value: Primitive::String("ok".to_owned().into()),
                 },
                 presence: SlotPresence::Present,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Exact,
         };
         let (fields, coverage) = flatten_semantic_return_value(&value);
@@ -541,7 +544,8 @@ mod tests {
                     value: Primitive::Boolean(true),
                 },
                 presence: SlotPresence::UnknownCoverage,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Unknown { omitted: None },
         };
         let (fields, _) = flatten_semantic_return_value(&value);
@@ -577,7 +581,8 @@ mod tests {
                     value: Primitive::Boolean(true),
                 },
                 presence: SlotPresence::Present,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Exact,
         };
 
@@ -607,7 +612,8 @@ mod tests {
                     },
                     presence: SlotPresence::Present,
                 },
-            ],
+            ]
+            .into(),
             coverage: Coverage::Exact,
         };
 
@@ -662,6 +668,34 @@ mod tests {
             outer.return_sites[0]
                 .return_site_id
                 .starts_with(&format!("{}:return:", outer.callable.callable_id))
+        );
+    }
+
+    #[test]
+    fn state_facts_are_primed_after_all_bindings_are_collected() {
+        let source = "const first = 1; function later() { return first; }";
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(&allocator, source, Some("facts.js"))
+            .expect("valid fixture");
+        let ControlFlow::Continue(state) = collect_definitions::<()>(
+            AstContext::new(parsed.program),
+            ResolutionMode::Import,
+            || ControlFlow::Continue(()),
+        ) else {
+            panic!("fixture analysis must not cancel");
+        };
+
+        assert!(state.state_facts_cache.borrow().is_some());
+        let facts = StateFacts::new(&state);
+        assert!(
+            facts
+                .binding_by_id("scope:program:0:51:binding:first")
+                .is_some()
+        );
+        assert!(
+            facts
+                .binding_by_id("scope:program:0:51:binding:later")
+                .is_some()
         );
     }
 

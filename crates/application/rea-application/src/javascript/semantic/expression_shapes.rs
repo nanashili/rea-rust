@@ -12,7 +12,7 @@ use super::ast_values::{
     unwrap_expression, unwrapped,
 };
 use super::limits::SEMANTIC_EXPRESSION_DEPTH_LIMIT;
-use super::mutation_initializers::{BindingReadStatus, semantic_binding_at_read};
+use super::mutation_initializers::BindingReadStatus;
 use super::opaque_effects::{
     OpaqueEffects, opaque_binding_read_may_have_changed, opaque_name_may_have_changed,
 };
@@ -136,7 +136,7 @@ impl<'s, 'a> ExpressionShapeResolver<'s, 'a> {
         if !initializer.projection.is_empty() {
             return None;
         }
-        let read = semantic_binding_at_read(binding, node, &self.state.parents, self.state.source);
+        let read = self.state.semantic_binding_at_read(binding, node);
         if !hoisted_function(self.state, initializer.node)
             && (read.status != BindingReadStatus::Ordered || !read.has_definite_initializer)
         {

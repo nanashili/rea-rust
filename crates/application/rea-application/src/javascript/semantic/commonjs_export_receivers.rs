@@ -420,8 +420,8 @@ impl<'s, 'a> ReceiverIndexer<'s, 'a> {
 
 /// Index export receiver effects after definitions and ambient call writes exist.
 pub fn index_commonjs_export_receivers<'a>(
-    state: &'a SemanticState<'a>,
-    public_call_writes: &'a NodeSet,
+    state: &SemanticState<'a>,
+    public_call_writes: &NodeSet,
 ) -> HashMap<NodeKey, CommonJsExportReceiverEffect> {
     let initial = state.program;
     let mut indexer = ReceiverIndexer {

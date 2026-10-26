@@ -84,7 +84,7 @@ fn normalize_evidence(evidence: &Json) -> Json {
     let mut coverage = evidence.at("coverage").obj();
     let mut limits: Vec<Json> = evidence.at("coverage").at("limits").arr().to_vec();
     limits.sort_by(|left, right| compare_code_points(&left.canonical(), &right.canonical()));
-    coverage.set("limits", Json::Array(limits));
+    coverage.set("limits", Json::array(limits));
     object.set("coverage", coverage);
     let sorted = |value: &Json| {
         strings(unique_sorted(
@@ -120,16 +120,23 @@ impl EvidenceRegistry {
                     !self.contexts.contains_key(&id),
                     "JavaScript semantic evidence context digest collision"
                 );
-                self.contexts
-                    .insert(id.clone(), context.with("context_id", id.as_str()).into());
+                self.contexts.insert(
+                    id.clone(),
+                    context.with_static("context_id", id.as_str()).into(),
+                );
                 self.ids_by_canonical.insert(canonical, id.clone());
                 id
             }
         };
         Obj::new()
-            .with("context_id", id)
-            .with("location", location)
+            .with_static("context_id", id)
+            .with_static("location", location)
             .into()
+    }
+
+    /// Whether a previously issued context reference is still owned here.
+    pub fn contains_context(&self, id: &str) -> bool {
+        self.contexts.contains_key(id)
     }
 
     /// Resolve one interned reference to full evidence.
@@ -190,10 +197,10 @@ impl EvidenceRegistry {
 
 /// `javaScriptSemanticNodeId`.
 pub fn semantic_node_id(kind: &str, identity: &Json) -> String {
-    let semantic = Obj::new()
-        .with("kind", kind)
-        .with("identity", identity.clone());
-    format!("jsrg_node_{}", Json::from(semantic).digest())
+    format!(
+        "jsrg_node_{}",
+        super::json::digest_kind_identity(kind, identity)
+    )
 }
 
 /// An insertion-ordered map keyed by fact identifier (JavaScript `Map` semantics).
@@ -234,6 +241,15 @@ impl OrderedFacts {
             .filter_map(|id| self.values.get(id).cloned())
             .collect()
     }
+
+    /// Move facts out in insertion order without cloning their JSON trees.
+    pub fn take_values(&mut self) -> Vec<Json> {
+        let mut values = std::mem::take(&mut self.values);
+        self.order
+            .drain(..)
+            .filter_map(|id| values.remove(&id))
+            .collect()
+    }
     /// Identifiers in insertion order.
     pub fn keys(&self) -> &[String] {
         &self.order
@@ -260,12 +276,180 @@ pub struct ProjectionState {
     pub unknown_omissions: OrderedFacts,
     /// Evidence contexts.
     pub evidence: EvidenceRegistry,
+    /// File-scoped immutable evidence fields reused by this projection.
+    pub evidence_template: Option<EvidenceTemplate>,
     /// Root node identifiers in insertion order.
     pub roots: Vec<String>,
     /// Remaining node budget for the current file.
     pub file_node_budget: Option<usize>,
     /// Whether the current file lost nodes to its budget.
     pub file_nodes_dropped: bool,
+}
+
+/// Immutable evidence fields shared by locations in one source file.
+#[derive(Clone)]
+pub struct EvidenceTemplate {
+    file_path: JsString,
+    file_key: (JsString, JsString),
+    base: Json,
+    context_id: Option<JsString>,
+}
+
+impl EvidenceTemplate {
+    fn for_file(file: &Json) -> Self {
+        let path = file.at("path").text().clone();
+        let sha = file.at("sha256").str().to_owned();
+        let base = Obj::new()
+            .with_static("authority", "ast-static-analysis")
+            .with_static("state", "observed")
+            .with_static("confidence", "exact")
+            .with_static(
+                "artifact",
+                Obj::new()
+                    .with_static("available", true)
+                    .with_static("artifact_id", format!("art_{sha}"))
+                    .with_static("sha256", sha.as_str()),
+            )
+            .with_static("location", Json::Null)
+            .with_static(
+                "extractor",
+                Obj::new()
+                    .with_static("name", "rea-javascript-semantic-analysis")
+                    .with_static("version", "1")
+                    .with_static("operation", "analyze_javascript_application")
+                    .with_static("executable_sha256", Json::Null),
+            )
+            .with_static(
+                "coverage",
+                Obj::new()
+                    .with_static("status", "complete")
+                    .with_static("truncated", false)
+                    .with_static("omitted_count", 0.0)
+                    .with_static("limits", Json::array(Vec::new())),
+            )
+            .with_static("limitations", Json::array(Vec::new()))
+            .with_static("evidence_ids", Json::array(Vec::new()))
+            .into();
+        Self {
+            file_path: path.clone(),
+            file_key: (path, sha.into()),
+            base,
+            context_id: None,
+        }
+    }
+
+    fn matches(&self, file: &Json) -> bool {
+        self.file_key.0 == file.at("path").text() && self.file_key.1 == file.at("sha256").str()
+    }
+
+    fn location(&self, location: &Json) -> Json {
+        if location.is_null() {
+            Obj::new()
+                .with_static("available", true)
+                .with_static(
+                    "value",
+                    Obj::new()
+                        .with_static("kind", "artifact-path")
+                        .with_static("path", self.file_path.clone()),
+                )
+                .into()
+        } else {
+            let mut value = Obj::new()
+                .with_static("kind", "source-range")
+                .with_static("source", self.file_path.clone());
+            value.extend_from(&location.obj());
+            Obj::new()
+                .with_static("available", true)
+                .with_static("value", value)
+                .into()
+        }
+    }
+
+    fn observed(&self, location: &Json) -> Json {
+        let mut evidence = self.base.obj();
+        evidence.set("location", self.location(location));
+        evidence.into()
+    }
+
+    fn unknown(&self, location: &Json) -> Json {
+        let mut evidence = self.observed(location).obj();
+        evidence.set("authority", "unknown");
+        evidence.set("state", "unknown");
+        evidence.set("confidence", "unknown");
+        evidence.set(
+            "limitations",
+            strings(["Dynamic syntax prevents an exact static relationship."]),
+        );
+        evidence.into()
+    }
+}
+
+impl ProjectionState {
+    pub fn unknown_capacity_reached(&self) -> bool {
+        self.unknown_capacity
+            .is_some_and(|capacity| self.unknowns.len() >= capacity)
+    }
+
+    pub fn record_unknown_capacity_omission(&mut self, family: &str, reason: &str) {
+        let omission = Obj::new()
+            .with_static("family", family)
+            .with_static("reason", reason)
+            .with_static("occurrences", 1.0);
+        record_unknown_omission(self, &omission.into());
+    }
+
+    fn template_for(&mut self, file: &Json) -> &EvidenceTemplate {
+        let replace = self
+            .evidence_template
+            .as_ref()
+            .is_none_or(|template| !template.matches(file));
+        if replace {
+            self.evidence_template = Some(EvidenceTemplate::for_file(file));
+        }
+        self.evidence_template
+            .as_ref()
+            .expect("evidence template was just installed")
+    }
+
+    pub fn observed_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file).observed(location)
+    }
+
+    /// Build a location-only reference to the current file's observed context.
+    pub fn observed_evidence_reference(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file);
+        let template = self
+            .evidence_template
+            .as_mut()
+            .expect("the current file template was just installed");
+        let context_id = match &template.context_id {
+            Some(id)
+                if self.evidence.contains_context(
+                    id.as_str().expect("registry context identifiers are ASCII"),
+                ) =>
+            {
+                id.clone()
+            }
+            _ => {
+                let reference = self.evidence.intern(&template.base);
+                let id = reference.at("context_id").text().clone();
+                template.context_id = Some(id.clone());
+                id
+            }
+        };
+        Obj::new()
+            .with_static("context_id", context_id)
+            .with_static("location", template.location(location))
+            .into()
+    }
+
+    pub fn inferred_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        inferred_evidence(&self.observed_evidence(file, location))
+    }
+
+    pub fn unknown_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file).unknown(location)
+    }
 }
 
 /// `SemanticNodeConstructionInput`.
@@ -284,51 +468,29 @@ pub struct NodeSpec<'a> {
     pub properties: Obj,
 }
 
+/// Identity and ownership fields needed before node admission.
+pub struct NodeAdmission<'a> {
+    /// Node kind.
+    pub kind: &'a str,
+    /// Role key.
+    pub role_key: JsString,
+    /// Source range or `null`.
+    pub location: Json,
+    /// Owning function node.
+    pub function_node_id: Option<JsString>,
+}
+
+/// Expensive node fields constructed only after identity admission succeeds.
+pub struct NodeDetails {
+    /// Display label.
+    pub label: Option<JsString>,
+    /// Node properties.
+    pub properties: Obj,
+}
+
 /// Semantic evidence for observed syntax (`observedSemanticEvidence`).
 pub fn observed_evidence(file: &Json, location: &Json) -> Json {
-    let path = file.at("path").text();
-    let sha = file.at("sha256").str();
-    let location = if location.is_null() {
-        Obj::new().with("available", true).with(
-            "value",
-            Obj::new().with("kind", "artifact-path").with("path", path),
-        )
-    } else {
-        let mut value = Obj::new().with("kind", "source-range").with("source", path);
-        value.extend_from(&location.obj());
-        Obj::new().with("available", true).with("value", value)
-    };
-    Obj::new()
-        .with("authority", "ast-static-analysis")
-        .with("state", "observed")
-        .with("confidence", "exact")
-        .with(
-            "artifact",
-            Obj::new()
-                .with("available", true)
-                .with("artifact_id", format!("art_{sha}"))
-                .with("sha256", sha),
-        )
-        .with("location", location)
-        .with(
-            "extractor",
-            Obj::new()
-                .with("name", "rea-javascript-semantic-analysis")
-                .with("version", "1")
-                .with("operation", "analyze_javascript_application")
-                .with("executable_sha256", Json::Null),
-        )
-        .with(
-            "coverage",
-            Obj::new()
-                .with("status", "complete")
-                .with("truncated", false)
-                .with("omitted_count", 0.0)
-                .with("limits", Json::Array(Vec::new())),
-        )
-        .with("limitations", Json::Array(Vec::new()))
-        .with("evidence_ids", Json::Array(Vec::new()))
-        .into()
+    EvidenceTemplate::for_file(file).observed(location)
 }
 
 const INFERENCE_LIMITATION: &str = "This relationship is a conservative static candidate; it does not prove runtime execution or causal flow.";
@@ -350,15 +512,7 @@ pub fn inferred_evidence_at(file: &Json, location: &Json) -> Json {
 
 /// `unknownSemanticEvidence`.
 pub fn unknown_evidence(file: &Json, location: &Json) -> Json {
-    let mut object = observed_evidence(file, location).obj();
-    object.set("authority", "unknown");
-    object.set("state", "unknown");
-    object.set("confidence", "unknown");
-    object.set(
-        "limitations",
-        strings(["Dynamic syntax prevents an exact static relationship."]),
-    );
-    object.into()
+    EvidenceTemplate::for_file(file).unknown(location)
 }
 
 fn display_text(label: &JsString) -> JsString {
@@ -371,10 +525,10 @@ fn display_text(label: &JsString) -> JsString {
 
 fn node_identity(file: &Json, location: &Json, role_key: &JsString) -> Json {
     Obj::new()
-        .with("artifact_sha256", file.at("sha256").clone())
-        .with("module_path", file.at("path").clone())
-        .with("source_range", location.clone())
-        .with("role_key", role_key)
+        .with_static("artifact_sha256", file.at("sha256").clone())
+        .with_static("module_path", file.at("path").clone())
+        .with_static("source_range", location.clone())
+        .with_static("role_key", role_key)
         .into()
 }
 
@@ -397,27 +551,68 @@ fn admit_node(state: &mut ProjectionState, node: Json) -> Option<Json> {
 
 /// `retainSemanticGraphNode`.
 pub fn retain_node(state: &mut ProjectionState, file: &Json, spec: NodeSpec<'_>) -> Option<Json> {
-    let identity = node_identity(file, &spec.location, &spec.role_key);
-    let id = semantic_node_id(spec.kind, &identity);
+    let NodeSpec {
+        kind,
+        role_key,
+        location,
+        label,
+        function_node_id,
+        properties,
+    } = spec;
+
+    retain_node_lazy(
+        state,
+        file,
+        NodeAdmission {
+            kind,
+            role_key,
+            location,
+            function_node_id,
+        },
+        || NodeDetails { label, properties },
+    )
+}
+
+/// Retain a node while deferring labels and properties until admission is
+/// known to be necessary. Existing-node reuse and budget behavior match
+/// [`retain_node`].
+pub fn retain_node_lazy(
+    state: &mut ProjectionState,
+    file: &Json,
+    identity_spec: NodeAdmission<'_>,
+    construct: impl FnOnce() -> NodeDetails,
+) -> Option<Json> {
+    let NodeAdmission {
+        kind,
+        role_key,
+        location,
+        function_node_id,
+    } = identity_spec;
+
+    let identity = node_identity(file, &location, &role_key);
+    let id = semantic_node_id(kind, &identity);
+
     if let Some(existing) = state.nodes.get(&id) {
         return Some(existing.clone());
     }
+
     if state.file_node_budget == Some(0) {
         state.file_nodes_dropped = true;
         return None;
     }
-    let evidence = state
-        .evidence
-        .intern(&observed_evidence(file, &spec.location));
+
+    let NodeDetails { label, properties } = construct();
+    let evidence = state.observed_evidence_reference(file, &location);
+
     let node: Json = Obj::new()
-        .with("kind", spec.kind)
-        .with("identity", identity)
-        .with("function_node_id", spec.function_node_id)
-        .with("application_node_ids", Json::Array(Vec::new()))
-        .with("label", spec.label.map(|label| display_text(&label)))
-        .with("properties", spec.properties)
-        .with("evidence", evidence)
-        .with("node_id", id)
+        .with_static("kind", kind)
+        .with_static("identity", identity)
+        .with_static("function_node_id", function_node_id)
+        .with_static("application_node_ids", Json::array(Vec::new()))
+        .with_static("label", label.map(|label| display_text(&label)))
+        .with_static("properties", properties)
+        .with_static("evidence", evidence)
+        .with_static("node_id", id)
         .into();
     admit_node(state, node)
 }
@@ -469,19 +664,19 @@ pub fn add_relation(state: &mut ProjectionState, spec: RelationSpec<'_>) {
         .evidence
         .unwrap_or_else(|| inferred_evidence(&state.evidence.resolve(source.at("evidence"))));
     let semantic = Obj::new()
-        .with("source_node_id", source.at("node_id").clone())
-        .with("target_node_id", target.at("node_id").clone())
-        .with("relation", spec.relation)
-        .with("resolution", spec.resolution)
-        .with("properties", spec.properties)
-        .with("evidence", state.evidence.intern(&evidence));
+        .with_static("source_node_id", source.at("node_id").clone())
+        .with_static("target_node_id", target.at("node_id").clone())
+        .with_static("relation", spec.relation)
+        .with_static("resolution", spec.resolution)
+        .with_static("properties", spec.properties)
+        .with_static("evidence", state.evidence.intern(&evidence));
     let id = format!("jsrg_relation_{}", Json::from(semantic.clone()).digest());
     if state.relations.has(&id) {
         return;
     }
     state
         .relations
-        .set(id.clone(), semantic.with("relation_id", id).into());
+        .set(id.clone(), semantic.with_static("relation_id", id).into());
 }
 
 /// `recordSemanticUnknownOmission`.
@@ -521,41 +716,35 @@ pub struct UnknownSpec<'a> {
 
 /// `addSemanticGraphUnknown`.
 pub fn add_unknown(state: &mut ProjectionState, spec: UnknownSpec<'_>) {
-    if let Some(capacity) = state.unknown_capacity
-        && state.unknowns.len() >= capacity
-    {
-        let omission = Obj::new()
-            .with("family", spec.family)
-            .with("reason", spec.reason)
-            .with("occurrences", 1.0);
-        record_unknown_omission(state, &omission.into());
+    if state.unknown_capacity_reached() {
+        state.record_unknown_capacity_omission(spec.family, spec.reason);
         return;
     }
     let semantic = Obj::new()
-        .with("node_id", spec.node_id)
-        .with("family", spec.family)
-        .with(
+        .with_static("node_id", spec.node_id)
+        .with_static("family", spec.family)
+        .with_static(
             "relation_kinds",
             strings(unique_sorted(spec.relation_kinds)),
         )
-        .with("reason", spec.reason)
-        .with("detail", spec.detail)
-        .with(
+        .with_static("reason", spec.reason)
+        .with_static("detail", spec.detail)
+        .with_static(
             "candidate_node_ids",
             strings(unique_sorted(spec.candidate_node_ids)),
         )
-        .with("evidence", state.evidence.intern(&spec.evidence));
+        .with_static("evidence", state.evidence.intern(&spec.evidence));
     let id = format!("jsrg_unknown_{}", Json::from(semantic.clone()).digest());
     if state.unknowns.has(&id) {
         return;
     }
     state
         .unknowns
-        .set(id.clone(), semantic.with("unknown_id", id).into());
+        .set(id.clone(), semantic.with_static("unknown_id", id).into());
 }
 
-/// `createJavaScriptSemanticFingerprint`.
-pub fn create_fingerprint(state: &mut ProjectionState, input: Obj) -> Json {
+/// `createJavaScriptSemanticFingerprint` with an already-owned evidence reference.
+pub fn create_fingerprint(input: Obj, evidence: Json) -> Json {
     let input: Json = input.into();
     let mut components = input.at("components").obj();
     components.set(
@@ -583,79 +772,79 @@ pub fn create_fingerprint(state: &mut ProjectionState, input: Obj) -> Json {
                 .map(|item| item.str().to_owned()),
         )),
     );
-    semantic.set("evidence", state.evidence.intern(input.at("evidence")));
+    semantic.set("evidence", evidence);
     let id_input = Obj::new()
-        .with("function_node_id", input.at("function_node_id").clone())
-        .with("algorithm", input.at("algorithm").clone())
-        .with("fingerprint_sha256", fingerprint_sha256.as_str());
+        .with_static("function_node_id", input.at("function_node_id").clone())
+        .with_static("algorithm", input.at("algorithm").clone())
+        .with_static("fingerprint_sha256", fingerprint_sha256.as_str());
     let id = format!("jsrg_fingerprint_{}", Json::from(id_input).digest());
     semantic
-        .with("fingerprint_sha256", fingerprint_sha256)
-        .with("fingerprint_id", id)
+        .with_static("fingerprint_sha256", fingerprint_sha256)
+        .with_static("fingerprint_id", id)
         .into()
 }
 
 /// `addSemanticFallbackRoot`.
 pub fn add_fallback_root(root_sha256: &str, state: &mut ProjectionState) {
     let identity: Json = Obj::new()
-        .with("artifact_sha256", root_sha256)
-        .with("module_path", "unknown-semantic-root")
-        .with("source_range", Json::Null)
-        .with("role_key", "artifact-root")
+        .with_static("artifact_sha256", root_sha256)
+        .with_static("module_path", "unknown-semantic-root")
+        .with_static("source_range", Json::Null)
+        .with_static("role_key", "artifact-root")
         .into();
     let evidence: Json = Obj::new()
-        .with("authority", "unknown")
-        .with("state", "unavailable")
-        .with("confidence", "unknown")
-        .with(
+        .with_static("authority", "unknown")
+        .with_static("state", "unavailable")
+        .with_static("confidence", "unknown")
+        .with_static(
             "artifact",
             Obj::new()
-                .with("available", true)
-                .with("artifact_id", format!("art_{root_sha256}"))
-                .with("sha256", root_sha256),
+                .with_static("available", true)
+                .with_static("artifact_id", format!("art_{root_sha256}"))
+                .with_static("sha256", root_sha256),
         )
-        .with(
+        .with_static(
             "location",
             Obj::new()
-                .with("available", false)
-                .with("reason", "not-observed")
-                .with(
+                .with_static("available", false)
+                .with_static("reason", "not-observed")
+                .with_static(
                     "detail",
                     "No admitted JavaScript source produced semantic IR.",
                 ),
         )
-        .with(
+        .with_static(
             "extractor",
             Obj::new()
-                .with("name", "rea-javascript-semantic-analysis")
-                .with("version", "1")
-                .with("operation", "analyze_javascript_application")
-                .with("executable_sha256", Json::Null),
+                .with_static("name", "rea-javascript-semantic-analysis")
+                .with_static("version", "1")
+                .with_static("operation", "analyze_javascript_application")
+                .with_static("executable_sha256", Json::Null),
         )
-        .with(
+        .with_static(
             "coverage",
             Obj::new()
-                .with("status", "unavailable")
-                .with("truncated", false)
-                .with("omitted_count", Json::Null)
-                .with("limits", Json::Array(Vec::new())),
+                .with_static("status", "unavailable")
+                .with_static("truncated", false)
+                .with_static("omitted_count", Json::Null)
+                .with_static("limits", Json::array(Vec::new())),
         )
-        .with(
+        .with_static(
             "limitations",
             strings(["This synthetic graph root does not claim a source location."]),
         )
-        .with("evidence_ids", Json::Array(Vec::new()))
+        .with_static("evidence_ids", Json::array(Vec::new()))
         .into();
     let id = semantic_node_id("module", &identity);
     let node: Json = Obj::new()
-        .with("kind", "module")
-        .with("identity", identity)
-        .with("function_node_id", Json::Null)
-        .with("application_node_ids", Json::Array(Vec::new()))
-        .with("label", "unavailable semantic root")
-        .with("properties", Obj::new())
-        .with("evidence", state.evidence.intern(&evidence))
-        .with("node_id", id)
+        .with_static("kind", "module")
+        .with_static("identity", identity)
+        .with_static("function_node_id", Json::Null)
+        .with_static("application_node_ids", Json::array(Vec::new()))
+        .with_static("label", "unavailable semantic root")
+        .with_static("properties", Obj::new())
+        .with_static("evidence", state.evidence.intern(&evidence))
+        .with_static("node_id", id)
         .into();
     if let Some(node) = admit_node(state, node) {
         add_root(state, node.at("node_id").str());
@@ -713,8 +902,8 @@ pub fn bind_application_nodes(state: &mut ProjectionState, application_nodes: &[
                     sha,
                     value.at("source").text(),
                     &Obj::new()
-                        .with("start", value.at("start").clone())
-                        .with("end", value.at("end").clone())
+                        .with_static("start", value.at("start").clone())
+                        .with_static("end", value.at("end").clone())
                         .into(),
                 ),
                 _ => continue,
@@ -798,7 +987,7 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
     let mut normalized = coverage.obj();
     let mut limits = coverage.at("limits").arr().to_vec();
     limits.sort_by(|left, right| compare_code_points(&left.canonical(), &right.canonical()));
-    normalized.set("limits", Json::Array(limits));
+    normalized.set("limits", Json::array(limits));
     if let Some(omitted) = coverage.get("omitted_unknown_occurrences") {
         let mut omitted = omitted.arr().to_vec();
         omitted.sort_by(|left, right| {
@@ -806,7 +995,7 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
                 |value: &Json| format!("{}:{}", value.at("family").str(), value.at("reason").str());
             compare_code_points(&key(left), &key(right))
         });
-        normalized.set("omitted_unknown_occurrences", Json::Array(omitted));
+        normalized.set("omitted_unknown_occurrences", Json::array(omitted));
     }
     let mut families: Vec<Json> = coverage
         .at("families")
@@ -828,35 +1017,48 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
         })
         .collect();
     sort_by_field(&mut families, "family");
-    normalized.set("families", Json::Array(families));
+    normalized.set("families", Json::array(families));
     let content = Obj::new()
-        .with("schema", "JavaScriptSemanticRelationGraph")
-        .with("root_artifact_sha256", root_artifact_sha256)
-        .with("application_graph_id", application_graph_id)
-        .with("root_node_ids", strings(unique_sorted(root_node_ids)))
-        .with("evidence_contexts", Json::Array(evidence_contexts))
-        .with("nodes", Json::Array(nodes))
-        .with("relations", Json::Array(relations))
-        .with("fingerprints", Json::Array(fingerprints))
-        .with("unknowns", Json::Array(unknowns))
-        .with("coverage", normalized)
-        .with("limitations", strings(unique_sorted(limitations)));
+        .with_static("schema", "JavaScriptSemanticRelationGraph")
+        .with_static("root_artifact_sha256", root_artifact_sha256)
+        .with_static("application_graph_id", application_graph_id)
+        .with_static("root_node_ids", strings(unique_sorted(root_node_ids)))
+        .with_static("evidence_contexts", Json::array(evidence_contexts))
+        .with_static("nodes", Json::array(nodes))
+        .with_static("relations", Json::array(relations))
+        .with_static("fingerprints", Json::array(fingerprints))
+        .with_static("unknowns", Json::array(unknowns))
+        .with_static("coverage", normalized)
+        .with_static("limitations", strings(unique_sorted(limitations)));
     let id = format!("jsrg_{}", Json::from(content.clone()).digest());
-    content.with("graph_id", id).into()
+    content.with_static("graph_id", id).into()
 }
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
     use super::super::super::semantic::value_types::JsString;
     use super::*;
+
+    fn test_file(path: JsString, sha: &str) -> Json {
+        Obj::new()
+            .with_static("path", path)
+            .with_static("sha256", sha)
+            .into()
+    }
+
+    fn test_location(start: f64, end: f64) -> Json {
+        Obj::new()
+            .with_static("start", start)
+            .with_static("end", end)
+            .into()
+    }
 
     #[test]
     fn observed_evidence_preserves_unpaired_path_units() {
         let path = JsString::from_utf16(vec![0x0061, 0xd800, 0x0062]);
-        let file: Json = Obj::new()
-            .with("path", path.clone())
-            .with("sha256", "sha")
-            .into();
+        let file = test_file(path.clone(), "sha");
 
         let evidence = observed_evidence(&file, &Json::Null);
         let stored = evidence
@@ -868,5 +1070,316 @@ mod tests {
 
         assert_eq!(stored.units(), path.units());
         assert_ne!(stored.units(), JsString::from("a\\ud800b").units());
+    }
+
+    #[test]
+    fn cached_evidence_preserves_the_evidence_contract_and_field_order() {
+        let file = test_file(JsString::from("source.js"), "sha-1");
+        let location = test_location(12.0, 19.0);
+        let mut state = ProjectionState::default();
+
+        let cached_observed = state.observed_evidence(&file, &location);
+        let expected = super::super::json::parse(
+            r#"{
+                "authority":"ast-static-analysis",
+                "state":"observed",
+                "confidence":"exact",
+                "artifact":{"available":true,"artifact_id":"art_sha-1","sha256":"sha-1"},
+                "location":{"available":true,"value":{"kind":"source-range","source":"source.js","start":12,"end":19}},
+                "extractor":{"name":"rea-javascript-semantic-analysis","version":"1","operation":"analyze_javascript_application","executable_sha256":null},
+                "coverage":{"status":"complete","truncated":false,"omitted_count":0,"limits":[]},
+                "limitations":[],
+                "evidence_ids":[]
+            }"#,
+        )
+        .expect("valid evidence contract");
+        assert_eq!(
+            cached_observed.stringify(),
+            expected.stringify(),
+            "evidence values and field order are part of the transfer contract"
+        );
+
+        let mut expected_unknown = expected.obj();
+        expected_unknown.set("authority", "unknown");
+        expected_unknown.set("state", "unknown");
+        expected_unknown.set("confidence", "unknown");
+        expected_unknown.set(
+            "limitations",
+            strings(["Dynamic syntax prevents an exact static relationship."]),
+        );
+        assert_eq!(
+            state.unknown_evidence(&file, &location),
+            Json::from(expected_unknown)
+        );
+    }
+
+    #[test]
+    fn cached_evidence_switches_file_keys_and_is_mutation_isolated() {
+        let first_file = test_file(JsString::from("first.js"), "sha-first");
+        let changed_digest = test_file(JsString::from("first.js"), "sha-second");
+        let changed_path = test_file(JsString::from("second.js"), "sha-second");
+        let location = test_location(1.0, 2.0);
+        let mut state = ProjectionState::default();
+
+        let first = state.observed_evidence(&first_file, &location);
+        let second = state.observed_evidence(&changed_digest, &location);
+        assert_eq!(second.at("artifact").at("sha256").str(), "sha-second");
+        let third = state.observed_evidence(&changed_path, &location);
+        assert_eq!(
+            third.at("location").at("value").at("source").text(),
+            "second.js"
+        );
+
+        let mut mutated = first.obj();
+        mutated.set("authority", "caller-mutated");
+        let fresh_first = state.observed_evidence(&first_file, &location);
+        assert_eq!(fresh_first.at("authority").str(), "ast-static-analysis");
+        let mutated: Json = mutated.into();
+        assert_eq!(mutated.at("authority").str(), "caller-mutated");
+    }
+
+    #[test]
+    fn cached_location_preserves_utf16_path_and_location_override() {
+        let path = JsString::from_utf16(vec![0x0061, 0xd800, 0x0062]);
+        let file = test_file(path.clone(), "sha");
+        let mut state = ProjectionState::default();
+
+        let range = state.observed_evidence(&file, &test_location(3.0, 8.0));
+        let source = range
+            .at("location")
+            .at("value")
+            .at("source")
+            .as_js_string()
+            .expect("source-range evidence should retain the source path");
+        assert_eq!(source.units(), path.units());
+        assert_eq!(range.at("location").at("value").at("start").num(), 3.0);
+        assert_eq!(range.at("location").at("value").at("end").num(), 8.0);
+
+        let artifact_path = state.observed_evidence(&file, &Json::Null);
+        assert_eq!(
+            artifact_path.at("location").at("value").at("kind").str(),
+            "artifact-path"
+        );
+        assert_eq!(
+            artifact_path
+                .at("location")
+                .at("value")
+                .at("path")
+                .as_js_string()
+                .expect("artifact path should remain a JavaScript string")
+                .units(),
+            path.units()
+        );
+
+        let override_location: Json = Obj::new()
+            .with_static("kind", "caller-kind")
+            .with_static("source", "caller-source")
+            .with_static("start", 4.0)
+            .into();
+        let overridden = state.observed_evidence(&file, &override_location);
+        let value = overridden.at("location").at("value");
+        assert_eq!(value.at("kind").str(), "caller-kind");
+        assert_eq!(value.at("source").str(), "caller-source");
+        assert_eq!(value.at("start").num(), 4.0);
+    }
+
+    #[test]
+    fn observed_reference_reuses_context_and_recovers_after_registry_clear() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let location = test_location(2.0, 5.0);
+        let mut state = ProjectionState::default();
+        let expected = state.observed_evidence(&file, &location);
+
+        let first = state.observed_evidence_reference(&file, &location);
+        let second = state.observed_evidence_reference(&file, &Json::Null);
+        assert_eq!(
+            first.at("context_id").str(),
+            second.at("context_id").str(),
+            "locations in one file should share one registry context"
+        );
+        assert_eq!(
+            state.evidence.resolve(&first).canonical(),
+            expected.canonical()
+        );
+
+        state.evidence.clear();
+        let recovered = state.observed_evidence_reference(&file, &location);
+        assert_eq!(
+            state.evidence.resolve(&recovered).canonical(),
+            expected.canonical()
+        );
+        assert_eq!(
+            recovered.at("context_id").str(),
+            first.at("context_id").str(),
+            "re-interning after clear should preserve the digest identity"
+        );
+
+        let other = state.observed_evidence_reference(
+            &test_file(JsString::from("other.js"), "other-sha"),
+            &location,
+        );
+        assert_ne!(
+            recovered.at("context_id").str(),
+            other.at("context_id").str(),
+            "different files must not share an observed context"
+        );
+    }
+
+    #[test]
+    fn observed_reference_matches_generic_intern_and_adopted_contexts() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let same_digest_file = test_file(JsString::from("renamed.js"), "sha");
+        let location = test_location(6.0, 9.0);
+        let mut state = ProjectionState::default();
+        let reference = state.observed_evidence_reference(&file, &location);
+        let expected = state.observed_evidence(&file, &location);
+        let renamed = state.observed_evidence(&same_digest_file, &location);
+        let renamed_reference = state.observed_evidence_reference(&same_digest_file, &location);
+
+        assert_eq!(
+            renamed_reference.at("context_id"),
+            reference.at("context_id")
+        );
+        assert_eq!(
+            state.evidence.resolve(&renamed_reference).canonical(),
+            renamed.canonical()
+        );
+        assert_eq!(state.evidence.contexts().len(), 1);
+
+        let generic = state.evidence.intern(&renamed);
+        assert_eq!(
+            generic.at("context_id").str(),
+            reference.at("context_id").str(),
+            "the cached path must use the registry's normal digest identity"
+        );
+        assert_eq!(
+            state.evidence.resolve(&reference).canonical(),
+            expected.canonical()
+        );
+
+        let context = state
+            .evidence
+            .contexts()
+            .into_iter()
+            .next()
+            .expect("the observed reference should have registered a context");
+        let mut adopted = EvidenceRegistry::default();
+        adopted
+            .adopt(&context)
+            .expect("a registry-issued context should be adoptable");
+        let adopted_reference = adopted.intern(&expected);
+        assert_eq!(
+            adopted_reference.at("context_id").str(),
+            reference.at("context_id").str()
+        );
+        assert_eq!(
+            adopted.resolve(&adopted_reference).canonical(),
+            expected.canonical()
+        );
+    }
+
+    #[test]
+    fn unknown_capacity_omissions_are_counted_without_admitting_extra_unknowns() {
+        let mut state = ProjectionState {
+            unknown_capacity: Some(1),
+            ..ProjectionState::default()
+        };
+        let spec = || UnknownSpec {
+            node_id: None,
+            family: "call-flow",
+            relation_kinds: vec!["calls".to_owned()],
+            reason: "dynamic-call",
+            detail: JsString::from("target is not statically known"),
+            candidate_node_ids: Vec::new(),
+            evidence: Json::Null,
+        };
+
+        add_unknown(&mut state, spec());
+        add_unknown(&mut state, spec());
+        add_unknown(&mut state, spec());
+
+        assert_eq!(state.unknowns.len(), 1);
+        assert_eq!(
+            state
+                .unknown_omissions
+                .get("call-flow:dynamic-call")
+                .expect("capacity omissions should be retained")
+                .at("occurrences")
+                .num(),
+            2.0
+        );
+    }
+
+    #[test]
+    fn lazy_node_admission_constructs_only_new_admitted_nodes() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let location = test_location(1.0, 4.0);
+        let mut state = ProjectionState {
+            file_node_budget: Some(1),
+            ..ProjectionState::default()
+        };
+        let constructions = Cell::new(0);
+
+        let identity = || NodeAdmission {
+            kind: "expression",
+            role_key: JsString::from("operation:1"),
+            location: location.clone(),
+            function_node_id: None,
+        };
+        let node = retain_node_lazy(&mut state, &file, identity(), || {
+            constructions.set(constructions.get() + 1);
+            NodeDetails {
+                label: Some(JsString::from("first")),
+                properties: Obj::new(),
+            }
+        })
+        .expect("the first node should fit the budget");
+        assert_eq!(constructions.get(), 1);
+        assert_eq!(state.nodes.len(), 1);
+
+        state.file_node_budget = Some(0);
+        let evidence_contexts_before_reuse = state.evidence.contexts().len();
+        let reused = retain_node_lazy(&mut state, &file, identity(), || {
+            constructions.set(constructions.get() + 1);
+            NodeDetails {
+                label: Some(JsString::from("should not replace the first node")),
+                properties: Obj::new(),
+            }
+        })
+        .expect("an existing node should be reusable at an exhausted budget");
+        assert_eq!(reused, node);
+        assert_eq!(constructions.get(), 1);
+        assert!(!state.file_nodes_dropped);
+        assert_eq!(
+            state.evidence.contexts().len(),
+            evidence_contexts_before_reuse
+        );
+
+        let evidence_contexts_before_rejection = state.evidence.contexts().len();
+        let rejected = retain_node_lazy(
+            &mut state,
+            &file,
+            NodeAdmission {
+                kind: "expression",
+                role_key: JsString::from("operation:2"),
+                location,
+                function_node_id: None,
+            },
+            || {
+                constructions.set(constructions.get() + 1);
+                NodeDetails {
+                    label: Some(JsString::from("should not be constructed")),
+                    properties: Obj::new(),
+                }
+            },
+        );
+        assert!(rejected.is_none());
+        assert_eq!(constructions.get(), 1);
+        assert_eq!(state.nodes.len(), 1);
+        assert!(state.file_nodes_dropped);
+        assert_eq!(
+            state.evidence.contexts().len(),
+            evidence_contexts_before_rejection
+        );
     }
 }

@@ -6,8 +6,11 @@
 //! algorithm id and cache invalidation (port plan §2.8).
 
 use std::collections::BTreeSet;
+use std::io::{self, BufWriter, Write};
 use std::ops::ControlFlow;
 
+use serde::Serializer;
+use serde::ser::SerializeSeq;
 use sha2::{Digest, Sha256};
 
 use super::babel::semantic_tokens;
@@ -21,22 +24,52 @@ use crate::javascript::semantic::value_types::JsString;
 
 /// `fingerprintJavaScriptAst`: SHA-256 of the JSON token array.
 pub fn fingerprint_javascript_ast<'a>(source: &'a str, node: Node<'a>) -> String {
-    struct Tokens<'s> {
+    struct Tokens<'s, S> {
         source: &'s str,
-        tokens: Vec<JsString>,
+        sequence: S,
     }
-    impl<'a> AstVisitor<'a> for Tokens<'a> {
+    impl<'a, S: SerializeSeq<Error = serde_json::Error>> AstVisitor<'a> for Tokens<'a, S> {
         fn enter(&mut self, node: &Node<'a>, _: Option<&Node<'a>>, _: &[Node<'a>]) {
-            self.tokens.extend(semantic_tokens(self.source, node));
+            for token in semantic_tokens(self.source, node) {
+                self.sequence
+                    .serialize_element(&token)
+                    .expect("JavaScript strings serialize to an infallible hash writer");
+            }
         }
     }
-    let mut visitor = Tokens {
-        source,
-        tokens: Vec::new(),
-    };
+
+    // Keep the exact JSON array encoding without retaining all tokens or its text.
+    // Buffer the serializer's small writes before updating the digest.
+    let mut serializer = serde_json::Serializer::new(BufWriter::new(FingerprintDigest::default()));
+    let sequence = serializer
+        .serialize_seq(None)
+        .expect("hash writer accepts the JSON array prefix");
+    let mut visitor = Tokens { source, sequence };
     let _: ControlFlow<()> = traverse(node, source, &mut visitor, || ControlFlow::Continue(()));
-    let json = serde_json::to_string(&visitor.tokens).unwrap_or_default();
-    hex(&Sha256::digest(json.as_bytes()))
+    visitor
+        .sequence
+        .end()
+        .expect("hash writer accepts the JSON array suffix");
+
+    let digest = serializer
+        .into_inner()
+        .into_inner()
+        .expect("buffered hash writer flushes without I/O");
+    hex(&digest.0.finalize())
+}
+
+#[derive(Debug, Default)]
+struct FingerprintDigest(Sha256);
+
+impl Write for FingerprintDigest {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0.update(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 pub(crate) fn hex(bytes: &[u8]) -> String {

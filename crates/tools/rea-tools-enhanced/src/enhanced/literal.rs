@@ -1,7 +1,7 @@
 //! Literal feature tracing through provider string/procedure searches and xrefs.
 //!
 //! Compatibility owner: `traceLiteralFeature` (`EnhancedLiteralTracing.ts`).
-use crate::analysis::{Analysis, params};
+use crate::analysis::{Analysis, is_capability_unavailable, params};
 use rea_core::analysis_error::AnalysisError;
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
@@ -102,9 +102,25 @@ pub fn trace_literal_feature(
                         "resolve_containing_procedure",
                         &params([("address", json!(source))]),
                         false,
-                    )?;
-                    containing.insert(source.clone(), resolved.clone());
-                    resolved
+                    );
+                    match resolved {
+                        Ok(resolved) => {
+                            containing.insert(source.clone(), resolved.clone());
+                            resolved
+                        }
+                        Err(error) if is_capability_unavailable(&error) => {
+                            let unknown = format!(
+                                "Containing procedure for {source} is unavailable: {}",
+                                error.user_message()
+                            );
+                            if !residual.contains(&unknown) {
+                                residual.push(unknown);
+                            }
+                            containing.insert(source.clone(), Value::Null);
+                            Value::Null
+                        }
+                        Err(error) => return Err(error),
+                    }
                 }
             };
             references.push(json!({
@@ -126,4 +142,116 @@ pub fn trace_literal_feature(
         "truncated": !residual.is_empty(),
         "residual_unknowns": residual,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rea_analysis::{AnalysisExecution, ExecutionOptions, ProviderIdentity};
+    use rea_core::cancellation::Cancellation;
+    use rea_tools_binary::port::AnalysisPort;
+    use serde_json::Map;
+
+    struct TracePort;
+
+    impl AnalysisPort for TracePort {
+        fn supports_operation(&self, _operation: &str) -> bool {
+            true
+        }
+
+        fn execute(
+            &self,
+            operation: &str,
+            parameters: &Map<String, Value>,
+            _options: &ExecutionOptions,
+        ) -> Result<AnalysisExecution, AnalysisError> {
+            let result = match operation {
+                "search_strings" => json!([{
+                    "address": "0x2000",
+                    "value": "needle"
+                }]),
+                "search_procedures" => json!([]),
+                "xrefs" => {
+                    assert_eq!(parameters["address"], "0x2000");
+                    json!(["0x3000"])
+                }
+                "resolve_containing_procedure" => {
+                    return Err(AnalysisError::capability_unavailable(
+                        "stub",
+                        operation,
+                        "the mapped address is outside recovered procedure coverage",
+                    ));
+                }
+                _ => return Err(AnalysisError::output(operation, "unexpected operation")),
+            };
+
+            Ok(AnalysisExecution::new(
+                result,
+                ProviderIdentity::new("stub", "stub provider", None),
+            ))
+        }
+    }
+
+    #[test]
+    fn trace_preserves_reference_when_containing_procedure_is_unknown() {
+        let analysis = Analysis::new(&TracePort, Cancellation::default(), None);
+
+        let result = trace_literal_feature(&analysis, "needle", false).expect("trace succeeds");
+
+        assert_eq!(result["references"][0]["source_address"], "0x3000");
+        assert_eq!(result["references"][0]["containing_procedure"], Value::Null);
+        assert_eq!(result["truncated"], true);
+        assert_eq!(result["residual_unknowns"].as_array().unwrap().len(), 1);
+        assert!(
+            result["residual_unknowns"][0]
+                .as_str()
+                .unwrap()
+                .contains("0x3000")
+        );
+    }
+
+    #[test]
+    fn trace_propagates_unexpected_containment_failures() {
+        struct FailingPort;
+
+        impl AnalysisPort for FailingPort {
+            fn supports_operation(&self, _operation: &str) -> bool {
+                true
+            }
+
+            fn execute(
+                &self,
+                operation: &str,
+                _parameters: &Map<String, Value>,
+                _options: &ExecutionOptions,
+            ) -> Result<AnalysisExecution, AnalysisError> {
+                if operation == "resolve_containing_procedure" {
+                    return Err(AnalysisError::output(operation, "transport failed"));
+                }
+                let result = match operation {
+                    "search_strings" => json!([{
+                        "address": "0x2000",
+                        "value": "needle"
+                    }]),
+                    "search_procedures" => json!([]),
+                    "xrefs" => json!(["0x3000"]),
+                    _ => return Err(AnalysisError::output(operation, "unexpected operation")),
+                };
+                Ok(AnalysisExecution::new(
+                    result,
+                    ProviderIdentity::new("stub", "stub provider", None),
+                ))
+            }
+        }
+
+        let analysis = Analysis::new(&FailingPort, Cancellation::default(), None);
+        let error = trace_literal_feature(&analysis, "needle", false)
+            .expect_err("unexpected containment failures propagate");
+
+        assert!(matches!(
+            error.kind,
+            rea_core::analysis_error::ErrorKind::Output { .. }
+        ));
+        assert!(error.message().contains("transport failed"));
+    }
 }

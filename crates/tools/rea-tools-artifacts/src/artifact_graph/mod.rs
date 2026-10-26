@@ -374,7 +374,7 @@ fn inspect_execute_raw(
         )
         .with(
             "limitations",
-            rea_application::javascript::graph::json::Json::Array(
+            rea_application::javascript::graph::json::Json::array(
                 inventory
                     .limitations
                     .iter()
@@ -447,7 +447,7 @@ fn inspect_execute_raw(
         )
         .with(
             "limitations",
-            rea_application::javascript::graph::json::Json::Array(
+            rea_application::javascript::graph::json::Json::array(
                 inspection_limitations.into_iter().map(Into::into).collect(),
             ),
         )

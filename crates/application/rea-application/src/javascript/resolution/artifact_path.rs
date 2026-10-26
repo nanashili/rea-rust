@@ -8,10 +8,13 @@
 //!
 //! Rust strings cannot hold unpaired UTF-16 surrogates, so the TypeScript
 //! branch that builds opaque structural URL segments for them has no input
-//! here. Package JSON is parsed with `serde_json`, which rejects lone
-//! surrogate escapes and nests at most 128 levels; such metadata is reported
-//! as invalid package JSON where `JSON.parse` would accept it.
-use std::collections::{HashMap, HashSet};
+//! here. Package JSON is parsed with `serde_json`; before parsing, the resolver
+//! maps lone UTF-16 units to an internal marker so metadata remains readable
+//! without copying every source file into an encoded representation.
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+};
 
 use serde::Serialize;
 use serde_json::Value;
@@ -106,7 +109,7 @@ pub struct ArtifactPathResolution {
 /// Text availability of one inventoried file read by the resolver.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolverFileText {
-    Included(String),
+    Included(JsString),
     /// `not-applicable`, `invalid-utf8` or `outside-analysis-scope`.
     Excluded(String),
 }
@@ -137,6 +140,13 @@ pub trait UnanalyzedLookup {
     fn has_directory(&self, path: &str, container_sha256: Option<&str>) -> bool;
 }
 
+/// Directory prefixes indexed by the container that owns their files.
+///
+/// The index contains one entry per path segment, so its size is bounded by
+/// the total number of segments in the acquired file projection. It avoids
+/// rescanning every file for each directory probe while retaining ownership.
+pub type ContainerDirectoryIndex = HashMap<String, HashSet<JsString>>;
+
 /// Values needed to resolve a declaration without filesystem access.
 #[derive(Clone, Copy)]
 pub struct ResolveInput<'a> {
@@ -146,12 +156,47 @@ pub struct ResolveInput<'a> {
     pub files: &'a HashMap<JsString, ResolverFile>,
     /// Directory identities retained by the complete artifact inventory.
     pub directory_paths: Option<&'a HashSet<JsString>>,
+    /// Directory prefixes derived from acquired files, keyed by owner.
+    pub container_directory_paths: Option<&'a ContainerDirectoryIndex>,
     /// Inventoried files outside the JavaScript projection: present, never read.
     pub unanalyzed_files: Option<&'a dyn UnanalyzedLookup>,
     pub html_base_href: Option<&'a str>,
     /// Import/require semantics; runtime resource paths omit this provenance.
     pub module_kind: Option<ModuleResolutionMode>,
     pub runtime_path_kind: Option<RuntimePathKind>,
+    pub(crate) package_metadata_cache: &'a PackageMetadataCache,
+}
+
+const PACKAGE_METADATA_CACHE_CAPACITY: usize = 64;
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct PackageMetadataCacheKey {
+    directory: String,
+    source_container_sha256: Option<String>,
+}
+
+/// Lazy package metadata shared by all resolution branches for one resolver.
+///
+/// The cache is deliberately bounded because a resolver can inspect an
+/// arbitrary number of package directories. The source container identity is
+/// part of the key because package visibility is scoped to that container.
+#[derive(Debug, Default)]
+pub(crate) struct PackageMetadataCache {
+    entries: RefCell<HashMap<PackageMetadataCacheKey, PackageMetadata>>,
+}
+
+impl PackageMetadataCache {
+    fn get(&self, key: &PackageMetadataCacheKey) -> Option<PackageMetadata> {
+        self.entries.borrow().get(key).cloned()
+    }
+
+    fn insert(&self, key: PackageMetadataCacheKey, metadata: PackageMetadata) {
+        let mut entries = self.entries.borrow_mut();
+        if entries.len() >= PACKAGE_METADATA_CACHE_CAPACITY && !entries.contains_key(&key) {
+            entries.clear();
+        }
+        entries.insert(key, metadata);
+    }
 }
 
 /// `moduleResolutionModeProperties`: preserve a retained loader mode.
@@ -1489,6 +1534,25 @@ fn has_container_directory(
     {
         return true;
     }
+
+    if let Some(index) = input.container_directory_paths {
+        let indexed_match = match container_sha256 {
+            Some(container) => index
+                .get(container)
+                .is_some_and(|paths| paths.contains(&JsString::from(candidate))),
+            None => index
+                .values()
+                .any(|paths| paths.contains(&JsString::from(candidate))),
+        };
+        if indexed_match {
+            return true;
+        }
+
+        return input
+            .unanalyzed_files
+            .is_some_and(|lookup| lookup.has_directory(candidate, container_sha256));
+    }
+
     // Any same-container descendant establishes a package directory.
     let prefix = format!("{candidate}/");
     if input.files.iter().any(|(path, file)| {
@@ -1624,6 +1688,22 @@ enum PackageMetadata {
 }
 
 fn read_package_metadata(input: &ResolveInput<'_>, directory: &str) -> PackageMetadata {
+    let source_container_sha256 =
+        file_for_path(input, input.source_path).map(|file| file.container_sha256.clone());
+    let key = PackageMetadataCacheKey {
+        directory: directory.to_owned(),
+        source_container_sha256,
+    };
+    if let Some(metadata) = input.package_metadata_cache.get(&key) {
+        return metadata;
+    }
+
+    let metadata = read_package_metadata_uncached(input, directory);
+    input.package_metadata_cache.insert(key, metadata.clone());
+    metadata
+}
+
+fn read_package_metadata_uncached(input: &ResolveInput<'_>, directory: &str) -> PackageMetadata {
     let path = posix_join(&[directory, "package.json"]);
     let source = file_for_path(input, input.source_path);
     let Some(file) = file_for_path(input, &path) else {
@@ -1646,7 +1726,11 @@ fn read_package_metadata(input: &ResolveInput<'_>, directory: &str) -> PackageMe
         return PackageMetadata::Absent;
     }
     let text = match &file.text {
-        ResolverFileText::Included(text) => text,
+        ResolverFileText::Included(text) => {
+            let encoded = encode_json_text_units(text);
+            let prepared = prepare_package_json_text(&encoded);
+            prepared
+        }
         ResolverFileText::Excluded(reason) => {
             return PackageMetadata::Unavailable(format!(
                 "Directory package metadata {path} was inventoried but its text is unavailable: {reason}."
@@ -1659,7 +1743,7 @@ fn read_package_metadata(input: &ResolveInput<'_>, directory: &str) -> PackageMe
         ))
     };
     // `JSON.parse` admits surrounding JSON whitespace only.
-    let Ok(value) = serde_json::from_str::<Value>(text) else {
+    let Ok(value) = serde_json::from_str::<Value>(&text) else {
         return invalid();
     };
     let object = match &value {
@@ -1772,10 +1856,12 @@ fn resolve_directory(
         context: ResolutionContext::PackageEntrypoint,
         files: input.files,
         directory_paths: input.directory_paths,
+        container_directory_paths: input.container_directory_paths,
         unanalyzed_files: input.unanalyzed_files,
         html_base_href: None,
         module_kind: input.module_kind,
         runtime_path_kind: None,
+        package_metadata_cache: input.package_metadata_cache,
     };
     let candidate = match contextual_candidate(&entry_input) {
         Ok(candidate) => candidate,
@@ -2301,5 +2387,290 @@ fn file_url_path(value: &str) -> FileUrlPath {
         }
         Some(_) => FileUrlPath::Rejected,
         None => FileUrlPath::NotFileUrl,
+    }
+}
+
+const INTERNAL_SURROGATE_MARKER: char = '\u{e000}';
+
+pub(crate) fn encode_json_text_units(value: &JsString) -> String {
+    value
+        .code_points()
+        .flat_map(|point| {
+            if point <= 0xffff {
+                encode_code_unit(point as u16).chars().collect::<Vec<_>>()
+            } else {
+                char::from_u32(point)
+                    .map(|character| vec![character])
+                    .unwrap_or_default()
+            }
+        })
+        .collect()
+}
+
+fn encode_code_unit(unit: u16) -> String {
+    if (0xd800..=0xdfff).contains(&unit) {
+        format!("{INTERNAL_SURROGATE_MARKER}{unit:04x}")
+    } else if unit == INTERNAL_SURROGATE_MARKER as u16 {
+        format!("{INTERNAL_SURROGATE_MARKER}{INTERNAL_SURROGATE_MARKER}")
+    } else {
+        char::from_u32(u32::from(unit))
+            .expect("non-surrogate UTF-16 code unit is a Unicode scalar")
+            .to_string()
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn decode_json_text_units(value: &str) -> JsString {
+    let mut units = Vec::new();
+    let mut chars = value.chars().peekable();
+    while let Some(character) = chars.next() {
+        if character != INTERNAL_SURROGATE_MARKER {
+            let mut buffer = [0; 2];
+            units.extend(character.encode_utf16(&mut buffer).iter().copied());
+            continue;
+        }
+        if chars.next_if_eq(&INTERNAL_SURROGATE_MARKER).is_some() {
+            units.push(INTERNAL_SURROGATE_MARKER as u16);
+            continue;
+        }
+        let digits: String = chars.by_ref().take(4).collect();
+        if digits.len() == 4 && digits.chars().all(|digit| digit.is_ascii_hexdigit()) {
+            units.push(u16::from_str_radix(&digits, 16).expect("validated hexadecimal digits"));
+        } else {
+            units.push(INTERNAL_SURROGATE_MARKER as u16);
+            units.extend(digits.encode_utf16());
+        }
+    }
+    JsString::from_utf16(units)
+}
+
+pub(crate) fn prepare_package_json_text(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    let mut characters = value.chars().peekable();
+    let mut in_string = false;
+
+    while let Some(character) = characters.next() {
+        if !in_string {
+            if character == '"' {
+                in_string = true;
+            }
+            output.push(character);
+            continue;
+        }
+
+        if character == '"' {
+            in_string = false;
+            output.push(character);
+            continue;
+        }
+
+        if character == INTERNAL_SURROGATE_MARKER {
+            output.push_str(&encode_code_unit(INTERNAL_SURROGATE_MARKER as u16));
+            continue;
+        }
+
+        if character == '\\' {
+            let Some(escape) = characters.next() else {
+                output.push('\\');
+                continue;
+            };
+            if escape != 'u' {
+                output.push('\\');
+                output.push(escape);
+                continue;
+            }
+
+            let mut digits = String::new();
+            for _ in 0..4 {
+                let Some(digit) = characters.next() else {
+                    output.push_str("\\u");
+                    output.push_str(&digits);
+                    break;
+                };
+                digits.push(digit);
+            }
+            if digits.len() != 4 || !digits.chars().all(|digit| digit.is_ascii_hexdigit()) {
+                output.push_str("\\u");
+                output.push_str(&digits);
+                continue;
+            }
+
+            let unit = u16::from_str_radix(&digits, 16).expect("validated hexadecimal digits");
+            if (0xd800..=0xdbff).contains(&unit) {
+                let is_low_pair = characters.peek() == Some(&'\\');
+                if is_low_pair {
+                    let mut lookahead = characters.clone();
+                    let _ = lookahead.next();
+                    if lookahead.next() == Some('u') {
+                        let low_digits: String = lookahead.take(4).collect();
+                        let low = u16::from_str_radix(&low_digits, 16)
+                            .ok()
+                            .filter(|low| (0xdc00..=0xdfff).contains(low));
+                        if low.is_some() {
+                            output.push('\\');
+                            output.push('u');
+                            output.push_str(&digits);
+                            continue;
+                        }
+                    }
+                }
+                output.push_str(&encode_code_unit(unit));
+                continue;
+            }
+            if (0xdc00..=0xdfff).contains(&unit) {
+                output.push_str(&encode_code_unit(unit));
+                continue;
+            }
+
+            output.push('\\');
+            output.push('u');
+            output.push_str(&digits);
+            continue;
+        }
+
+        output.push(character);
+    }
+
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn input<'a>(
+        files: &'a HashMap<JsString, ResolverFile>,
+        cache: &'a PackageMetadataCache,
+    ) -> ResolveInput<'a> {
+        ResolveInput {
+            declared_path: "./entry",
+            source_path: "src/app.js",
+            context: ResolutionContext::ModuleSpecifier,
+            files,
+            directory_paths: None,
+            container_directory_paths: None,
+            unanalyzed_files: None,
+            html_base_href: None,
+            module_kind: Some(ModuleResolutionMode::Require),
+            runtime_path_kind: None,
+            package_metadata_cache: cache,
+        }
+    }
+
+    fn file(container_sha256: &str, text: &str) -> ResolverFile {
+        ResolverFile {
+            container_sha256: container_sha256.into(),
+            text: ResolverFileText::Included(JsString::from(text)),
+        }
+    }
+
+    #[test]
+    fn package_metadata_cache_reuses_valid_metadata() {
+        let mut files = HashMap::new();
+        files.insert(JsString::from("src/app.js"), file("container-a", ""));
+        files.insert(
+            JsString::from("pkg/package.json"),
+            file("container-a", r#"{"main":"entry.js"}"#),
+        );
+        let cache = PackageMetadataCache::default();
+        let input = input(&files, &cache);
+
+        let first = read_package_metadata(&input, "pkg");
+        let second = read_package_metadata(&input, "pkg");
+
+        assert!(matches!(first, PackageMetadata::Available(_)));
+        assert!(matches!(second, PackageMetadata::Available(_)));
+        assert_eq!(cache.entries.borrow().len(), 1);
+    }
+
+    #[test]
+    fn package_metadata_cache_reuses_unavailable_metadata_error() {
+        let mut files = HashMap::new();
+        files.insert(JsString::from("src/app.js"), file("container-a", ""));
+        files.insert(
+            JsString::from("pkg/package.json"),
+            file("container-a", "not package json"),
+        );
+        let cache = PackageMetadataCache::default();
+        let input = input(&files, &cache);
+
+        let first = read_package_metadata(&input, "pkg");
+        let second = read_package_metadata(&input, "pkg");
+
+        assert!(matches!(first, PackageMetadata::Unavailable(_)));
+        assert!(matches!(second, PackageMetadata::Unavailable(_)));
+        assert_eq!(cache.entries.borrow().len(), 1);
+    }
+
+    #[test]
+    fn package_metadata_cache_separates_source_containers() {
+        let mut files = HashMap::new();
+        files.insert(JsString::from("src/app.js"), file("container-a", ""));
+        files.insert(JsString::from("src/other.js"), file("container-b", ""));
+        files.insert(
+            JsString::from("pkg/package.json"),
+            file("container-a", r#"{"main":"entry.js"}"#),
+        );
+        let cache = PackageMetadataCache::default();
+        let input_a = input(&files, &cache);
+        let input_b = ResolveInput {
+            source_path: "src/other.js",
+            ..input_a
+        };
+
+        assert!(matches!(
+            read_package_metadata(&input_a, "pkg"),
+            PackageMetadata::Available(_)
+        ));
+        assert!(matches!(
+            read_package_metadata(&input_b, "pkg"),
+            PackageMetadata::Absent
+        ));
+        assert_eq!(cache.entries.borrow().len(), 2);
+    }
+
+    #[test]
+    fn container_directory_index_keeps_file_ownership() {
+        let mut files = HashMap::new();
+        files.insert(JsString::from("src/app.js"), file("container-a", ""));
+        files.insert(JsString::from("pkg/entry.js"), file("container-a", ""));
+        files.insert(JsString::from("pkg/other.js"), file("container-b", ""));
+        let cache = PackageMetadataCache::default();
+        let mut directories = ContainerDirectoryIndex::new();
+        directories
+            .entry("container-a".into())
+            .or_default()
+            .insert(JsString::from("pkg"));
+        directories
+            .entry("container-b".into())
+            .or_default()
+            .insert(JsString::from("pkg"));
+        let input = ResolveInput {
+            container_directory_paths: Some(&directories),
+            ..input(&files, &cache)
+        };
+
+        assert!(has_container_directory(&input, "pkg", Some("container-a")));
+        assert!(has_container_directory(&input, "pkg", Some("container-b")));
+        assert!(!has_container_directory(&input, "pkg", Some("container-c")));
+        assert!(has_container_directory(&input, "pkg", None));
+    }
+
+    #[test]
+    fn container_directory_index_preserves_empty_absolute_prefix() {
+        let mut files = HashMap::new();
+        files.insert(JsString::from("/pkg/entry.js"), file("container-a", ""));
+        let cache = PackageMetadataCache::default();
+        let mut directories = ContainerDirectoryIndex::new();
+        directories
+            .entry("container-a".into())
+            .or_default()
+            .insert(JsString::from(""));
+        let input = ResolveInput {
+            container_directory_paths: Some(&directories),
+            ..input(&files, &cache)
+        };
+
+        assert!(has_container_directory(&input, "", Some("container-a")));
     }
 }

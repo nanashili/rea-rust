@@ -86,30 +86,30 @@ pub fn javascript_analysis_coverage(javascript: &Json) -> Json {
 /// `artifactLocalIdentity`.
 pub fn artifact_local_identity<K: Into<JsString>>(sha256: &str, namespace: &str, key: K) -> Json {
     Obj::new()
-        .with("strategy", "artifact-local-key")
-        .with("stability", "artifact-version")
-        .with("artifact_sha256", sha256)
-        .with("namespace", namespace)
-        .with("key", Json::String(key.into()))
+        .with_static("strategy", "artifact-local-key")
+        .with_static("stability", "artifact-version")
+        .with_static("artifact_sha256", sha256)
+        .with_static("namespace", namespace)
+        .with_static("key", Json::String(key.into()))
         .into()
 }
 
 /// Content-digest identity.
 pub fn content_identity(sha256: &str) -> Json {
     Obj::new()
-        .with("strategy", "content-digest")
-        .with("stability", "global-exact")
-        .with("sha256", sha256)
+        .with_static("strategy", "content-digest")
+        .with_static("stability", "global-exact")
+        .with_static("sha256", sha256)
         .into()
 }
 
 /// Canonical-path identity.
 pub fn canonical_path_identity<P: Into<JsString>>(sha256: &str, path: P) -> Json {
     Obj::new()
-        .with("strategy", "canonical-path")
-        .with("stability", "artifact-version")
-        .with("artifact_sha256", sha256)
-        .with("path", Json::String(path.into()))
+        .with_static("strategy", "canonical-path")
+        .with_static("stability", "artifact-version")
+        .with_static("artifact_sha256", sha256)
+        .with_static("path", Json::String(path.into()))
         .into()
 }
 
@@ -196,7 +196,7 @@ pub fn add_artifact_contains_edge(
         source: source.node_id.clone(),
         target: target.node_id.clone(),
         relation: "contains".into(),
-        properties: Obj::new().with("path", Json::String(file.at("path").text().clone())),
+        properties: Obj::new().with_static("path", Json::String(file.at("path").text().clone())),
         evidence,
     });
 }
@@ -369,7 +369,7 @@ pub fn add_unavailable_static_parse_scope(
         source: input.asset.node_id.clone(),
         target: node.node_id,
         relation: "contains".into(),
-        properties: Obj::new().with("scope", "unavailable-static-analysis"),
+        properties: Obj::new().with_static("scope", "unavailable-static-analysis"),
         evidence,
     });
 }
@@ -461,13 +461,13 @@ pub fn link_electron_role_to_asset(
         return;
     };
     let properties = Obj::new()
-        .with("declared_path", resolution.at("declared_path").clone())
-        .with(
+        .with_static("declared_path", resolution.at("declared_path").clone())
+        .with_static(
             "resolution_context",
             resolution.at("resolution_context").clone(),
         )
-        .with("resolved_path", Json::String(path.clone()))
-        .with(
+        .with_static("resolved_path", Json::String(path.clone()))
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         );

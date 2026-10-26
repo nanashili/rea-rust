@@ -10,18 +10,23 @@ use super::classify::AsarProbe;
 use super::reader::{ArtifactEntry, ArtifactReader, ArtifactTraversalOmission, ReaderFailure};
 use rea_core::JsString;
 use rea_core::cancellation::Cancellation;
+use rea_host::fs::stable_directory::{
+    DirectoryEntry, DirectoryEntryKind, DirectoryError, DirectoryReader,
+};
 use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::Number;
 #[cfg(test)]
 use serde_json::Value;
 use std::fmt;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const MAX_ASAR_HEADER_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_ASAR_HEADER_PROBE_BYTES: u64 = MAX_ASAR_HEADER_BYTES + 8;
 const MAX_LISTING_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+const MAX_UNPACKED_ENTRY_BYTES: usize = 2 * 1024 * 1024 * 1024;
 const MAX_ASAR_JSON_DEPTH: usize = 1024;
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
@@ -898,6 +903,8 @@ fn is_observed_empty_codesign(path: &JsString, node: &ParsedNode) -> bool {
 /// ASAR reader over an in-memory capture of the whole container.
 pub struct AsarArtifactReader {
     bytes: Arc<[u8]>,
+    archive_path: Option<PathBuf>,
+    companion_reader: Option<DirectoryReader>,
     header_bytes: u64,
     listing: Vec<ListedEntry>,
     prepared: bool,
@@ -911,6 +918,20 @@ impl AsarArtifactReader {
     pub fn new_shared(bytes: Arc<[u8]>) -> Self {
         Self {
             bytes,
+            archive_path: None,
+            companion_reader: None,
+            header_bytes: 0,
+            listing: Vec::new(),
+            prepared: false,
+        }
+    }
+
+    /// Creates an ASAR reader that can resolve `<archive>.unpacked` entries.
+    pub fn from_path(path: &Path, bytes: Arc<[u8]>) -> Self {
+        Self {
+            bytes,
+            archive_path: Some(path.to_owned()),
+            companion_reader: None,
             header_bytes: 0,
             listing: Vec::new(),
             prepared: false,
@@ -948,6 +969,96 @@ impl AsarArtifactReader {
         self.listing = read_listing(header, cancellation)?;
         self.prepared = true;
         Ok(())
+    }
+}
+
+impl AsarArtifactReader {
+    fn inspect_companion_entry(
+        &mut self,
+        path: &JsString,
+        cancellation: &Cancellation,
+    ) -> Result<DirectoryEntry, ReaderFailure> {
+        let relative_path = path.as_str().ok_or_else(|| {
+            ReaderFailure::new("path", "ASAR unpacked entry path is not valid UTF-8")
+        })?;
+        let reader = self.ensure_companion_reader()?;
+        reader
+            .inspect_entry(relative_path, cancellation)
+            .map_err(map_directory_error)?
+            .ok_or_else(|| {
+                ReaderFailure::new(
+                    "unavailable",
+                    format!("ASAR unpacked companion bytes are unavailable for {}", path),
+                )
+            })
+    }
+
+    fn open_unpacked(
+        &mut self,
+        path: &JsString,
+        cancellation: &Cancellation,
+    ) -> Result<Vec<u8>, ReaderFailure> {
+        let entry = self.inspect_companion_entry(path, cancellation)?;
+        if entry.kind != DirectoryEntryKind::Regular {
+            return Err(ReaderFailure::new(
+                "path",
+                format!("ASAR unpacked entry is not a regular file: {path}"),
+            ));
+        }
+        let maximum_bytes = usize::try_from(entry.identity.bytes)
+            .ok()
+            .filter(|size| *size <= MAX_UNPACKED_ENTRY_BYTES)
+            .ok_or_else(|| {
+                ReaderFailure::new(
+                    "limit",
+                    format!(
+                        "ASAR unpacked entry exceeds the {MAX_UNPACKED_ENTRY_BYTES} byte read budget: {}",
+                        path
+                    ),
+                )
+            })?;
+        self.ensure_companion_reader()?
+            .read_entry_bounded(&entry, maximum_bytes, cancellation)
+            .map_err(map_directory_error)
+    }
+
+    fn ensure_companion_reader(&mut self) -> Result<&DirectoryReader, ReaderFailure> {
+        if self.companion_reader.is_none() {
+            let archive_path = self.archive_path.as_ref().ok_or_else(|| {
+                ReaderFailure::new(
+                    "unavailable",
+                    "ASAR unpacked companion bytes are unavailable",
+                )
+            })?;
+            let mut companion_path = archive_path.as_os_str().to_os_string();
+            companion_path.push(".unpacked");
+            let reader =
+                DirectoryReader::open(Path::new(&companion_path)).map_err(map_directory_error)?;
+            self.companion_reader = Some(reader);
+        }
+        self.companion_reader.as_ref().ok_or_else(|| {
+            ReaderFailure::new("io", "ASAR companion reader was not retained after opening")
+        })
+    }
+}
+
+fn map_directory_error(error: DirectoryError) -> ReaderFailure {
+    match error {
+        DirectoryError::Cancelled(_) => ReaderFailure::new("cancelled", error.to_string()),
+        DirectoryError::InvalidRoot | DirectoryError::InvalidRelativePath => {
+            ReaderFailure::new("path", error.to_string())
+        }
+        DirectoryError::Changed(_) => ReaderFailure::new("integrity", error.to_string()),
+        DirectoryError::Limit { .. } | DirectoryError::LimitBytes { .. } => {
+            ReaderFailure::new("limit", error.to_string())
+        }
+        DirectoryError::Unsupported(_) => ReaderFailure::new("unavailable", error.to_string()),
+        DirectoryError::Io { ref source, .. } if source.kind() == std::io::ErrorKind::NotFound => {
+            ReaderFailure::new("unavailable", error.to_string())
+        }
+        DirectoryError::Cleanup { .. } | DirectoryError::Io { .. } => {
+            ReaderFailure::new("io", error.to_string())
+        }
     }
 }
 
@@ -999,14 +1110,9 @@ impl ArtifactReader for AsarArtifactReader {
             ));
         }
 
+        let listed_path = listed.path.clone();
         if listed.unpacked {
-            return Err(ReaderFailure::new(
-                "unavailable",
-                format!(
-                    "ASAR unpacked companion bytes are unavailable for {}",
-                    entry.path
-                ),
-            ));
+            return self.open_unpacked(&listed_path, cancellation);
         }
         let range = listed.packed_range(self.header_bytes, self.bytes.len())?;
         Ok(self.bytes[range].to_vec())
@@ -1015,6 +1121,7 @@ impl ArtifactReader for AsarArtifactReader {
     fn close(&mut self) -> Result<(), ReaderFailure> {
         self.bytes = Arc::from([]);
         self.listing = Vec::new();
+        self.companion_reader = None;
         Ok(())
     }
 }
@@ -1124,6 +1231,17 @@ mod tests {
             reader.open(&entry, &Cancellation::default()).unwrap(),
             b"abc"
         );
+    }
+
+    #[test]
+    fn bytes_only_reader_keeps_unpacked_companion_unavailable() {
+        let mut reader =
+            archive_with_file(json!({"size": 3, "offset": "0", "unpacked": true}), b"abc");
+        let entry = file_entry(&mut reader);
+        let failure = reader
+            .open(&entry, &Cancellation::default())
+            .expect_err("bytes-only readers cannot claim companion ownership");
+        assert_eq!(failure.reason, "unavailable");
     }
 
     #[test]

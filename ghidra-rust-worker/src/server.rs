@@ -201,6 +201,7 @@ impl Worker {
             "inspect_instruction" => self
                 .prepared()?
                 .inspect_instruction(serde_json::from_value(params)?),
+            "function_body" => self.prepared()?.function_body(params),
             "read_bytes" => self.prepared()?.read_bytes(serde_json::from_value(params)?),
             "checkpoint" => {
                 empty_params(&params)?;
@@ -242,7 +243,7 @@ impl Worker {
             "capabilities": [
                 "info", "open", "functions", "function_aliases", "segments", "image_map", "search_bytes", "batch_decompile",
                 "resolve_functions", "batch_decompile_inventory", "strings", "references_to",
-                "references_from", "instructions", "inspect_instruction", "read_bytes", "checkpoint", "close"
+                "references_from", "instructions", "inspect_instruction", "function_body", "read_bytes", "checkpoint", "close"
             ]
         });
         if let Some(session) = &self.session {

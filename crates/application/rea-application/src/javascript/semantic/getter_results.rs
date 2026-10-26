@@ -58,8 +58,8 @@ pub(crate) fn expand_semantic_getter_result<'state, 'ast, R: GetterResultResolve
         seen: std::collections::HashSet::new(),
     };
     let getter = job.invocation.getter;
-    let results = super::callable_results::callable_result_expressions(state.source, &getter);
-    for result in results {
+    let results = state.callable_result_expressions(&getter);
+    for result in results.iter() {
         if let Some(value) = result.node {
             walker.visit(value, job.path.clone(), job.escapes || result.delegated);
         }

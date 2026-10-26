@@ -9,7 +9,6 @@ use crate::javascript::ast::{Field, Node};
 
 use super::ambient_writes::is_unmodified_global_reference;
 use super::ast_values::{is_member, static_property_name, unwrapped};
-use super::mutation_initializers::semantic_binding_at_read;
 use super::opaque_effects::{OpaqueEffects, opaque_global_may_have_changed};
 use super::property_paths::PropertyPathKey;
 use super::state::SemanticState;
@@ -77,13 +76,9 @@ pub fn is_intrinsic_map_lookup<'a>(
             return Some(false);
         };
         if !initializer.projection.is_empty()
-            || !semantic_binding_at_read(
-                state.binding(binding_index),
-                receiver,
-                &state.parents,
-                state.source,
-            )
-            .has_definite_initializer
+            || !state
+                .semantic_binding_at_read(state.binding(binding_index), receiver)
+                .has_definite_initializer
         {
             return Some(false);
         }

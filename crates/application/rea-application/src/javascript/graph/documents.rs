@@ -27,11 +27,11 @@ pub fn add_html_roles(context: &mut GraphContext<'_>) {
         };
         let path_js = html.at("path").text().clone();
         let role_resolution: Json = Obj::new()
-            .with("declared_path", Json::String(path_js.clone()))
-            .with("resolution_context", "html-reference")
-            .with("resolved_path", Json::String(path_js.clone()))
-            .with("resolution_status", "resolved")
-            .with("limitations", Json::Array(Vec::new()))
+            .with_static("declared_path", Json::String(path_js.clone()))
+            .with_static("resolution_context", "html-reference")
+            .with_static("resolved_path", Json::String(path_js.clone()))
+            .with_static("resolution_status", "resolved")
+            .with_static("limitations", Json::array(Vec::new()))
             .into();
         let role = create_electron_role_node(
             context,
@@ -59,9 +59,9 @@ pub fn add_html_roles(context: &mut GraphContext<'_>) {
             let resolved_path_js = resolution.at("resolved_path").text().clone();
             if resolution.at("resolution_status").str() != "resolved" {
                 let mut properties = Obj::new()
-                    .with("mechanism", "html-script-reference")
-                    .with("script_path", Json::String(script_path_js.clone()))
-                    .with("base_href", script.at("base_href").clone());
+                    .with_static("mechanism", "html-script-reference")
+                    .with_static("script_path", Json::String(script_path_js.clone()))
+                    .with_static("base_href", script.at("base_href").clone());
                 if let Some(object) = resolution.as_obj() {
                     properties.extend_from(object);
                 }
@@ -91,18 +91,18 @@ pub fn add_html_roles(context: &mut GraphContext<'_>) {
                 continue;
             };
             let properties = Obj::new()
-                .with("script_path", Json::String(script_path_js.clone()))
-                .with("base_href", script.at("base_href").clone())
-                .with(
+                .with_static("script_path", Json::String(script_path_js.clone()))
+                .with_static("base_href", script.at("base_href").clone())
+                .with_static(
                     "resolution_context",
                     resolution.at("resolution_context").clone(),
                 )
-                .with("resolved_path", Json::String(resolved_path_js))
-                .with(
+                .with_static("resolved_path", Json::String(resolved_path_js))
+                .with_static(
                     "resolution_status",
                     resolution.at("resolution_status").clone(),
                 )
-                .with("limitations", resolution.at("limitations").clone());
+                .with_static("limitations", resolution.at("limitations").clone());
             let coverage = complete_coverage();
             add_static_inference_edge(
                 context,
@@ -124,8 +124,8 @@ pub fn add_html_roles(context: &mut GraphContext<'_>) {
 
 /// `addJavaScriptSourceMapOriginals`.
 pub fn add_source_map_originals(context: &mut GraphContext<'_>) {
-    let source_maps = context.analysis.at("source_maps").arr().to_vec();
-    for source_map in &source_maps {
+    let source_maps = context.analysis.at("source_maps").clone();
+    for source_map in source_maps.arr() {
         let map_path = source_map.at("path").text().clone();
         let (Some(map_file), Some(map_node)) = (
             context.files_by_path.get(&map_path).cloned(),
@@ -145,12 +145,12 @@ pub fn add_source_map_originals(context: &mut GraphContext<'_>) {
                 )
             } else {
                 Obj::new()
-                    .with("strategy", "source-map-original")
-                    .with("stability", "source-map-exact")
-                    .with("source_map_sha256", sha)
-                    .with("original_source", reference.at("source_name").clone())
-                    .with("source_root", reference.at("source_root").clone())
-                    .with("source_sha256", original.at("content_sha256").clone())
+                    .with_static("strategy", "source-map-original")
+                    .with_static("stability", "source-map-exact")
+                    .with_static("source_map_sha256", sha)
+                    .with_static("original_source", reference.at("source_name").clone())
+                    .with_static("source_root", reference.at("source_root").clone())
+                    .with_static("source_sha256", original.at("content_sha256").clone())
                     .into()
             };
             let label = reference
@@ -159,14 +159,14 @@ pub fn add_source_map_originals(context: &mut GraphContext<'_>) {
                 .filter(|name| !name.is_empty())
                 .cloned();
             let properties = Obj::new()
-                .with("source_index", original.at("source_index").clone())
-                .with(
+                .with_static("source_index", original.at("source_index").clone())
+                .with_static(
                     "declaration_index",
                     original.at("declaration_index").clone(),
                 )
-                .with("source_name_available", !reference.is_null())
-                .with("content_available", !original.at("content").is_null())
-                .with("content_sha256", original.at("content_sha256").clone());
+                .with_static("source_name_available", !reference.is_null())
+                .with_static("content_available", !original.at("content").is_null())
+                .with_static("content_sha256", original.at("content_sha256").clone());
             let map_file_path = map_file.at("path").text().clone();
             let evidence = || {
                 let mut evidence = artifact_observation(&EvidenceInput::new(
@@ -179,7 +179,7 @@ pub fn add_source_map_originals(context: &mut GraphContext<'_>) {
                     let mut object = evidence.obj();
                     object.set(
                         "limitations",
-                        Json::Array(vec![Json::String(limitation.clone())]),
+                        Json::array(vec![Json::String(limitation.clone())]),
                     );
                     evidence = object.into();
                 }
@@ -212,13 +212,13 @@ pub fn add_source_map_originals(context: &mut GraphContext<'_>) {
                 target: node.node_id,
                 relation: "contains".into(),
                 properties: Obj::new()
-                    .with("source_index", original.at("source_index").clone())
-                    .with(
+                    .with_static("source_index", original.at("source_index").clone())
+                    .with_static(
                         "declaration_index",
                         original.at("declaration_index").clone(),
                     )
-                    .with("original_source", source_name)
-                    .with("source_root", source_root),
+                    .with_static("original_source", source_name)
+                    .with_static("source_root", source_root),
                 evidence: evidence(),
             });
         }

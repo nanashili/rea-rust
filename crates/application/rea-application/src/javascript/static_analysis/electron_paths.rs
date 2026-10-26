@@ -19,7 +19,6 @@ use super::electron_context_bridge::{exposure_arguments, members_for_exposure};
 use super::electron_ipc::{IpcMode, channel_value, ipc_descriptor};
 use super::electron_values::{electron_callee_path, electron_static_value, member_path};
 use super::helpers::range;
-use super::parents::ParentMap;
 
 pub struct WrappedElectronAnalysis {
     pub paths: Vec<CallPath>,
@@ -36,7 +35,6 @@ pub fn collect_electron_wrapped_call_paths<'a>(
 ) -> WrappedElectronAnalysis {
     let mut paths = Vec::new();
     let mut context_bridge_replacements = Vec::new();
-    let parents = ParentMap::new(context);
 
     if collect_symbolic_read_uncertainty(context, nodes, state) {
         *unknown_findings = (*unknown_findings).saturating_add(1);
@@ -100,9 +98,9 @@ pub fn collect_electron_wrapped_call_paths<'a>(
         }
 
         let (api_status, _, unknown_members) = members_for_exposure(context, Some(api_object));
-        let guarded = has_guarded_ancestor(&parents, exposure)
+        let guarded = has_guarded_ancestor(state, exposure)
             || contains_guard_expression(context, exposure)
-            || has_sequential_fallthrough_guard(context, &parents, exposure);
+            || has_sequential_fallthrough_guard(context, state, exposure);
         if !guarded
             && arguments
                 .world_id
@@ -142,9 +140,9 @@ pub fn collect_electron_wrapped_call_paths<'a>(
     }
 }
 
-fn has_guarded_ancestor<'a>(parents: &ParentMap<'a>, node: Node<'a>) -> bool {
+fn has_guarded_ancestor<'a>(state: &SemanticState<'a>, node: Node<'a>) -> bool {
     let mut current = node;
-    while let Some(parent) = parents.parent(&current) {
+    while let Some(parent) = state.parent_of(&current) {
         if matches!(
             parent.babel_type(),
             "IfStatement"
@@ -180,11 +178,11 @@ fn contains_guard_expression(context: &AstContext<'_>, node: Node<'_>) -> bool {
 
 fn has_sequential_fallthrough_guard<'a>(
     context: &AstContext<'a>,
-    parents: &ParentMap<'a>,
+    state: &SemanticState<'a>,
     node: Node<'a>,
 ) -> bool {
     let mut child = node;
-    let mut parent = parents.parent(&child);
+    let mut parent = state.parent_of(&child);
 
     while let Some(current) = parent {
         if current.babel_type() == "BlockStatement" {
@@ -213,7 +211,7 @@ fn has_sequential_fallthrough_guard<'a>(
         }
 
         child = current;
-        parent = parents.parent(&child);
+        parent = state.parent_of(&child);
     }
 
     false

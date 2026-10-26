@@ -8,9 +8,7 @@ use crate::javascript::ast::{AstVisitor, Field, Node, traverse};
 
 use super::ast_values::{is_class, is_function, unwrap_expression};
 use super::module_interop::{ModuleInterop, create_module_interop_for_global_eval};
-use super::mutation_initializers::{
-    EffectTiming, effect_timing, semantic_binding_effect_follows_capture,
-};
+use super::mutation_initializers::{EffectTiming, effect_timing};
 use super::state::{BindingState, SemanticState};
 
 #[derive(Clone, Debug, Default)]
@@ -45,16 +43,18 @@ pub fn index_opaque_effects<'a>(state: &SemanticState<'a>) -> OpaqueEffects<'a> 
             .entry(scope_id.clone())
             .or_default()
             .push(*node);
-        let mut child = scope_id.clone();
-        while let Some(index) = state.scopes_by_id.get(&child).copied() {
-            let Some(parent) = state.scope(index).parent_scope_id.clone() else {
+        let mut child_index = state.scopes_by_id.get(scope_id).copied();
+        while let Some(index) = child_index {
+            let Some(parent_index) = state.parent_scope(index) else {
                 break;
             };
+            let child = &state.scope(index).scope_id;
+            let parent = &state.scope(parent_index).scope_id;
             let children = effects.children.entry(parent.clone()).or_default();
-            if !children.iter().any(|candidate| candidate == &child) {
-                children.push(child);
+            if !children.iter().any(|candidate| candidate == child) {
+                children.push(child.clone());
             }
-            child = parent;
+            child_index = Some(parent_index);
         }
     }
     index_global_sites(state, &mut effects);
@@ -163,13 +163,7 @@ pub fn binding_may_have_opaque_effect<'a>(
         .any(|effect| {
             read.is_none_or(|read| {
                 effect_timing(read, Some(effect), state, state.source) != EffectTiming::After
-                    && !semantic_binding_effect_follows_capture(
-                        binding,
-                        read,
-                        effect,
-                        &state.parents,
-                        state.source,
-                    )
+                    && !state.semantic_binding_effect_follows_capture(binding, read, effect)
             })
         })
 }

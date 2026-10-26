@@ -1846,3 +1846,235 @@ mod catalog_parser_regressions {
         assert_eq!(defaulted["direction"], "outgoing");
     }
 }
+
+#[cfg(test)]
+mod navigation_context_output_regressions {
+    use super::validate_named_contract;
+    use crate::catalog::catalog;
+    use serde_json::json;
+
+    #[test]
+    fn public_output_schema_accepts_unavailable_navigation_facets() {
+        let contract = catalog()
+            .tool("get_navigation_context")
+            .expect("navigation contract exists");
+        let output = json!({
+            "result": {
+                "document": "/tmp/example.bin",
+                "address": {
+                    "state": "unavailable",
+                    "operation": "current_address",
+                    "reason": "provider has no cursor",
+                    "remediation": "Use an interactive provider"
+                },
+                "procedure": {
+                    "state": "unavailable",
+                    "operation": "resolve_containing_procedure",
+                    "reason": "address unavailable",
+                    "remediation": "Provide an explicit address"
+                }
+            }
+        });
+
+        validate_named_contract(
+            "get_navigation_context",
+            contract.output_schema().expect("output schema exists"),
+            &output,
+        )
+        .expect("public MCP output schema accepts unavailable facets");
+    }
+
+    #[test]
+    fn public_output_schema_rejects_incomplete_unavailable_navigation_facets() {
+        let contract = catalog()
+            .tool("get_navigation_context")
+            .expect("navigation contract exists");
+        let output = json!({
+            "result": {
+                "document": "/tmp/example.bin",
+                "address": {
+                    "state": "unavailable",
+                    "operation": "current_address",
+                    "reason": "provider has no cursor"
+                },
+                "procedure": null
+            }
+        });
+
+        validate_named_contract(
+            "get_navigation_context",
+            contract.output_schema().expect("output schema exists"),
+            &output,
+        )
+        .expect_err("incomplete unavailable facet must fail closed");
+    }
+}
+
+#[cfg(test)]
+mod native_output_identity_regressions {
+    use crate::catalog::catalog;
+    use rea_core::canonical_json::digest;
+    use serde_json::json;
+
+    #[test]
+    fn changed_native_output_schemas_have_content_bound_ids() {
+        for name in [
+            "procedure_info",
+            "get_navigation_context",
+            "binary_session",
+            "trace_feature",
+        ] {
+            let contract = catalog().tool(name).expect("native contract exists");
+            let mut schema = contract
+                .output_schema()
+                .expect("output schema exists")
+                .clone();
+            let id = schema
+                .as_object_mut()
+                .expect("schema is an object")
+                .remove("$id")
+                .expect("output schema has an identity");
+            let hash = digest(&json!({
+                "target": "draft-2020-12",
+                "schema": schema
+            }))
+            .expect("schema canonicalization succeeds");
+
+            assert_eq!(id, format!("urn:rea:tool-output:sha256:{hash}"), "{name}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod binary_session_schema_regressions {
+    use super::{resolve_schema, rooted_schema, validate};
+    use crate::catalog::catalog;
+    use serde_json::{Value, json};
+
+    #[test]
+    fn binary_session_accepts_unknown_package_root() {
+        let contract = catalog().tool("binary_session").expect("binary session");
+        let document = contract.output_schema().expect("output schema");
+        let result = document
+            .get("properties")
+            .and_then(|properties| properties.get("result"))
+            .and_then(|result| resolve_schema(document, result).ok())
+            .expect("binary session result schema");
+        let result = result
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .and_then(|branches| {
+                branches.iter().find(|branch| {
+                    branch
+                        .get("properties")
+                        .and_then(|properties| properties.get("server_identity"))
+                        .is_some()
+                })
+            })
+            .expect("open binary session result branch");
+        let server_ref = result
+            .get("properties")
+            .and_then(|properties| properties.get("server_identity"))
+            .expect("server identity reference");
+        let server = resolve_schema(document, server_ref).expect("server identity schema");
+        let package_ref = server
+            .get("properties")
+            .and_then(|properties| properties.get("package"))
+            .expect("package reference");
+        let package = resolve_schema(document, package_ref).expect("package schema");
+        let schema = rooted_schema(document, package);
+
+        validate(
+            &schema,
+            &json!({
+                "name": "rea",
+                "version": "0.1.0",
+                "root_path": null,
+                "build_commit": null
+            }),
+        )
+        .expect("unestablished package ownership remains valid unknown");
+    }
+
+    #[test]
+    fn binary_session_rejects_non_string_package_root() {
+        let contract = catalog().tool("binary_session").expect("binary session");
+        let document = contract.output_schema().expect("output schema");
+        let result = document
+            .get("properties")
+            .and_then(|properties| properties.get("result"))
+            .and_then(|result| resolve_schema(document, result).ok())
+            .expect("binary session result schema");
+        let result = result
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .and_then(|branches| {
+                branches.iter().find(|branch| {
+                    branch
+                        .get("properties")
+                        .and_then(|properties| properties.get("server_identity"))
+                        .is_some()
+                })
+            })
+            .expect("open binary session result branch");
+        let server_ref = result
+            .get("properties")
+            .and_then(|properties| properties.get("server_identity"))
+            .expect("server identity reference");
+        let server = resolve_schema(document, server_ref).expect("server identity schema");
+        let package_ref = server
+            .get("properties")
+            .and_then(|properties| properties.get("package"))
+            .expect("package reference");
+        let package = resolve_schema(document, package_ref).expect("package schema");
+        let schema = rooted_schema(document, package);
+
+        validate(
+            &schema,
+            &json!({
+                "name": "rea",
+                "version": "0.1.0",
+                "root_path": 42,
+                "build_commit": null
+            }),
+        )
+        .expect_err("package root must remain a path or explicit null");
+    }
+}
+
+#[cfg(test)]
+mod trace_feature_schema_regressions {
+    use super::{resolve_schema, rooted_schema, validate};
+    use crate::catalog::catalog;
+    use serde_json::{Value, json};
+
+    fn containing_procedure_schema() -> serde_json::Value {
+        let contract = catalog().tool("trace_feature").expect("trace feature");
+        let document = contract.output_schema().expect("output schema");
+        let normalized = document
+            .get("properties")
+            .and_then(|properties| properties.get("normalized_result"))
+            .and_then(|result| resolve_schema(document, result).ok())
+            .expect("trace feature normalized result schema");
+        let containing = normalized
+            .get("properties")
+            .and_then(|properties| properties.get("references"))
+            .and_then(|references| references.get("items"))
+            .and_then(|items| items.get("properties"))
+            .and_then(|properties| properties.get("containing_procedure"))
+            .expect("containing procedure schema");
+        rooted_schema(document, containing)
+    }
+
+    #[test]
+    fn trace_feature_accepts_unknown_containing_procedure() {
+        validate(&containing_procedure_schema(), &Value::Null)
+            .expect("unavailable containment is an explicit unknown");
+    }
+
+    #[test]
+    fn trace_feature_rejects_invalid_containing_procedure_value() {
+        validate(&containing_procedure_schema(), &json!(42))
+            .expect_err("containment must be an object, null, or a structured negative result");
+    }
+}

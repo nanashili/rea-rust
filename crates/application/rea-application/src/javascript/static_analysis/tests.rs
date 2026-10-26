@@ -3,12 +3,13 @@
 //! `.cache/rust-migration/js-static-diff/`.
 
 use oxc_allocator::Allocator;
+use sha2::{Digest, Sha256};
 use std::ops::ControlFlow;
 
 use super::analyze::analyze_source;
 use super::babel::semantic_tokens;
 use super::findings::{ModuleRange, ModuleRangeIndex};
-use super::fingerprint::fingerprint_javascript_ast;
+use super::fingerprint::{fingerprint_javascript_ast, hex};
 use super::graphql::graphql_operation_from_text;
 use super::helpers::{point_for_offset, range_for_offsets};
 use super::interop::{Template, canonical_roles, with_interop_templates};
@@ -205,6 +206,8 @@ fn fingerprint_preserves_lone_surrogates_in_literals_and_templates() {
     let (fingerprint_a, tokens_a) = fingerprint(source_a, &allocator_a);
     let (fingerprint_b, tokens_b) = fingerprint(source_b, &allocator_b);
 
+    assert_eq!(fingerprint_a, hex(&Sha256::digest(tokens_a.as_bytes())));
+    assert_eq!(fingerprint_b, hex(&Sha256::digest(tokens_b.as_bytes())));
     assert_ne!(fingerprint_a, fingerprint_b);
     assert!(tokens_a.contains(r#"\ud800"#));
     assert!(tokens_a.contains(r#"\\uD800"#));

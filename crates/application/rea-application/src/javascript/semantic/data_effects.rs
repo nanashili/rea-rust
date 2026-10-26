@@ -7,7 +7,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::javascript::ast::{Field, Node};
+use crate::javascript::ast::{Field, Node, NodeKey};
 use crate::javascript::contracts::semantic_ir::{
     SemanticBoundaryOperation, SemanticCallable, SemanticConfigurationOperation,
     SemanticProjectedResultBinding, SemanticProjectionPathSegment, SemanticRequestField,
@@ -22,7 +22,6 @@ use crate::javascript::semantic::data_effect_helpers::{
     data_effect_literal_string, data_effect_member_callee, is_semantic_process_object,
     traverse_data_effects,
 };
-use crate::javascript::semantic::mutation_initializers::semantic_binding_at_read;
 use crate::javascript::semantic::state::SemanticState;
 use crate::javascript::semantic::value_types::{JsString, Primitive};
 use crate::javascript::static_analysis::helpers::range as contract_range;
@@ -35,10 +34,15 @@ pub struct DataEffectAnalysis {
     pub boundary_operations: Vec<SemanticBoundaryOperation>,
 }
 
+struct ConfigurationFact {
+    key: Option<JsString>,
+    source_config_id: String,
+}
+
 /// Collect all data effects in Babel visitor order.
 pub fn collect_semantic_data_effects<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &[SemanticCallable],
 ) -> DataEffectAnalysis {
     let callable_ids: HashSet<String> = callables
@@ -52,11 +56,28 @@ pub fn collect_semantic_data_effects<'a>(
         ancestors: Vec::new(),
     };
     let mut configurations = Vec::new();
+    let mut configuration_facts = HashMap::new();
     let mut requests = Vec::new();
     let mut boundaries = Vec::new();
     traverse_data_effects(program, &mut context, |node, _parent, ancestors, owner| {
-        if let Some(operation) = configuration_operation(node, ancestors, owner, state) {
+        if let Some(details) = configuration_details(node, state) {
+            let source_config_id = configuration_id(node, details.kind, state);
+            let operation = configuration_operation(
+                node,
+                ancestors,
+                owner,
+                state,
+                &details,
+                source_config_id.clone(),
+            );
             configurations.push(operation);
+            configuration_facts.insert(
+                unwrapped(state.source, node).key(),
+                ConfigurationFact {
+                    key: details.key,
+                    source_config_id,
+                },
+            );
         }
         if let Some(operation) = request_operation(node, ancestors, owner, state) {
             requests.push(operation);
@@ -66,7 +87,7 @@ pub fn collect_semantic_data_effects<'a>(
         }
     });
 
-    let defaults = collect_defaults(program, state, &callable_ids);
+    let defaults = collect_defaults(program, state, &callable_ids, &configuration_facts);
     let response_consumers = collect_response_consumers(program, state, &callable_ids, &requests);
     DataEffectAnalysis {
         configuration_operations: configurations.into_iter().chain(defaults).collect(),
@@ -122,96 +143,118 @@ fn configuration_operation<'a>(
     ancestors: &[Node<'a>],
     owner: Option<&str>,
     state: &SemanticState<'a>,
-) -> Option<SemanticConfigurationOperation> {
-    let (kind, key, resolution) = configuration_details(node, state)?;
-    Some(SemanticConfigurationOperation {
-        config_id: format!(
-            "config:{kind}:{}:{}",
-            state.context.start(&node),
-            state.context.end(&node)
-        ),
-        kind: kind.to_owned(),
+    details: &ConfigurationDetails,
+    config_id: String,
+) -> SemanticConfigurationOperation {
+    SemanticConfigurationOperation {
+        config_id,
+        kind: details.kind.to_owned(),
         location: contract_range(&state.context, &node),
         owner_callable_id: owner.map(str::to_owned),
         result_binding_id: owner_binding(node, ancestors, state),
-        key,
+        key: details.key.clone(),
         source_config_id: None,
         value: Primitive::Null,
         value_resource_limit: None,
-        resolution: resolution.to_owned(),
-    })
+        resolution: details.resolution.to_owned(),
+    }
+}
+
+struct ConfigurationDetails {
+    kind: &'static str,
+    key: Option<JsString>,
+    resolution: &'static str,
+}
+
+fn configuration_id(node: Node<'_>, kind: &str, state: &SemanticState<'_>) -> String {
+    format!(
+        "config:{kind}:{}:{}",
+        state.context.start(&node),
+        state.context.end(&node)
+    )
 }
 
 fn configuration_details<'a>(
     node: Node<'a>,
     state: &SemanticState<'a>,
-) -> Option<(&'static str, Option<JsString>, &'static str)> {
-    if matches!(
-        node.babel_type(),
+) -> Option<ConfigurationDetails> {
+    match node.babel_type() {
+        "MemberExpression" | "OptionalMemberExpression" => {
+            process_configuration_details(node, state)
+        }
+        "CallExpression" | "OptionalCallExpression" => file_configuration_details(node, state),
+        _ => None,
+    }
+}
+
+fn process_configuration_details<'a>(
+    node: Node<'a>,
+    state: &SemanticState<'a>,
+) -> Option<ConfigurationDetails> {
+    let object = node.field(state.source, Field::Object)?;
+    if !matches!(
+        object.babel_type(),
         "MemberExpression" | "OptionalMemberExpression"
     ) {
-        if let Some(object) = node.field(state.source, Field::Object) {
-            if matches!(
-                object.babel_type(),
-                "MemberExpression" | "OptionalMemberExpression"
-            ) {
-                let family = object
-                    .field(state.source, Field::Property)
-                    .map(|p| static_property_name(state.source, p, object.computed()))
-                    .filter(|p| p == "env" || p == "argv");
-                if let Some(family) = family.and_then(|family| family.try_to_string().ok()) {
-                    let key = node
-                        .field(state.source, Field::Property)
-                        .and_then(|p| static_property_key(state.source, p, node.computed()));
-                    let valid_argv = family != "argv"
-                        || key.as_ref().is_none_or(|key| {
-                            key.try_to_string()
-                                .ok()
-                                .is_some_and(|key| array_index_key(&key))
-                        });
-                    if valid_argv
-                        && object
-                            .field(state.source, Field::Object)
-                            .is_some_and(|process| {
-                                process_object_matches(process, state, &family, key.as_ref())
-                            })
-                    {
-                        return Some((
-                            if family == "env" {
-                                "environment"
-                            } else {
-                                "argv"
-                            },
-                            key.clone(),
-                            if key.is_some() { "complete" } else { "partial" },
-                        ));
-                    }
-                }
-            }
-        }
+        return None;
     }
-    if matches!(
-        node.babel_type(),
-        "CallExpression" | "OptionalCallExpression"
-    ) {
-        let method = node
-            .field(state.source, Field::Callee)
-            .and_then(|callee| builtin_data_effect_method(callee, state, &["fs", "node:fs"]));
-        if matches!(method.as_deref(), Some("readFile" | "readFileSync")) {
-            let key = node
-                .field_list(state.source, Field::Arguments)
-                .into_iter()
-                .flatten()
-                .next()
-                .and_then(|argument| data_effect_literal_string(Some(argument), state.source));
-            return Some((
-                "file",
-                key.clone(),
-                if key.is_some() { "complete" } else { "partial" },
-            ));
-        }
+
+    let family = object
+        .field(state.source, Field::Property)
+        .map(|property| static_property_name(state.source, property, object.computed()))
+        .filter(|family| family == "env" || family == "argv")?
+        .try_to_string()
+        .ok()?;
+    let key = node
+        .field(state.source, Field::Property)
+        .and_then(|property| static_property_key(state.source, property, node.computed()));
+    let valid_argv = family != "argv"
+        || key.as_ref().is_none_or(|key| {
+            key.try_to_string()
+                .ok()
+                .is_some_and(|key| array_index_key(&key))
+        });
+    if !valid_argv {
+        return None;
     }
-    None
+
+    let process = object.field(state.source, Field::Object)?;
+    if !process_object_matches(process, state, &family, key.as_ref()) {
+        return None;
+    }
+
+    Some(ConfigurationDetails {
+        kind: if family == "env" {
+            "environment"
+        } else {
+            "argv"
+        },
+        resolution: if key.is_some() { "complete" } else { "partial" },
+        key,
+    })
+}
+
+fn file_configuration_details<'a>(
+    node: Node<'a>,
+    state: &SemanticState<'a>,
+) -> Option<ConfigurationDetails> {
+    let callee = node.field(state.source, Field::Callee)?;
+    let method = builtin_data_effect_method(callee, state, &["fs", "node:fs"])?;
+    if !matches!(method.as_str(), "readFile" | "readFileSync") {
+        return None;
+    }
+
+    let key = node
+        .field_list(state.source, Field::Arguments)
+        .into_iter()
+        .flatten()
+        .next()
+        .and_then(|argument| data_effect_literal_string(Some(argument), state.source));
+    Some(ConfigurationDetails {
+        kind: "file",
+        resolution: if key.is_some() { "complete" } else { "partial" },
+        key,
+    })
 }
 
 fn array_index_key(key: &str) -> bool {
@@ -237,38 +280,10 @@ fn process_object_matches<'a>(
 
 fn collect_defaults<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &HashSet<String>,
+    configurations: &HashMap<NodeKey, ConfigurationFact>,
 ) -> Vec<SemanticConfigurationOperation> {
-    let mut context = DataEffectTraversalContext {
-        state,
-        callable_ids: callables,
-        callable_stack: Vec::new(),
-        ancestors: Vec::new(),
-    };
-    let mut configurations = HashMap::new();
-    traverse_data_effects(
-        program,
-        &mut context,
-        |node, _parent, _ancestors, _owner| {
-            if let Some((kind, key, resolution)) = configuration_details(node, state) {
-                configurations.insert(
-                    unwrapped(state.source, node).key(),
-                    (
-                        kind.to_owned(),
-                        key,
-                        resolution.to_owned(),
-                        format!(
-                            "config:{kind}:{}:{}",
-                            state.context.start(&node),
-                            state.context.end(&node)
-                        ),
-                    ),
-                );
-            }
-        },
-    );
-
     let mut context = DataEffectTraversalContext {
         state,
         callable_ids: callables,
@@ -290,7 +305,7 @@ fn collect_defaults<'a>(
             return;
         };
         let source_key = unwrapped(state.source, left).key();
-        let Some((kind, key, _resolution, source_id)) = configurations.get(&source_key) else {
+        let Some(fact) = configurations.get(&source_key) else {
             return;
         };
         let literal = node
@@ -310,8 +325,8 @@ fn collect_defaults<'a>(
                 .unwrap_or_else(|| contract_range(&state.context, &node)),
             owner_callable_id: owner.map(str::to_owned),
             result_binding_id: owner_binding(node, ancestors, state),
-            key: key.clone(),
-            source_config_id: Some(source_id.clone()),
+            key: fact.key.clone(),
+            source_config_id: Some(fact.source_config_id.clone()),
             value: value.clone().unwrap_or(Primitive::Null),
             value_resource_limit: None,
             resolution: if value.is_some() {
@@ -321,7 +336,6 @@ fn collect_defaults<'a>(
             }
             .to_owned(),
         });
-        let _ = kind;
     });
     output
 }
@@ -519,7 +533,7 @@ fn boundary_details<'a>(
 
 fn collect_response_consumers<'a>(
     program: Node<'a>,
-    state: &'a SemanticState<'a>,
+    state: &SemanticState<'a>,
     callables: &HashSet<String>,
     requests: &[SemanticRequestOperation],
 ) -> Vec<SemanticRequestOperation> {
@@ -628,6 +642,7 @@ fn sole_write_reaches_read<'a>(read: Node<'a>, state: &SemanticState<'a>) -> boo
     let binding = state.binding(binding_index);
     binding.initializers.len() == 1
         && (state.stable_initializer(binding_index).is_some()
-            || semantic_binding_at_read(binding, read, &state.parents, state.source)
+            || state
+                .semantic_binding_at_read(binding, read)
                 .has_definite_initializer)
 }

@@ -1220,10 +1220,9 @@ fn io_error(stage: &'static str, source: io::Error) -> DirectoryError {
 }
 
 fn is_missing_io_error(error: &io::Error) -> bool {
-    matches!(
-        error.kind(),
-        io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
-    )
+    // No-follow traversal through a symlink can report NotADirectory. Preserve
+    // that failure rather than turning an unreadable path into absent evidence.
+    error.kind() == io::ErrorKind::NotFound
 }
 
 fn is_missing_path_error(error: &DirectoryError) -> bool {
@@ -1344,6 +1343,17 @@ mod tests {
             !entries
                 .iter()
                 .any(|entry| entry.path == "external/secret.txt")
+        );
+        assert!(
+            reader
+                .inspect_entry("external/secret.txt", &cancellation)
+                .is_err()
+        );
+        assert!(
+            reader
+                .inspect_entry("missing/secret.txt", &cancellation)
+                .expect("missing parent remains an absent entry")
+                .is_none()
         );
 
         let external_identity = super::fingerprint(

@@ -521,6 +521,25 @@ fn mcp_advertises_the_exact_pe_contract_and_retains_inspection_evidence() {
     assert_eq!(evidence["parameters"]["max_entries"], 100);
     assert_eq!(evidence["normalized_result"]["coverage"]["resources"], 5);
 
+    let contract = rea_mcp::catalog()
+        .tool("inspect_pe_resources")
+        .expect("PE resources contract should be available")
+        .output_schema()
+        .expect("PE resources output schema should be available");
+    rea_mcp::schema::validate_named_contract("inspect_pe_resources", contract, evidence)
+        .expect("serialized PE report should satisfy its advertised contract");
+
+    let mut invalid_evidence = evidence.clone();
+    let icon = invalid_evidence["normalized_result"]["icon_groups"]
+        .as_array_mut()
+        .and_then(|groups| groups.first_mut())
+        .and_then(|group| group["images"].as_array_mut())
+        .and_then(|images| images.first_mut())
+        .expect("fixture should contain a serialized icon image");
+    icon["width"] = json!("32");
+    rea_mcp::schema::validate_named_contract("inspect_pe_resources", contract, &invalid_evidence)
+        .expect_err("the contract must reject an invalid nested icon field");
+
     let summary = server.call_tool(4, "get_evidence_bundle", json!({"detail": "summary"}));
     let retained = &summary["result"]["structuredContent"]["result"];
     assert_eq!(retained["total_retained_records"], 1);

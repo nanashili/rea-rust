@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn array_length_is_present_even_when_items_are_partial() {
         let value = SemanticValue::Array {
-            items: Vec::new(),
+            items: Vec::new().into(),
             coverage: Coverage::Unknown { omitted: None },
         };
         let property = semantic_slot_at_path(&value, &["length".into()]);
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn missing_partial_sibling_remains_unknown_coverage() {
         let value = SemanticValue::Object {
-            properties: Vec::new(),
+            properties: Vec::new().into(),
             coverage: Coverage::Unknown { omitted: Some(1) },
         };
         let property = semantic_slot_at_path(&value, &["missing".into()]);

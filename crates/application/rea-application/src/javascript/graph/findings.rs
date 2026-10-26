@@ -139,13 +139,13 @@ fn add_reference(context: &mut GraphContext<'_>, input: &Finding<'_>, self_refer
             .and_then(|resolved| resolved.status.clone())
             .into();
         let mut properties = Obj::new()
-            .with("declared_specifier", value.at("specifier").clone())
-            .with("expression", value.at("expression").clone())
-            .with(
+            .with_static("declared_specifier", value.at("specifier").clone())
+            .with_static("expression", value.at("expression").clone())
+            .with_static(
                 "resolved_path",
                 resolved.as_ref().and_then(|resolved| resolved.path.clone()),
             )
-            .with("resolution_status", status.clone());
+            .with_static("resolution_status", status.clone());
         properties.extend_from(&resolution_properties(resolution));
         let reference_limitations = resolved
             .as_ref()
@@ -182,8 +182,8 @@ fn add_reference(context: &mut GraphContext<'_>, input: &Finding<'_>, self_refer
             )],
         });
         let mut edge_properties = Obj::new()
-            .with("kind", kind)
-            .with("resolution_status", status);
+            .with_static("kind", kind)
+            .with_static("resolution_status", status);
         edge_properties.extend_from(&resolution_properties(resolution));
         add_static_inference_edge(
             context,
@@ -215,7 +215,7 @@ fn add_reference(context: &mut GraphContext<'_>, input: &Finding<'_>, self_refer
                     range: value.at("location"),
                     coverage: input.coverage,
                     relation: "maps_to",
-                    properties: Obj::new().with("resolved_path", path.clone()),
+                    properties: Obj::new().with_static("resolved_path", path.clone()),
                     confidence: None,
                     limitations: Some(limitations.clone()),
                 },
@@ -246,15 +246,15 @@ fn add_reference(context: &mut GraphContext<'_>, input: &Finding<'_>, self_refer
         Json::Null
     };
     let mut properties = Obj::new()
-        .with("kind", kind)
-        .with("specifier", value.at("specifier").clone())
-        .with("expression", value.at("expression").clone())
-        .with("resolution_mode", resolution_mode)
-        .with(
+        .with_static("kind", kind)
+        .with_static("specifier", value.at("specifier").clone())
+        .with_static("expression", value.at("expression").clone())
+        .with_static("resolution_mode", resolution_mode)
+        .with_static(
             "resolved_path",
             resolved.as_ref().and_then(|resolved| resolved.path.clone()),
         )
-        .with(
+        .with_static(
             "resolution_status",
             resolved
                 .as_ref()
@@ -338,9 +338,9 @@ fn add_endpoint(context: &mut GraphContext<'_>, input: &Finding<'_>) {
     }
     identity_parts.push(key.into());
     let mut properties = Obj::new()
-        .with("endpoint_kind", value.at("kind").clone())
-        .with("value", text.clone())
-        .with("mechanism", value.at("mechanism").clone());
+        .with_static("endpoint_kind", value.at("kind").clone())
+        .with_static("value", text.clone())
+        .with_static("mechanism", value.at("mechanism").clone());
     if candidate {
         properties.set("interpretation", value.at("interpretation").clone());
     }
@@ -384,14 +384,14 @@ fn add_endpoint(context: &mut GraphContext<'_>, input: &Finding<'_>) {
     // UTF-16 string escaping.
     let node = context.accumulator.add_node(NodeInput {
         kind: "endpoint".into(),
-        identity: artifact_local_identity(sha, kind, &Json::Array(identity_parts).stringify()),
+        identity: artifact_local_identity(sha, kind, &Json::array(identity_parts).stringify()),
         observations: vec![ObservationInput::new_js(
             Some(node_label),
             properties,
             evidence,
         )],
     });
-    let mut edge_properties = Obj::new().with("mechanism", value.at("mechanism").clone());
+    let mut edge_properties = Obj::new().with_static("mechanism", value.at("mechanism").clone());
     if candidate {
         edge_properties.set("interpretation", value.at("interpretation").clone());
     }
@@ -433,9 +433,9 @@ fn add_storage(context: &mut GraphContext<'_>, input: &Finding<'_>) {
     let sha = input.file.at("sha256").str();
     let path = input.file.at("path").text().clone();
     let mut properties = Obj::new()
-        .with("storage_kind", kind)
-        .with("name", value.at("name").clone())
-        .with("mechanism", value.at("mechanism").clone());
+        .with_static("storage_kind", kind)
+        .with_static("name", value.at("name").clone())
+        .with_static("mechanism", value.at("mechanism").clone());
     if candidate {
         properties.set("interpretation", "candidate");
     }
@@ -482,7 +482,7 @@ fn add_storage(context: &mut GraphContext<'_>, input: &Finding<'_>) {
         identity: artifact_local_identity(sha, &namespace, &key),
         observations: vec![ObservationInput::new_js(Some(label), properties, evidence)],
     });
-    let mut edge_properties = Obj::new().with("mechanism", value.at("mechanism").clone());
+    let mut edge_properties = Obj::new().with_static("mechanism", value.at("mechanism").clone());
     if candidate {
         edge_properties.set("interpretation", "candidate");
     }
@@ -545,7 +545,7 @@ fn add_role(context: &mut GraphContext<'_>, input: &Finding<'_>) {
             range: value.at("location"),
             coverage: input.coverage,
             relation: "loads",
-            properties: Obj::new().with("mechanism", value.at("mechanism").clone()),
+            properties: Obj::new().with_static("mechanism", value.at("mechanism").clone()),
             confidence: None,
             limitations: None,
         },
@@ -599,10 +599,10 @@ fn add_source_map(context: &mut GraphContext<'_>, input: &Finding<'_>) {
         _ => artifact_local_identity(sha, "unresolved-source-map", &declared_sha),
     };
     let mut properties = Obj::new()
-        .with("declared_url", declared.clone())
-        .with("declared_url_sha256", declared_sha.as_str())
-        .with("resolved_path", resolved_path.clone())
-        .with(
+        .with_static("declared_url", declared.clone())
+        .with_static("declared_url_sha256", declared_sha.as_str())
+        .with_static("resolved_path", resolved_path.clone())
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         );
@@ -624,9 +624,9 @@ fn add_source_map(context: &mut GraphContext<'_>, input: &Finding<'_>) {
         )],
     });
     let mut edge_properties = Obj::new()
-        .with("declared_url_sha256", declared_sha.as_str())
-        .with("resolved_path", resolved_path)
-        .with(
+        .with_static("declared_url_sha256", declared_sha.as_str())
+        .with_static("resolved_path", resolved_path)
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         );
@@ -816,10 +816,10 @@ fn unresolved_reference_node(
         .cloned()
         .unwrap_or_else(|| reference.at("expression").text().clone());
     let mut properties = Obj::new()
-        .with("reference_kind", kind)
-        .with("specifier", reference.at("specifier").clone())
-        .with("expression", reference.at("expression").clone())
-        .with("resolution", "unresolved");
+        .with_static("reference_kind", kind)
+        .with_static("specifier", reference.at("specifier").clone())
+        .with_static("expression", reference.at("expression").clone())
+        .with_static("resolution", "unresolved");
     if let Some(resolution) = resolution {
         properties.set(
             "resolution_status",

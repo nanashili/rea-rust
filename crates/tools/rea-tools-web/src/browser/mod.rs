@@ -223,11 +223,11 @@ pub(crate) fn browser_observation_raw_evidence(
             .with("environment", environment)
             .with(
                 "limitations",
-                GraphJson::Array(limitations.into_iter().map(GraphJson::from).collect()),
+                GraphJson::array(limitations.into_iter().map(GraphJson::from).collect()),
             )
             .with("relationship_coverage", GraphJson::Null)
-            .with("locations", GraphJson::Array(Vec::new()))
-            .with("evidence_links", GraphJson::Array(Vec::new())),
+            .with("locations", GraphJson::array(Vec::new()))
+            .with("evidence_links", GraphJson::array(Vec::new())),
     );
     let raw = RawValue::from_string(record.stringify())
         .map_err(|error| AnalysisError::output(operation, error.to_string()))?;

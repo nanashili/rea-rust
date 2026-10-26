@@ -9,9 +9,12 @@
 //! [`SemanticState::opaque_candidates`]; neither changes scopes or bindings.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ops::ControlFlow;
 
-use crate::javascript::ast::{AstContext, AstVisitor, Field, Node, NodeMap, NodeSet, traverse};
+use crate::javascript::ast::{
+    AstContext, AstVisitor, Field, Node, NodeMap, NodeParents, NodeSet, traverse,
+};
 
 use super::ast_values::{
     is_call, is_class, is_function, is_identifier_named, is_member, object_pattern_keys,
@@ -19,6 +22,7 @@ use super::ast_values::{
 };
 use super::evaluation_order::{IterationCardinality, branch_may_be_skipped, iteration_cardinality};
 use super::globals::{GLOBAL_EVAL_ROOTS, is_unmodified_global_reference};
+use super::module_interop::StateFacts;
 use super::reference_role::reference_role;
 use super::state::{
     BindingState, CopyKind, DeclarationKind, Definition, DefinitionKind, Initializer, InsertionMap,
@@ -39,6 +43,8 @@ pub fn collect_definitions<'a, B>(
 ) -> ControlFlow<B, SemanticState<'a>> {
     let mut state = create_state(context, static_import_resolution_mode);
     collect(&mut state, &mut checkpoint)?;
+    StateFacts::prime_cache(&state);
+    state.enable_binding_lookup_cache();
     ControlFlow::Continue(state)
 }
 
@@ -52,7 +58,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
     );
     let root = ScopeState {
         scope_id: root_id.clone(),
-        parent_scope_id: None,
+        parent_scope: None,
         kind: ScopeKind::Program,
         location: context.range(&program),
         bindings_complete: true,
@@ -70,7 +76,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         program,
         script,
         static_import_resolution_mode: mode,
-        parents: NodeMap::default(),
+        parents: NodeParents::default(),
         scopes: vec![root],
         scopes_by_id,
         scope_by_node: RefCell::new(scope_by_node),
@@ -89,6 +95,13 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         may_reference_global_eval: false,
         opaque_candidates: Vec::new(),
         global_eval_sites_cache: RefCell::new(None),
+        opaque_effects_cache: RefCell::new(None),
+        state_facts_cache: RefCell::new(None),
+        binding_lookup_cache: RefCell::new(super::state::BindingLookupCache::default()),
+        callable_result_cache: RefCell::new(HashMap::new()),
+        statement_position_cache: RefCell::new(
+            super::mutation_initializers::StatementPositionCache::default(),
+        ),
         getter_resource_limits: RefCell::new(Vec::new()),
         value_resource_limits: RefCell::new(Vec::new()),
         value_caches: RefCell::new(super::values::ValueCaches::default()),
@@ -157,7 +170,7 @@ impl<'a> AstVisitor<'a> for Definitions<'_, 'a> {
             );
             let dynamic = ScopeState {
                 scope_id: id.clone(),
-                parent_scope_id: Some(self.state.scopes[parent_scope].scope_id.clone()),
+                parent_scope: Some(parent_scope),
                 kind: ScopeKind::Block,
                 location: context.range(parent),
                 bindings_complete: false,
@@ -679,13 +692,10 @@ fn nested_scope<'a>(
     let kind = scope_kind(source, node, parent)?;
     let owner = switch_owner.unwrap_or(*node);
     let id = scope_id(kind, state.context.start(&owner), state.context.end(&owner));
-    let parent_scope_id = match function_name_scope(state, node, parent_scope) {
-        Some(name_scope) => state.scopes[name_scope].scope_id.clone(),
-        None => state.scopes[parent_scope].scope_id.clone(),
-    };
+    let parent_scope = function_name_scope(state, node, parent_scope).unwrap_or(parent_scope);
     let scope = ScopeState {
         scope_id: id,
-        parent_scope_id: Some(parent_scope_id),
+        parent_scope: Some(parent_scope),
         kind,
         location: state.context.range(&owner),
         bindings_complete: true,
@@ -716,7 +726,7 @@ fn function_name_scope<'a>(
                 state.context.end(node)
             )
         ),
-        parent_scope_id: Some(state.scopes[parent_scope].scope_id.clone()),
+        parent_scope: Some(parent_scope),
         kind: ScopeKind::Block,
         location: state.context.range(node),
         bindings_complete: true,
@@ -1255,6 +1265,7 @@ fn index_prototype_uncertainty<'a, B>(
     impl<'a> Prototype<'_, 'a> {
         fn taint(&mut self, owner: &str) {
             if owner == "Object" {
+                self.state.invalidate_binding_lookup_cache();
                 self.state.prototype_require_mutation_observed = None;
             }
             self.state.prototype_enumeration_may_affect = None;

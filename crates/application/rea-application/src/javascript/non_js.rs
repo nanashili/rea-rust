@@ -77,7 +77,7 @@ pub(crate) fn json_module_observation(file: &JavaScriptArtifactFile) -> Json {
             .with("path", JsString::from(file.path.clone()))
             .with("sha256", file.sha256.clone())
             .with("status", status)
-            .with("top_level_keys", Json::Array(Vec::new()))
+            .with("top_level_keys", Json::array(Vec::new()))
             .with("omitted_top_level_keys", omitted)
             .with("limitation", reason)
             .into()
@@ -125,7 +125,7 @@ pub(crate) fn json_module_observation(file: &JavaScriptArtifactFile) -> Json {
         .with("status", "included")
         .with(
             "top_level_keys",
-            Json::Array(keys.into_iter().map(Json::from).collect()),
+            Json::array(keys.into_iter().map(Json::from).collect()),
         )
         .with("omitted_top_level_keys", 0_usize)
         .with("limitation", Json::Null)
@@ -174,7 +174,7 @@ pub(crate) fn html_observations(file: &JavaScriptArtifactFile) -> (Vec<Json>, Op
             .with("script_count", references.inline_script_count)
             .with(
                 "scripts",
-                Json::Array(
+                Json::array(
                     references
                         .inline_scripts
                         .into_iter()
@@ -226,7 +226,7 @@ pub(crate) fn source_map_observation(file: &JavaScriptArtifactFile) -> Json {
             .with("path", JsString::from(file.path.clone()))
             .with("sha256", file.sha256.clone())
             .with("status", "invalid")
-            .with("sources", Json::Array(Vec::new()))
+            .with("sources", Json::array(Vec::new()))
             .with("limitation", reason)
             .into()
     };
@@ -314,7 +314,7 @@ pub(crate) fn source_map_observation(file: &JavaScriptArtifactFile) -> Json {
         .with("path", JsString::from(file.path.clone()))
         .with("sha256", file.sha256.clone())
         .with("status", "included")
-        .with("sources", Json::Array(sources))
+        .with("sources", Json::array(sources))
         .with("limitation", Json::Null)
         .into()
 }
@@ -340,7 +340,7 @@ fn source_map_leaves(value: &Json) -> Option<Vec<&Json>> {
     }
     if let Some(Json::Array(sections)) = value.get("sections") {
         let mut leaves = Vec::new();
-        for section in sections {
+        for section in sections.iter() {
             let map = section.get("map")?;
             leaves.extend(source_map_leaves(map)?);
         }

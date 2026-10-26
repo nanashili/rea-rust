@@ -52,9 +52,9 @@ impl<'a> ResolveRequest<'a> {
     /// The request in the TypeScript input field names, for recorded replay.
     pub fn to_json(&self) -> Json {
         let mut object = Obj::new()
-            .with("declaredPath", Json::String(self.declared_path.clone()))
-            .with("sourcePath", Json::String(self.source_path.clone()))
-            .with("context", Json::String(self.context.clone()));
+            .with_static("declaredPath", Json::String(self.declared_path.clone()))
+            .with_static("sourcePath", Json::String(self.source_path.clone()))
+            .with_static("context", Json::String(self.context.clone()));
         if let Some(base) = &self.html_base_href {
             object.set("htmlBaseHref", base.clone());
         }
@@ -97,24 +97,26 @@ pub fn resolution_properties(resolution: Option<&Json>) -> Obj {
             .iter()
             .map(|branch| {
                 let mut value = Obj::new()
-                    .with("mode", branch.at("mode").clone())
-                    .with("resolution_status", branch.at("resolution_status").clone())
-                    .with("resolved_path", branch.at("resolved_path").clone())
-                    .with("limitations", branch.at("limitations").clone());
+                    .with_static("mode", branch.at("mode").clone())
+                    .with_static("resolution_status", branch.at("resolution_status").clone())
+                    .with_static("resolved_path", branch.at("resolved_path").clone())
+                    .with_static("limitations", branch.at("limitations").clone());
                 if let Some(candidate) = branch.get("candidate_path") {
                     value.set("candidate_path", candidate.clone());
                 }
                 Json::from(value)
             })
             .collect();
-        properties.set("conditional_resolutions", Json::Array(branches));
+        properties.set("conditional_resolutions", Json::array(branches));
     }
     properties
 }
 
 /// `moduleResolutionModeProperties`.
 pub fn resolution_mode_properties(mode: Option<&str>) -> Obj {
-    mode.map_or_else(Obj::new, |mode| Obj::new().with("resolution_mode", mode))
+    mode.map_or_else(Obj::new, |mode| {
+        Obj::new().with_static("resolution_mode", mode)
+    })
 }
 
 /// Resolution limitations as owned strings.

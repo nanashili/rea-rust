@@ -97,7 +97,7 @@ pub fn normalize_evidence(evidence: &Json) -> Json {
     let mut coverage = evidence.at("coverage").obj();
     coverage.set(
         "limits",
-        Json::Array(normalize_limits(evidence.at("coverage").at("limits").arr())),
+        Json::array(normalize_limits(evidence.at("coverage").at("limits").arr())),
     );
     object.set("coverage", coverage);
     object.set("limitations", sorted_strings(evidence.at("limitations")));
@@ -117,22 +117,22 @@ fn normalize_identity(identity: &Json) -> Json {
 /// `jag_node_` identifier for one kind and identity.
 pub fn node_id(kind: &str, identity: &Json) -> String {
     let semantic = Obj::new()
-        .with("kind", kind)
-        .with("identity", identity.clone());
+        .with_static("kind", kind)
+        .with_static("identity", identity.clone());
     format!("jag_node_{}", Json::from(semantic).digest())
 }
 
 fn observation_strategy() -> Json {
     Obj::new()
-        .with("strategy", "semantic-content-sha256")
-        .with("stability", "observation-exact")
+        .with_static("strategy", "semantic-content-sha256")
+        .with_static("stability", "observation-exact")
         .into()
 }
 
 fn edge_strategy() -> Json {
     Obj::new()
-        .with("strategy", "semantic-content-sha256")
-        .with("stability", "relationship-exact")
+        .with_static("strategy", "semantic-content-sha256")
+        .with_static("stability", "relationship-exact")
         .into()
 }
 
@@ -154,15 +154,15 @@ pub fn create_node(input: NodeInput) -> CreatedNode {
         .map(|observation| {
             let label = observation.label.map(Json::String).unwrap_or(Json::Null);
             let semantic = Obj::new()
-                .with("label", label)
-                .with("source_map_reference", observation.source_map_reference)
-                .with("properties", observation.properties)
-                .with("evidence", normalize_evidence(&observation.evidence))
-                .with("identifier_strategy", observation_strategy());
-            let mut hashed = Obj::new().with("node_id", identifier.as_str());
+                .with_static("label", label)
+                .with_static("source_map_reference", observation.source_map_reference)
+                .with_static("properties", observation.properties)
+                .with_static("evidence", normalize_evidence(&observation.evidence))
+                .with_static("identifier_strategy", observation_strategy());
+            let mut hashed = Obj::new().with_static("node_id", identifier.as_str());
             hashed.extend_from(&semantic);
             let id = format!("jag_observation_{}", Json::from(hashed).digest());
-            Json::from(semantic.with("observation_id", id))
+            Json::from(semantic.with_static("observation_id", id))
         })
         .collect();
     observations.sort_by(|left, right| {
@@ -198,14 +198,14 @@ pub struct EdgeInput {
 /// `createJavaScriptApplicationEdge`.
 pub fn create_edge(input: EdgeInput) -> Json {
     let semantic = Obj::new()
-        .with("source_node_id", input.source)
-        .with("target_node_id", input.target)
-        .with("relation", input.relation)
-        .with("properties", input.properties)
-        .with("evidence", normalize_evidence(&input.evidence))
-        .with("identifier_strategy", edge_strategy());
+        .with_static("source_node_id", input.source)
+        .with_static("target_node_id", input.target)
+        .with_static("relation", input.relation)
+        .with_static("properties", input.properties)
+        .with_static("evidence", normalize_evidence(&input.evidence))
+        .with_static("identifier_strategy", edge_strategy());
     let id = format!("jag_edge_{}", Json::from(semantic.clone()).digest());
-    semantic.with("edge_id", id).into()
+    semantic.with_static("edge_id", id).into()
 }
 
 struct AccumulatedNode {
@@ -314,10 +314,10 @@ impl Accumulator {
             }
             records.push(
                 Obj::new()
-                    .with("node_id", entry.node.node_id.as_str())
-                    .with("kind", entry.node.kind.as_str())
-                    .with("identity", entry.node.identity.clone())
-                    .with("observations", Json::Array(entry.observations.clone()))
+                    .with_static("node_id", entry.node.node_id.as_str())
+                    .with_static("kind", entry.node.kind.as_str())
+                    .with_static("identity", entry.node.identity.clone())
+                    .with_static("observations", Json::array(entry.observations.clone()))
                     .into(),
             );
         }
@@ -361,21 +361,21 @@ pub fn seal_graph(input: GraphInput) -> Json {
     let mut coverage = input.coverage.obj();
     coverage.set(
         "limits",
-        Json::Array(normalize_limits(input.coverage.at("limits").arr())),
+        Json::array(normalize_limits(input.coverage.at("limits").arr())),
     );
     let content = Obj::new()
-        .with("schema", "JavaScriptApplicationGraph")
-        .with(
+        .with_static("schema", "JavaScriptApplicationGraph")
+        .with_static(
             "root_node_ids",
             super::json::strings(unique_sorted(input.root_node_ids)),
         )
-        .with("nodes", Json::Array(nodes))
-        .with("edges", Json::Array(edges))
-        .with("coverage", coverage)
-        .with(
+        .with_static("nodes", Json::array(nodes))
+        .with_static("edges", Json::array(edges))
+        .with_static("coverage", coverage)
+        .with_static(
             "limitations",
             super::json::strings(unique_sorted(input.limitations)),
         );
     let id = format!("jag_{}", Json::from(content.clone()).digest());
-    content.with("graph_id", id).into()
+    content.with_static("graph_id", id).into()
 }

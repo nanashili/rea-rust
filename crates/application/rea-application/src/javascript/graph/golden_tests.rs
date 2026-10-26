@@ -12,9 +12,173 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use super::super::semantic::value_types::JsString;
-use super::json::{Json, parse};
+use super::json::{Json, Obj, parse};
 use super::resolution::{ArtifactPathResolver, ResolveRequest};
 use super::{SemanticGraphProjection, SemanticLimits, build_application_graph, project_file};
+
+#[test]
+fn project_file_preserves_raw_property_metadata_across_repeated_binding_ids() {
+    let property = Obj::new()
+        .with_static("name", 7.0)
+        .with_static("presence", Obj::new().with_static("raw", true))
+        .with_static(
+            "value",
+            Obj::new()
+                .with_static("status", "literal")
+                .with_static("value", 1.0),
+        );
+    let binding = Obj::new()
+        .with_static("bindingId", "binding-1")
+        .with_static("kind", "variable")
+        .with_static("name", "value")
+        .with_static(
+            "definitions",
+            Json::array(vec![Obj::new().with_static("location", Json::Null).into()]),
+        )
+        .with_static(
+            "value",
+            Obj::new()
+                .with_static("status", "object")
+                .with_static("properties", Json::array(vec![property.into()]))
+                .with_static("unknownProperties", false)
+                .with_static("omittedProperties", 0.0),
+        );
+    let repeated_binding = binding.clone().with_static(
+        "value",
+        Obj::new()
+            .with_static("status", "literal")
+            .with_static("value", 9.0),
+    );
+    let ir = Obj::new()
+        .with_static(
+            "bindings",
+            Json::array(vec![binding.into(), repeated_binding.into()]),
+        )
+        .into();
+    let file = Obj::new()
+        .with_static("path", "fixture.js")
+        .with_static("sha256", "fixture-sha")
+        .into();
+
+    let projection = project_file(&file, &ir, 100, 100, &[]).expect("projection succeeds");
+    let slot = projection
+        .at("nodes")
+        .arr()
+        .iter()
+        .find(|node| node.at("kind").str() == "property-slot")
+        .expect("property slot is projected");
+    let properties = slot.at("properties");
+
+    assert_eq!(properties.at("name").as_f64(), Some(7.0));
+    assert_eq!(properties.at("presence").at("raw").as_bool(), Some(true));
+}
+
+#[test]
+fn typed_projection_preserves_serialized_ir_at_admission_limits() {
+    use super::semantic_builder::project_file_view;
+    use super::semantic_ir_view::SemanticIrView;
+    use crate::javascript::semantic::analysis::analyze_source;
+
+    let source = r#"
+        function target(value) { return value; }
+        function caller(input) {
+            const result = target(input);
+            return input[result];
+        }
+        caller({ key: 1 });
+    "#;
+    let ir = analyze_source(source, Some("fixture.js")).expect("valid source");
+    let serialized =
+        parse(&serde_json::to_string(&ir).expect("serializable IR")).expect("valid serialized IR");
+    let typed = SemanticIrView::from_typed(ir);
+    let file = Obj::new()
+        .with_static("path", "fixture.js")
+        .with_static("sha256", "fixture-sha")
+        .into();
+
+    for (nodes, unknowns) in [(200, 200), (8, 1), (1, 0)] {
+        let expected = project_file(&file, &serialized, nodes, unknowns, &[])
+            .expect("serialized projection succeeds");
+        let projected = project_file_view(&file, &typed, nodes, unknowns, &[])
+            .expect("typed projection succeeds");
+
+        assert_eq!(
+            projected.canonical(),
+            expected.canonical(),
+            "typed and serialized facts must agree at capacities {nodes}/{unknowns}"
+        );
+    }
+}
+
+#[test]
+fn project_file_preserves_arguments_and_resolution_across_repeated_call_site_ids() {
+    let ir = parse(
+        r#"{
+            "bindings": [{"bindingId":"result","kind":"variable","name":"result"}],
+            "callResultFlows": [{"callSiteId":"shared","bindingId":"result"}],
+            "callSites": [
+                {"callSiteId":"shared", "kind":"call", "resolution":"exact",
+                 "location":{"start":{"line":1,"column":0},"end":{"line":1,"column":10}},
+                 "arguments":[{"index":0,"location":{"start":{"line":1,"column":2},"end":{"line":1,"column":3}}}]},
+                {"callSiteId":"shared", "kind":"call", "resolution":"candidate",
+                 "location":{"start":{"line":2,"column":0},"end":{"line":2,"column":10}},
+                 "arguments":[{"index":0,"spread":true,"location":{"start":{"line":2,"column":2},"end":{"line":2,"column":3}}}]}
+            ]
+        }"#,
+    )
+    .expect("valid permissive IR");
+    let file = Obj::new()
+        .with_static("path", "fixture.js")
+        .with_static("sha256", "fixture-sha")
+        .into();
+
+    let projection = project_file(&file, &ir, 100, 100, &[]).expect("projection succeeds");
+    let arguments: Vec<&Json> = projection
+        .at("nodes")
+        .arr()
+        .iter()
+        .filter(|node| node.at("identity").at("role_key").str() == "argument:shared:0")
+        .collect();
+
+    assert_eq!(arguments.len(), 2);
+    assert_eq!(arguments[0].at("label").str(), "argument 0");
+    assert_eq!(arguments[1].at("label").str(), "spread argument");
+    assert_eq!(
+        arguments[0]
+            .at("identity")
+            .at("source_range")
+            .at("start")
+            .at("line")
+            .num(),
+        1.0
+    );
+    assert_eq!(
+        arguments[1]
+            .at("identity")
+            .at("source_range")
+            .at("start")
+            .at("line")
+            .num(),
+        2.0
+    );
+
+    let last_call = projection
+        .at("nodes")
+        .arr()
+        .iter()
+        .filter(|node| node.at("kind").str() == "call-site")
+        .next_back()
+        .expect("the repeated call site remains a retained node");
+    let result_flow = projection
+        .at("relations")
+        .arr()
+        .iter()
+        .find(|relation| relation.at("relation").str() == "aliases")
+        .expect("the call result reaches its binding");
+
+    assert_eq!(result_flow.at("source_node_id"), last_call.at("node_id"));
+    assert_eq!(result_flow.at("resolution").str(), "candidate");
+}
 
 /// Replays the resolution owner's recorded results in call order per request.
 struct RecordedResolver {
@@ -120,7 +284,7 @@ fn first_difference(left: &Json, right: &Json, path: &str) -> Option<String> {
                 .map(|(key, _)| format!("{path}.{key}: missing on Rust side"))
         }
         (Json::Array(a), Json::Array(b)) => {
-            for (index, (x, y)) in a.iter().zip(b).enumerate() {
+            for (index, (x, y)) in a.iter().zip(b.iter()).enumerate() {
                 if let Some(found) = first_difference(x, y, &format!("{path}[{index}]")) {
                     return Some(found);
                 }

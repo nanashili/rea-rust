@@ -170,13 +170,13 @@ fn observation_identity(context: &GraphContext<'_>, scope: &str, key: &JsString)
     // graph values continue to retain the original `JsString`.
     let hash_key = String::from_utf16_lossy(key.units());
     Obj::new()
-        .with("strategy", "observation-fingerprint")
-        .with("stability", "observation-only")
-        .with(
+        .with_static("strategy", "observation-fingerprint")
+        .with_static("stability", "observation-only")
+        .with_static(
             "observation_sha256",
             sha256_text(&format!("{}\0{scope}\0{hash_key}", context.root_sha256())),
         )
-        .with("scope", scope)
+        .with_static("scope", scope)
         .into()
 }
 
@@ -304,15 +304,15 @@ fn add_browser_window(
     let location = value.at("location");
     let key = range_key(location);
     let mut properties = Obj::new()
-        .with("source_path", Json::String(path.clone()))
-        .with("options_status", value.at("options_status").clone())
-        .with(
+        .with_static("source_path", Json::String(path.clone()))
+        .with_static("options_status", value.at("options_status").clone())
+        .with_static(
             "web_preferences_status",
             value.at("web_preferences_status").clone(),
         )
-        .with("web_preferences", value.at("web_preferences").clone())
-        .with("preload_path", value.at("preload_path").clone())
-        .with(
+        .with_static("web_preferences", value.at("web_preferences").clone())
+        .with_static("preload_path", value.at("preload_path").clone())
+        .with_static(
             "preload_resolution_context",
             value.at("preload_resolution_context").clone(),
         );
@@ -320,12 +320,13 @@ fn add_browser_window(
     if let Some(sources) = resolved_sources {
         properties.set(
             "resolution_sources",
-            Json::Array(
+            Json::array(
                 sources
                     .arr()
                     .iter()
                     .map(|location| {
-                        let mut entry = Obj::new().with("source", Json::String(path.clone()));
+                        let mut entry =
+                            Obj::new().with_static("source", Json::String(path.clone()));
                         entry.extend_from(&location.obj());
                         Json::from(entry)
                     })
@@ -372,7 +373,7 @@ fn add_browser_window(
             coverage,
             relation: "contains",
             operation: "locate-browser-window-construction",
-            properties: Obj::new().with("source_path", Json::String(path.clone())),
+            properties: Obj::new().with_static("source_path", Json::String(path.clone())),
             confidence: None,
             limitations: None,
         },
@@ -400,17 +401,17 @@ fn add_browser_window(
         },
     );
     let mut properties = Obj::new()
-        .with("declared_path", Json::String(declared.clone()))
-        .with(
+        .with_static("declared_path", Json::String(declared.clone()))
+        .with_static(
             "resolution_context",
             resolution.at("resolution_context").clone(),
         )
-        .with("resolved_path", resolution.at("resolved_path").clone())
-        .with(
+        .with_static("resolved_path", resolution.at("resolved_path").clone())
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         )
-        .with("limitations", resolution.at("limitations").clone());
+        .with_static("limitations", resolution.at("limitations").clone());
     properties.extend_from(&resolution_properties(Some(&resolution)));
     add_edge(
         context,
@@ -455,14 +456,14 @@ fn add_context_bridge(
         .cloned()
         .unwrap_or_else(|| JsString::from("[missing]"));
     let properties = Obj::new()
-        .with("world", value.at("world").clone())
-        .with("world_id", value.at("world_id").clone())
-        .with("api_key", value.at("api_key").clone())
-        .with("api_key_expression", value.at("api_key_expression").clone())
-        .with("api_status", value.at("api_status").clone())
-        .with("members", value.at("members").clone())
-        .with("unknown_members", value.at("unknown_members").clone())
-        .with(
+        .with_static("world", value.at("world").clone())
+        .with_static("world_id", value.at("world_id").clone())
+        .with_static("api_key", value.at("api_key").clone())
+        .with_static("api_key_expression", value.at("api_key_expression").clone())
+        .with_static("api_status", value.at("api_status").clone())
+        .with_static("members", value.at("members").clone())
+        .with_static("unknown_members", value.at("unknown_members").clone())
+        .with_static(
             "resolution_basis",
             value
                 .get("resolution_basis")
@@ -509,9 +510,9 @@ fn add_context_bridge(
             relation: "exposes",
             operation: "map-context-bridge-exposure",
             properties: Obj::new()
-                .with("world", value.at("world").clone())
-                .with("api_key", value.at("api_key").clone())
-                .with(
+                .with_static("world", value.at("world").clone())
+                .with_static("api_key", value.at("api_key").clone())
+                .with_static(
                     "resolution",
                     if value.at("api_key").is_null() {
                         "dynamic"
@@ -546,13 +547,13 @@ fn add_utility_process(
         context.resolve(&request)
     });
     let mut resolution_props = Obj::new()
-        .with(
+        .with_static(
             "resolved_path",
             resolution
                 .as_ref()
                 .map_or(Json::Null, |r| r.at("resolved_path").clone()),
         )
-        .with(
+        .with_static(
             "resolution_status",
             resolution
                 .as_ref()
@@ -573,13 +574,13 @@ fn add_utility_process(
     let mut observations = vec![ObservationInput::new_js(
         label,
         Obj::new()
-            .with("module_path", value.at("module_path").clone())
-            .with(
+            .with_static("module_path", value.at("module_path").clone())
+            .with_static(
                 "module_resolution_context",
                 value.at("module_resolution_context").clone(),
             )
-            .with("module_expression", value.at("module_expression").clone())
-            .with("service_name", value.at("service_name").clone()),
+            .with_static("module_expression", value.at("module_expression").clone())
+            .with_static("service_name", value.at("service_name").clone()),
         ast_observation(
             &EvidenceInput::new(sha, &path, "observe-utility-process-fork", coverage.clone())
                 .range(location),
@@ -615,8 +616,8 @@ fn add_utility_process(
         observations,
     });
     let mut properties = Obj::new()
-        .with("declared_path", value.at("module_path").clone())
-        .with("expression", value.at("module_expression").clone());
+        .with_static("declared_path", value.at("module_path").clone())
+        .with_static("expression", value.at("module_expression").clone());
     properties.extend_from(&resolution_props);
     add_edge(
         context,
@@ -656,13 +657,13 @@ fn add_utility_process(
         return;
     };
     let mut properties = Obj::new()
-        .with("declared_path", Json::String(declared.clone()))
-        .with(
+        .with_static("declared_path", Json::String(declared.clone()))
+        .with_static(
             "resolution_context",
             resolution.at("resolution_context").clone(),
         )
-        .with("resolved_path", Json::String(resolved_js.clone()))
-        .with(
+        .with_static("resolved_path", Json::String(resolved_js.clone()))
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         );
@@ -732,14 +733,14 @@ fn add_ipc_boundaries(context: &mut GraphContext<'_>) {
                 relation: if mode == "invoke" { "invokes" } else { "sends" },
                 operation: "map-ipc-transmission",
                 properties: Obj::new()
-                    .with("side", finding.at("side").clone())
-                    .with("operation", finding.at("operation").clone())
-                    .with("channel", finding.at("channel").clone())
-                    .with(
+                    .with_static("side", finding.at("side").clone())
+                    .with_static("operation", finding.at("operation").clone())
+                    .with_static("channel", finding.at("channel").clone())
+                    .with_static(
                         "channel_expression",
                         finding.at("channel_expression").clone(),
                     )
-                    .with(
+                    .with_static(
                         "resolution",
                         if finding.at("channel").is_null() {
                             "dynamic"
@@ -789,11 +790,11 @@ fn add_ipc_boundaries(context: &mut GraphContext<'_>) {
             let Some(target) = target else { continue };
             let path = file.at("path").text().clone();
             let properties = Obj::new()
-                .with("fact_kind", "sender-validation-candidate")
-                .with("subject", validation.at("subject").clone())
-                .with("mechanism", validation.at("mechanism").clone())
-                .with("expected", validation.at("expected").clone())
-                .with("enforcement", validation.at("enforcement").clone());
+                .with_static("fact_kind", "sender-validation-candidate")
+                .with_static("subject", validation.at("subject").clone())
+                .with_static("mechanism", validation.at("mechanism").clone())
+                .with_static("expected", validation.at("expected").clone())
+                .with_static("enforcement", validation.at("enforcement").clone());
             let evidence = ast_observation(
                 &EvidenceInput::new(file.at("sha256").str(), &path, "observe-ipc-sender-validation-candidate", coverage.clone())
                     .range(validation.at("location"))
@@ -839,10 +840,10 @@ fn add_ipc_boundaries(context: &mut GraphContext<'_>) {
                 },
                 operation: "pair-ipc-literal-channel",
                 properties: Obj::new()
-                    .with("channel", transmission.finding.at("channel").clone())
-                    .with("pairing_basis", "unique-exact-literal-channel")
-                    .with("handler_path", handler.file.at("path").clone())
-                    .with("handler_operation", handler.finding.at("operation").clone()),
+                    .with_static("channel", transmission.finding.at("channel").clone())
+                    .with_static("pairing_basis", "unique-exact-literal-channel")
+                    .with_static("handler_path", handler.file.at("path").clone())
+                    .with_static("handler_operation", handler.finding.at("operation").clone()),
                 confidence: None,
                 limitations: Some(vec![JsString::from(
                     "Literal channel equality does not prove that the handler is registered or reachable at runtime.",
@@ -887,15 +888,15 @@ fn add_channel_node(
         observation_identity(context, "electron-ipc-channel", &identity_key)
     };
     let mut properties = Obj::new()
-        .with("side", finding.at("side").clone())
-        .with("operation", finding.at("operation").clone())
-        .with("mode", finding.at("mode").clone())
-        .with("channel", finding.at("channel").clone())
-        .with(
+        .with_static("side", finding.at("side").clone())
+        .with_static("operation", finding.at("operation").clone())
+        .with_static("mode", finding.at("mode").clone())
+        .with_static("channel", finding.at("channel").clone())
+        .with_static(
             "channel_expression",
             finding.at("channel_expression").clone(),
         )
-        .with(
+        .with_static(
             "resolution",
             if finding.at("channel").is_null() {
                 "dynamic"
@@ -963,16 +964,16 @@ fn add_handler_node(
         .cloned()
         .unwrap_or_default();
     let mut properties = Obj::new()
-        .with("side", finding.at("side").clone())
-        .with("operation", finding.at("operation").clone())
-        .with("mode", finding.at("mode").clone())
-        .with("channel", finding.at("channel").clone())
-        .with(
+        .with_static("side", finding.at("side").clone())
+        .with_static("operation", finding.at("operation").clone())
+        .with_static("mode", finding.at("mode").clone())
+        .with_static("channel", finding.at("channel").clone())
+        .with_static(
             "channel_expression",
             finding.at("channel_expression").clone(),
         )
-        .with("handler_kind", finding.at("handler_kind").clone())
-        .with("handler_location", finding.at("handler_location").clone());
+        .with_static("handler_kind", finding.at("handler_kind").clone())
+        .with_static("handler_location", finding.at("handler_location").clone());
     if let Some(invocation) = finding.get("invocation_location") {
         properties.set("invocation_location", invocation.clone());
     }
@@ -1021,20 +1022,20 @@ fn add_handler_node(
             relation: "contains",
             operation: "locate-ipc-handler",
             properties: Obj::new()
-                .with("side", finding.at("side").clone())
-                .with("operation", finding.at("operation").clone()),
+                .with_static("side", finding.at("side").clone())
+                .with_static("operation", finding.at("operation").clone()),
             confidence: None,
             limitations: None,
         },
         true,
     );
     let mut properties = Obj::new()
-        .with("channel", finding.at("channel").clone())
-        .with(
+        .with_static("channel", finding.at("channel").clone())
+        .with_static(
             "channel_expression",
             finding.at("channel_expression").clone(),
         )
-        .with(
+        .with_static(
             "resolution",
             if finding.at("channel").is_null() {
                 "dynamic"
@@ -1141,13 +1142,13 @@ fn add_native_binding(context: &mut GraphContext<'_>, file: &Json, value: &Json,
         observations: vec![ObservationInput::new_js(
             Some(label),
             Obj::new()
-                .with("specifier", Json::String(specifier_js.clone()))
-                .with("binding_kind", value.at("binding_kind").clone())
-                .with("requested_members", members.clone())
-                .with("namespace_access", namespace.clone())
-                .with("dynamic_member_access", dynamic.clone())
-                .with("resolved_path", Json::String(resolved_js.clone()))
-                .with("native_export_verification", "not-performed"),
+                .with_static("specifier", Json::String(specifier_js.clone()))
+                .with_static("binding_kind", value.at("binding_kind").clone())
+                .with_static("requested_members", members.clone())
+                .with_static("namespace_access", namespace.clone())
+                .with_static("dynamic_member_access", dynamic.clone())
+                .with_static("resolved_path", Json::String(resolved_js.clone()))
+                .with_static("native_export_verification", "not-performed"),
             ast_observation(
                 &EvidenceInput::new(file.at("sha256").str(), &path_js, "observe-native-addon-binding", coverage.clone())
                     .range(value.at("location"))
@@ -1170,11 +1171,11 @@ fn add_native_binding(context: &mut GraphContext<'_>, file: &Json, value: &Json,
             },
             operation: "map-native-addon-binding",
             properties: Obj::new()
-                .with("specifier", Json::String(specifier_js.clone()))
-                .with("binding_kind", value.at("binding_kind").clone())
-                .with("requested_members", members.clone())
-                .with("namespace_access", namespace.clone())
-                .with("dynamic_member_access", dynamic.clone()),
+                .with_static("specifier", Json::String(specifier_js.clone()))
+                .with_static("binding_kind", value.at("binding_kind").clone())
+                .with_static("requested_members", members.clone())
+                .with_static("namespace_access", namespace.clone())
+                .with_static("dynamic_member_access", dynamic.clone()),
             confidence: None,
             limitations: Some(vec![JsString::from(
                 "Requested JavaScript members are not verified native exports.",
@@ -1196,11 +1197,11 @@ fn add_native_binding(context: &mut GraphContext<'_>, file: &Json, value: &Json,
             relation: "exposes",
             operation: "associate-native-addon-requested-exports",
             properties: Obj::new()
-                .with("resolved_path", Json::String(resolved_js.clone()))
-                .with("requested_members", members.clone())
-                .with("namespace_access", namespace)
-                .with("dynamic_member_access", dynamic)
-                .with("verified", false),
+                .with_static("resolved_path", Json::String(resolved_js.clone()))
+                .with_static("requested_members", members.clone())
+                .with_static("namespace_access", namespace)
+                .with_static("dynamic_member_access", dynamic)
+                .with_static("verified", false),
             confidence: Some("medium"),
             limitations: Some(vec![JsString::from(
                 "The .node artifact path is resolved, but requested JavaScript members have not been verified against native symbols.",
@@ -1237,8 +1238,8 @@ fn add_call_paths(context: &mut GraphContext<'_>) {
                 .enumerate()
                 .map(|(index, step)| {
                     let mut properties = Obj::new()
-                        .with("path_id", path_id.as_str())
-                        .with("entry", path.at("entry").clone());
+                        .with_static("path_id", path_id.as_str())
+                        .with_static("entry", path.at("entry").clone());
                     if let Some(entry_path) = &entry_path {
                         properties.set("entry_path", entry_path.clone());
                     }
@@ -1284,8 +1285,8 @@ fn add_call_paths(context: &mut GraphContext<'_>) {
                 if let Some(owner) = finding_source(context, file, entry.at("module_key"), runtime)
                 {
                     let mut properties = Obj::new()
-                        .with("path_id", path_id.as_str())
-                        .with("entry", path.at("entry").clone());
+                        .with_static("path_id", path_id.as_str())
+                        .with_static("entry", path.at("entry").clone());
                     if let Some(entry_path) = &entry_path {
                         properties.set("entry_path", entry_path.clone());
                     }
@@ -1312,8 +1313,8 @@ fn add_call_paths(context: &mut GraphContext<'_>) {
                 let previous = &steps[index - 1];
                 let step = &steps[index];
                 let mut properties = Obj::new()
-                    .with("path_id", path_id.as_str())
-                    .with("entry", path.at("entry").clone());
+                    .with_static("path_id", path_id.as_str())
+                    .with_static("entry", path.at("entry").clone());
                 if let Some(entry_path) = &entry_path {
                     properties.set("entry_path", entry_path.clone());
                 }
@@ -1387,12 +1388,12 @@ fn add_call_paths(context: &mut GraphContext<'_>) {
                         },
                         operation: "join-electron-wrapper-paths",
                         properties: Obj::new()
-                            .with("channel", transmission.finding.at("channel").clone())
-                            .with("pairing_basis", "unique-exact-literal-channel")
-                            .with("resolution", "candidate")
-                            .with("handler_path", to.file.at("path").clone())
-                            .with("bridge_conditions", from.path.at("conditions").clone())
-                            .with("handler_conditions", to.path.at("conditions").clone()),
+                            .with_static("channel", transmission.finding.at("channel").clone())
+                            .with_static("pairing_basis", "unique-exact-literal-channel")
+                            .with_static("resolution", "candidate")
+                            .with_static("handler_path", to.file.at("path").clone())
+                            .with_static("bridge_conditions", from.path.at("conditions").clone())
+                            .with_static("handler_conditions", to.path.at("conditions").clone()),
                         confidence: None,
                         limitations: Some(vec![JsString::from(
                             "The unique static channel match does not establish runtime registration, sender acceptance, or dispatch.",

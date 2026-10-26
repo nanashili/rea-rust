@@ -39,14 +39,12 @@ pub mod fingerprint;
 pub mod graphql;
 pub mod helpers;
 pub mod interop;
-pub mod parents;
 pub mod rpc;
 pub mod semantics;
 pub mod state;
 mod symbolic_reads;
 pub mod web;
 
-pub use parents::ParentMap;
 pub use semantics::{BindingFacts, SemanticReference, StableInitializer, StaticSemantics};
 
 #[cfg(test)]
