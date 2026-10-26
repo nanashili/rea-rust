@@ -40,6 +40,7 @@ use super::state::ResolutionMode;
 struct PrimaryPhase<'a> {
     internal_callables: Vec<super::projection::SemanticCallable>,
     scopes: Vec<crate::javascript::contracts::semantic_ir::SemanticScope>,
+    bindings: Vec<crate::javascript::contracts::semantic_ir::SemanticBinding>,
     references: Vec<SemanticReference>,
     links: CollectedModuleLinks<'a>,
 }
@@ -242,8 +243,6 @@ pub(crate) fn analyze_prepared_source_with_checkpoint<'a, B>(
         parser_partial,
         &mut checkpoint,
     )?;
-    let bindings = immutable_bindings(state);
-    checkpoint()?;
 
     let mut resource_limits = state.getter_resource_limits.borrow().clone();
     resource_limits.extend(state.value_resource_limits.borrow().iter().cloned());
@@ -266,7 +265,7 @@ pub(crate) fn analyze_prepared_source_with_checkpoint<'a, B>(
     ControlFlow::Continue(Ok(SemanticIr {
         schema: "JavaScriptSemanticIR".to_owned(),
         scopes: primary.scopes,
-        bindings,
+        bindings: primary.bindings,
         callables: callable_phase.callables,
         references: primary.references,
         module_links: callable_phase.module_links,
@@ -324,12 +323,14 @@ fn collect_primary_projection_phase<'a, B>(
             },
         )
         .collect();
+    let bindings = immutable_bindings(state);
     let references = project_references(internal_references);
     checkpoint()?;
 
     ControlFlow::Continue(PrimaryPhase {
         internal_callables,
         scopes,
+        bindings,
         references,
         links,
     })
