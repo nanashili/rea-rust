@@ -169,17 +169,114 @@ impl SemanticIrView {
         }
     }
 
-    /// Iterate over callable identity, location, and return-site metadata.
-    /// Return values remain in the typed producer; only linked callables need
-    /// their complete return facts converted for module metadata.
-    pub(crate) fn callable_headers(&self) -> Box<dyn ExactSizeIterator<Item = Json> + '_> {
+    /// Iterate over callable identities without expanding their return sites.
+    pub(crate) fn callable_identities(&self) -> Box<dyn ExactSizeIterator<Item = Json> + '_> {
         match &self.backing {
             SemanticBacking::Serialized(ir) => Box::new(ir.at("callables").arr().iter().cloned()),
             SemanticBacking::Typed(ir) => Box::new(
                 ir.callables
                     .iter()
-                    .map(|callable| self.callable_header(callable)),
+                    .map(|callable| self.callable_identity(callable)),
             ),
+        }
+    }
+
+    /// Select producer positions before converting binding metadata. Positions
+    /// preserve the distinct facts of repeated IDs in permissive JSON input.
+    pub(crate) fn binding_indices_matching(&self, matches: impl Fn(&str) -> bool) -> Vec<usize> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .bindings
+                .iter()
+                .enumerate()
+                .filter_map(|(index, binding)| matches(&binding.binding_id).then_some(index))
+                .collect(),
+            SemanticBacking::Serialized(ir) => ir
+                .at("bindings")
+                .arr()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, binding)| {
+                    matches(binding.at("bindingId").str()).then_some(index)
+                })
+                .collect(),
+        }
+    }
+
+    pub(crate) fn binding_header_at(&self, index: usize) -> Option<Json> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .bindings
+                .get(index)
+                .map(|binding| self.binding_header(binding)),
+            SemanticBacking::Serialized(ir) => ir.at("bindings").arr().get(index).cloned(),
+        }
+    }
+
+    /// Select retained callables before expanding their return-site metadata.
+    pub(crate) fn callable_indices_matching(&self, matches: impl Fn(&str) -> bool) -> Vec<usize> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .callables
+                .iter()
+                .enumerate()
+                .filter_map(|(index, callable)| matches(&callable.callable_id).then_some(index))
+                .collect(),
+            SemanticBacking::Serialized(ir) => ir
+                .at("callables")
+                .arr()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, callable)| {
+                    matches(callable.at("callableId").str()).then_some(index)
+                })
+                .collect(),
+        }
+    }
+
+    pub(crate) fn callable_header_at(&self, index: usize) -> Option<Json> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .callables
+                .get(index)
+                .map(|callable| self.callable_header(callable)),
+            SemanticBacking::Serialized(ir) => ir.at("callables").arr().get(index).cloned(),
+        }
+    }
+
+    /// Return-site identity owns return-flow selection. A permissive JSON
+    /// caller can repeat a site ID across different callable records.
+    pub(crate) fn callable_indices_with_returns(
+        &self,
+        matches: impl Fn(&str) -> bool,
+    ) -> Vec<usize> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .callables
+                .iter()
+                .enumerate()
+                .filter_map(|(index, callable)| {
+                    callable
+                        .return_sites
+                        .iter()
+                        .any(|site| matches(&site.return_site_id))
+                        .then_some(index)
+                })
+                .collect(),
+            SemanticBacking::Serialized(ir) => ir
+                .at("callables")
+                .arr()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, callable)| {
+                    callable
+                        .at("returnSites")
+                        .arr()
+                        .iter()
+                        .any(|site| matches(site.at("returnSiteId").str()))
+                        .then_some(index)
+                })
+                .collect(),
         }
     }
 
@@ -344,12 +441,17 @@ impl SemanticIrView {
                 })
                 .collect(),
         );
+        let mut header = self.callable_identity(callable).obj();
+        header.set("returnSites", return_sites);
+        header.into()
+    }
+
+    fn callable_identity(&self, callable: &SemanticCallable) -> Json {
         Obj::new()
             .with_static("callableId", self.convert(&callable.callable_id))
             .with_static("kind", self.convert(&callable.kind))
             .with_static("name", self.convert(&callable.name))
             .with_static("location", self.convert(&callable.location))
-            .with_static("returnSites", return_sites)
             .into()
     }
 }

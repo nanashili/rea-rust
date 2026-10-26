@@ -91,7 +91,7 @@ impl CallableOwnerLookup {
     pub fn new(ir: &SemanticIrView) -> Self {
         let mut ids = Vec::new();
         let mut ranges = Vec::new();
-        for (order, callable) in ir.callable_headers().enumerate() {
+        for (order, callable) in ir.callable_identities().enumerate() {
             ids.push(callable.at("callableId").str().to_owned());
             ranges.push((range(callable.at("location")), order));
         }

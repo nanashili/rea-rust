@@ -420,9 +420,15 @@ const BINDING_LOOKUP_CACHE_ENTRY_OVERHEAD: usize = 64;
 #[derive(Debug, Default)]
 pub(crate) struct BindingLookupCache {
     enabled: bool,
-    entries: HashMap<Option<ScopeIndex>, HashMap<String, (Option<bool>, BindingLookup)>>,
+    entries: HashMap<Option<ScopeIndex>, HashMap<String, CachedBindingLookup>>,
     entry_count: usize,
     estimated_bytes: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CachedBindingLookup {
+    prototype_require_mutation_observed: Option<bool>,
+    result: BindingLookup,
 }
 
 impl BindingLookupCache {
@@ -446,8 +452,9 @@ impl BindingLookupCache {
             return None;
         }
         self.entries.get(&scope).and_then(|entries| {
-            entries.get(name).and_then(|(observed, result)| {
-                (*observed == prototype_require_mutation_observed).then_some(*result)
+            entries.get(name).and_then(|cached| {
+                (cached.prototype_require_mutation_observed == prototype_require_mutation_observed)
+                    .then_some(cached.result)
             })
         })
     }
@@ -464,10 +471,10 @@ impl BindingLookupCache {
         }
 
         if let Some(entries) = self.entries.get_mut(&scope)
-            && let Some((observed, cached_result)) = entries.get_mut(name)
+            && let Some(cached) = entries.get_mut(name)
         {
-            *observed = prototype_require_mutation_observed;
-            *cached_result = result;
+            cached.prototype_require_mutation_observed = prototype_require_mutation_observed;
+            cached.result = result;
             return;
         }
 
@@ -484,7 +491,10 @@ impl BindingLookupCache {
         let entries = self.entries.entry(scope).or_default();
         entries.insert(
             name.to_owned(),
-            (prototype_require_mutation_observed, result),
+            CachedBindingLookup {
+                prototype_require_mutation_observed,
+                result,
+            },
         );
         self.entry_count += 1;
         self.estimated_bytes = self.estimated_bytes.saturating_add(entry_bytes);

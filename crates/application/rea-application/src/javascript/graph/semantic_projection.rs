@@ -11,7 +11,7 @@ use super::leaves::{
 };
 use super::semantic_graph::{
     NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation, add_unknown,
-    inferred_evidence_at, observed_evidence, retain_node, unknown_evidence,
+    inferred_evidence_at, retain_node, unknown_evidence,
 };
 use super::semantic_ir_view::{BindingValueLookup, SemanticCollection, SemanticIrView};
 use super::semantic_lookup::{CallableOwnerLookup, NodeRangeLookup, range_key};
@@ -84,6 +84,18 @@ impl FileContext<'_> {
         retain_node(self.state, &self.file, spec)
     }
 
+    fn observed_evidence(&mut self, location: &Json) -> Json {
+        self.state.observed_evidence(&self.file, location)
+    }
+
+    fn inferred_evidence(&mut self, location: &Json) -> Json {
+        self.state.inferred_evidence(&self.file, location)
+    }
+
+    fn unknown_evidence(&mut self, location: &Json) -> Json {
+        self.state.unknown_evidence(&self.file, location)
+    }
+
     fn relate(
         &mut self,
         source: Option<&Json>,
@@ -131,7 +143,12 @@ fn owner_id(context: &FileContext<'_>, owner: &Json) -> Option<String> {
 /// `projectSemanticValues`.
 pub fn project_values(context: &mut FileContext<'_>) {
     let ir = context.ir.clone();
-    for (index, binding) in ir.binding_headers().enumerate() {
+    let retained_bindings =
+        ir.binding_indices_matching(|id| context.binding_nodes.contains_key(id));
+    for index in retained_bindings {
+        let Some(binding) = ir.binding_header_at(index) else {
+            continue;
+        };
         let binding_id = binding.at("bindingId");
         let Some(node) = context.binding(binding_id) else {
             continue;
@@ -215,7 +232,7 @@ fn project_value(
                         format!("; {} omitted", js_int(omitted.num()))
                     }
                 );
-                let evidence = unknown_evidence(&context.file, &location);
+                let evidence = context.unknown_evidence(&location);
                 let id = target.at("node_id").str().to_owned();
                 context.unknown(UnknownSpec {
                     node_id: Some(id.clone()),
@@ -229,7 +246,7 @@ fn project_value(
             }
         }
         "unknown" | "ambiguous" | "cycle" => {
-            let mut evidence = observed_evidence(&context.file, &location).obj();
+            let mut evidence = context.observed_evidence(&location).obj();
             evidence.set("authority", "unknown");
             evidence.set("state", "unknown");
             evidence.set("confidence", "unknown");
@@ -416,7 +433,7 @@ pub fn project_objects(context: &mut FileContext<'_>) {
                 .concat_str("; object identity is ")
                 .concat_str(operation.at("resolution").str())
                 .concat_str(".");
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(node.as_ref()),
                 family: "object-flow",
@@ -582,19 +599,27 @@ pub fn project_calls(context: &mut FileContext<'_>) {
 
 fn project_return_values(context: &mut FileContext<'_>) {
     let ir = context.ir.clone();
-    for callable in ir.callable_headers() {
+    let retained_callables =
+        ir.callable_indices_with_returns(|id| context.return_site_nodes.contains_key(id));
+    for index in retained_callables {
+        let Some(callable) = ir.callable_header_at(index) else {
+            continue;
+        };
         for site in callable.at("returnSites").arr() {
-            let return_node = context
+            let Some(return_node) = context
                 .return_site_nodes
                 .get(site.at("returnSiteId").str())
-                .cloned();
+                .cloned()
+            else {
+                continue;
+            };
             let identity = site.at("identityReferenceLocation");
             for reference in context.references_within(site.at("location")) {
                 let exact =
                     !identity.is_null() && reference.at("identity").at("source_range") == identity;
                 context.relate(
                     Some(&reference),
-                    return_node.as_ref(),
+                    Some(&return_node),
                     "aliases",
                     resolution(exact),
                 );
@@ -704,7 +729,7 @@ pub fn project_promises(context: &mut FileContext<'_>) {
                 .iter()
                 .filter_map(|id| node_id(nodes.get(id.str())))
                 .collect();
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(Some(&promise)),
                 family: "promise-ownership",
@@ -837,7 +862,7 @@ pub fn project_events(context: &mut FileContext<'_>) {
                     operation.at("method").str()
                 )
             };
-            let evidence = unknown_evidence(&context.file, operation.at("location"));
+            let evidence = context.unknown_evidence(operation.at("location"));
             context.unknown(UnknownSpec {
                 node_id: node_id(Some(&event)),
                 family: "event",
@@ -916,7 +941,7 @@ pub fn project_timers(context: &mut FileContext<'_>) {
         if complete {
             continue;
         }
-        let evidence = unknown_evidence(&context.file, operation.at("location"));
+        let evidence = context.unknown_evidence(operation.at("location"));
         context.unknown(UnknownSpec {
             node_id: node_id(call.as_ref()),
             family: "timer",
@@ -1109,7 +1134,7 @@ fn child_unknown(
     detail: String,
     candidates: Vec<String>,
 ) {
-    let evidence = unknown_evidence(&context.file, location);
+    let evidence = context.unknown_evidence(location);
     context.unknown(UnknownSpec {
         node_id: node_id(node),
         family: "child-process",
@@ -1150,7 +1175,7 @@ fn data_unknown(
     location: &Json,
     input: DataUnknown<'_>,
 ) {
-    let evidence = unknown_evidence(&context.file, location);
+    let evidence = context.unknown_evidence(location);
     context.unknown(UnknownSpec {
         node_id: node_id(Some(node)),
         family: input.family,
@@ -1460,7 +1485,7 @@ pub fn project_resources(context: &mut FileContext<'_>) {
         if complete {
             continue;
         }
-        let evidence = unknown_evidence(&context.file, operation.at("location"));
+        let evidence = context.unknown_evidence(operation.at("location"));
         context.unknown(UnknownSpec {
             node_id: node_id(call.as_ref()),
             family: "resource-lifecycle",
@@ -1489,10 +1514,7 @@ pub fn project_closure_captures(context: &mut FileContext<'_>) {
         let source = context.binding(capture.at("bindingId"));
         let target = context.callable(capture.at("callableId"));
         let mut spec = RelationSpec::new(source.as_ref(), target.as_ref(), "captures", "resolved");
-        spec.evidence = Some(inferred_evidence_at(
-            &context.file,
-            capture.at("referenceLocation"),
-        ));
+        spec.evidence = Some(context.inferred_evidence(capture.at("referenceLocation")));
         add_relation(context.state, spec);
     }
 }
@@ -1510,7 +1532,11 @@ pub fn project_frontiers(context: &mut FileContext<'_>) {
         let node = context
             .callable_node_id(frontier.at("callableId"))
             .unwrap_or_else(|| context.module_node.at("node_id").str().to_owned());
-        let evidence = unknown_evidence(&context.file, frontier.at("location"));
+        if context.state.unknown_capacity_reached() {
+            context.state.record_unknown_capacity_omission(family, kind);
+            continue;
+        }
+        let evidence = context.unknown_evidence(frontier.at("location"));
         context.unknown(UnknownSpec {
             node_id: Some(node),
             family,
@@ -1563,7 +1589,7 @@ pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
             .with_static("limitations", fingerprint.at("limitations").clone())
             .with_static(
                 "evidence",
-                observed_evidence(&context.file, callable.at("identity").at("source_range")),
+                context.observed_evidence(callable.at("identity").at("source_range")),
             );
         output.push(super::semantic_graph::create_fingerprint(
             context.state,

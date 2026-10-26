@@ -271,12 +271,150 @@ pub struct ProjectionState {
     pub unknown_omissions: OrderedFacts,
     /// Evidence contexts.
     pub evidence: EvidenceRegistry,
+    /// File-scoped immutable evidence fields reused by this projection.
+    pub evidence_template: Option<EvidenceTemplate>,
     /// Root node identifiers in insertion order.
     pub roots: Vec<String>,
     /// Remaining node budget for the current file.
     pub file_node_budget: Option<usize>,
     /// Whether the current file lost nodes to its budget.
     pub file_nodes_dropped: bool,
+}
+
+/// Immutable evidence fields shared by locations in one source file.
+#[derive(Clone)]
+pub struct EvidenceTemplate {
+    file_path: JsString,
+    file_key: (JsString, JsString),
+    base: Json,
+}
+
+impl EvidenceTemplate {
+    fn for_file(file: &Json) -> Self {
+        let path = file.at("path").text().clone();
+        let sha = file.at("sha256").str().to_owned();
+        let base = Obj::new()
+            .with_static("authority", "ast-static-analysis")
+            .with_static("state", "observed")
+            .with_static("confidence", "exact")
+            .with_static(
+                "artifact",
+                Obj::new()
+                    .with_static("available", true)
+                    .with_static("artifact_id", format!("art_{sha}"))
+                    .with_static("sha256", sha.as_str()),
+            )
+            .with_static("location", Json::Null)
+            .with_static(
+                "extractor",
+                Obj::new()
+                    .with_static("name", "rea-javascript-semantic-analysis")
+                    .with_static("version", "1")
+                    .with_static("operation", "analyze_javascript_application")
+                    .with_static("executable_sha256", Json::Null),
+            )
+            .with_static(
+                "coverage",
+                Obj::new()
+                    .with_static("status", "complete")
+                    .with_static("truncated", false)
+                    .with_static("omitted_count", 0.0)
+                    .with_static("limits", Json::array(Vec::new())),
+            )
+            .with_static("limitations", Json::array(Vec::new()))
+            .with_static("evidence_ids", Json::array(Vec::new()))
+            .into();
+        Self {
+            file_path: path.clone(),
+            file_key: (path, sha.into()),
+            base,
+        }
+    }
+
+    fn matches(&self, file: &Json) -> bool {
+        self.file_key.0 == file.at("path").text() && self.file_key.1 == file.at("sha256").str()
+    }
+
+    fn location(&self, location: &Json) -> Json {
+        if location.is_null() {
+            Obj::new()
+                .with_static("available", true)
+                .with_static(
+                    "value",
+                    Obj::new()
+                        .with_static("kind", "artifact-path")
+                        .with_static("path", self.file_path.clone()),
+                )
+                .into()
+        } else {
+            let mut value = Obj::new()
+                .with_static("kind", "source-range")
+                .with_static("source", self.file_path.clone());
+            value.extend_from(&location.obj());
+            Obj::new()
+                .with_static("available", true)
+                .with_static("value", value)
+                .into()
+        }
+    }
+
+    fn observed(&self, location: &Json) -> Json {
+        let mut evidence = self.base.obj();
+        evidence.set("location", self.location(location));
+        evidence.into()
+    }
+
+    fn unknown(&self, location: &Json) -> Json {
+        let mut evidence = self.observed(location).obj();
+        evidence.set("authority", "unknown");
+        evidence.set("state", "unknown");
+        evidence.set("confidence", "unknown");
+        evidence.set(
+            "limitations",
+            strings(["Dynamic syntax prevents an exact static relationship."]),
+        );
+        evidence.into()
+    }
+}
+
+impl ProjectionState {
+    pub fn unknown_capacity_reached(&self) -> bool {
+        self.unknown_capacity
+            .is_some_and(|capacity| self.unknowns.len() >= capacity)
+    }
+
+    pub fn record_unknown_capacity_omission(&mut self, family: &str, reason: &str) {
+        let omission = Obj::new()
+            .with_static("family", family)
+            .with_static("reason", reason)
+            .with_static("occurrences", 1.0);
+        record_unknown_omission(self, &omission.into());
+    }
+
+    fn template_for(&mut self, file: &Json) -> &EvidenceTemplate {
+        let replace = self
+            .evidence_template
+            .as_ref()
+            .is_none_or(|template| !template.matches(file));
+        if replace {
+            self.evidence_template = Some(EvidenceTemplate::for_file(file));
+        }
+        self.evidence_template
+            .as_ref()
+            .expect("evidence template was just installed")
+    }
+
+    pub fn observed_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file).observed(location)
+    }
+
+    pub fn inferred_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        inferred_evidence(&self.observed_evidence(file, location))
+    }
+
+    pub fn unknown_evidence(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file).unknown(location)
+    }
 }
 
 /// `SemanticNodeConstructionInput`.
@@ -297,55 +435,7 @@ pub struct NodeSpec<'a> {
 
 /// Semantic evidence for observed syntax (`observedSemanticEvidence`).
 pub fn observed_evidence(file: &Json, location: &Json) -> Json {
-    let path = file.at("path").text();
-    let sha = file.at("sha256").str();
-    let location = if location.is_null() {
-        Obj::new().with_static("available", true).with_static(
-            "value",
-            Obj::new()
-                .with_static("kind", "artifact-path")
-                .with_static("path", path),
-        )
-    } else {
-        let mut value = Obj::new()
-            .with_static("kind", "source-range")
-            .with_static("source", path);
-        value.extend_from(&location.obj());
-        Obj::new()
-            .with_static("available", true)
-            .with_static("value", value)
-    };
-    Obj::new()
-        .with_static("authority", "ast-static-analysis")
-        .with_static("state", "observed")
-        .with_static("confidence", "exact")
-        .with_static(
-            "artifact",
-            Obj::new()
-                .with_static("available", true)
-                .with_static("artifact_id", format!("art_{sha}"))
-                .with_static("sha256", sha),
-        )
-        .with_static("location", location)
-        .with_static(
-            "extractor",
-            Obj::new()
-                .with_static("name", "rea-javascript-semantic-analysis")
-                .with_static("version", "1")
-                .with_static("operation", "analyze_javascript_application")
-                .with_static("executable_sha256", Json::Null),
-        )
-        .with_static(
-            "coverage",
-            Obj::new()
-                .with_static("status", "complete")
-                .with_static("truncated", false)
-                .with_static("omitted_count", 0.0)
-                .with_static("limits", Json::array(Vec::new())),
-        )
-        .with_static("limitations", Json::array(Vec::new()))
-        .with_static("evidence_ids", Json::array(Vec::new()))
-        .into()
+    EvidenceTemplate::for_file(file).observed(location)
 }
 
 const INFERENCE_LIMITATION: &str = "This relationship is a conservative static candidate; it does not prove runtime execution or causal flow.";
@@ -367,15 +457,7 @@ pub fn inferred_evidence_at(file: &Json, location: &Json) -> Json {
 
 /// `unknownSemanticEvidence`.
 pub fn unknown_evidence(file: &Json, location: &Json) -> Json {
-    let mut object = observed_evidence(file, location).obj();
-    object.set("authority", "unknown");
-    object.set("state", "unknown");
-    object.set("confidence", "unknown");
-    object.set(
-        "limitations",
-        strings(["Dynamic syntax prevents an exact static relationship."]),
-    );
-    object.into()
+    EvidenceTemplate::for_file(file).unknown(location)
 }
 
 fn display_text(label: &JsString) -> JsString {
@@ -423,9 +505,8 @@ pub fn retain_node(state: &mut ProjectionState, file: &Json, spec: NodeSpec<'_>)
         state.file_nodes_dropped = true;
         return None;
     }
-    let evidence = state
-        .evidence
-        .intern(&observed_evidence(file, &spec.location));
+    let observed = state.observed_evidence(file, &spec.location);
+    let evidence = state.evidence.intern(&observed);
     let node: Json = Obj::new()
         .with_static("kind", spec.kind)
         .with_static("identity", identity)
@@ -538,14 +619,8 @@ pub struct UnknownSpec<'a> {
 
 /// `addSemanticGraphUnknown`.
 pub fn add_unknown(state: &mut ProjectionState, spec: UnknownSpec<'_>) {
-    if let Some(capacity) = state.unknown_capacity
-        && state.unknowns.len() >= capacity
-    {
-        let omission = Obj::new()
-            .with_static("family", spec.family)
-            .with_static("reason", spec.reason)
-            .with_static("occurrences", 1.0);
-        record_unknown_omission(state, &omission.into());
+    if state.unknown_capacity_reached() {
+        state.record_unknown_capacity_omission(spec.family, spec.reason);
         return;
     }
     let semantic = Obj::new()
@@ -867,13 +942,24 @@ mod tests {
     use super::super::super::semantic::value_types::JsString;
     use super::*;
 
+    fn test_file(path: JsString, sha: &str) -> Json {
+        Obj::new()
+            .with_static("path", path)
+            .with_static("sha256", sha)
+            .into()
+    }
+
+    fn test_location(start: f64, end: f64) -> Json {
+        Obj::new()
+            .with_static("start", start)
+            .with_static("end", end)
+            .into()
+    }
+
     #[test]
     fn observed_evidence_preserves_unpaired_path_units() {
         let path = JsString::from_utf16(vec![0x0061, 0xd800, 0x0062]);
-        let file: Json = Obj::new()
-            .with_static("path", path.clone())
-            .with_static("sha256", "sha")
-            .into();
+        let file = test_file(path.clone(), "sha");
 
         let evidence = observed_evidence(&file, &Json::Null);
         let stored = evidence
@@ -885,5 +971,148 @@ mod tests {
 
         assert_eq!(stored.units(), path.units());
         assert_ne!(stored.units(), JsString::from("a\\ud800b").units());
+    }
+
+    #[test]
+    fn cached_evidence_preserves_the_evidence_contract_and_field_order() {
+        let file = test_file(JsString::from("source.js"), "sha-1");
+        let location = test_location(12.0, 19.0);
+        let mut state = ProjectionState::default();
+
+        let cached_observed = state.observed_evidence(&file, &location);
+        let expected = super::super::json::parse(
+            r#"{
+                "authority":"ast-static-analysis",
+                "state":"observed",
+                "confidence":"exact",
+                "artifact":{"available":true,"artifact_id":"art_sha-1","sha256":"sha-1"},
+                "location":{"available":true,"value":{"kind":"source-range","source":"source.js","start":12,"end":19}},
+                "extractor":{"name":"rea-javascript-semantic-analysis","version":"1","operation":"analyze_javascript_application","executable_sha256":null},
+                "coverage":{"status":"complete","truncated":false,"omitted_count":0,"limits":[]},
+                "limitations":[],
+                "evidence_ids":[]
+            }"#,
+        )
+        .expect("valid evidence contract");
+        assert_eq!(
+            cached_observed.stringify(),
+            expected.stringify(),
+            "evidence values and field order are part of the transfer contract"
+        );
+
+        let mut expected_unknown = expected.obj();
+        expected_unknown.set("authority", "unknown");
+        expected_unknown.set("state", "unknown");
+        expected_unknown.set("confidence", "unknown");
+        expected_unknown.set(
+            "limitations",
+            strings(["Dynamic syntax prevents an exact static relationship."]),
+        );
+        assert_eq!(
+            state.unknown_evidence(&file, &location),
+            Json::from(expected_unknown)
+        );
+    }
+
+    #[test]
+    fn cached_evidence_switches_file_keys_and_is_mutation_isolated() {
+        let first_file = test_file(JsString::from("first.js"), "sha-first");
+        let changed_digest = test_file(JsString::from("first.js"), "sha-second");
+        let changed_path = test_file(JsString::from("second.js"), "sha-second");
+        let location = test_location(1.0, 2.0);
+        let mut state = ProjectionState::default();
+
+        let first = state.observed_evidence(&first_file, &location);
+        let second = state.observed_evidence(&changed_digest, &location);
+        assert_eq!(second.at("artifact").at("sha256").str(), "sha-second");
+        let third = state.observed_evidence(&changed_path, &location);
+        assert_eq!(
+            third.at("location").at("value").at("source").text(),
+            "second.js"
+        );
+
+        let mut mutated = first.obj();
+        mutated.set("authority", "caller-mutated");
+        let fresh_first = state.observed_evidence(&first_file, &location);
+        assert_eq!(fresh_first.at("authority").str(), "ast-static-analysis");
+        let mutated: Json = mutated.into();
+        assert_eq!(mutated.at("authority").str(), "caller-mutated");
+    }
+
+    #[test]
+    fn cached_location_preserves_utf16_path_and_location_override() {
+        let path = JsString::from_utf16(vec![0x0061, 0xd800, 0x0062]);
+        let file = test_file(path.clone(), "sha");
+        let mut state = ProjectionState::default();
+
+        let range = state.observed_evidence(&file, &test_location(3.0, 8.0));
+        let source = range
+            .at("location")
+            .at("value")
+            .at("source")
+            .as_js_string()
+            .expect("source-range evidence should retain the source path");
+        assert_eq!(source.units(), path.units());
+        assert_eq!(range.at("location").at("value").at("start").num(), 3.0);
+        assert_eq!(range.at("location").at("value").at("end").num(), 8.0);
+
+        let artifact_path = state.observed_evidence(&file, &Json::Null);
+        assert_eq!(
+            artifact_path.at("location").at("value").at("kind").str(),
+            "artifact-path"
+        );
+        assert_eq!(
+            artifact_path
+                .at("location")
+                .at("value")
+                .at("path")
+                .as_js_string()
+                .expect("artifact path should remain a JavaScript string")
+                .units(),
+            path.units()
+        );
+
+        let override_location: Json = Obj::new()
+            .with_static("kind", "caller-kind")
+            .with_static("source", "caller-source")
+            .with_static("start", 4.0)
+            .into();
+        let overridden = state.observed_evidence(&file, &override_location);
+        let value = overridden.at("location").at("value");
+        assert_eq!(value.at("kind").str(), "caller-kind");
+        assert_eq!(value.at("source").str(), "caller-source");
+        assert_eq!(value.at("start").num(), 4.0);
+    }
+
+    #[test]
+    fn unknown_capacity_omissions_are_counted_without_admitting_extra_unknowns() {
+        let mut state = ProjectionState {
+            unknown_capacity: Some(1),
+            ..ProjectionState::default()
+        };
+        let spec = || UnknownSpec {
+            node_id: None,
+            family: "call-flow",
+            relation_kinds: vec!["calls".to_owned()],
+            reason: "dynamic-call",
+            detail: JsString::from("target is not statically known"),
+            candidate_node_ids: Vec::new(),
+            evidence: Json::Null,
+        };
+
+        add_unknown(&mut state, spec());
+        add_unknown(&mut state, spec());
+        add_unknown(&mut state, spec());
+
+        assert_eq!(state.unknowns.len(), 1);
+        assert_eq!(
+            state
+                .unknown_omissions
+                .get("call-flow:dynamic-call")
+                .expect("capacity omissions should be retained")
+                .at("occurrences")
+                .num(),
+            2.0
+        );
     }
 }

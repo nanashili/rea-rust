@@ -373,10 +373,10 @@ pub(crate) fn slot_at_value<'a>(value: ValueRef<'a>, path: &[JsString]) -> SlotF
             ContainerSlots::Json(slots) => slots
                 .iter()
                 .find(|slot| slot.at("name").text() == name)
-                .map(|slot| SlotFact::Observed(slot)),
+                .map(SlotFact::Observed),
             ContainerSlots::Typed(slots) => slots
                 .iter()
-                .find(|slot| &slot.name == name)
+                .find(|slot| slot.name == name)
                 .map(SlotFact::TypedObserved),
         };
         let Some(observed) = observed else {

@@ -137,7 +137,7 @@ fn project_source(
     }
     project_electron_paths(state, file, paths);
     let mut callable_nodes = HashMap::new();
-    for callable in ir.callable_headers() {
+    for callable in ir.callable_identities() {
         let name = callable.at("name");
         if let Some(node) = retain_node(
             state,
@@ -181,7 +181,11 @@ fn project_source(
         }
     }
     let mut return_site_nodes = HashMap::new();
-    for callable in ir.callable_headers() {
+    let retained_callables = ir.callable_indices_matching(|id| callable_nodes.contains_key(id));
+    for index in retained_callables {
+        let callable = ir
+            .callable_header_at(index)
+            .expect("selected callable exists");
         let Some(owner) = callable_nodes
             .get(callable.at("callableId").str())
             .map(|node| node.at("node_id").str().to_owned())
@@ -280,7 +284,12 @@ fn project_source(
 fn project_definitions_and_references(context: &mut FileContext<'_>) -> Vec<Json> {
     let ir = context.ir.clone();
     let mut reference_nodes = Vec::new();
-    for binding in ir.binding_headers() {
+    let retained_bindings =
+        ir.binding_indices_matching(|id| context.binding_nodes.contains_key(id));
+    for index in retained_bindings {
+        let binding = ir
+            .binding_header_at(index)
+            .expect("selected binding exists");
         let id = binding.at("bindingId").str();
         let Some(binding_node) = context.binding_nodes.get(id).cloned() else {
             continue;
