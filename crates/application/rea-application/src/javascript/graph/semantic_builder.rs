@@ -91,6 +91,160 @@ fn first_definition_location(binding: &Json) -> Json {
         .map_or(Json::Null, |definition| definition.at("location").clone())
 }
 
+struct CallSiteProjection {
+    nodes: HashMap<String, Json>,
+    resolutions: HashMap<String, &'static str>,
+    nodes_by_range: HashMap<String, String>,
+}
+
+fn retain_callable_nodes(
+    file: &Json,
+    ir: &SemanticIrView,
+    state: &mut ProjectionState,
+) -> HashMap<String, Json> {
+    let mut callable_nodes = HashMap::new();
+    for callable in ir.callable_identities() {
+        let name = callable.at("name");
+        if let Some(node) = retain_node(
+            state,
+            file,
+            NodeSpec {
+                kind: "function",
+                role_key: format!("callable:{}", callable.at("callableId").str()).into(),
+                location: callable.at("location").clone(),
+                label: name.as_js_string().cloned(),
+                function_node_id: None,
+                properties: Obj::new().with_static("name", name.clone()),
+            },
+        ) {
+            callable_nodes.insert(callable.at("callableId").str().to_owned(), node);
+        }
+    }
+    callable_nodes
+}
+
+fn retain_binding_nodes(
+    file: &Json,
+    ir: &SemanticIrView,
+    state: &mut ProjectionState,
+    owners: &CallableOwnerLookup,
+    callable_nodes: &HashMap<String, Json>,
+) -> HashMap<String, Json> {
+    let mut binding_nodes = HashMap::new();
+    for binding in ir.binding_headers() {
+        let location = first_definition_location(&binding);
+        let owner = owners
+            .owner(&location, callable_nodes)
+            .map(|node| node.at("node_id").str().to_owned());
+        if let Some(node) = retain_node(
+            state,
+            file,
+            NodeSpec {
+                kind: if binding.at("kind").str() == "parameter" {
+                    "parameter"
+                } else {
+                    "binding"
+                },
+                role_key: format!("binding:{}", binding.at("bindingId").str()).into(),
+                location,
+                label: binding.at("name").as_js_string().cloned(),
+                function_node_id: owner.map(Into::into),
+                properties: Obj::new(),
+            },
+        ) {
+            binding_nodes.insert(binding.at("bindingId").str().to_owned(), node);
+        }
+    }
+    binding_nodes
+}
+
+fn retain_return_site_nodes(
+    file: &Json,
+    ir: &SemanticIrView,
+    state: &mut ProjectionState,
+    callable_nodes: &HashMap<String, Json>,
+) -> HashMap<String, Json> {
+    let mut return_site_nodes = HashMap::new();
+    let retained_callables = ir.callable_indices_matching(|id| callable_nodes.contains_key(id));
+    for index in retained_callables {
+        let callable = ir
+            .callable_header_at(index)
+            .expect("selected callable exists");
+        let Some(owner) = callable_nodes
+            .get(callable.at("callableId").str())
+            .map(|node| node.at("node_id").str().to_owned())
+        else {
+            continue;
+        };
+        for site in callable.at("returnSites").arr() {
+            let id = site.at("returnSiteId").str().to_owned();
+            if let Some(node) = retain_node(
+                state,
+                file,
+                NodeSpec {
+                    kind: "return-site",
+                    role_key: id.clone().into(),
+                    location: site.at("location").clone(),
+                    label: Some(JsString::from("return")),
+                    function_node_id: Some(owner.clone().into()),
+                    properties: Obj::new(),
+                },
+            ) {
+                return_site_nodes.insert(id, node);
+            }
+        }
+    }
+    return_site_nodes
+}
+
+fn retain_call_sites(
+    file: &Json,
+    ir: &SemanticIrView,
+    state: &mut ProjectionState,
+    callable_nodes: &HashMap<String, Json>,
+) -> CallSiteProjection {
+    let mut projection = CallSiteProjection {
+        nodes: HashMap::new(),
+        resolutions: HashMap::new(),
+        nodes_by_range: HashMap::new(),
+    };
+    for call in ir.call_site_headers() {
+        let id = call.at("callSiteId").str().to_owned();
+        let owner = call
+            .at("callerCallableId")
+            .as_str()
+            .and_then(|caller| callable_nodes.get(caller))
+            .map(|node| node.at("node_id").str().to_owned());
+        if let Some(node) = retain_node(
+            state,
+            file,
+            NodeSpec {
+                kind: "call-site",
+                role_key: format!("call:{id}").into(),
+                location: call.at("location").clone(),
+                label: call.at("kind").as_js_string().cloned(),
+                function_node_id: owner.map(Into::into),
+                properties: Obj::new(),
+            },
+        ) {
+            projection.nodes.insert(id.clone(), node);
+        }
+        projection.resolutions.insert(
+            id.clone(),
+            if call.at("resolution").str() == "exact" {
+                "resolved"
+            } else {
+                "candidate"
+            },
+        );
+        projection
+            .nodes_by_range
+            .entry(range_key(call.at("location")))
+            .or_insert(id);
+    }
+    projection
+}
+
 /// `projectFileSteps`: project one file into `state`, returning its fingerprints.
 fn project_source(
     file: &Json,
@@ -136,118 +290,11 @@ fn project_source(
         );
     }
     project_electron_paths(state, file, paths);
-    let mut callable_nodes = HashMap::new();
-    for callable in ir.callable_identities() {
-        let name = callable.at("name");
-        if let Some(node) = retain_node(
-            state,
-            file,
-            NodeSpec {
-                kind: "function",
-                role_key: format!("callable:{}", callable.at("callableId").str()).into(),
-                location: callable.at("location").clone(),
-                label: name.as_js_string().cloned(),
-                function_node_id: None,
-                properties: Obj::new().with_static("name", name.clone()),
-            },
-        ) {
-            callable_nodes.insert(callable.at("callableId").str().to_owned(), node);
-        }
-    }
+    let callable_nodes = retain_callable_nodes(file, ir, state);
     let owners = CallableOwnerLookup::new(ir);
-    let mut binding_nodes = HashMap::new();
-    for binding in ir.binding_headers() {
-        let location = first_definition_location(&binding);
-        let owner = owners
-            .owner(&location, &callable_nodes)
-            .map(|node| node.at("node_id").str().to_owned());
-        if let Some(node) = retain_node(
-            state,
-            file,
-            NodeSpec {
-                kind: if binding.at("kind").str() == "parameter" {
-                    "parameter"
-                } else {
-                    "binding"
-                },
-                role_key: format!("binding:{}", binding.at("bindingId").str()).into(),
-                location,
-                label: binding.at("name").as_js_string().cloned(),
-                function_node_id: owner.map(Into::into),
-                properties: Obj::new(),
-            },
-        ) {
-            binding_nodes.insert(binding.at("bindingId").str().to_owned(), node);
-        }
-    }
-    let mut return_site_nodes = HashMap::new();
-    let retained_callables = ir.callable_indices_matching(|id| callable_nodes.contains_key(id));
-    for index in retained_callables {
-        let callable = ir
-            .callable_header_at(index)
-            .expect("selected callable exists");
-        let Some(owner) = callable_nodes
-            .get(callable.at("callableId").str())
-            .map(|node| node.at("node_id").str().to_owned())
-        else {
-            continue;
-        };
-        for site in callable.at("returnSites").arr() {
-            let id = site.at("returnSiteId").str().to_owned();
-            if let Some(node) = retain_node(
-                state,
-                file,
-                NodeSpec {
-                    kind: "return-site",
-                    role_key: id.clone().into(),
-                    location: site.at("location").clone(),
-                    label: Some(JsString::from("return")),
-                    function_node_id: Some(owner.clone().into()),
-                    properties: Obj::new(),
-                },
-            ) {
-                return_site_nodes.insert(id, node);
-            }
-        }
-    }
-    let mut call_site_nodes = HashMap::new();
-    for call in ir.records(SemanticCollection::CallSites) {
-        let owner = call
-            .at("callerCallableId")
-            .as_str()
-            .and_then(|id| callable_nodes.get(id))
-            .map(|node| node.at("node_id").str().to_owned());
-        if let Some(node) = retain_node(
-            state,
-            file,
-            NodeSpec {
-                kind: "call-site",
-                role_key: format!("call:{}", call.at("callSiteId").str()).into(),
-                location: call.at("location").clone(),
-                label: call.at("kind").as_js_string().cloned(),
-                function_node_id: owner.map(Into::into),
-                properties: Obj::new(),
-            },
-        ) {
-            call_site_nodes.insert(call.at("callSiteId").str().to_owned(), node);
-        }
-    }
-    let mut call_resolutions = HashMap::new();
-    let mut call_sites_by_range = HashMap::new();
-    for call in ir.records(SemanticCollection::CallSites) {
-        let id = call.at("callSiteId").str().to_owned();
-        call_resolutions.insert(
-            id.clone(),
-            if call.at("resolution").str() == "exact" {
-                "resolved"
-            } else {
-                "candidate"
-            },
-        );
-        call_sites_by_range
-            .entry(range_key(call.at("location")))
-            .or_insert(id);
-    }
+    let binding_nodes = retain_binding_nodes(file, ir, state, &owners, &callable_nodes);
+    let return_site_nodes = retain_return_site_nodes(file, ir, state, &callable_nodes);
+    let call_sites = retain_call_sites(file, ir, state, &callable_nodes);
     let mut context = FileContext {
         file: file.clone(),
         ir: ir.clone(),
@@ -255,12 +302,12 @@ fn project_source(
         module_node,
         binding_nodes,
         callable_nodes,
-        call_site_nodes,
+        call_site_nodes: call_sites.nodes,
         return_site_nodes,
         argument_nodes: HashMap::new(),
-        call_resolutions,
+        call_resolutions: call_sites.resolutions,
         owners,
-        call_sites_by_range,
+        call_sites_by_range: call_sites.nodes_by_range,
         references: None,
     };
     let references = project_definitions_and_references(&mut context);

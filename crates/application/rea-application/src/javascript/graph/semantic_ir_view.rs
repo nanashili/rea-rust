@@ -13,14 +13,15 @@ use serde::Serialize;
 use super::direct_serializer::JsonConversion;
 use super::json::{Json, Obj};
 use super::leaves::ValueRef;
-use crate::javascript::contracts::semantic_ir::{SemanticBinding, SemanticCallable, SemanticIr};
+use crate::javascript::contracts::semantic_ir::{
+    SemanticBinding, SemanticCallSite, SemanticCallable, SemanticIr,
+};
 use crate::javascript::semantic::value_types::JsString;
 
 #[derive(Clone, Copy)]
 pub(crate) enum SemanticCollection {
     References,
     ModuleLinks,
-    CallSites,
     ArgumentFlows,
     CallReturnFlows,
     CallResultFlows,
@@ -35,8 +36,6 @@ pub(crate) enum SemanticCollection {
     BoundaryOperations,
     ResourceOperations,
     ObjectOperations,
-    FunctionFingerprints,
-    Frontiers,
 }
 
 impl SemanticCollection {
@@ -44,7 +43,6 @@ impl SemanticCollection {
         match self {
             Self::References => "references",
             Self::ModuleLinks => "moduleLinks",
-            Self::CallSites => "callSites",
             Self::ArgumentFlows => "argumentFlows",
             Self::CallReturnFlows => "callReturnFlows",
             Self::CallResultFlows => "callResultFlows",
@@ -59,8 +57,6 @@ impl SemanticCollection {
             Self::BoundaryOperations => "boundaryOperations",
             Self::ResourceOperations => "resourceOperations",
             Self::ObjectOperations => "objectOperations",
-            Self::FunctionFingerprints => "functionFingerprints",
-            Self::Frontiers => "frontiers",
         }
     }
 }
@@ -104,7 +100,6 @@ impl SemanticIrView {
             SemanticBacking::Typed(ir) => match collection {
                 SemanticCollection::References => self.serialized_records(&ir.references),
                 SemanticCollection::ModuleLinks => self.serialized_records(&ir.module_links),
-                SemanticCollection::CallSites => self.serialized_records(&ir.call_sites),
                 SemanticCollection::ArgumentFlows => self.serialized_records(&ir.argument_flows),
                 SemanticCollection::CallReturnFlows => {
                     self.serialized_records(&ir.call_return_flows)
@@ -145,10 +140,6 @@ impl SemanticIrView {
                 SemanticCollection::ObjectOperations => {
                     self.serialized_records(&ir.object_operations)
                 }
-                SemanticCollection::FunctionFingerprints => {
-                    self.serialized_records(&ir.function_fingerprints)
-                }
-                SemanticCollection::Frontiers => self.serialized_records(&ir.frontiers),
             },
         }
     }
@@ -178,6 +169,113 @@ impl SemanticIrView {
                     .iter()
                     .map(|callable| self.callable_identity(callable)),
             ),
+        }
+    }
+
+    /// Admission and range lookup need call identity, never argument lists.
+    pub(crate) fn call_site_headers(&self) -> Box<dyn ExactSizeIterator<Item = Json> + '_> {
+        match &self.backing {
+            SemanticBacking::Serialized(ir) => Box::new(ir.at("callSites").arr().iter().cloned()),
+            SemanticBacking::Typed(ir) => {
+                Box::new(ir.call_sites.iter().map(|call| self.call_site_header(call)))
+            }
+        }
+    }
+
+    /// Select before expanding arguments. Producer positions preserve repeated
+    /// IDs and their distinct argument facts in permissive JSON input.
+    pub(crate) fn call_site_indices_matching(&self, matches: impl Fn(&str) -> bool) -> Vec<usize> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .call_sites
+                .iter()
+                .enumerate()
+                .filter_map(|(index, call)| matches(&call.call_site_id).then_some(index))
+                .collect(),
+            SemanticBacking::Serialized(ir) => ir
+                .at("callSites")
+                .arr()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, call)| matches(call.at("callSiteId").str()).then_some(index))
+                .collect(),
+        }
+    }
+
+    pub(crate) fn call_site_at(&self, index: usize) -> Option<Json> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir.call_sites.get(index).map(|call| self.convert(call)),
+            SemanticBacking::Serialized(ir) => ir.at("callSites").arr().get(index).cloned(),
+        }
+    }
+
+    /// Exhausted unknown capacity still counts each examined frontier kind.
+    /// Keep locations and reason text in the producer until a frontier can be
+    /// admitted rather than converting records that will immediately be lost.
+    pub(crate) fn frontier_kinds(&self) -> Box<dyn ExactSizeIterator<Item = &str> + '_> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => {
+                Box::new(ir.frontiers.iter().map(|frontier| frontier.kind.as_str()))
+            }
+            SemanticBacking::Serialized(ir) => Box::new(
+                ir.at("frontiers")
+                    .arr()
+                    .iter()
+                    .map(|frontier| frontier.at("kind").str()),
+            ),
+        }
+    }
+
+    pub(crate) fn frontier_at(&self, index: usize) -> Option<Json> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .frontiers
+                .get(index)
+                .map(|frontier| self.convert(frontier)),
+            SemanticBacking::Serialized(ir) => ir.at("frontiers").arr().get(index).cloned(),
+        }
+    }
+
+    pub(crate) fn fingerprint_indices_matching(
+        &self,
+        matches: impl Fn(&str) -> bool,
+    ) -> Vec<usize> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .function_fingerprints
+                .iter()
+                .enumerate()
+                .filter_map(|(index, fingerprint)| {
+                    matches(&fingerprint.callable_id).then_some(index)
+                })
+                .collect(),
+            SemanticBacking::Serialized(ir) => ir
+                .at("functionFingerprints")
+                .arr()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, fingerprint)| {
+                    // Callable lookup requires a string, rather than the `.str()`
+                    // fallback used by admission maps for malformed identities.
+                    fingerprint
+                        .at("callableId")
+                        .as_str()
+                        .filter(|id| matches(id))
+                        .map(|_| index)
+                })
+                .collect(),
+        }
+    }
+
+    pub(crate) fn fingerprint_at(&self, index: usize) -> Option<Json> {
+        match &self.backing {
+            SemanticBacking::Typed(ir) => ir
+                .function_fingerprints
+                .get(index)
+                .map(|fingerprint| self.convert(fingerprint)),
+            SemanticBacking::Serialized(ir) => {
+                ir.at("functionFingerprints").arr().get(index).cloned()
+            }
         }
     }
 
@@ -452,6 +550,16 @@ impl SemanticIrView {
             .with_static("kind", self.convert(&callable.kind))
             .with_static("name", self.convert(&callable.name))
             .with_static("location", self.convert(&callable.location))
+            .into()
+    }
+
+    fn call_site_header(&self, call: &SemanticCallSite) -> Json {
+        Obj::new()
+            .with_static("callSiteId", self.convert(&call.call_site_id))
+            .with_static("kind", self.convert(&call.kind))
+            .with_static("callerCallableId", self.convert(&call.caller_callable_id))
+            .with_static("location", self.convert(&call.location))
+            .with_static("resolution", self.convert(&call.resolution))
             .into()
     }
 }

@@ -134,6 +134,11 @@ impl EvidenceRegistry {
             .into()
     }
 
+    /// Whether a previously issued context reference is still owned here.
+    pub fn contains_context(&self, id: &str) -> bool {
+        self.contexts.contains_key(id)
+    }
+
     /// Resolve one interned reference to full evidence.
     pub fn resolve(&self, reference: &Json) -> Json {
         let mut context = self
@@ -287,6 +292,7 @@ pub struct EvidenceTemplate {
     file_path: JsString,
     file_key: (JsString, JsString),
     base: Json,
+    context_id: Option<JsString>,
 }
 
 impl EvidenceTemplate {
@@ -328,6 +334,7 @@ impl EvidenceTemplate {
             file_path: path.clone(),
             file_key: (path, sha.into()),
             base,
+            context_id: None,
         }
     }
 
@@ -406,6 +413,34 @@ impl ProjectionState {
 
     pub fn observed_evidence(&mut self, file: &Json, location: &Json) -> Json {
         self.template_for(file).observed(location)
+    }
+
+    /// Build a location-only reference to the current file's observed context.
+    pub fn observed_evidence_reference(&mut self, file: &Json, location: &Json) -> Json {
+        self.template_for(file);
+        let template = self
+            .evidence_template
+            .as_mut()
+            .expect("the current file template was just installed");
+        let context_id = match &template.context_id {
+            Some(id)
+                if self.evidence.contains_context(
+                    id.as_str().expect("registry context identifiers are ASCII"),
+                ) =>
+            {
+                id.clone()
+            }
+            _ => {
+                let reference = self.evidence.intern(&template.base);
+                let id = reference.at("context_id").text().clone();
+                template.context_id = Some(id.clone());
+                id
+            }
+        };
+        Obj::new()
+            .with_static("context_id", context_id)
+            .with_static("location", template.location(location))
+            .into()
     }
 
     pub fn inferred_evidence(&mut self, file: &Json, location: &Json) -> Json {
@@ -505,8 +540,7 @@ pub fn retain_node(state: &mut ProjectionState, file: &Json, spec: NodeSpec<'_>)
         state.file_nodes_dropped = true;
         return None;
     }
-    let observed = state.observed_evidence(file, &spec.location);
-    let evidence = state.evidence.intern(&observed);
+    let evidence = state.observed_evidence_reference(file, &spec.location);
     let node: Json = Obj::new()
         .with_static("kind", spec.kind)
         .with_static("identity", identity)
@@ -646,8 +680,8 @@ pub fn add_unknown(state: &mut ProjectionState, spec: UnknownSpec<'_>) {
         .set(id.clone(), semantic.with_static("unknown_id", id).into());
 }
 
-/// `createJavaScriptSemanticFingerprint`.
-pub fn create_fingerprint(state: &mut ProjectionState, input: Obj) -> Json {
+/// `createJavaScriptSemanticFingerprint` with an already-owned evidence reference.
+pub fn create_fingerprint(input: Obj, evidence: Json) -> Json {
     let input: Json = input.into();
     let mut components = input.at("components").obj();
     components.set(
@@ -675,7 +709,7 @@ pub fn create_fingerprint(state: &mut ProjectionState, input: Obj) -> Json {
                 .map(|item| item.str().to_owned()),
         )),
     );
-    semantic.set("evidence", state.evidence.intern(input.at("evidence")));
+    semantic.set("evidence", evidence);
     let id_input = Obj::new()
         .with_static("function_node_id", input.at("function_node_id").clone())
         .with_static("algorithm", input.at("algorithm").clone())
@@ -1082,6 +1116,101 @@ mod tests {
         assert_eq!(value.at("kind").str(), "caller-kind");
         assert_eq!(value.at("source").str(), "caller-source");
         assert_eq!(value.at("start").num(), 4.0);
+    }
+
+    #[test]
+    fn observed_reference_reuses_context_and_recovers_after_registry_clear() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let location = test_location(2.0, 5.0);
+        let mut state = ProjectionState::default();
+        let expected = state.observed_evidence(&file, &location);
+
+        let first = state.observed_evidence_reference(&file, &location);
+        let second = state.observed_evidence_reference(&file, &Json::Null);
+        assert_eq!(
+            first.at("context_id").str(),
+            second.at("context_id").str(),
+            "locations in one file should share one registry context"
+        );
+        assert_eq!(
+            state.evidence.resolve(&first).canonical(),
+            expected.canonical()
+        );
+
+        state.evidence.clear();
+        let recovered = state.observed_evidence_reference(&file, &location);
+        assert_eq!(
+            state.evidence.resolve(&recovered).canonical(),
+            expected.canonical()
+        );
+        assert_eq!(
+            recovered.at("context_id").str(),
+            first.at("context_id").str(),
+            "re-interning after clear should preserve the digest identity"
+        );
+
+        let other = state.observed_evidence_reference(
+            &test_file(JsString::from("other.js"), "other-sha"),
+            &location,
+        );
+        assert_ne!(
+            recovered.at("context_id").str(),
+            other.at("context_id").str(),
+            "different files must not share an observed context"
+        );
+    }
+
+    #[test]
+    fn observed_reference_matches_generic_intern_and_adopted_contexts() {
+        let file = test_file(JsString::from("source.js"), "sha");
+        let same_digest_file = test_file(JsString::from("renamed.js"), "sha");
+        let location = test_location(6.0, 9.0);
+        let mut state = ProjectionState::default();
+        let reference = state.observed_evidence_reference(&file, &location);
+        let expected = state.observed_evidence(&file, &location);
+        let renamed = state.observed_evidence(&same_digest_file, &location);
+        let renamed_reference = state.observed_evidence_reference(&same_digest_file, &location);
+
+        assert_eq!(
+            renamed_reference.at("context_id"),
+            reference.at("context_id")
+        );
+        assert_eq!(
+            state.evidence.resolve(&renamed_reference).canonical(),
+            renamed.canonical()
+        );
+        assert_eq!(state.evidence.contexts().len(), 1);
+
+        let generic = state.evidence.intern(&renamed);
+        assert_eq!(
+            generic.at("context_id").str(),
+            reference.at("context_id").str(),
+            "the cached path must use the registry's normal digest identity"
+        );
+        assert_eq!(
+            state.evidence.resolve(&reference).canonical(),
+            expected.canonical()
+        );
+
+        let context = state
+            .evidence
+            .contexts()
+            .into_iter()
+            .next()
+            .expect("the observed reference should have registered a context");
+        let mut adopted = EvidenceRegistry::default();
+        adopted
+            .adopt(&context)
+            .expect("a registry-issued context should be adoptable");
+        let adopted_reference = adopted.intern(&expected);
+        assert_eq!(
+            adopted_reference.at("context_id").str(),
+            reference.at("context_id").str()
+        );
+        assert_eq!(
+            adopted.resolve(&adopted_reference).canonical(),
+            expected.canonical()
+        );
     }
 
     #[test]

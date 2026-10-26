@@ -487,7 +487,10 @@ fn object_target(
 /// `projectCalls`.
 pub fn project_calls(context: &mut FileContext<'_>) {
     let ir = context.ir.clone();
-    for call in ir.records(SemanticCollection::CallSites) {
+    let retained_calls =
+        ir.call_site_indices_matching(|id| context.call_site_nodes.contains_key(id));
+    for index in retained_calls {
+        let call = ir.call_site_at(index).expect("selected call site exists");
         let call_id = call.at("callSiteId").str();
         let Some(call_node) = context.call_site_nodes.get(call_id).cloned() else {
             continue;
@@ -1522,20 +1525,20 @@ pub fn project_closure_captures(context: &mut FileContext<'_>) {
 /// `projectSemanticFrontiers`.
 pub fn project_frontiers(context: &mut FileContext<'_>) {
     let ir = context.ir.clone();
-    for frontier in ir.records(SemanticCollection::Frontiers) {
-        let kind = frontier.at("kind").str();
+    for (index, kind) in ir.frontier_kinds().enumerate() {
         let (family, relations): (&str, &[&str]) = match kind {
             "dynamic-call" => ("call-flow", &["calls"]),
             "dynamic-scope" => ("data-flow", &["reads", "writes"]),
             _ => ("object-flow", &["reads-property", "writes-property"]),
         };
-        let node = context
-            .callable_node_id(frontier.at("callableId"))
-            .unwrap_or_else(|| context.module_node.at("node_id").str().to_owned());
         if context.state.unknown_capacity_reached() {
             context.state.record_unknown_capacity_omission(family, kind);
             continue;
         }
+        let frontier = ir.frontier_at(index).expect("selected frontier exists");
+        let node = context
+            .callable_node_id(frontier.at("callableId"))
+            .unwrap_or_else(|| context.module_node.at("node_id").str().to_owned());
         let evidence = context.unknown_evidence(frontier.at("location"));
         context.unknown(UnknownSpec {
             node_id: Some(node),
@@ -1555,10 +1558,18 @@ pub fn project_frontiers(context: &mut FileContext<'_>) {
 pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
     let ir = context.ir.clone();
     let mut output = Vec::new();
-    for fingerprint in ir.records(SemanticCollection::FunctionFingerprints) {
+    let retained_fingerprints =
+        ir.fingerprint_indices_matching(|id| context.callable_nodes.contains_key(id));
+    for index in retained_fingerprints {
+        let fingerprint = ir
+            .fingerprint_at(index)
+            .expect("selected fingerprint exists");
         let Some(callable) = context.callable(fingerprint.at("callableId")) else {
             continue;
         };
+        let evidence = context
+            .state
+            .observed_evidence_reference(&context.file, callable.at("identity").at("source_range"));
         let components = fingerprint.at("components");
         let input = Obj::new()
             .with_static("function_node_id", callable.at("node_id").clone())
@@ -1586,15 +1597,8 @@ pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
                     )
                     .with_static("effects", components.at("effects").clone()),
             )
-            .with_static("limitations", fingerprint.at("limitations").clone())
-            .with_static(
-                "evidence",
-                context.observed_evidence(callable.at("identity").at("source_range")),
-            );
-        output.push(super::semantic_graph::create_fingerprint(
-            context.state,
-            input,
-        ));
+            .with_static("limitations", fingerprint.at("limitations").clone());
+        output.push(super::semantic_graph::create_fingerprint(input, evidence));
     }
     output
 }
