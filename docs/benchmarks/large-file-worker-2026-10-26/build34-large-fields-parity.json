@@ -1,0 +1,483 @@
+{
+  "binaries": {
+    "candidate": {
+      "path": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build34/rea",
+      "sha256": "04d076034a205aceaad621e0a73c2d2562e5f170de037e2bbcb77ef4b8589903"
+    },
+    "reference": {
+      "path": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+      "sha256": "be4eed9c258331077ea2dbcd2fbd6c667a12ef335cd5095da8ccdc99122319c1"
+    }
+  },
+  "comparisons": [
+    {
+      "candidate": {
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build34/rea",
+        "executable_sha256": "04d076034a205aceaad621e0a73c2d2562e5f170de037e2bbcb77ef4b8589903",
+        "fixture": "figma-main",
+        "profile": {
+          "name": "candidate-production-limits",
+          "output_cap_bytes": 67108864,
+          "purpose": "Production worker limits.",
+          "timeout_seconds": 30.0
+        },
+        "result": {
+          "cleanup_errors": [],
+          "cleanup_ms": 14.335,
+          "complete": false,
+          "elapsed_ms": 9507.181,
+          "error": null,
+          "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build34/rea",
+          "frames": {
+            "bytes": 9577369,
+            "complete": false,
+            "compressed_terminal_count": 1,
+            "count": 2,
+            "decoded_budget_bytes": 268435456,
+            "decoded_bytes": 48351471,
+            "decoded_frame_count": 2,
+            "decoded_sha256": "87b5ab681768239dfcce05f6d736eaf7a122864a22db3f396ea068ef20039110",
+            "encoding": "gzip+base64",
+            "final_projection": true,
+            "hashes_truncated": false,
+            "kinds": {
+              "final": 1,
+              "message": 1
+            },
+            "parse_errors": [],
+            "projection_complete": false,
+            "projection_counts": {
+              "evidenceContexts": 479,
+              "fingerprints": 11842,
+              "nodes": 20000,
+              "nodes_truncated": true,
+              "omittedUnknownOccurrences": 6,
+              "relations": 2417,
+              "roots": 1,
+              "unknowns": 20000
+            },
+            "protocol_invalid": false,
+            "semantic_coverage": {
+              "omitted_count": 0,
+              "resource_limit_count": null,
+              "status": "partial"
+            },
+            "semantic_coverage_complete": false,
+            "semantic_failure": false,
+            "semantic_hashes": {
+              "semantic_failure": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_ir": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_metadata": "fc570e8860b3ab1ab34198bfa9e27284168c2cd814f133acc003434246084931",
+              "semantic_projection": "91c9e5f9ec4d7c2ab84acb995aaf61888a2865b387e0de24480cf81c0314230e",
+              "static_analysis": "20d55769d267d1b3176e0c1bb0a4b6a31d71c6d561b570e08340391422109214"
+            },
+            "sha256": [
+              "f9039a99c9358f5fd7de19616e8ca95f4ff7f4a8fa6c28b116df4a12da82f789",
+              "44775a03aa2cb981ed7c76f606963aefbd8c57717a929b1a9fe0899943a0b7b2"
+            ],
+            "worker_completed": true
+          },
+          "label": "candidate-production-limits:figma-main",
+          "measurement_note": "Worker I/O wall includes launch and pipe draining. Total wall also includes cleanup and deferred protocol validation. CPU and RSS are sampled family lower bounds at a 50 ms cadence; receipt stores protocol hashes and metadata only.",
+          "projection_complete": false,
+          "protocol_validation_ms": 923.665,
+          "returncode": 0,
+          "sample_count": 131,
+          "sampled_family_cpu_us": 8319678,
+          "sampled_family_peak_rss_bytes": 656818176,
+          "semantic_coverage_complete": false,
+          "status": "partial",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_stderr_bytes": 9577371,
+          "worker_completed": true,
+          "worker_io_ms": 8568.726
+        }
+      },
+      "candidate_validity_failures": [],
+      "completion": {
+        "candidate_full_analysis_complete": false,
+        "candidate_projection_complete": false,
+        "candidate_semantic_coverage_complete": false,
+        "candidate_semantic_failure_is_null": true,
+        "candidate_semantic_ir_is_null": true,
+        "candidate_valid": true,
+        "candidate_worker_completed": true,
+        "full_analysis_complete": {
+          "both": false,
+          "candidate": false,
+          "reference": false
+        },
+        "projection_completion_matches": true,
+        "reference_full_analysis_complete": false,
+        "reference_projection_complete": false,
+        "reference_semantic_coverage_complete": false,
+        "reference_semantic_failure_is_null": true,
+        "reference_semantic_ir_is_null": true,
+        "reference_valid": true,
+        "reference_worker_completed": true,
+        "semantic_coverage_completion_matches": true,
+        "worker_completion_matches": true
+      },
+      "field_parity_pass": true,
+      "fixture": "figma-main",
+      "hash_equality": {
+        "semantic_failure": true,
+        "semantic_ir": true,
+        "semantic_metadata": true,
+        "semantic_projection": true,
+        "static_analysis": true
+      },
+      "reference": {
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+        "executable_sha256": "be4eed9c258331077ea2dbcd2fbd6c667a12ef335cd5095da8ccdc99122319c1",
+        "fixture": "figma-main",
+        "profile": {
+          "name": "build29-diagnostic-reference",
+          "output_cap_bytes": 201326592,
+          "purpose": "Extended diagnostic capture; not a production result.",
+          "timeout_seconds": 90.0
+        },
+        "result": {
+          "cleanup_errors": [],
+          "cleanup_ms": 15.161,
+          "complete": false,
+          "elapsed_ms": 10391.568,
+          "error": null,
+          "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+          "frames": {
+            "bytes": 48492468,
+            "complete": false,
+            "compressed_terminal_count": 0,
+            "count": 2,
+            "decoded_budget_bytes": 268435456,
+            "decoded_bytes": 0,
+            "decoded_frame_count": 2,
+            "decoded_sha256": null,
+            "encoding": null,
+            "final_projection": true,
+            "hashes_truncated": false,
+            "kinds": {
+              "final": 1,
+              "message": 1
+            },
+            "parse_errors": [],
+            "projection_complete": false,
+            "projection_counts": {
+              "evidenceContexts": 479,
+              "fingerprints": 11842,
+              "nodes": 20000,
+              "nodes_truncated": true,
+              "omittedUnknownOccurrences": 6,
+              "relations": 2417,
+              "roots": 1,
+              "unknowns": 20000
+            },
+            "protocol_invalid": false,
+            "semantic_coverage": {
+              "omitted_count": 0,
+              "resource_limit_count": null,
+              "status": "partial"
+            },
+            "semantic_coverage_complete": false,
+            "semantic_failure": false,
+            "semantic_hashes": {
+              "semantic_failure": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_ir": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_metadata": "fc570e8860b3ab1ab34198bfa9e27284168c2cd814f133acc003434246084931",
+              "semantic_projection": "91c9e5f9ec4d7c2ab84acb995aaf61888a2865b387e0de24480cf81c0314230e",
+              "static_analysis": "20d55769d267d1b3176e0c1bb0a4b6a31d71c6d561b570e08340391422109214"
+            },
+            "sha256": [
+              "f9039a99c9358f5fd7de19616e8ca95f4ff7f4a8fa6c28b116df4a12da82f789",
+              "ffafb4eb91892b283a23d31ebbeb09bf02f2c4101b4ce4e33136063690ad8862"
+            ],
+            "worker_completed": true
+          },
+          "label": "build29-diagnostic-reference:figma-main",
+          "measurement_note": "Worker I/O wall includes launch and pipe draining. Total wall also includes cleanup and deferred protocol validation. CPU and RSS are sampled family lower bounds at a 50 ms cadence; receipt stores protocol hashes and metadata only.",
+          "projection_complete": false,
+          "protocol_validation_ms": 883.308,
+          "returncode": 0,
+          "sample_count": 144,
+          "sampled_family_cpu_us": 9263761,
+          "sampled_family_peak_rss_bytes": 676937728,
+          "semantic_coverage_complete": false,
+          "status": "partial",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_stderr_bytes": 48492469,
+          "worker_completed": true,
+          "worker_io_ms": 9491.698
+        }
+      },
+      "reference_validity_failures": [],
+      "validity_failures": []
+    },
+    {
+      "candidate": {
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build34/rea",
+        "executable_sha256": "04d076034a205aceaad621e0a73c2d2562e5f170de037e2bbcb77ef4b8589903",
+        "fixture": "postman-agent-worker",
+        "profile": {
+          "name": "candidate-production-limits",
+          "output_cap_bytes": 67108864,
+          "purpose": "Production worker limits.",
+          "timeout_seconds": 30.0
+        },
+        "result": {
+          "cleanup_errors": [],
+          "cleanup_ms": 14.114,
+          "complete": false,
+          "elapsed_ms": 28657.58,
+          "error": null,
+          "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build34/rea",
+          "frames": {
+            "bytes": 15470839,
+            "complete": false,
+            "compressed_terminal_count": 1,
+            "count": 2,
+            "decoded_budget_bytes": 268435456,
+            "decoded_bytes": 65787048,
+            "decoded_frame_count": 2,
+            "decoded_sha256": "36e66161ade2f1a1a4a93a1963481e5d49b2c255a35ea46342f1a590289b7cc0",
+            "encoding": "gzip+base64",
+            "final_projection": true,
+            "hashes_truncated": false,
+            "kinds": {
+              "final": 1,
+              "message": 1
+            },
+            "parse_errors": [],
+            "projection_complete": false,
+            "projection_counts": {
+              "evidenceContexts": 3,
+              "fingerprints": 19537,
+              "nodes": 20000,
+              "nodes_truncated": true,
+              "omittedUnknownOccurrences": 5,
+              "relations": 0,
+              "roots": 1,
+              "unknowns": 20000
+            },
+            "protocol_invalid": false,
+            "semantic_coverage": {
+              "omitted_count": 0,
+              "resource_limit_count": null,
+              "status": "partial"
+            },
+            "semantic_coverage_complete": false,
+            "semantic_failure": false,
+            "semantic_hashes": {
+              "semantic_failure": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_ir": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_metadata": "02702b17d55b3fd85207df4011451e22c6fd00b9c49a1aca891d96c3ad1727f9",
+              "semantic_projection": "12092dd0fc6b1b2a6c4b1e73ebcc09e2faa6f83ff6bda1a755aef695077952a0",
+              "static_analysis": "0d6c8b38c85a1fc0c614cec04ab1fd1acf4b0904f9ad96927febb9feaf0cabab"
+            },
+            "sha256": [
+              "97b3c16132c08b146a61680ec330109c5261ee282bed347457e50d59e22cc698",
+              "ef492a3af5e60aba10a84c5f2f1d84079562bd1bdd28854dd7c4c6a9d6086a79"
+            ],
+            "worker_completed": true
+          },
+          "label": "candidate-production-limits:postman-agent-worker",
+          "measurement_note": "Worker I/O wall includes launch and pipe draining. Total wall also includes cleanup and deferred protocol validation. CPU and RSS are sampled family lower bounds at a 50 ms cadence; receipt stores protocol hashes and metadata only.",
+          "projection_complete": false,
+          "protocol_validation_ms": 1654.612,
+          "returncode": 0,
+          "sample_count": 408,
+          "sampled_family_cpu_us": 26526598,
+          "sampled_family_peak_rss_bytes": 1474805760,
+          "semantic_coverage_complete": false,
+          "status": "partial",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_stderr_bytes": 15470841,
+          "worker_completed": true,
+          "worker_io_ms": 26987.391
+        }
+      },
+      "candidate_validity_failures": [],
+      "completion": {
+        "candidate_full_analysis_complete": false,
+        "candidate_projection_complete": false,
+        "candidate_semantic_coverage_complete": false,
+        "candidate_semantic_failure_is_null": true,
+        "candidate_semantic_ir_is_null": true,
+        "candidate_valid": true,
+        "candidate_worker_completed": true,
+        "full_analysis_complete": {
+          "both": false,
+          "candidate": false,
+          "reference": false
+        },
+        "projection_completion_matches": true,
+        "reference_full_analysis_complete": false,
+        "reference_projection_complete": false,
+        "reference_semantic_coverage_complete": false,
+        "reference_semantic_failure_is_null": true,
+        "reference_semantic_ir_is_null": true,
+        "reference_valid": true,
+        "reference_worker_completed": true,
+        "semantic_coverage_completion_matches": true,
+        "worker_completion_matches": true
+      },
+      "field_parity_pass": true,
+      "fixture": "postman-agent-worker",
+      "hash_equality": {
+        "semantic_failure": true,
+        "semantic_ir": true,
+        "semantic_metadata": true,
+        "semantic_projection": true,
+        "static_analysis": true
+      },
+      "reference": {
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+        "executable_sha256": "be4eed9c258331077ea2dbcd2fbd6c667a12ef335cd5095da8ccdc99122319c1",
+        "fixture": "postman-agent-worker",
+        "profile": {
+          "name": "build29-diagnostic-reference",
+          "output_cap_bytes": 201326592,
+          "purpose": "Extended diagnostic capture; not a production result.",
+          "timeout_seconds": 90.0
+        },
+        "result": {
+          "cleanup_errors": [],
+          "cleanup_ms": 16.085,
+          "complete": false,
+          "elapsed_ms": 32821.065,
+          "error": null,
+          "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+          "frames": {
+            "bytes": 71796521,
+            "complete": false,
+            "compressed_terminal_count": 0,
+            "count": 2,
+            "decoded_budget_bytes": 268435456,
+            "decoded_bytes": 0,
+            "decoded_frame_count": 2,
+            "decoded_sha256": null,
+            "encoding": null,
+            "final_projection": true,
+            "hashes_truncated": false,
+            "kinds": {
+              "final": 1,
+              "message": 1
+            },
+            "parse_errors": [],
+            "projection_complete": false,
+            "projection_counts": {
+              "evidenceContexts": 3,
+              "fingerprints": 19537,
+              "nodes": 20000,
+              "nodes_truncated": true,
+              "omittedUnknownOccurrences": 5,
+              "relations": 0,
+              "roots": 1,
+              "unknowns": 20000
+            },
+            "protocol_invalid": false,
+            "semantic_coverage": {
+              "omitted_count": 0,
+              "resource_limit_count": null,
+              "status": "partial"
+            },
+            "semantic_coverage_complete": false,
+            "semantic_failure": false,
+            "semantic_hashes": {
+              "semantic_failure": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_ir": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+              "semantic_metadata": "02702b17d55b3fd85207df4011451e22c6fd00b9c49a1aca891d96c3ad1727f9",
+              "semantic_projection": "12092dd0fc6b1b2a6c4b1e73ebcc09e2faa6f83ff6bda1a755aef695077952a0",
+              "static_analysis": "0d6c8b38c85a1fc0c614cec04ab1fd1acf4b0904f9ad96927febb9feaf0cabab"
+            },
+            "sha256": [
+              "97b3c16132c08b146a61680ec330109c5261ee282bed347457e50d59e22cc698",
+              "3c340db57a0e993b73d38131b378d436851e4e5a898aa4356558ad978988aac0"
+            ],
+            "worker_completed": true
+          },
+          "label": "build29-diagnostic-reference:postman-agent-worker",
+          "measurement_note": "Worker I/O wall includes launch and pipe draining. Total wall also includes cleanup and deferred protocol validation. CPU and RSS are sampled family lower bounds at a 50 ms cadence; receipt stores protocol hashes and metadata only.",
+          "projection_complete": false,
+          "protocol_validation_ms": 1680.991,
+          "returncode": 0,
+          "sample_count": 466,
+          "sampled_family_cpu_us": 30547152,
+          "sampled_family_peak_rss_bytes": 1516290048,
+          "semantic_coverage_complete": false,
+          "status": "partial",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_stderr_bytes": 71796522,
+          "worker_completed": true,
+          "worker_io_ms": 31122.12
+        }
+      },
+      "reference_validity_failures": [],
+      "validity_failures": []
+    }
+  ],
+  "field_parity_pass": true,
+  "finished_utc": "2026-10-26T14:00:41.057581+00:00",
+  "fixtures": [
+    {
+      "archive": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "archive_sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+      "entry_offset": 5832192,
+      "name": "figma-main",
+      "requested_member": "main.js",
+      "selected_member": "main.js",
+      "source_bytes": 3632793,
+      "source_sha256": "5ff5373b176c282f7389aa437a0d553bcd3dbf9ff5846dfac1f3641cdee40371"
+    },
+    {
+      "archive": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "archive_sha256": "1705089ab2a15340eff8de9a85d8365189099129f22268c1cc9fd3b0dc7e4d78",
+      "entry_offset": 5622386,
+      "name": "postman-agent-worker",
+      "requested_member": "AgentWorker.js",
+      "selected_member": "AgentWorker.js",
+      "source_bytes": 10794503,
+      "source_sha256": "dd0391ddedd4907dab0866816f1a7251ee2b57054828bcb596ed074b7fd32280"
+    }
+  ],
+  "full_analysis_complete": false,
+  "harness": {
+    "path": "/Users/tihan-nico/.codex/worktrees/rea-large-files/rea-rust/scripts/benchmarks/compare_js_workers.py",
+    "sha256": "0e69d828d62bb7ef0ad02747550effee4e48e03abfa7f683da693d2805eed3d1"
+  },
+  "hash_policy": {
+    "canonical_json": "The imported harness hashes all five semantic fields canonically with ensure_ascii=true, sort_keys=true, and separators=(',', ':').",
+    "fields": [
+      "static_analysis",
+      "semantic_ir",
+      "semantic_metadata",
+      "semantic_projection",
+      "semantic_failure"
+    ],
+    "null_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "raw_frames": "Never persisted; worker spools remain unlinked temporary files owned by run_worker."
+  },
+  "limits": {
+    "candidate": {
+      "name": "candidate-production-limits",
+      "output_cap_bytes": 67108864,
+      "purpose": "Production worker limits.",
+      "timeout_seconds": 30.0
+    },
+    "max_heap_mb": 1024,
+    "node_budget": 20000,
+    "reference": {
+      "name": "build29-diagnostic-reference",
+      "output_cap_bytes": 201326592,
+      "purpose": "Extended diagnostic capture; not a production result.",
+      "timeout_seconds": 90.0
+    },
+    "unknown_budget": 20000
+  },
+  "purpose": "Exact semantic-field transport oracle; diagnostic reference uses relaxed capture limits.",
+  "started_utc": "2026-10-26T13:59:19.297881+00:00",
+  "timing_comparison": "Not comparable: reference and candidate use different diagnostic and production limits."
+}

@@ -1,0 +1,173 @@
+{
+  "schema": "rea-js-worker-comparison-v2",
+  "started_at_utc": "2026-10-26T07:48:43.854970+00:00",
+  "finished_at_utc": "2026-10-26T07:49:19.936607+00:00",
+  "provenance": {
+    "script_sha256": "86fd7ca80b4fd879529e276e90bab34c14ffef338c2ebddba66a23e12d6f0fc6",
+    "host": {
+      "system": "Darwin",
+      "release": "27.2.0",
+      "machine": "arm64",
+      "python": "3.13.7",
+      "logical_cpu_count": 10
+    },
+    "load_average": [
+      6.06982421875,
+      15.84130859375,
+      21.8330078125
+    ]
+  },
+  "config": {
+    "baseline": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build20/rea",
+    "candidate": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build20/rea",
+    "baseline_sha256": "ffe5cfc2590a595b7b9d117681860c9a044e382b05aefa514b9e18d8e1d0e5e8",
+    "candidate_sha256": "ffe5cfc2590a595b7b9d117681860c9a044e382b05aefa514b9e18d8e1d0e5e8",
+    "candidate_only": true,
+    "rounds": 1,
+    "timeout_seconds": 30.0,
+    "max_heap_mb": 1024,
+    "node_budget": 20000,
+    "unknown_budget": 20000,
+    "max_family_rss_bytes": 4294967296,
+    "max_combined_output_bytes": 67108864
+  },
+  "fixtures": [
+    {
+      "name": "figma-main",
+      "archive": "/Applications/Figma.app/Contents/Resources/app.asar",
+      "member": "main.js",
+      "metadata": {
+        "bytes": 3632793,
+        "sha256": "5ff5373b176c282f7389aa437a0d553bcd3dbf9ff5846dfac1f3641cdee40371",
+        "archive_sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+        "offset": 5832192
+      }
+    },
+    {
+      "name": "postman-agent-worker",
+      "archive": "/Applications/Postman.app/Contents/Resources/app.asar",
+      "member": "AgentWorker.js",
+      "metadata": {
+        "bytes": 10794503,
+        "sha256": "dd0391ddedd4907dab0866816f1a7251ee2b57054828bcb596ed074b7fd32280",
+        "archive_sha256": "1705089ab2a15340eff8de9a85d8365189099129f22268c1cc9fd3b0dc7e4d78",
+        "offset": 5622386
+      }
+    }
+  ],
+  "results": [
+    {
+      "round": 1,
+      "fixture": "figma-main",
+      "member": "main.js",
+      "source_sha256": "5ff5373b176c282f7389aa437a0d553bcd3dbf9ff5846dfac1f3641cdee40371",
+      "order": "candidate",
+      "result": {
+        "label": "figma-main#round-1",
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build20/rea",
+        "elapsed_ms": 20056.706,
+        "returncode": 0,
+        "status": "partial",
+        "worker_completed": true,
+        "semantic_coverage_complete": false,
+        "projection_complete": false,
+        "complete": false,
+        "error": null,
+        "stdout_stderr_bytes": 48492469,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frames": {
+          "count": 2,
+          "bytes": 48492468,
+          "sha256": [
+            "f9039a99c9358f5fd7de19616e8ca95f4ff7f4a8fa6c28b116df4a12da82f789",
+            "ffafb4eb91892b283a23d31ebbeb09bf02f2c4101b4ce4e33136063690ad8862"
+          ],
+          "hashes_truncated": false,
+          "kinds": {
+            "message": 1,
+            "final": 1
+          },
+          "parse_errors": [],
+          "worker_completed": true,
+          "semantic_coverage_complete": false,
+          "projection_complete": false,
+          "complete": false,
+          "semantic_failure": false,
+          "protocol_invalid": false,
+          "final_projection": true,
+          "semantic_coverage": {
+            "status": "partial",
+            "omitted_count": 0,
+            "resource_limit_count": null
+          },
+          "projection_counts": {
+            "roots": 1,
+            "nodes": 20000,
+            "relations": 2417,
+            "unknowns": 20000,
+            "fingerprints": 11842,
+            "evidenceContexts": 479,
+            "omittedUnknownOccurrences": 6,
+            "nodes_truncated": true
+          },
+          "semantic_hashes": {}
+        },
+        "sample_count": 977,
+        "sampled_family_peak_rss_bytes": 1275084800,
+        "sampled_family_cpu_us": 10137817,
+        "cleanup_errors": [],
+        "measurement_note": "CPU and RSS are sampled family lower bounds; receipt stores protocol hashes and metadata only."
+      }
+    },
+    {
+      "round": 1,
+      "fixture": "postman-agent-worker",
+      "member": "AgentWorker.js",
+      "source_sha256": "dd0391ddedd4907dab0866816f1a7251ee2b57054828bcb596ed074b7fd32280",
+      "order": "candidate",
+      "result": {
+        "label": "postman-agent-worker#round-1",
+        "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build20/rea",
+        "elapsed_ms": 15987.353,
+        "returncode": 122,
+        "status": "exit-122",
+        "worker_completed": false,
+        "semantic_coverage_complete": false,
+        "projection_complete": false,
+        "complete": false,
+        "error": null,
+        "stdout_stderr_bytes": 3004738,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frames": {
+          "count": 1,
+          "bytes": 3004737,
+          "sha256": [
+            "97b3c16132c08b146a61680ec330109c5261ee282bed347457e50d59e22cc698"
+          ],
+          "hashes_truncated": false,
+          "kinds": {
+            "message": 1
+          },
+          "parse_errors": [],
+          "worker_completed": false,
+          "semantic_coverage_complete": false,
+          "projection_complete": false,
+          "complete": false,
+          "semantic_failure": false,
+          "protocol_invalid": false,
+          "final_projection": false,
+          "semantic_coverage": null,
+          "projection_counts": {},
+          "semantic_hashes": {}
+        },
+        "sample_count": 449,
+        "sampled_family_peak_rss_bytes": 1432240128,
+        "sampled_family_cpu_us": 13560848,
+        "cleanup_errors": [],
+        "measurement_note": "CPU and RSS are sampled family lower bounds; receipt stores protocol hashes and metadata only."
+      }
+    }
+  ]
+}

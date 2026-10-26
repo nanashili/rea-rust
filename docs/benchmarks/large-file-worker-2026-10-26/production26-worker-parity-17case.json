@@ -1,0 +1,573 @@
+{
+  "baseline_sha256": "982f639ef7fa9c00ab8e69cd14087b80d05e00e21c41bac8677f82a902d8e6e8",
+  "candidate_sha256": "1cdfb058f6f75fb9dc30dbdf343d04c9c21ae25434898444614e88be97f9a5be",
+  "case_count": 17,
+  "manifest_sha256": "4da1e4d176557b40f43b0403b86f84f90d022260d55055a954513c0ca8047f64",
+  "results": [
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "30820f012f87ea4d39ae843b9bbcc2ce0e857d7873182d8cd1cf101651901171",
+            "semantic_projection": "d907e277e14f4b88864a2509196bfb86b4455bbf8800817d4381df3f3a71579a",
+            "static_analysis": "2a37aa5cc7f8b4f88fe5e11501594c1983fb9ca5090873d29d371c9a9f16896f"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "30820f012f87ea4d39ae843b9bbcc2ce0e857d7873182d8cd1cf101651901171",
+            "semantic_projection": "d907e277e14f4b88864a2509196bfb86b4455bbf8800817d4381df3f3a71579a",
+            "static_analysis": "2a37aa5cc7f8b4f88fe5e11501594c1983fb9ca5090873d29d371c9a9f16896f"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "commonjs-structure",
+      "path": "/project/src/commonjs.cjs",
+      "source_sha256": "397446d403194414e20ebb89787e52e2352c0dc27a55cab5159be62994ed1a85"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "4a579d92185854b01652f43462c8eff91468c5c960b32ab5b118188f9f8b0868",
+            "semantic_projection": "31186607b9bde51bbf5f3a9ca70d8f9b4a9d6acd4cf25f79aa8f5ac24e884e43",
+            "static_analysis": "5b45bd5d96f75d29e5bed2839bb7fa6b9750b98a6be18a611e689e542d3bb84c"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "4a579d92185854b01652f43462c8eff91468c5c960b32ab5b118188f9f8b0868",
+            "semantic_projection": "31186607b9bde51bbf5f3a9ca70d8f9b4a9d6acd4cf25f79aa8f5ac24e884e43",
+            "static_analysis": "5b45bd5d96f75d29e5bed2839bb7fa6b9750b98a6be18a611e689e542d3bb84c"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "imports",
+      "path": "/project/src/imports.ts",
+      "source_sha256": "8bc8f9b7fe14db029a635c3aec71775abbcc4ac0f2d74c1c3bf7df18a1ed9ec2"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "06297a39fbb7a2dc56d59951669f963f80c9cf3961c03277593e6a34db1ae822",
+            "semantic_projection": "fbb15cf8c1f036d93b2bfc1b87711add2e937c6f928446b105baee0fb041d123",
+            "static_analysis": "0ca2fc867aca20ab58d1f06eb15bb267413edf73068520ab4ab926a159cd6bcd"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "06297a39fbb7a2dc56d59951669f963f80c9cf3961c03277593e6a34db1ae822",
+            "semantic_projection": "fbb15cf8c1f036d93b2bfc1b87711add2e937c6f928446b105baee0fb041d123",
+            "static_analysis": "0ca2fc867aca20ab58d1f06eb15bb267413edf73068520ab4ab926a159cd6bcd"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "closures",
+      "path": "/project/src/closures.js",
+      "source_sha256": "345f137a0f69a98fee96387e75cd2676a235a572e504f32d077f0ecc6de966b8"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "9494978ccf9d7ad7762bfc4a03a53be388411052529f25835cdfbddfd2e6d656",
+            "semantic_projection": "876e17b05502305aa2166d0bb23a4380f90e614acaa3a94af73a0447484a016c",
+            "static_analysis": "7d318a864e32b6076922fd8ea211fcb66b4b8644392cdfc1132732b8b47a850e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "9494978ccf9d7ad7762bfc4a03a53be388411052529f25835cdfbddfd2e6d656",
+            "semantic_projection": "876e17b05502305aa2166d0bb23a4380f90e614acaa3a94af73a0447484a016c",
+            "static_analysis": "7d318a864e32b6076922fd8ea211fcb66b4b8644392cdfc1132732b8b47a850e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "loops",
+      "path": "/project/src/loops.js",
+      "source_sha256": "b034ec7ce7e21e10ebc1093e3f6ef8ea0668bf639ad0057d09b4754517850c1a"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "a34f5292e5963273c32cabd330c2de64d9a6187eaf7610c785aed8a3217dc257",
+            "semantic_projection": "ddda8739b33813735ef4bdf17aca465912b9e3317c558a9eb9ca2fa8e648704c",
+            "static_analysis": "c103bcc3fede3527a887eb9ee4b2210b0c30b8647c760ac8a8cf5f6d8d385b7e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "a34f5292e5963273c32cabd330c2de64d9a6187eaf7610c785aed8a3217dc257",
+            "semantic_projection": "ddda8739b33813735ef4bdf17aca465912b9e3317c558a9eb9ca2fa8e648704c",
+            "static_analysis": "c103bcc3fede3527a887eb9ee4b2210b0c30b8647c760ac8a8cf5f6d8d385b7e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "unicode",
+      "path": "/project/src/unicode.js",
+      "source_sha256": "0452b40ff5cb2993a77c0a5c8a2cd0263771cce13ba357186b69af0084251e57"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "849e82b076a3df1af97f7a815c9c9aeeb1102fec7a43fd481de4f3d3370db2a3",
+            "semantic_projection": "0ce3b03b260e5a41809bbd36e814c3fc4da5414bc5f97ef4861095f06be918e7",
+            "static_analysis": "4a82328cc195a07455de5b72a5a83f2a80278a606ce6db74e9465eb131525d44"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "849e82b076a3df1af97f7a815c9c9aeeb1102fec7a43fd481de4f3d3370db2a3",
+            "semantic_projection": "0ce3b03b260e5a41809bbd36e814c3fc4da5414bc5f97ef4861095f06be918e7",
+            "static_analysis": "4a82328cc195a07455de5b72a5a83f2a80278a606ce6db74e9465eb131525d44"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "promise-ownership",
+      "path": "/project/src/promise-ownership.js",
+      "source_sha256": "1f5673312bae955d51bccfd5146c7baeb408fe7f9f4dbc1e2c91df9553683f6c"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "a74a519c0ef4857185d2acacde232ee0faca905cb446c67055d78b5b8a917260",
+            "semantic_projection": "ffd31d08f4d969ddc0607f64924ad1230dd4f6caab9932947db5cbe71eed57a3",
+            "static_analysis": "c8498d3b5a46aa9e9bd88ef35a8cfa17c625a7130aa233462adeed7c2b070f0e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "a74a519c0ef4857185d2acacde232ee0faca905cb446c67055d78b5b8a917260",
+            "semantic_projection": "ffd31d08f4d969ddc0607f64924ad1230dd4f6caab9932947db5cbe71eed57a3",
+            "static_analysis": "c8498d3b5a46aa9e9bd88ef35a8cfa17c625a7130aa233462adeed7c2b070f0e"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "surrogates",
+      "path": "/project/src/surrogates.js",
+      "source_sha256": "6fd175d4f2b9453801dbb3864155705277025a9f929bc61e4c57083c71b2013b"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "7e3c0f92d0932c5ea9ea5dc216acbab6a2ed479088d23db1ea46b51f8643d838",
+            "semantic_projection": "233d37ce5e105b2522c4fc6f571335c18b200b48e3878760c96f8b791323fbcf",
+            "static_analysis": "29a0dab6c5fda089240a15bb7da117c310e3a42b7db65fe07797568f2c60dd1b"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "7e3c0f92d0932c5ea9ea5dc216acbab6a2ed479088d23db1ea46b51f8643d838",
+            "semantic_projection": "233d37ce5e105b2522c4fc6f571335c18b200b48e3878760c96f8b791323fbcf",
+            "static_analysis": "29a0dab6c5fda089240a15bb7da117c310e3a42b7db65fe07797568f2c60dd1b"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "eval",
+      "path": "/project/src/eval.js",
+      "source_sha256": "ce36ed15f7c3dce5594375966a64289047591387cdda89a00ec9c93d502f428d"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "4e0442c872fbcf86348faa35d83cfc42d55491479dd3a574e633985c26b8f387",
+            "semantic_projection": "f72bd41919e5e4c95f108890b1d66199347f66a37286ec4597864e646d38c18a",
+            "static_analysis": "644726e4aa7e4eab10ba02048e8a925cf7b81db066165f4ebc20db840584e186"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "4e0442c872fbcf86348faa35d83cfc42d55491479dd3a574e633985c26b8f387",
+            "semantic_projection": "f72bd41919e5e4c95f108890b1d66199347f66a37286ec4597864e646d38c18a",
+            "static_analysis": "644726e4aa7e4eab10ba02048e8a925cf7b81db066165f4ebc20db840584e186"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "hoisting",
+      "path": "/project/src/hoisting.js",
+      "source_sha256": "d36c94ee785477bfe75e7006ba68f30756d825a33d03cc48cfb9eeb9322fef1a"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "6f52e2b3cc897367b1ba78b1fc38a69d3bec14074b0b026880c72658b3a8f700",
+            "semantic_projection": "17ade960a5cebed7efe6fe4f66ce1c5d5824237b13424321797bd36d9dc15d99",
+            "static_analysis": "d7336018d39513d4e2fe038090ebf8aea2deacd324884be11c0526a6d4e79460"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "6f52e2b3cc897367b1ba78b1fc38a69d3bec14074b0b026880c72658b3a8f700",
+            "semantic_projection": "17ade960a5cebed7efe6fe4f66ce1c5d5824237b13424321797bd36d9dc15d99",
+            "static_analysis": "d7336018d39513d4e2fe038090ebf8aea2deacd324884be11c0526a6d4e79460"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "param-scopes",
+      "path": "/project/src/param-scopes.js",
+      "source_sha256": "fe0b707fa609e4f4f516335733b1e50500305dd6910f7936223b2895346c1b24"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "4f3add7d59de1e23e39bf9bad4d34f1577eef69f4f92fb7b8602562651fb5c40",
+            "semantic_projection": "fd05cc5e2a7314699af417d439bc6653cef5773ed830dce50a7c9a4e047e81db",
+            "static_analysis": "757f92c38b022eb90a99c822cc4cd5e9995798143df63f78e2fb276f10ee40c0"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "4f3add7d59de1e23e39bf9bad4d34f1577eef69f4f92fb7b8602562651fb5c40",
+            "semantic_projection": "fd05cc5e2a7314699af417d439bc6653cef5773ed830dce50a7c9a4e047e81db",
+            "static_analysis": "757f92c38b022eb90a99c822cc4cd5e9995798143df63f78e2fb276f10ee40c0"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "with-proto",
+      "path": "/project/src/with-proto.js",
+      "source_sha256": "230d98fad2f7fe335d3a5fdcb779c0cf1ec971c38b2d7b923ab491383fd1bf11"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "d986a92763d42ee6a32acbc996d182ab3e941aab9fcc1cec61038beda511a4c2",
+            "semantic_projection": "7395062097ac70af7ab396bf17522341dcf819ffe3a357a4e7399a162c64951c",
+            "static_analysis": "aa8dbfafb49ca16767942a48cbbf4e4e6067ce38597740e3793e872458de11a4"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "d986a92763d42ee6a32acbc996d182ab3e941aab9fcc1cec61038beda511a4c2",
+            "semantic_projection": "7395062097ac70af7ab396bf17522341dcf819ffe3a357a4e7399a162c64951c",
+            "static_analysis": "aa8dbfafb49ca16767942a48cbbf4e4e6067ce38597740e3793e872458de11a4"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "with",
+      "path": "/project/src/with.js",
+      "source_sha256": "8d6335387ba8394d93d259ca2ea3bb71bf95f672250003075d6b1ee782bf3897"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "20267af7d5de21facff7fa57f83daac13071da8eafe781b7de92ea92a4eb8c2f",
+            "semantic_projection": "3d39e074ebd45926831935f2f652b34e4b8e70bd1341a94abfae94a52a9e0ef3",
+            "static_analysis": "f54ec6eede522c42c9e2ba485c14ecb0ecbf04d556bd4a71dd16a531919463e6"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "20267af7d5de21facff7fa57f83daac13071da8eafe781b7de92ea92a4eb8c2f",
+            "semantic_projection": "3d39e074ebd45926831935f2f652b34e4b8e70bd1341a94abfae94a52a9e0ef3",
+            "static_analysis": "f54ec6eede522c42c9e2ba485c14ecb0ecbf04d556bd4a71dd16a531919463e6"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "import-typeof",
+      "path": "/project/src/import-typeof.ts",
+      "source_sha256": "ea8a86b6cf6518c1b0e7614bf2b02fe670b5922ea4b378585a156dba1f703d40"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "e77d43217e4459b7c789f7ce2cc723cc8c0a9541391c6b3a32c9ccfc5d2d7c5b",
+            "semantic_projection": "968b18044add9110a0526ab7ac7bbfa10212dc493e7bd1c29efe1720491f940f",
+            "static_analysis": "122fb1c4848046729191234544d2d37c20a7c0bfd00aa2bd3fd5f0a369047270"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "e77d43217e4459b7c789f7ce2cc723cc8c0a9541391c6b3a32c9ccfc5d2d7c5b",
+            "semantic_projection": "968b18044add9110a0526ab7ac7bbfa10212dc493e7bd1c29efe1720491f940f",
+            "static_analysis": "122fb1c4848046729191234544d2d37c20a7c0bfd00aa2bd3fd5f0a369047270"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "ts-targets",
+      "path": "/project/src/ts-targets.ts",
+      "source_sha256": "bd3a508069b14e93f7b4ef53984d379116cf14c0c40949962b46d2d73217cc08"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "0361f2086a253f5f6fc3fb313f00a6b858ccf6e3db6ef3991a25901cf1f81106",
+            "semantic_projection": "215c9b1d0299e65946ad39faeb0c940d39b6b4ebc96df34ce47e239908f2f8f7",
+            "static_analysis": "c9afe5974c8bb6341dbbd0ec327dfe2f9fa765ffbdd38cdbc34e6647c609306c"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "0361f2086a253f5f6fc3fb313f00a6b858ccf6e3db6ef3991a25901cf1f81106",
+            "semantic_projection": "215c9b1d0299e65946ad39faeb0c940d39b6b4ebc96df34ce47e239908f2f8f7",
+            "static_analysis": "c9afe5974c8bb6341dbbd0ec327dfe2f9fa765ffbdd38cdbc34e6647c609306c"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "imports-mode",
+      "path": "/project/src/imports-mode.mjs",
+      "source_sha256": "3a86148a50243293a8c9d72c17c4a1aea54addd7b5a312e0908068108db3fdf7"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "bfc503e3d73bed2bdc82f9e4886239ddf1383fc1376748a4025a007bd0a374f9",
+            "semantic_projection": "a06d3fc2e46a872e47b4449488d0b27cd48383595cf6ee28827fa2ef33edb171",
+            "static_analysis": "101ced424fafe06a7152bcc53696928573f3988dcca8c91c65e380fe54600c5a"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": true,
+          "projection_complete": true,
+          "semantic_coverage_complete": true,
+          "semantic_hashes": {
+            "semantic_metadata": "bfc503e3d73bed2bdc82f9e4886239ddf1383fc1376748a4025a007bd0a374f9",
+            "semantic_projection": "a06d3fc2e46a872e47b4449488d0b27cd48383595cf6ee28827fa2ef33edb171",
+            "static_analysis": "101ced424fafe06a7152bcc53696928573f3988dcca8c91c65e380fe54600c5a"
+          },
+          "status": "complete",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "broad-producers",
+      "path": "/project/src/broad-producers.js",
+      "source_sha256": "e4cda44054283be5f1f24b34cab2d702654d01a2aceda8742ac9f07462289fa6"
+    },
+    {
+      "comparison": {
+        "baseline": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "6d48e6b41c7741ffdcb5a48268ea7a25c87cef177e33208dc3c802ba0e661750",
+            "semantic_projection": "666dbbc4579c179ae0dc1c86ff1fe9b30cd69b1cbe2c6abfc3128fce1fafb7c9",
+            "static_analysis": "43378745f99c127cad2123f0e6e25f3c526652d6c4f5dce9f2bce088de0dea97"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "candidate": {
+          "complete": false,
+          "projection_complete": true,
+          "semantic_coverage_complete": false,
+          "semantic_hashes": {
+            "semantic_metadata": "6d48e6b41c7741ffdcb5a48268ea7a25c87cef177e33208dc3c802ba0e661750",
+            "semantic_projection": "666dbbc4579c179ae0dc1c86ff1fe9b30cd69b1cbe2c6abfc3128fce1fafb7c9",
+            "static_analysis": "43378745f99c127cad2123f0e6e25f3c526652d6c4f5dce9f2bce088de0dea97"
+          },
+          "status": "partial",
+          "worker_completed": true
+        },
+        "failures": [],
+        "semantic_differences": []
+      },
+      "id": "edge-boundaries",
+      "path": "/project/src/edge-boundaries.mjs",
+      "source_sha256": "95d5dea84410424372646002515b6f4f8e3fdf2017a8f5c995b0737725f71cde"
+    }
+  ],
+  "runner_sha256": "d6a43a7a608f17f3f0b455a9b3b332a4f6b7165ce21f17b4a8a63e1f8978cf56",
+  "schema": "rea-js-worker-manifest-comparison-v1",
+  "script_sha256": "74f83327c52739e749562d92734cdc75dcdb20bf603b874130e2c1920189e985",
+  "source_commit": "14d63901e81f71254e5396922f1a6dbe3cd15e5a"
+}

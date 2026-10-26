@@ -1,0 +1,390 @@
+{
+  "collection_summary": {
+    "semantic_projection.evidenceContexts": {
+      "count": 3,
+      "largest_record_bytes": 724,
+      "largest_record_fields": [
+        "artifact",
+        "authority",
+        "confidence",
+        "context_id",
+        "coverage",
+        "evidence_ids",
+        "extractor",
+        "limitations",
+        "state"
+      ],
+      "largest_record_index": 1,
+      "serialized_bytes": 2000
+    },
+    "semantic_projection.evidenceContexts.evidence_ids": {
+      "count": 0,
+      "largest_record_bytes": 0,
+      "largest_record_fields": [],
+      "largest_record_index": null,
+      "serialized_bytes": 0
+    },
+    "semantic_projection.evidenceContexts.limitations": {
+      "count": 2,
+      "largest_record_bytes": 119,
+      "largest_record_fields": [],
+      "largest_record_index": 0,
+      "serialized_bytes": 174
+    },
+    "semantic_projection.fingerprints": {
+      "count": 19537,
+      "largest_record_bytes": 1149,
+      "largest_record_fields": [
+        "algorithm",
+        "components",
+        "evidence",
+        "fingerprint_id",
+        "fingerprint_sha256",
+        "function_node_id",
+        "limitations",
+        "status"
+      ],
+      "largest_record_index": 4972,
+      "serialized_bytes": 21943384
+    },
+    "semantic_projection.fingerprints.limitations": {
+      "count": 19537,
+      "largest_record_bytes": 82,
+      "largest_record_fields": [],
+      "largest_record_index": 0,
+      "serialized_bytes": 1602034
+    },
+    "semantic_projection.nodes": {
+      "count": 20000,
+      "largest_record_bytes": 949,
+      "largest_record_fields": [
+        "application_node_ids",
+        "evidence",
+        "function_node_id",
+        "identity",
+        "kind",
+        "label",
+        "node_id",
+        "properties"
+      ],
+      "largest_record_index": 4960,
+      "serialized_bytes": 14826988
+    },
+    "semantic_projection.nodes.application_node_ids": {
+      "count": 0,
+      "largest_record_bytes": 0,
+      "largest_record_fields": [],
+      "largest_record_index": null,
+      "serialized_bytes": 0
+    },
+    "semantic_projection.omittedUnknownOccurrences": {
+      "count": 5,
+      "largest_record_bytes": 73,
+      "largest_record_fields": [
+        "family",
+        "occurrences",
+        "reason"
+      ],
+      "largest_record_index": 0,
+      "serialized_bytes": 338
+    },
+    "semantic_projection.relations": {
+      "count": 0,
+      "largest_record_bytes": 0,
+      "largest_record_fields": [],
+      "largest_record_index": null,
+      "serialized_bytes": 0
+    },
+    "semantic_projection.roots": {
+      "count": 1,
+      "largest_record_bytes": 76,
+      "largest_record_fields": [],
+      "largest_record_index": 0,
+      "serialized_bytes": 76
+    },
+    "semantic_projection.unknowns": {
+      "count": 20000,
+      "largest_record_bytes": 751,
+      "largest_record_fields": [
+        "candidate_node_ids",
+        "detail",
+        "evidence",
+        "family",
+        "node_id",
+        "reason",
+        "relation_kinds",
+        "unknown_id"
+      ],
+      "largest_record_index": 7921,
+      "serialized_bytes": 12882929
+    },
+    "semantic_projection.unknowns.candidate_node_ids": {
+      "count": 0,
+      "largest_record_bytes": 0,
+      "largest_record_fields": [],
+      "largest_record_index": null,
+      "serialized_bytes": 0
+    },
+    "semantic_projection.unknowns.relation_kinds": {
+      "count": 20000,
+      "largest_record_bytes": 17,
+      "largest_record_fields": [],
+      "largest_record_index": 0,
+      "serialized_bytes": 321979
+    }
+  },
+  "combined_output_bytes": 71796522,
+  "diagnostic_limits": {
+    "combined_output_cap_bytes": 201326592,
+    "deadline_seconds": 90.0,
+    "max_heap_mb": 1024,
+    "node_budget": 20000,
+    "unknown_budget": 20000
+  },
+  "executable": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build29/rea",
+  "executable_sha256": "be4eed9c258331077ea2dbcd2fbd6c667a12ef335cd5095da8ccdc99122319c1",
+  "execution_seconds": 31.881,
+  "final_frame_bytes": 68791784,
+  "final_frame_kind": null,
+  "final_frame_observed": true,
+  "finished_utc": "2026-10-26T11:32:30Z",
+  "frame_count": 2,
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "production_output_cap_bytes": 67108864,
+  "projection_total_serialized_bytes": 49715400,
+  "request_sha256": "72eed72d9cc1e48fd52df5ac1c206f92ffb802908c94aea915e643909bbded91",
+  "returncode": 0,
+  "source_sha256": "dd0391ddedd4907dab0866816f1a7251ee2b57054828bcb596ed074b7fd32280",
+  "started_utc": "2026-10-26T11:31:52Z",
+  "status": "exit-0",
+  "stderr_bytes": 0,
+  "string_summary": {
+    "distinct_lengths": 176,
+    "occurrences": 3316392,
+    "top_duplicate_lengths": [
+      {
+        "aggregate_utf8_bytes": 7857920,
+        "occurrences": 122780,
+        "utf8_length": 64
+      },
+      {
+        "aggregate_utf8_bytes": 4658160,
+        "occurrences": 59720,
+        "utf8_length": 78
+      },
+      {
+        "aggregate_utf8_bytes": 3172062,
+        "occurrences": 528677,
+        "utf8_length": 6
+      },
+      {
+        "aggregate_utf8_bytes": 2966956,
+        "occurrences": 40094,
+        "utf8_length": 74
+      },
+      {
+        "aggregate_utf8_bytes": 2652810,
+        "occurrences": 88427,
+        "utf8_length": 30
+      },
+      {
+        "aggregate_utf8_bytes": 2528701,
+        "occurrences": 361243,
+        "utf8_length": 7
+      },
+      {
+        "aggregate_utf8_bytes": 2504978,
+        "occurrences": 51122,
+        "utf8_length": 49
+      },
+      {
+        "aggregate_utf8_bytes": 2406800,
+        "occurrences": 240680,
+        "utf8_length": 10
+      },
+      {
+        "aggregate_utf8_bytes": 1975400,
+        "occurrences": 141100,
+        "utf8_length": 14
+      },
+      {
+        "aggregate_utf8_bytes": 1665544,
+        "occurrences": 208193,
+        "utf8_length": 8
+      },
+      {
+        "aggregate_utf8_bytes": 1597887,
+        "occurrences": 19727,
+        "utf8_length": 81
+      },
+      {
+        "aggregate_utf8_bytes": 1576800,
+        "occurrences": 19710,
+        "utf8_length": 80
+      },
+      {
+        "aggregate_utf8_bytes": 1561472,
+        "occurrences": 390368,
+        "utf8_length": 4
+      },
+      {
+        "aggregate_utf8_bytes": 1557017,
+        "occurrences": 20221,
+        "utf8_length": 77
+      },
+      {
+        "aggregate_utf8_bytes": 1072314,
+        "occurrences": 59573,
+        "utf8_length": 18
+      },
+      {
+        "aggregate_utf8_bytes": 991428,
+        "occurrences": 82619,
+        "utf8_length": 12
+      },
+      {
+        "aggregate_utf8_bytes": 958880,
+        "occurrences": 59930,
+        "utf8_length": 16
+      },
+      {
+        "aggregate_utf8_bytes": 938110,
+        "occurrences": 187622,
+        "utf8_length": 5
+      },
+      {
+        "aggregate_utf8_bytes": 871340,
+        "occurrences": 22930,
+        "utf8_length": 38
+      },
+      {
+        "aggregate_utf8_bytes": 846756,
+        "occurrences": 94084,
+        "utf8_length": 9
+      }
+    ],
+    "top_duplicate_strings": [
+      {
+        "aggregate_utf8_bytes": 3083964,
+        "occurrences": 39538,
+        "sha256": "610f98e3aad0bf35e1c8744ac95153cb780c081307d1e7e4b3f3784934427b88",
+        "utf8_length": 78
+      },
+      {
+        "aggregate_utf8_bytes": 2486603,
+        "occurrences": 50747,
+        "sha256": "eff6e712b76affec0b58d2aa208a117afdebf5c0ea6bdce6e795e77adc0c76a9",
+        "utf8_length": 49
+      },
+      {
+        "aggregate_utf8_bytes": 1562960,
+        "occurrences": 19537,
+        "sha256": "3f17cfe7e943d271b8d7b41d0d3211120de0c43e92138974fc5857d66736d7fd",
+        "utf8_length": 80
+      },
+      {
+        "aggregate_utf8_bytes": 1532778,
+        "occurrences": 19651,
+        "sha256": "cf01edf7852ff31474367fcd7b2a693c5b8726ac2552c5d27a87c15f60acd264",
+        "utf8_length": 78
+      },
+      {
+        "aggregate_utf8_bytes": 1280192,
+        "occurrences": 20003,
+        "sha256": "a6d4f72d214ec0b4508c9333ce3d6bafdeca23e9e0061064cf5ad88bb5c62d8f",
+        "utf8_length": 64
+      },
+      {
+        "aggregate_utf8_bytes": 1113532,
+        "occurrences": 79538,
+        "sha256": "235f9b28d49e7c14222d45854a4e451969730345d8b4394f5067423f002b33f6",
+        "utf8_length": 14
+      },
+      {
+        "aggregate_utf8_bytes": 1070544,
+        "occurrences": 178424,
+        "sha256": "881d5fb60090f59aabba4f287d7596317ca7091d00c2180b6cbc8ab018b9febd",
+        "utf8_length": 6
+      },
+      {
+        "aggregate_utf8_bytes": 1050900,
+        "occurrences": 105090,
+        "sha256": "96d815328a42cb4ef89d5e0b7a1df6be43b484832c83a7b4596d8402c7c0b12b",
+        "utf8_length": 10
+      },
+      {
+        "aggregate_utf8_bytes": 779456,
+        "occurrences": 12179,
+        "sha256": "a117288688ad59388f308b82aa30755bcd67d6461625521d70a42c11912dcc05",
+        "utf8_length": 64
+      },
+      {
+        "aggregate_utf8_bytes": 750606,
+        "occurrences": 125101,
+        "sha256": "8fcfccf675b1f0bfd39dcbb13015052fe82bc51c003c165a410945c913dbb2be",
+        "utf8_length": 6
+      },
+      {
+        "aggregate_utf8_bytes": 747798,
+        "occurrences": 124633,
+        "sha256": "073c1634c496cdb649d1afe0a312bbb4b7e1741b271542e4a436c3b8824b1761",
+        "utf8_length": 6
+      },
+      {
+        "aggregate_utf8_bytes": 735637,
+        "occurrences": 105091,
+        "sha256": "d4c30c78491883d7856be5d54501a511909c77d7ddb80e3e406d9aac5be0e8a5",
+        "utf8_length": 7
+      },
+      {
+        "aggregate_utf8_bytes": 735630,
+        "occurrences": 105090,
+        "sha256": "70110e841c953c36ec05f6a1133f6de80b64315b385ffb6702a2bbb8a5e6335b",
+        "utf8_length": 7
+      },
+      {
+        "aggregate_utf8_bytes": 714432,
+        "occurrences": 59536,
+        "sha256": "cc8c0600f73b900ce1d16589e047ba069cbe4e7982af703fb61757277fe09b42",
+        "utf8_length": 12
+      },
+      {
+        "aggregate_utf8_bytes": 713696,
+        "occurrences": 178424,
+        "sha256": "38a9c1e721584da284b90ceea4ed7eb8db15ac4ea86c2c75ec925d5f8799fcf0",
+        "utf8_length": 4
+      },
+      {
+        "aggregate_utf8_bytes": 686432,
+        "occurrences": 18064,
+        "sha256": "6e52caf380e15c3ac22505d3220a0a53c0f000ef0104246d5002b73ef9fe5454",
+        "utf8_length": 38
+      },
+      {
+        "aggregate_utf8_bytes": 632592,
+        "occurrences": 39537,
+        "sha256": "acd75d0767cb411322aeb667acf19c3487734a809c1c87507563b5f933de6b6d",
+        "utf8_length": 16
+      },
+      {
+        "aggregate_utf8_bytes": 625184,
+        "occurrences": 19537,
+        "sha256": "7550a843a32ab067ef17e6f25180c3963b39bd5307e80934d4085f162c1d7d64",
+        "utf8_length": 32
+      },
+      {
+        "aggregate_utf8_bytes": 595400,
+        "occurrences": 59540,
+        "sha256": "4b0f595c348d628dfafe51aa0338b9b9460da035764a7f6dc759fe80354a3958",
+        "utf8_length": 10
+      },
+      {
+        "aggregate_utf8_bytes": 565516,
+        "occurrences": 80788,
+        "sha256": "b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc",
+        "utf8_length": 7
+      }
+    ],
+    "utf8_bytes": 54430632
+  }
+}

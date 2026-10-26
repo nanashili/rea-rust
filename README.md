@@ -117,6 +117,12 @@ records fixes, repeated measurements, and remaining failures. The
 data-structure, string, compression and allocator work. The
 [TypeScript failure comparison](docs/benchmarks/typescript-comparison-2026-10-26/README.md)
 records matching-source diagnostics and acquisition differences on the large apps.
+The [large-file worker report](docs/benchmarks/large-file-worker-2026-10-26/README.md)
+records Build34 public MCP qualification for both workflows. Both completed the
+protocol with `semantic_partial_completed` coverage under the 20,000-node and
+20,000-unknown per-file limits; see the report for retained integrity warnings,
+parity evidence, and resource measurements. This is bounded evidence rather
+than full semantic completion or a TypeScript speed comparison.
 
 The separate TypeScript/native comparison used frozen builds, measured on an
 Apple M1 Pro on 24 October 2026, with warm filesystem caches. Seven sessions per

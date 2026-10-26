@@ -1,0 +1,36 @@
+{
+  "frozen_at_utc": "2026-10-26T10:52:19.682193+00:00",
+  "commit": "a643a5eb57072a19b3ef89fd6d9b76c900ab3a7e",
+  "tree": "62c8fdcc9c59cd6fffd83774bad1bd47b94d1c94",
+  "tracked_source_clean_at_freeze": true,
+  "source_checkout": "/Users/tihan-nico/.codex/worktrees/rea-large-files/rea-rust",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: aarch64-apple-darwin\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "cargo_lock": {
+    "bytes": 121067,
+    "sha256": "08dfada42720f557d4a6df04e05bd2f2182059d3ae97b2df65567835448c3a37"
+  },
+  "build_log": {
+    "path": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/build27-release.log",
+    "bytes": 11872,
+    "sha256": "80fcc3d0d0bfb4631e320af552ca5a730748670b973375015f299d72a1132118"
+  },
+  "build_command": "cargo build --locked --release -p rea -p rea-application --bin rea --example js-full-semantic-diff",
+  "build_environment": {
+    "CARGO_TARGET_DIR": "/Users/tihan-nico/.codex/worktrees/rea-large-files/artifacts/target"
+  },
+  "artifacts": {
+    "rea": {
+      "bytes": 54435600,
+      "sha256": "106e2bbc73490982276f67876cacc6980cb4c04416c171d8b5bbb058148acc10"
+    },
+    "js-full-semantic-diff": {
+      "bytes": 3927328,
+      "sha256": "3fe98ba5aed0e754685c7bf6a703e0f69f6c4836f34baa346666acdad2aa8f0c"
+    }
+  },
+  "temporary_full_ir_helper": {
+    "path": "/Users/tihan-nico/.codex/worktrees/rea-large-files/rea-rust/crates/application/rea-application/examples/js-full-semantic-diff.rs",
+    "bytes": 4014,
+    "sha256": "2b8b3ba6924d334819cd4f5660f2430b98a0a100718053adcc21551407267a00"
+  }
+}

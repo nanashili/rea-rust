@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "plan_id": "large-javascript-30s-1gib-record-figma-integrity-2026-10-26",
+  "purpose": "Public MCP qualification of selected large JavaScript sources at production worker limits. Figma uses record-and-continue because bindings.node has a declared/calculated ASAR integrity mismatch; the mismatch and untrusted status remain in Evidence. Postman retains fail policy.",
+  "workflows": [
+    {
+      "name": "figma-main-js",
+      "target": "/Applications/Figma.app",
+      "cases": [
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+            "source_paths": [
+              "main.js"
+            ],
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "record-and-continue",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    },
+    {
+      "name": "postman-agent-worker-js",
+      "target": "/Applications/Postman.app",
+      "cases": [
+        {
+          "name": "analyze_javascript_application",
+          "arguments": {
+            "input_path": "/Applications/Postman.app/Contents/Resources/app.asar",
+            "source_paths": [
+              "AgentWorker.js"
+            ],
+            "format": "asar",
+            "detail": "summary",
+            "integrity_policy": "fail",
+            "analysis_timeout_ms": 30000,
+            "max_heap_mb": 1024,
+            "max_semantic_nodes": 100000,
+            "max_semantic_nodes_per_file": 20000,
+            "max_semantic_unknowns": 100000,
+            "max_semantic_unknowns_per_file": 20000
+          }
+        }
+      ]
+    }
+  ]
+}

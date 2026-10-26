@@ -1,0 +1,547 @@
+{
+  "aggregate_sha256": "eccfa4a23ebb5d6d235526aa4fbab2fc155810074b7bbe31cf7677becffd8e0f",
+  "plan_sha256": "8990ffeb6b3633f41bdb3152d6c0de06e5321c8eeda7262c5576eeab963e373d",
+  "rea_sha256": "04d076034a205aceaad621e0a73c2d2562e5f170de037e2bbcb77ef4b8589903",
+  "schema": "rea-large-mcp-public-summary-v1",
+  "worker_sha256": null,
+  "workflow_count": 2,
+  "workflows": [
+    {
+      "calls": [
+        {
+          "failure_class": null,
+          "label": "initialize",
+          "method": "initialize",
+          "output_bytes": 1177,
+          "sampled_family_cpu_ms": 48.912288000000004,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_bytes": 106594304,
+          "sampled_max_gap_ms": 21.875334001379088,
+          "status": "success",
+          "wall_ms": 62.51095799962059
+        },
+        {
+          "failure_class": null,
+          "label": "tools-list",
+          "method": "tools/list",
+          "output_bytes": 3258039,
+          "sampled_family_cpu_ms": 62.75216800000001,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_bytes": 182747136,
+          "sampled_max_gap_ms": 22.499665999930585,
+          "status": "success",
+          "wall_ms": 112.29987500337302
+        },
+        {
+          "failure_class": null,
+          "label": "analyze_javascript_application#1",
+          "method": "tools/call",
+          "output_bytes": 32190,
+          "sampled_family_cpu_ms": 14577.359216000012,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_bytes": 868270080,
+          "sampled_max_gap_ms": 27.71170800042455,
+          "status": "success",
+          "wall_ms": 14745.795707996876
+        }
+      ],
+      "error": null,
+      "failure_class": null,
+      "metrics": {
+        "harness_cpu_ms": 10057.163,
+        "sampled_family_cpu_ms": 14716.281840000012,
+        "sampled_family_peak_rss_bytes": 868270080,
+        "wait4_system_cpu_ms": 515.636,
+        "wait4_user_cpu_ms": 14223.06,
+        "wall_ms": 15106.319667000207
+      },
+      "name": "figma-main-js",
+      "public_results": [
+        {
+          "call": "call-0003.json",
+          "public_result": {
+            "tool_call": {
+              "coverage_classification": "semantic_partial_completed",
+              "delivery_coverage": {
+                "examined": 132,
+                "exhausted": true,
+                "next_offset": null,
+                "status": "complete-within-view",
+                "total": 396
+              },
+              "evidence_id": "ev_5ee335e65946c4a2670e4daf4c8e174aea3c052e7f2eb33cf6b83198753f4a7a",
+              "evidence_ids": [
+                "ev_5ee335e65946c4a2670e4daf4c8e174aea3c052e7f2eb33cf6b83198753f4a7a",
+                "ev_dd4902ebc55b5b994263617ea73c810ed0b4d87c62622bdf8fb57bf313796b66"
+              ],
+              "evidence_links": "ev_dd4902ebc55b5b994263617ea73c810ed0b4d87c62622bdf8fb57bf313796b66",
+              "integrity_warnings": {
+                "count": 3,
+                "selected": [
+                  "Artifact integrity metadata contradicts observed bytes at bindings.node; the observed bytes are untrusted.",
+                  "Artifact integrity metadata contradicts observed bytes at desktop_rust.node; the observed bytes are untrusted.",
+                  "Artifact integrity metadata contradicts observed bytes at node_modules/fsevents/fsevents.node; the observed bytes are untrusted."
+                ]
+              },
+              "summary": {
+                "coverage": {
+                  "application": {
+                    "limits": [],
+                    "omitted_count": null,
+                    "status": "partial",
+                    "truncated": false
+                  },
+                  "application_unknowns": 73,
+                  "semantic": {
+                    "families": [
+                      {
+                        "family": "boundary",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "call-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "child-process",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "closure",
+                        "omitted_relations": null,
+                        "retained_relations": 2417,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "configuration",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "data-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 8035
+                      },
+                      {
+                        "family": "event",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "object-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 12053
+                      },
+                      {
+                        "family": "promise-ownership",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "request",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "resource-lifecycle",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      },
+                      {
+                        "family": "timer",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 44
+                      }
+                    ],
+                    "limits": [
+                      {
+                        "name": "semantic_graph_file_node_ceiling",
+                        "unit": "items",
+                        "value": 20000
+                      },
+                      {
+                        "name": "semantic_graph_file_unknown_ceiling",
+                        "unit": "items",
+                        "value": 20000
+                      },
+                      {
+                        "name": "semantic_graph_node_ceiling",
+                        "unit": "items",
+                        "value": 100000
+                      },
+                      {
+                        "name": "semantic_graph_unknown_ceiling",
+                        "unit": "items",
+                        "value": 100000
+                      }
+                    ],
+                    "omitted_nodes": null,
+                    "omitted_relations": null,
+                    "omitted_unknown_occurrences": [
+                      {
+                        "family": "call-flow",
+                        "occurrences": 24134,
+                        "reason": "dynamic-call"
+                      },
+                      {
+                        "family": "child-process",
+                        "occurrences": 2,
+                        "reason": "ambiguous-target"
+                      },
+                      {
+                        "family": "object-flow",
+                        "occurrences": 51061,
+                        "reason": "ambiguous-target"
+                      },
+                      {
+                        "family": "object-flow",
+                        "occurrences": 3003,
+                        "reason": "dynamic-property"
+                      },
+                      {
+                        "family": "resource-lifecycle",
+                        "occurrences": 4,
+                        "reason": "ambiguous-target"
+                      },
+                      {
+                        "family": "timer",
+                        "occurrences": 40,
+                        "reason": "ambiguous-target"
+                      }
+                    ],
+                    "status": "partial",
+                    "truncated": true
+                  },
+                  "semantic_unknowns": 20528
+                },
+                "format": "asar",
+                "input_path": "/Applications/Figma.app/Contents/Resources/app.asar",
+                "limitation_count": 14,
+                "root_artifact_sha256": "891f863a97baff44ef0212542809f10182abb953a82e66343a9a9888e9b28401",
+                "source_selection": {
+                  "requested_paths": [
+                    "main.js"
+                  ],
+                  "unselected_files": 76
+                },
+                "statistics": {
+                  "findings": 715,
+                  "invalid_utf8_files": 0,
+                  "modules": 0,
+                  "nested_asar_containers": 0,
+                  "parse_failures": 0,
+                  "parsed_javascript_files": 1,
+                  "relevant_files": 77,
+                  "skipped_javascript_files": 0,
+                  "text_bytes_read": 3632793,
+                  "visited_ast_nodes": 887811
+                }
+              }
+            }
+          }
+        }
+      ],
+      "resource_flags": {
+        "reader_threads_alive": [],
+        "remaining_observed_descendants": [],
+        "sampled_family_peak_rss_bytes": 868270080,
+        "termination": "stdin-eof",
+        "termination_error": null
+      },
+      "retained_evidence_ids": [
+        "ev_5ee335e65946c4a2670e4daf4c8e174aea3c052e7f2eb33cf6b83198753f4a7a",
+        "ev_dd4902ebc55b5b994263617ea73c810ed0b4d87c62622bdf8fb57bf313796b66"
+      ],
+      "round": 1,
+      "status": "success"
+    },
+    {
+      "calls": [
+        {
+          "failure_class": null,
+          "label": "initialize",
+          "method": "initialize",
+          "output_bytes": 1177,
+          "sampled_family_cpu_ms": 43.031125,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_bytes": 106561536,
+          "sampled_max_gap_ms": 22.740917000191985,
+          "status": "success",
+          "wall_ms": 46.651957996800775
+        },
+        {
+          "failure_class": null,
+          "label": "tools-list",
+          "method": "tools/list",
+          "output_bytes": 3258039,
+          "sampled_family_cpu_ms": 60.47137599999999,
+          "sampled_family_max_processes": 1,
+          "sampled_family_peak_rss_bytes": 176734208,
+          "sampled_max_gap_ms": 23.269583001820138,
+          "status": "success",
+          "wall_ms": 105.85337500015157
+        },
+        {
+          "failure_class": null,
+          "label": "analyze_javascript_application#1",
+          "method": "tools/call",
+          "output_bytes": 28590,
+          "sampled_family_cpu_ms": 37956.24122799997,
+          "sampled_family_max_processes": 2,
+          "sampled_family_peak_rss_bytes": 2019131392,
+          "sampled_max_gap_ms": 102.84537500047009,
+          "status": "success",
+          "wall_ms": 38381.22429199939
+        }
+      ],
+      "error": null,
+      "failure_class": null,
+      "metrics": {
+        "harness_cpu_ms": 25581.100000000002,
+        "sampled_family_cpu_ms": 38101.326431999965,
+        "sampled_family_peak_rss_bytes": 2019131392,
+        "wait4_system_cpu_ms": 1235.415,
+        "wait4_user_cpu_ms": 36926.947,
+        "wall_ms": 38688.66037499902
+      },
+      "name": "postman-agent-worker-js",
+      "public_results": [
+        {
+          "call": "call-0003.json",
+          "public_result": {
+            "tool_call": {
+              "coverage_classification": "semantic_partial_completed",
+              "delivery_coverage": {
+                "examined": 2874,
+                "exhausted": true,
+                "next_offset": null,
+                "status": "complete-within-view",
+                "total": 3884
+              },
+              "evidence_id": "ev_e031e0184d5b4675dc84a02e2fb2986400a60897d8d30e3f1102d92fe27084a4",
+              "evidence_ids": [
+                "ev_a2bc561af9399da9916ef042555e077a68691fe7de4cb786daf18a6a5a6851e6",
+                "ev_e031e0184d5b4675dc84a02e2fb2986400a60897d8d30e3f1102d92fe27084a4"
+              ],
+              "evidence_links": "ev_a2bc561af9399da9916ef042555e077a68691fe7de4cb786daf18a6a5a6851e6",
+              "summary": {
+                "coverage": {
+                  "application": {
+                    "limits": [],
+                    "omitted_count": null,
+                    "status": "partial",
+                    "truncated": false
+                  },
+                  "application_unknowns": 434,
+                  "semantic": {
+                    "families": [
+                      {
+                        "family": "boundary",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "call-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "child-process",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "closure",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "configuration",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "data-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 745
+                      },
+                      {
+                        "family": "event",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "object-flow",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 20045
+                      },
+                      {
+                        "family": "promise-ownership",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "request",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "resource-lifecycle",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      },
+                      {
+                        "family": "timer",
+                        "omitted_relations": null,
+                        "retained_relations": 0,
+                        "status": "partial",
+                        "unknown_count": 395
+                      }
+                    ],
+                    "limits": [
+                      {
+                        "name": "semantic_graph_file_node_ceiling",
+                        "unit": "items",
+                        "value": 20000
+                      },
+                      {
+                        "name": "semantic_graph_file_unknown_ceiling",
+                        "unit": "items",
+                        "value": 20000
+                      },
+                      {
+                        "name": "semantic_graph_node_ceiling",
+                        "unit": "items",
+                        "value": 100000
+                      },
+                      {
+                        "name": "semantic_graph_unknown_ceiling",
+                        "unit": "items",
+                        "value": 100000
+                      }
+                    ],
+                    "omitted_nodes": null,
+                    "omitted_relations": null,
+                    "omitted_unknown_occurrences": [
+                      {
+                        "family": "call-flow",
+                        "occurrences": 91841,
+                        "reason": "dynamic-call"
+                      },
+                      {
+                        "family": "data-flow",
+                        "occurrences": 3,
+                        "reason": "dynamic-scope"
+                      },
+                      {
+                        "family": "object-flow",
+                        "occurrences": 163582,
+                        "reason": "ambiguous-target"
+                      },
+                      {
+                        "family": "object-flow",
+                        "occurrences": 15250,
+                        "reason": "dynamic-property"
+                      },
+                      {
+                        "family": "timer",
+                        "occurrences": 129,
+                        "reason": "ambiguous-target"
+                      }
+                    ],
+                    "status": "partial",
+                    "truncated": true
+                  },
+                  "semantic_unknowns": 24740
+                },
+                "format": "asar",
+                "input_path": "/Applications/Postman.app/Contents/Resources/app.asar",
+                "limitation_count": 9,
+                "root_artifact_sha256": "1705089ab2a15340eff8de9a85d8365189099129f22268c1cc9fd3b0dc7e4d78",
+                "source_selection": {
+                  "requested_paths": [
+                    "AgentWorker.js"
+                  ],
+                  "unselected_files": 439
+                },
+                "statistics": {
+                  "findings": 6600,
+                  "invalid_utf8_files": 0,
+                  "modules": 2376,
+                  "nested_asar_containers": 0,
+                  "parse_failures": 0,
+                  "parsed_javascript_files": 1,
+                  "relevant_files": 440,
+                  "skipped_javascript_files": 0,
+                  "text_bytes_read": 10794503,
+                  "visited_ast_nodes": 1804245
+                }
+              }
+            }
+          }
+        }
+      ],
+      "resource_flags": {
+        "reader_threads_alive": [],
+        "remaining_observed_descendants": [],
+        "sampled_family_peak_rss_bytes": 2019131392,
+        "termination": "stdin-eof",
+        "termination_error": null
+      },
+      "retained_evidence_ids": [
+        "ev_a2bc561af9399da9916ef042555e077a68691fe7de4cb786daf18a6a5a6851e6",
+        "ev_e031e0184d5b4675dc84a02e2fb2986400a60897d8d30e3f1102d92fe27084a4"
+      ],
+      "round": 1,
+      "status": "success"
+    }
+  ]
+}
