@@ -385,6 +385,9 @@ pub struct SemanticState<'a> {
     /// owner keeps one shared map instead of rebuilding and cloning every
     /// binding record for each proof attempt.
     pub(crate) state_facts_cache: RefCell<Option<Rc<HashMap<String, BindingFacts>>>>,
+    /// Scope lookup results are enabled only after definitions have finished
+    /// mutating the scope and binding tables.
+    pub(crate) binding_lookup_cache: RefCell<BindingLookupCache>,
     /// Pure direct return/yield syntax facts, shared by semantic consumers.
     pub(crate) callable_result_cache:
         RefCell<HashMap<NodeKey, Rc<Vec<super::callable_results::CallableResultExpression<'a>>>>>,
@@ -410,6 +413,84 @@ pub struct SemanticState<'a> {
     pub(crate) next_initializer_id: usize,
 }
 
+const MAX_BINDING_LOOKUP_CACHE_ENTRIES: usize = 65_536;
+const MAX_BINDING_LOOKUP_CACHE_BYTES: usize = 8 * 1024 * 1024;
+const BINDING_LOOKUP_CACHE_ENTRY_OVERHEAD: usize = 64;
+
+#[derive(Debug, Default)]
+pub(crate) struct BindingLookupCache {
+    enabled: bool,
+    entries: HashMap<Option<ScopeIndex>, HashMap<String, (Option<bool>, BindingLookup)>>,
+    entry_count: usize,
+    estimated_bytes: usize,
+}
+
+impl BindingLookupCache {
+    fn enable(&mut self) {
+        self.enabled = true;
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.entry_count = 0;
+        self.estimated_bytes = 0;
+    }
+
+    fn get(
+        &self,
+        scope: Option<ScopeIndex>,
+        name: &str,
+        prototype_require_mutation_observed: Option<bool>,
+    ) -> Option<BindingLookup> {
+        if !self.enabled {
+            return None;
+        }
+        self.entries.get(&scope).and_then(|entries| {
+            entries.get(name).and_then(|(observed, result)| {
+                (*observed == prototype_require_mutation_observed).then_some(*result)
+            })
+        })
+    }
+
+    fn insert(
+        &mut self,
+        scope: Option<ScopeIndex>,
+        name: &str,
+        prototype_require_mutation_observed: Option<bool>,
+        result: BindingLookup,
+    ) {
+        if !self.enabled {
+            return;
+        }
+
+        if let Some(entries) = self.entries.get_mut(&scope)
+            && let Some((observed, cached_result)) = entries.get_mut(name)
+        {
+            *observed = prototype_require_mutation_observed;
+            *cached_result = result;
+            return;
+        }
+
+        let entry_bytes = BINDING_LOOKUP_CACHE_ENTRY_OVERHEAD.saturating_add(name.len());
+        if entry_bytes > MAX_BINDING_LOOKUP_CACHE_BYTES {
+            return;
+        }
+        if self.entry_count >= MAX_BINDING_LOOKUP_CACHE_ENTRIES
+            || self.estimated_bytes.saturating_add(entry_bytes) > MAX_BINDING_LOOKUP_CACHE_BYTES
+        {
+            self.clear();
+        }
+
+        let entries = self.entries.entry(scope).or_default();
+        entries.insert(
+            name.to_owned(),
+            (prototype_require_mutation_observed, result),
+        );
+        self.entry_count += 1;
+        self.estimated_bytes = self.estimated_bytes.saturating_add(entry_bytes);
+    }
+}
+
 #[derive(Debug)]
 pub enum ModuleRequireWritesCache<'a> {
     Empty,
@@ -418,6 +499,14 @@ pub enum ModuleRequireWritesCache<'a> {
 }
 
 impl<'a> SemanticState<'a> {
+    pub(crate) fn enable_binding_lookup_cache(&self) {
+        self.binding_lookup_cache.borrow_mut().enable();
+    }
+
+    pub(crate) fn invalidate_binding_lookup_cache(&mut self) {
+        self.binding_lookup_cache.borrow_mut().clear();
+    }
+
     pub(crate) fn callable_result_expressions(
         &self,
         callable: &Node<'a>,
@@ -674,6 +763,26 @@ impl<'a> SemanticState<'a> {
     /// `semanticBindingLookupFromScope`: certain and possible owners without
     /// discarding `with` uncertainty.
     pub fn lookup_from_scope(&self, scope: Option<ScopeIndex>, name: &str) -> BindingLookup {
+        let prototype_require_mutation_observed = self.prototype_require_mutation_observed;
+        if let Some(result) =
+            self.binding_lookup_cache
+                .borrow()
+                .get(scope, name, prototype_require_mutation_observed)
+        {
+            return result;
+        }
+
+        let result = self.lookup_from_scope_uncached(scope, name);
+        self.binding_lookup_cache.borrow_mut().insert(
+            scope,
+            name,
+            prototype_require_mutation_observed,
+            result,
+        );
+        result
+    }
+
+    fn lookup_from_scope_uncached(&self, scope: Option<ScopeIndex>, name: &str) -> BindingLookup {
         let mut uncertain = false;
         let mut scope = scope;
         while let Some(index) = scope {

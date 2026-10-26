@@ -44,6 +44,7 @@ pub fn collect_definitions<'a, B>(
     let mut state = create_state(context, static_import_resolution_mode);
     collect(&mut state, &mut checkpoint)?;
     StateFacts::prime_cache(&state);
+    state.enable_binding_lookup_cache();
     ControlFlow::Continue(state)
 }
 
@@ -96,6 +97,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
         global_eval_sites_cache: RefCell::new(None),
         opaque_effects_cache: RefCell::new(None),
         state_facts_cache: RefCell::new(None),
+        binding_lookup_cache: RefCell::new(super::state::BindingLookupCache::default()),
         callable_result_cache: RefCell::new(HashMap::new()),
         statement_position_cache: RefCell::new(
             super::mutation_initializers::StatementPositionCache::default(),
@@ -1266,6 +1268,7 @@ fn index_prototype_uncertainty<'a, B>(
     impl<'a> Prototype<'_, 'a> {
         fn taint(&mut self, owner: &str) {
             if owner == "Object" {
+                self.state.invalidate_binding_lookup_cache();
                 self.state.prototype_require_mutation_observed = None;
             }
             self.state.prototype_enumeration_may_affect = None;

@@ -41,6 +41,7 @@ pub struct StatementPositionCache {
     direct_initializers: HashMap<NodeKey, Option<StatementPosition>>,
     reference_initializers: HashMap<NodeKey, Option<StatementPosition>>,
     binding_reads: HashMap<NodeKey, BindingReadPosition>,
+    top_level_positions: HashMap<NodeKey, Option<StatementPosition>>,
     position_entries: usize,
 }
 
@@ -56,6 +57,7 @@ impl StatementPositionCache {
             self.direct_initializers.clear();
             self.reference_initializers.clear();
             self.binding_reads.clear();
+            self.top_level_positions.clear();
             self.position_entries = 0;
         }
         self.position_entries += 1;
@@ -1384,6 +1386,14 @@ mod tests {
         assert_eq!(cache.indexed_bodies.len(), body_index_count);
         assert!(cache.direct_mutations.is_empty());
         assert!(cache.binding_reads.contains_key(&read.key()));
+
+        let loop_node = first(&nodes, "ForStatement");
+        assert!(cached_top_level_position(&mut cache, loop_node, &nodes.parents, source).is_none());
+        assert_eq!(cache.top_level_positions.get(&loop_node.key()), Some(&None));
+
+        cache.position_entries = STATEMENT_POSITION_CACHE_ENTRY_LIMIT;
+        let _ = cached_top_level_position(&mut cache, initializer, &nodes.parents, source);
+        assert!(!cache.top_level_positions.contains_key(&loop_node.key()));
     }
 }
 
@@ -1583,6 +1593,22 @@ pub(crate) fn cached_top_level_effect_follows_capture<'a>(
 }
 
 fn cached_top_level_position<'a>(
+    cache: &mut StatementPositionCache,
+    node: Node<'a>,
+    parents: &NodeParents<'a>,
+    source: &str,
+) -> Option<StatementPosition> {
+    if let Some(position) = cache.top_level_positions.get(&node.key()) {
+        return *position;
+    }
+
+    let position = uncached_top_level_position(cache, node, parents, source);
+    cache.admit_position();
+    cache.top_level_positions.insert(node.key(), position);
+    position
+}
+
+fn uncached_top_level_position<'a>(
     cache: &mut StatementPositionCache,
     node: Node<'a>,
     parents: &NodeParents<'a>,

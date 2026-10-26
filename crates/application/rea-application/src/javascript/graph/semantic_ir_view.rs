@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use super::direct_serializer::JsonConversion;
 use super::json::{Json, Obj};
+use super::leaves::ValueRef;
 use crate::javascript::contracts::semantic_ir::{SemanticBinding, SemanticCallable, SemanticIr};
 use crate::javascript::semantic::value_types::JsString;
 
@@ -359,12 +360,13 @@ pub(crate) struct BindingValueLookup<'ir> {
 }
 
 impl BindingValueLookup<'_> {
-    pub(crate) fn get(&self, binding_id: &str) -> Option<Json> {
+    pub(crate) fn value(&self, binding_id: &str) -> Option<ValueRef<'_>> {
         let index = *self.indices.get(binding_id)?;
-        let value = match &self.ir.backing {
-            SemanticBacking::Typed(ir) => self.ir.convert(&ir.bindings[index].value),
-            SemanticBacking::Serialized(ir) => ir.at("bindings").arr()[index].at("value").clone(),
-        };
-        Some(value)
+        match &self.ir.backing {
+            SemanticBacking::Typed(ir) => Some(ValueRef::Typed(&ir.bindings[index].value)),
+            SemanticBacking::Serialized(ir) => {
+                Some(ValueRef::Json(ir.at("bindings").arr()[index].at("value")))
+            }
+        }
     }
 }

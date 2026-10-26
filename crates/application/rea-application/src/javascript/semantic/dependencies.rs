@@ -69,7 +69,7 @@ impl SemanticDependencyProofs {
         let Some(second) = second else {
             return Some(first.clone());
         };
-        if first == second {
+        if Self::has_same_shape(first, second) {
             return Some(first.clone());
         }
         if matches!(first, SemanticDependencyProof::Leaf)
@@ -90,9 +90,55 @@ impl SemanticDependencyProofs {
         else {
             return Some(SemanticDependencyProof::Leaf);
         };
-        let zero = Self::union(first_zero.as_deref(), second_zero.as_deref()).map(Rc::new);
-        let one = Self::union(first_one.as_deref(), second_one.as_deref()).map(Rc::new);
+        let zero = Self::union_branch(first_zero.as_ref(), second_zero.as_ref());
+        let one = Self::union_branch(first_one.as_ref(), second_one.as_ref());
         Some(SemanticDependencyProof::Branch { zero, one })
+    }
+
+    fn has_same_shape(first: &SemanticDependencyProof, second: &SemanticDependencyProof) -> bool {
+        match (first, second) {
+            (SemanticDependencyProof::Empty, SemanticDependencyProof::Empty)
+            | (SemanticDependencyProof::Leaf, SemanticDependencyProof::Leaf) => true,
+            (
+                SemanticDependencyProof::Branch {
+                    zero: first_zero,
+                    one: first_one,
+                },
+                SemanticDependencyProof::Branch {
+                    zero: second_zero,
+                    one: second_one,
+                },
+            ) => {
+                Self::same_child(first_zero, second_zero) && Self::same_child(first_one, second_one)
+            }
+            _ => false,
+        }
+    }
+
+    fn same_child(
+        first: &Option<Rc<SemanticDependencyProof>>,
+        second: &Option<Rc<SemanticDependencyProof>>,
+    ) -> bool {
+        match (first, second) {
+            (None, None) => true,
+            (Some(first), Some(second)) => Rc::ptr_eq(first, second),
+            _ => false,
+        }
+    }
+
+    fn union_branch(
+        first: Option<&Rc<SemanticDependencyProof>>,
+        second: Option<&Rc<SemanticDependencyProof>>,
+    ) -> Option<Rc<SemanticDependencyProof>> {
+        match (first, second) {
+            (None, None) => None,
+            (Some(first), None) => Some(Rc::clone(first)),
+            (None, Some(second)) => Some(Rc::clone(second)),
+            (Some(first), Some(second)) if Rc::ptr_eq(first, second) => Some(Rc::clone(first)),
+            (Some(first), Some(second)) => {
+                Self::union(Some(first.as_ref()), Some(second.as_ref())).map(Rc::new)
+            }
+        }
     }
 
     pub fn intersects(
@@ -175,6 +221,42 @@ mod tests {
         assert_shared_nodes(&original, &union);
         assert!(proofs.has(&union, "binding-2048"));
         assert!(!proofs.has(&union, "binding-2049"));
+    }
+
+    #[test]
+    fn overlapping_union_reuses_unchanged_branch_and_preserves_inputs() {
+        let mut proofs = SemanticDependencyProofs::new(
+            (0..16)
+                .map(|index| format!("binding-{index}"))
+                .collect::<Vec<_>>(),
+        );
+        let first = proofs.binding("binding-0");
+        let second = proofs.binding("binding-1");
+        let distant = proofs.binding("binding-8");
+        let left = SemanticDependencyProofs::union(Some(&first), Some(&second)).expect("left");
+        let right = SemanticDependencyProofs::union(Some(&first), Some(&distant)).expect("right");
+        let merged = SemanticDependencyProofs::union(Some(&left), Some(&right)).expect("merged");
+
+        assert!(proofs.has(&merged, "binding-0"));
+        assert!(proofs.has(&merged, "binding-1"));
+        assert!(proofs.has(&merged, "binding-8"));
+        assert!(!proofs.has(&left, "binding-8"));
+        assert!(!proofs.has(&right, "binding-1"));
+
+        let (
+            SemanticDependencyProof::Branch {
+                one: Some(right_one),
+                ..
+            },
+            SemanticDependencyProof::Branch {
+                one: Some(merged_one),
+                ..
+            },
+        ) = (&right, &merged)
+        else {
+            panic!("distant dependency should occupy the high branch");
+        };
+        assert!(Rc::ptr_eq(right_one, merged_one));
     }
 
     fn assert_shared_nodes(left: &SemanticDependencyProof, right: &SemanticDependencyProof) {

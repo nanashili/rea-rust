@@ -2,7 +2,10 @@
 //! resource-limit classifications, execution-limit projection, semantic slot
 //! inventories and export return-shape projection.
 
-use super::super::semantic::value_types::JsString;
+use super::super::semantic::value_types::{
+    Coverage, JsString, Property, SemanticValue, SlotPresence,
+};
+use super::direct_serializer::JsonConversion;
 use super::evidence::{limit, partial_coverage};
 use super::json::{Json, Obj};
 
@@ -118,10 +121,28 @@ pub struct Container<'a> {
     pub coverage: Json,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum ValueRef<'a> {
+    Json(&'a Json),
+    Typed(&'a SemanticValue),
+}
+
+enum ContainerSlots<'a> {
+    Json(&'a [Json]),
+    Typed(&'a [Property]),
+}
+
+struct ContainerRef<'a> {
+    slots: ContainerSlots<'a>,
+    coverage: Json,
+}
+
 /// A property selected from a semantic value without copying its subtree.
 pub(crate) enum SlotFact<'a> {
     Root(&'a Json),
     Observed(&'a Json),
+    TypedRoot(&'a SemanticValue),
+    TypedObserved(&'a Property),
     Synthetic {
         name: JsString,
         presence: &'static str,
@@ -134,6 +155,8 @@ impl SlotFact<'_> {
         match self {
             Self::Root(_) => JsString::from(""),
             Self::Observed(property) => property.at("name").text().clone(),
+            Self::TypedRoot(_) => JsString::from(""),
+            Self::TypedObserved(property) => property.name.clone(),
             Self::Synthetic { name, .. } => name.clone(),
         }
     }
@@ -142,6 +165,8 @@ impl SlotFact<'_> {
         match self {
             Self::Root(_) => "present",
             Self::Observed(property) => property.at("presence").str(),
+            Self::TypedRoot(_) => "present",
+            Self::TypedObserved(property) => typed_presence(property.presence),
             Self::Synthetic { presence, .. } => presence,
         }
     }
@@ -150,6 +175,8 @@ impl SlotFact<'_> {
         match self {
             Self::Root(_) => Json::String(JsString::from("")),
             Self::Observed(property) => property.at("name").clone(),
+            Self::TypedRoot(_) => Json::String(JsString::from("")),
+            Self::TypedObserved(property) => Json::String(property.name.clone()),
             Self::Synthetic { name, .. } => Json::String(name.clone()),
         }
     }
@@ -158,16 +185,123 @@ impl SlotFact<'_> {
         match self {
             Self::Root(_) => Json::String(JsString::from("present")),
             Self::Observed(property) => property.at("presence").clone(),
+            Self::TypedRoot(_) => Json::String(JsString::from("present")),
+            Self::TypedObserved(property) => {
+                Json::String(JsString::from(typed_presence(property.presence)))
+            }
             Self::Synthetic { presence, .. } => Json::String(JsString::from(*presence)),
         }
     }
 
-    pub(crate) fn value(&self) -> &Json {
+    pub(crate) fn value_status(&self) -> Json {
+        self.value_ref().status()
+    }
+
+    pub(crate) fn value_coverage(&self) -> Json {
+        self.value_ref().coverage()
+    }
+
+    pub(crate) fn is_container(&self) -> bool {
+        self.value_ref().is_container()
+    }
+
+    fn value_ref(&self) -> ValueRef<'_> {
         match self {
-            Self::Root(value) => value,
-            Self::Observed(property) => property.at("value"),
-            Self::Synthetic { value, .. } => value,
+            Self::Root(value) => ValueRef::Json(value),
+            Self::Observed(property) => ValueRef::Json(property.at("value")),
+            Self::TypedRoot(value) => ValueRef::Typed(value),
+            Self::TypedObserved(property) => ValueRef::Typed(&property.value),
+            Self::Synthetic { value, .. } => ValueRef::Json(value),
         }
+    }
+}
+
+impl ValueRef<'_> {
+    fn status(self) -> Json {
+        match self {
+            Self::Json(value) => value.at("status").clone(),
+            Self::Typed(value) => semantic_status(value),
+        }
+    }
+
+    fn coverage(self) -> Json {
+        match self {
+            Self::Json(value) => {
+                container(value).map_or(Json::Null, |inventory| inventory.coverage)
+            }
+            Self::Typed(value) => typed_container_coverage(value),
+        }
+    }
+
+    fn is_container(self) -> bool {
+        match self {
+            Self::Json(value) => matches!(value.at("status").str(), "object" | "array"),
+            Self::Typed(value) => matches!(
+                value,
+                SemanticValue::Object { .. } | SemanticValue::Array { .. }
+            ),
+        }
+    }
+}
+
+fn semantic_status(value: &SemanticValue) -> Json {
+    Json::String(JsString::from(match value {
+        SemanticValue::Literal { .. } => "literal",
+        SemanticValue::Union { .. } => "union",
+        SemanticValue::Object { .. } => "object",
+        SemanticValue::Array { .. } => "array",
+        SemanticValue::Unknown { .. } => "unknown",
+        SemanticValue::Ambiguous { .. } => "ambiguous",
+        SemanticValue::Cycle { .. } => "cycle",
+    }))
+}
+
+fn typed_presence(presence: SlotPresence) -> &'static str {
+    match presence {
+        SlotPresence::Present => "present",
+        SlotPresence::Absent => "absent",
+        SlotPresence::UnknownCoverage => "unknown-coverage",
+    }
+}
+
+fn typed_container_coverage(value: &SemanticValue) -> Json {
+    let coverage = match value {
+        SemanticValue::Object { coverage, .. } | SemanticValue::Array { coverage, .. } => coverage,
+        _ => return Json::Null,
+    };
+    let (unknown, omitted) = match coverage {
+        Coverage::Exact => (false, Some(0usize)),
+        Coverage::Unknown { omitted } => (true, *omitted),
+    };
+    Obj::new()
+        .with_static("status", if unknown { "partial" } else { "complete" })
+        .with_static(
+            "omitted",
+            omitted.map_or(Json::Null, |count| Json::from(count as f64)),
+        )
+        .into()
+}
+
+fn container_ref(value: ValueRef<'_>) -> Option<ContainerRef<'_>> {
+    match value {
+        ValueRef::Json(value) => {
+            let inventory = container(value)?;
+            Some(ContainerRef {
+                slots: ContainerSlots::Json(inventory.slots),
+                coverage: inventory.coverage,
+            })
+        }
+        ValueRef::Typed(value) => match value {
+            SemanticValue::Object { properties, .. } => Some(ContainerRef {
+                slots: ContainerSlots::Typed(properties.as_slice()),
+                coverage: typed_container_coverage(value),
+            }),
+            SemanticValue::Array { items, .. } => Some(ContainerRef {
+                slots: ContainerSlots::Typed(items.as_slice()),
+                coverage: typed_container_coverage(value),
+            }),
+            _ => None,
+        },
     }
 }
 
@@ -193,24 +327,27 @@ pub fn container(value: &Json) -> Option<Container<'_>> {
     })
 }
 
-/// `semanticSlotAtPath`.
-pub(crate) fn slot_at_path<'a>(value: &'a Json, path: &[JsString]) -> SlotFact<'a> {
+/// Select a property using the same rules for serialized and typed values.
+pub(crate) fn slot_at_value<'a>(value: ValueRef<'a>, path: &[JsString]) -> SlotFact<'a> {
     let leaf = path.last().cloned().unwrap_or_default();
     if path.is_empty() {
-        return SlotFact::Root(value);
+        return match value {
+            ValueRef::Json(value) => SlotFact::Root(value),
+            ValueRef::Typed(value) => SlotFact::TypedRoot(value),
+        };
     }
 
     let mut current = value;
     for (index, name) in path.iter().enumerate() {
-        let Some(inventory) = container(current) else {
+        let Some(inventory) = container_ref(current) else {
             return SlotFact::Synthetic {
                 name: leaf,
                 presence: "unknown-coverage",
-                value: continued_path_unknown(path, index, current),
+                value: continued_path_unknown(path, index, &value_metadata_json(current)),
             };
         };
 
-        if current.at("status").str() == "array" && name == "length" {
+        if is_array(current) && name == "length" {
             let length_value: Json = Obj::new()
                 .with_static("status", "unknown")
                 .with_static(
@@ -232,10 +369,16 @@ pub(crate) fn slot_at_path<'a>(value: &'a Json, path: &[JsString]) -> SlotFact<'
             };
         }
 
-        let observed = inventory
-            .slots
-            .iter()
-            .find(|slot| slot.at("name").text() == name);
+        let observed = match inventory.slots {
+            ContainerSlots::Json(slots) => slots
+                .iter()
+                .find(|slot| slot.at("name").text() == name)
+                .map(|slot| SlotFact::Observed(slot)),
+            ContainerSlots::Typed(slots) => slots
+                .iter()
+                .find(|slot| &slot.name == name)
+                .map(SlotFact::TypedObserved),
+        };
         let Some(observed) = observed else {
             let presence = if inventory.coverage.at("status").str() == "complete" {
                 "absent"
@@ -261,21 +404,67 @@ pub(crate) fn slot_at_path<'a>(value: &'a Json, path: &[JsString]) -> SlotFact<'
         };
 
         if index + 1 == path.len() {
-            return SlotFact::Observed(observed);
+            return observed;
         }
 
-        if observed.at("presence").str() != "present" {
+        if observed.presence() != "present" {
             return SlotFact::Synthetic {
                 name: leaf,
                 presence: "unknown-coverage",
-                value: continued_path_unknown(path, index + 1, observed.at("value")),
+                value: continued_path_unknown(
+                    path,
+                    index + 1,
+                    &value_metadata_json(
+                        observed
+                            .borrowed_value()
+                            .expect("observed slot has a value"),
+                    ),
+                ),
             };
         }
 
-        current = observed.at("value");
+        current = observed
+            .borrowed_value()
+            .expect("present observed slot has a value");
     }
 
     unreachable!("a non-empty path must return a slot fact")
+}
+
+fn is_array(value: ValueRef<'_>) -> bool {
+    match value {
+        ValueRef::Json(value) => value.at("status").str() == "array",
+        ValueRef::Typed(SemanticValue::Array { .. }) => true,
+        ValueRef::Typed(_) => false,
+    }
+}
+
+impl<'a> SlotFact<'a> {
+    fn borrowed_value(&self) -> Option<ValueRef<'a>> {
+        match self {
+            Self::Root(value) => Some(ValueRef::Json(value)),
+            Self::Observed(property) => Some(ValueRef::Json(property.at("value"))),
+            Self::TypedRoot(value) => Some(ValueRef::Typed(value)),
+            Self::TypedObserved(property) => Some(ValueRef::Typed(&property.value)),
+            Self::Synthetic { .. } => None,
+        }
+    }
+}
+
+fn value_metadata_json(value: ValueRef<'_>) -> Json {
+    match value {
+        ValueRef::Json(value) => value.clone(),
+        ValueRef::Typed(
+            value @ (SemanticValue::Unknown { .. }
+            | SemanticValue::Ambiguous { .. }
+            | SemanticValue::Cycle { .. }),
+        ) => JsonConversion::default()
+            .serialize(value)
+            .expect("opaque semantic values must serialize"),
+        ValueRef::Typed(value) => Obj::new()
+            .with_static("status", semantic_status(value))
+            .into(),
+    }
 }
 
 fn continued_path_unknown(path: &[JsString], receiver_index: usize, value: &Json) -> Json {
@@ -484,8 +673,12 @@ pub fn export_return_shapes(
 
 #[cfg(test)]
 mod tests {
-    use super::{Json, Obj, property_pointer_js, slot_at_path};
+    use super::{Json, Obj, ValueRef, property_pointer_js, slot_at_value, value_metadata_json};
+    use crate::javascript::graph::direct_serializer::JsonConversion;
     use crate::javascript::semantic::value_types::JsString;
+    use crate::javascript::semantic::value_types::{
+        Coverage, Primitive, Property, PropertySlots, ResourceLimit, SemanticValue, SlotPresence,
+    };
 
     #[test]
     fn property_pointer_js_preserves_unpaired_units_and_escapes_delimiters() {
@@ -536,18 +729,112 @@ mod tests {
             .with_static("omittedProperties", 0.0)
             .into();
 
-        let observed = slot_at_path(&value, &["items".into(), "0".into()]);
+        let observed = slot_at_value(ValueRef::Json(&value), &["items".into(), "0".into()]);
         assert_eq!(observed.name(), "0");
         assert_eq!(observed.presence(), "present");
-        assert_eq!(observed.value().at("status").str(), "literal");
+        assert_eq!(observed.value_status().str(), "literal");
 
-        let missing = slot_at_path(&value, &["items".into(), "9".into()]);
+        let missing = slot_at_value(ValueRef::Json(&value), &["items".into(), "9".into()]);
         assert_eq!(missing.name(), "9");
         assert_eq!(missing.presence(), "absent");
-        assert_eq!(missing.value().at("status").str(), "unknown");
+        assert_eq!(missing.value_status().str(), "unknown");
 
-        let length = slot_at_path(&value, &["items".into(), "length".into()]);
+        let length = slot_at_value(ValueRef::Json(&value), &["items".into(), "length".into()]);
         assert_eq!(length.presence(), "present");
-        assert_eq!(length.value().at("status").str(), "unknown");
+        assert_eq!(length.value_status().str(), "unknown");
+    }
+
+    #[test]
+    fn typed_and_json_slot_selection_preserve_metadata_and_first_duplicate() {
+        let duplicate_name = JsString::from_utf16(vec![0xd800, 0x2f]);
+        let value = SemanticValue::Object {
+            properties: PropertySlots::from(vec![
+                Property {
+                    name: duplicate_name.clone(),
+                    value: SemanticValue::Literal {
+                        value: Primitive::Number(1.0),
+                    },
+                    presence: SlotPresence::Present,
+                },
+                Property {
+                    name: duplicate_name.clone(),
+                    value: SemanticValue::Literal {
+                        value: Primitive::Number(2.0),
+                    },
+                    presence: SlotPresence::Present,
+                },
+                Property {
+                    name: "arr".into(),
+                    value: SemanticValue::Array {
+                        items: PropertySlots::from(vec![Property {
+                            name: "0".into(),
+                            value: SemanticValue::Unknown {
+                                reason: "opaque item".into(),
+                                resource_limit: None,
+                            },
+                            presence: SlotPresence::Present,
+                        }]),
+                        coverage: Coverage::Unknown { omitted: Some(3) },
+                    },
+                    presence: SlotPresence::Present,
+                },
+                Property {
+                    name: "opaque".into(),
+                    value: SemanticValue::Unknown {
+                        reason: "opaque receiver".into(),
+                        resource_limit: Some(ResourceLimit::PrimitiveCandidates),
+                    },
+                    presence: SlotPresence::Present,
+                },
+                Property {
+                    name: "uncertain".into(),
+                    value: SemanticValue::Literal {
+                        value: Primitive::Boolean(true),
+                    },
+                    presence: SlotPresence::UnknownCoverage,
+                },
+            ]),
+            coverage: Coverage::Exact,
+        };
+        let full = JsonConversion::default().serialize(&value).unwrap();
+
+        for path in [
+            vec![duplicate_name.clone()],
+            vec!["arr".into(), "length".into()],
+            vec!["arr".into(), "9".into()],
+            vec!["arr".into(), "9".into(), "leaf".into()],
+            vec!["opaque".into(), "leaf".into()],
+            vec!["uncertain".into(), "leaf".into()],
+        ] {
+            let expected = slot_at_value(ValueRef::Json(&full), &path);
+            let actual = slot_at_value(ValueRef::Typed(&value), &path);
+
+            assert_eq!(actual.name(), expected.name());
+            assert_eq!(actual.raw_name(), expected.raw_name());
+            assert_eq!(actual.presence(), expected.presence());
+            assert_eq!(actual.raw_presence(), expected.raw_presence());
+            assert_eq!(actual.value_status(), expected.value_status());
+            assert_eq!(actual.value_coverage(), expected.value_coverage());
+            let actual_metadata = value_metadata_json(actual.value_ref());
+            let expected_metadata = value_metadata_json(expected.value_ref());
+            assert_eq!(actual_metadata.at("reason"), expected_metadata.at("reason"));
+            assert_eq!(
+                actual_metadata.at("resourceLimit"),
+                expected_metadata.at("resourceLimit")
+            );
+            assert_eq!(actual.is_container(), expected.is_container());
+        }
+
+        let duplicate = slot_at_value(ValueRef::Typed(&value), &[duplicate_name]);
+        let ValueRef::Typed(selected) = duplicate.borrowed_value().unwrap() else {
+            panic!("typed selector returned JSON");
+        };
+        let SemanticValue::Literal {
+            value: Primitive::Number(number),
+        } = selected
+        else {
+            panic!("duplicate selector did not return first literal");
+        };
+        assert_eq!(*number, 1.0);
     }
 }

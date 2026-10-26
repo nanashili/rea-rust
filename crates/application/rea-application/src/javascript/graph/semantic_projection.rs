@@ -7,7 +7,7 @@ use super::evidence::partial_coverage;
 use super::json::{Json, Obj, js_int, strings, utf16_len};
 use super::leaves::{
     SlotFact, container, property_pointer_js, semantic_resource_limit_coverage,
-    semantic_resource_limit_reason, slot_at_path,
+    semantic_resource_limit_reason, slot_at_value,
 };
 use super::semantic_graph::{
     NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation, add_unknown,
@@ -318,7 +318,6 @@ fn property_slot(
         ])
         .stringify()
     );
-    let coverage = container(fact.value()).map_or(Json::Null, |inventory| inventory.coverage);
     context.retain(NodeSpec {
         kind: "property-slot",
         role_key: role_key.into(),
@@ -334,8 +333,8 @@ fn property_slot(
             .with_static("property_pointer", property_pointer_js(path))
             .with_static("object_binding_id", binding_id)
             .with_static("presence", fact.raw_presence())
-            .with_static("value_status", fact.value().at("status").clone())
-            .with_static("value_coverage", coverage),
+            .with_static("value_status", fact.value_status())
+            .with_static("value_coverage", fact.value_coverage()),
     })
 }
 
@@ -447,21 +446,22 @@ fn object_target(
 ) -> (Option<Json>, Option<Json>, String, bool) {
     let object_id = operation.at("objectBindingId");
     let binding = context.binding(object_id);
-    let value = object_id.as_str().and_then(|id| values.get(id));
     let path = operation.at("propertyPath");
-    let (Some(object_id), false, Some(value)) = (object_id.as_str(), path.is_null(), value) else {
+    let (Some(object_id), false) = (object_id.as_str(), path.is_null()) else {
         return (binding, None, "unknown-coverage".to_owned(), false);
     };
     let path = js_string_path(path);
-    let fact = slot_at_path(&value, &path);
+    let Some(value) = values.value(object_id) else {
+        return (binding, None, "unknown-coverage".to_owned(), false);
+    };
+    let fact = slot_at_value(value, &path);
     let presence = fact.presence().to_owned();
     if path.is_empty() {
-        return (binding, None, presence, container(&value).is_some());
+        return (binding, None, presence, fact.is_container());
     }
     let slot = property_slot(context, object_id, &path, &fact);
-    let receiver = slot_at_path(&value, &path[..path.len().saturating_sub(1)]);
-    let receiver_resolved =
-        receiver.presence() == "present" && container(receiver.value()).is_some();
+    let receiver = slot_at_value(value, &path[..path.len().saturating_sub(1)]);
+    let receiver_resolved = receiver.presence() == "present" && receiver.is_container();
     (slot.clone(), slot, presence, receiver_resolved)
 }
 
