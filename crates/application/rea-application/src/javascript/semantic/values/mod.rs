@@ -4,6 +4,7 @@
 //! and provenance proofs belong to one query, so an earlier capture cannot
 //! publish a value into a live reader's cache.
 
+mod captured_cache;
 mod expressions;
 mod independent_cache;
 mod provenance;
@@ -22,6 +23,7 @@ use super::opaque_effects::{
 use super::provenance::{BindingProvenance, semantic_ambiguous_provenance};
 use super::state::{BindingState, ProjectionKey, SemanticState};
 use super::value_types::{JsString, ResourceLimit, SemanticValue};
+use captured_cache::CapturedBindingCache;
 use independent_cache::{IndependentBindingCache, IndependentBindingValue};
 
 const CALLER_INDEPENDENT: isize = isize::MAX;
@@ -75,7 +77,7 @@ struct BindingEvaluation {
 pub(crate) struct ValueCaches {
     dependencies: Option<Rc<RefCell<SemanticDependencyProofs>>>,
     primitive_bindings: HashMap<String, SemanticValue>,
-    captured_bindings: HashMap<NodeKey, HashMap<String, SemanticValue>>,
+    captured_bindings: CapturedBindingCache,
     primitive_expressions: HashMap<NodeKey, SemanticValue>,
     independent_bindings: IndependentBindingCache,
 }
@@ -369,7 +371,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
     ) -> Option<SemanticValue> {
         let caches = self.state.value_caches.borrow();
         match point.capture_point {
-            Some(capture) => caches.captured_bindings.get(&capture.key())?.get(binding),
+            Some(capture) => caches.captured_bindings.get(capture.key(), binding),
             None => caches.primitive_bindings.get(binding),
         }
         .cloned()
@@ -382,11 +384,14 @@ impl<'s, 'a> Evaluation<'s, 'a> {
         value: SemanticValue,
     ) {
         let mut caches = self.state.value_caches.borrow_mut();
-        let values = match point.capture_point {
-            Some(capture) => caches.captured_bindings.entry(capture.key()).or_default(),
-            None => &mut caches.primitive_bindings,
-        };
-        values.insert(binding.to_owned(), value);
+        match point.capture_point {
+            Some(capture) => caches
+                .captured_bindings
+                .admit(capture.key(), binding, value),
+            None => {
+                caches.primitive_bindings.insert(binding.to_owned(), value);
+            }
+        }
     }
 
     fn evaluate_binding(
@@ -888,6 +893,72 @@ mod tests {
         );
 
         let recomputed = evaluate_semantic_binding(binding, state);
+        assert_eq!(recomputed, first);
+    }
+
+    #[test]
+    fn captured_binding_recomputes_at_the_same_point_after_cache_eviction() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 }; const captured = value;",
+            Some("captured-cache-eviction.js"),
+        )
+        .expect("captured cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+        let capture = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "captured")
+            .expect("captured binding exists")
+            .initializers[0]
+            .node;
+        let point = EvaluationPoint {
+            depth: 0,
+            capture_point: Some(capture),
+        };
+
+        let first = Evaluation::new(state).evaluate_binding(binding, point, true);
+        assert_eq!(object_property_number(&first, "first"), Some(1.0));
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .captured_bindings
+                .get(capture.key(), &binding.binding_id)
+                .is_some(),
+            "the evaluator should retain the captured result"
+        );
+
+        for index in 0..independent_cache::MAX_CACHE_ENTRIES {
+            state.value_caches.borrow_mut().captured_bindings.admit(
+                capture.key(),
+                &format!("synthetic-{index}"),
+                SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(index as f64),
+                },
+            );
+        }
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .captured_bindings
+                .get(capture.key(), &binding.binding_id)
+                .is_none(),
+            "the bounded cache should evict the captured result"
+        );
+
+        let recomputed = Evaluation::new(state).evaluate_binding(binding, point, true);
         assert_eq!(recomputed, first);
     }
 

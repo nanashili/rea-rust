@@ -24,6 +24,8 @@ use super::semantic::state::ResolutionMode;
 use super::semantic::value_types::JsString;
 use super::worker::{WorkerFileMetadata, WorkerLimits, WorkerRequest, analyze_source_with_worker};
 
+const DEFAULT_WORKER_TIMEOUT_MS: u64 = 30_000;
+
 /// Operational controls for the isolated source-analysis stage.
 #[derive(Clone, Debug)]
 pub struct JavaScriptAnalysisOptions {
@@ -55,7 +57,7 @@ impl Default for JavaScriptAnalysisOptions {
         Self {
             worker_limits: WorkerLimits {
                 max_heap_mb: Some(1024),
-                timeout: Duration::from_millis(300_000),
+                timeout: Duration::from_millis(DEFAULT_WORKER_TIMEOUT_MS),
             },
             semantic_limits: SemanticLimits::default(),
         }
@@ -72,7 +74,7 @@ impl JavaScriptAnalysisOptions {
         let timeout_ms = object
             .and_then(|value| value.get("analysis_timeout_ms"))
             .and_then(Value::as_u64)
-            .unwrap_or(300_000);
+            .unwrap_or(DEFAULT_WORKER_TIMEOUT_MS);
         Self {
             worker_limits: WorkerLimits {
                 max_heap_mb,
@@ -882,6 +884,7 @@ fn analyze_worker_source(
     };
 
     let prepared = super::semantic::analysis::prepare_state(&parsed, ResolutionMode::Import);
+    let parser_partial = !parsed.errors.is_empty();
     let (static_result, mut prepared) =
         super::static_analysis::analyze::analyze_source_with_prepared_state(
             source, path, &parsed, prepared,
@@ -894,6 +897,7 @@ fn analyze_worker_source(
         .to_vec();
     let parse_status = static_result.parse_status;
     drop(static_result);
+    drop(parsed);
 
     // Preserve the completed static checkpoint when semantic analysis fails.
     let semantic_ir = if parse_status == ParseStatus::Failed {
@@ -901,7 +905,7 @@ fn analyze_worker_source(
     } else {
         catch_semantic_failure(|| {
             match super::semantic::analysis::analyze_prepared_source_with_checkpoint(
-                &parsed,
+                parser_partial,
                 &mut prepared,
                 || ControlFlow::<()>::Continue(()),
             ) {

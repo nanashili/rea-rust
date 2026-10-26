@@ -216,6 +216,34 @@ fn finish<'a>(
     })
 }
 
+/// Parse a discarded module retry on a temporary allocator and retain only
+/// owned diagnostics. A fatal retry contributes no recovered diagnostics.
+fn module_retry_diagnostics(
+    source: &str,
+    mode: ParserMode,
+    options: BoundaryOptions,
+    allow_return_outside_function: bool,
+    preserve_parens: bool,
+) -> Vec<RawDiagnostic> {
+    let module_allocator = Allocator::default();
+    finish(
+        &module_allocator,
+        source,
+        attempt(
+            &module_allocator,
+            source,
+            mode,
+            OxcModuleKind::Module,
+            allow_return_outside_function,
+            preserve_parens,
+        ),
+        mode,
+        options,
+    )
+    .map(|parsed| parsed.errors)
+    .unwrap_or_default()
+}
+
 /// Oxc can report the same syntax failure from its parser and semantic
 /// validation passes. Babel exposes one diagnostic at that source location,
 /// so retain one location-bearing diagnostic while preserving diagnostics that
@@ -495,21 +523,7 @@ fn recover_unambiguous_analysis_parse<'a>(
     options: BoundaryOptions,
 ) -> Result<ParsedJavaScriptProgram<'a>, Vec<RawDiagnostic>> {
     let first = finish(allocator, source, first, mode, options)?;
-    let module = finish(
-        allocator,
-        source,
-        attempt(
-            allocator,
-            source,
-            mode,
-            OxcModuleKind::Module,
-            false,
-            preserve_parens,
-        ),
-        mode,
-        options,
-    );
-    let module_errors = module.map(|parsed| parsed.errors).unwrap_or_default();
+    let module_errors = module_retry_diagnostics(source, mode, options, false, preserve_parens);
     if module_errors.is_empty() {
         return Ok(first);
     }
@@ -615,15 +629,7 @@ pub fn parse_recovered_javascript_program<'a>(
     // errors after choosing a script. oxc's does not, so obtain that error set
     // from an explicit module attempt. A fatal module attempt contributes no
     // recovered diagnostics, matching the parser owner's fallback behavior.
-    let module_errors: Vec<RawDiagnostic> = finish(
-        allocator,
-        source,
-        attempt(allocator, source, mode, OxcModuleKind::Module, true, false),
-        mode,
-        options,
-    )
-    .map(|module| module.errors)
-    .unwrap_or_default();
+    let module_errors = module_retry_diagnostics(source, mode, options, true, false);
     if first.errors.is_empty() && module_errors.is_empty() {
         return Ok(RecoveredJavaScriptProgram {
             parsed: first,
@@ -719,6 +725,59 @@ pub fn extract_facts(
 ) -> JavaScriptSourceFacts {
     let index = PositionIndex::new(source);
     facts::extract(source, path, parsed, &index)
+}
+
+#[cfg(test)]
+mod allocator_tests {
+    use super::*;
+
+    #[test]
+    fn discarded_module_retries_do_not_retain_asts() {
+        let mut source = String::new();
+        for index in 0..10_000 {
+            source.push_str(&format!("const value_{index} = {index};\n"));
+        }
+
+        let mode = ParserMode::for_path(Some("fixture.js"));
+        let expected_allocator = Allocator::default();
+        let expected = finish(
+            &expected_allocator,
+            &source,
+            attempt(
+                &expected_allocator,
+                &source,
+                mode,
+                OxcModuleKind::Unambiguous,
+                false,
+                true,
+            ),
+            mode,
+            BoundaryOptions::default(),
+        )
+        .expect("the selected script parse should succeed");
+        assert!(expected.program.source_type.is_script());
+        let selected_ast_bytes = expected_allocator.used_bytes();
+
+        let analysis_allocator = Allocator::default();
+        let analysis =
+            parse_javascript_analysis_program(&analysis_allocator, &source, Some("fixture.js"))
+                .expect("analysis source parses");
+        assert!(analysis.errors.is_empty());
+        assert_eq!(analysis.program.body.len(), expected.program.body.len());
+        assert_eq!(analysis_allocator.used_bytes(), selected_ast_bytes);
+
+        let recovery_allocator = Allocator::default();
+        let recovered =
+            parse_recovered_javascript_program(&recovery_allocator, &source, Some("fixture.js"))
+                .expect("recovered source parses");
+        assert!(recovered.parsed.errors.is_empty());
+        assert!(recovered.module_only_errors.is_empty());
+        assert_eq!(
+            recovered.parsed.program.body.len(),
+            expected.program.body.len()
+        );
+        assert_eq!(recovery_allocator.used_bytes(), selected_ast_bytes);
+    }
 }
 
 #[cfg(test)]

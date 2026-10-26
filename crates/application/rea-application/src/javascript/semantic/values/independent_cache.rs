@@ -7,7 +7,7 @@ use super::Memoized;
 
 // This bounds the estimated payload retained by the derived memo. Evicted
 // values are recomputed and do not change semantic coverage or classification.
-const MAX_CACHE_BYTES: usize = 64 * 1024 * 1024;
+pub(super) const MAX_CACHE_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const MAX_CACHE_ENTRIES: usize = 4096;
 
 #[derive(Clone)]
@@ -82,7 +82,7 @@ fn bounded_cache_bytes_add(current: usize, additional: usize) -> usize {
     current.saturating_add(additional).min(MAX_CACHE_BYTES + 1)
 }
 
-fn semantic_value_bytes(value: &SemanticValue) -> usize {
+pub(super) fn semantic_value_bytes(value: &SemanticValue) -> usize {
     let inline = size_of::<SemanticValue>();
     match value {
         SemanticValue::Literal { value } => inline.saturating_add(primitive_bytes(value)),

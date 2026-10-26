@@ -211,20 +211,21 @@ pub fn analyze_source_with_mode_and_checkpoint<B>(
 
     let mut prepared =
         prepare_state_with_checkpoint(&parsed, static_import_resolution_mode, &mut checkpoint)?;
-    analyze_prepared_source_with_checkpoint(&parsed, &mut prepared, checkpoint)
+    let parser_partial = !parsed.errors.is_empty();
+    drop(parsed);
+    analyze_prepared_source_with_checkpoint(parser_partial, &mut prepared, checkpoint)
 }
 
 /// Continue semantic analysis from state prepared by the static phase.
 ///
-/// The parsed arena and semantic state are borrowed together for this call;
-/// neither escapes in the returned contract.  The caller owns the phase
-/// boundary and may have already populated the mutation facts.
+/// The parser's semantic model has already been consumed by the static phase;
+/// only its partial-parse status crosses this phase boundary. The caller owns
+/// the phase boundary and may have already populated the mutation facts.
 pub(crate) fn analyze_prepared_source_with_checkpoint<'a, B>(
-    parsed: &ParsedJavaScriptProgram<'a>,
+    parser_partial: bool,
     prepared: &mut PreparedSemanticState<'a>,
     mut checkpoint: impl FnMut() -> ControlFlow<B>,
 ) -> ControlFlow<B, Result<SemanticIr, Vec<RawDiagnostic>>> {
-    let parser_partial = !parsed.errors.is_empty();
     collect_primary_state_phase(prepared, &mut checkpoint)?;
     let state = &prepared.state;
 
@@ -571,11 +572,13 @@ mod shared_pipeline_tests {
             let allocator = Allocator::default();
             let parsed = parse_javascript_analysis_program(&allocator, source, Some("shared.js"))
                 .expect("parse source");
+            let parser_partial = !parsed.errors.is_empty();
             let prepared = prepare_state(&parsed, ResolutionMode::Import);
             let (_, mut prepared) =
                 analyze_source_with_prepared_state(source, Some("shared.js"), &parsed, prepared);
+            drop(parsed);
             let ControlFlow::Continue(Ok(actual)) =
-                analyze_prepared_source_with_checkpoint(&parsed, &mut prepared, || {
+                analyze_prepared_source_with_checkpoint(parser_partial, &mut prepared, || {
                     ControlFlow::<()>::Continue(())
                 })
             else {
