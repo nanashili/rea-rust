@@ -13,6 +13,7 @@ use super::semantic_graph::{
     NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation, add_unknown,
     inferred_evidence_at, observed_evidence, retain_node, unknown_evidence,
 };
+use super::semantic_ir_view::{BindingValueLookup, SemanticCollection, SemanticIrView};
 use super::semantic_lookup::{CallableOwnerLookup, NodeRangeLookup, range_key};
 
 /// File-local projection context.
@@ -20,7 +21,7 @@ pub struct FileContext<'s> {
     /// Source file.
     pub file: Json,
     /// Semantic IR.
-    pub ir: Json,
+    pub ir: SemanticIrView,
     /// Projection state.
     pub state: &'s mut ProjectionState,
     /// Module node.
@@ -35,8 +36,6 @@ pub struct FileContext<'s> {
     pub return_site_nodes: HashMap<String, Json>,
     /// Argument nodes by call-site and index.
     pub argument_nodes: HashMap<String, Json>,
-    /// Reference nodes in producer order.
-    pub reference_nodes: Vec<Json>,
     /// Call resolutions by call-site id.
     pub call_resolutions: HashMap<String, &'static str>,
     /// Callable owner lookup.
@@ -131,12 +130,16 @@ fn owner_id(context: &FileContext<'_>, owner: &Json) -> Option<String> {
 
 /// `projectSemanticValues`.
 pub fn project_values(context: &mut FileContext<'_>) {
-    let bindings = context.ir.at("bindings").arr().to_vec();
-    for binding in &bindings {
-        let Some(node) = context.binding(binding.at("bindingId")) else {
+    let ir = context.ir.clone();
+    for (index, binding) in ir.binding_headers().enumerate() {
+        let binding_id = binding.at("bindingId");
+        let Some(node) = context.binding(binding_id) else {
             continue;
         };
-        project_value(context, binding, binding.at("value"), Some(node), &[]);
+        let Some(value) = ir.binding_value_at(index) else {
+            continue;
+        };
+        project_value(context, &binding, &value, Some(node), &[]);
     }
 }
 
@@ -340,20 +343,9 @@ fn property_slot(
 
 /// `projectSemanticObjects`.
 pub fn project_objects(context: &mut FileContext<'_>) {
-    let values: HashMap<String, Json> = context
-        .ir
-        .at("bindings")
-        .arr()
-        .iter()
-        .map(|binding| {
-            (
-                binding.at("bindingId").str().to_owned(),
-                binding.at("value").clone(),
-            )
-        })
-        .collect();
-    let operations = context.ir.at("objectOperations").arr().to_vec();
-    for operation in &operations {
+    let ir = context.ir.clone();
+    let values = ir.binding_values();
+    for operation in ir.records(SemanticCollection::ObjectOperations) {
         let kind = operation.at("kind").str();
         let path = operation.at("propertyPath");
         let label = if path.is_null() {
@@ -380,7 +372,7 @@ pub fn project_objects(context: &mut FileContext<'_>) {
             ),
         });
         let (object_node, slot, presence, receiver_resolved) =
-            object_target(context, &values, operation);
+            object_target(context, &values, &operation);
         let (source, target) = match kind {
             "read" => (slot.clone(), occurrence.clone()),
             "write" => (occurrence.clone(), slot.clone()),
@@ -450,7 +442,7 @@ fn object_relation(kind: &str) -> &'static str {
 
 fn object_target(
     context: &mut FileContext<'_>,
-    values: &HashMap<String, Json>,
+    values: &BindingValueLookup<'_>,
     operation: &Json,
 ) -> (Option<Json>, Option<Json>, String, bool) {
     let object_id = operation.at("objectBindingId");
@@ -461,13 +453,13 @@ fn object_target(
         return (binding, None, "unknown-coverage".to_owned(), false);
     };
     let path = js_string_path(path);
-    let fact = slot_at_path(value, &path);
+    let fact = slot_at_path(&value, &path);
     let presence = fact.presence().to_owned();
     if path.is_empty() {
-        return (binding, None, presence, container(value).is_some());
+        return (binding, None, presence, container(&value).is_some());
     }
     let slot = property_slot(context, object_id, &path, &fact);
-    let receiver = slot_at_path(value, &path[..path.len().saturating_sub(1)]);
+    let receiver = slot_at_path(&value, &path[..path.len().saturating_sub(1)]);
     let receiver_resolved =
         receiver.presence() == "present" && container(receiver.value()).is_some();
     (slot.clone(), slot, presence, receiver_resolved)
@@ -477,8 +469,8 @@ fn object_target(
 
 /// `projectCalls`.
 pub fn project_calls(context: &mut FileContext<'_>) {
-    let calls = context.ir.at("callSites").arr().to_vec();
-    for call in &calls {
+    let ir = context.ir.clone();
+    for call in ir.records(SemanticCollection::CallSites) {
         let call_id = call.at("callSiteId").str();
         let Some(call_node) = context.call_site_nodes.get(call_id).cloned() else {
             continue;
@@ -526,8 +518,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             }
         }
     }
-    let flows = context.ir.at("argumentFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::ArgumentFlows) {
         let argument = context
             .argument_nodes
             .get(&format!(
@@ -549,8 +541,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             resolution,
         );
     }
-    let flows = context.ir.at("callReturnFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::CallReturnFlows) {
         let source = context
             .return_site_nodes
             .get(flow.at("returnSiteId").str())
@@ -571,8 +563,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
             resolution,
         );
     }
-    let flows = context.ir.at("callResultFlows").arr().to_vec();
-    for flow in &flows {
+    let ir = context.ir.clone();
+    for flow in ir.records(SemanticCollection::CallResultFlows) {
         let source = context
             .call_site_nodes
             .get(flow.at("callSiteId").str())
@@ -589,8 +581,8 @@ pub fn project_calls(context: &mut FileContext<'_>) {
 }
 
 fn project_return_values(context: &mut FileContext<'_>) {
-    let callables = context.ir.at("callables").arr().to_vec();
-    for callable in &callables {
+    let ir = context.ir.clone();
+    for callable in ir.callable_headers() {
         for site in callable.at("returnSites").arr() {
             let return_node = context
                 .return_site_nodes
@@ -615,9 +607,9 @@ fn project_return_values(context: &mut FileContext<'_>) {
 
 /// `projectSemanticPromises`.
 pub fn project_promises(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("promiseOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::PromiseOperations) {
         let kind = operation.at("kind").str();
         let label = if kind == "awaited-expression" {
             "awaited expression".to_owned()
@@ -648,7 +640,7 @@ pub fn project_promises(context: &mut FileContext<'_>) {
             nodes.insert(operation.at("promiseId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::PromiseOperations) {
         let Some(promise) = nodes.get(operation.at("promiseId").str()).cloned() else {
             continue;
         };
@@ -742,9 +734,9 @@ pub fn project_promises(context: &mut FileContext<'_>) {
 
 /// `projectSemanticEvents`.
 pub fn project_events(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("eventOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut events: HashMap<JsString, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::EventOperations) {
         let name = operation.at("eventName");
         let key = match name.as_js_string() {
             None => operation.at("eventId").text().clone(),
@@ -877,10 +869,10 @@ fn projected_bindings(context: &mut FileContext<'_>, source: Option<&Json>, oper
 
 /// `projectSemanticTimers`.
 pub fn project_timers(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("timerOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut timers: HashMap<String, Json> = HashMap::new();
-    for operation in operations
-        .iter()
+    for operation in ir
+        .records(SemanticCollection::TimerOperations)
         .filter(|operation| operation.at("kind").str() == "schedule")
     {
         let function = owner_id(context, operation.at("ownerCallableId"));
@@ -901,12 +893,12 @@ pub fn project_timers(context: &mut FileContext<'_>) {
             timers.insert(operation.at("timerId").str().to_owned(), timer);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::TimerOperations) {
         let call = context.call_site_at(operation.at("location"));
         if operation.at("kind").str() == "schedule" {
             let timer = timers.get(operation.at("timerId").str()).cloned();
             context.relate(call.as_ref(), timer.as_ref(), "schedules-timer", "resolved");
-            projected_bindings(context, timer.as_ref(), operation);
+            projected_bindings(context, timer.as_ref(), &operation);
             continue;
         }
         let target = operation
@@ -946,9 +938,9 @@ pub fn project_timers(context: &mut FileContext<'_>) {
 
 /// `projectSemanticChildProcesses`.
 pub fn project_child_processes(context: &mut FileContext<'_>) {
-    let spawns = context.ir.at("childProcessSpawns").arr().to_vec();
+    let ir = context.ir.clone();
     let mut processes: HashMap<String, Json> = HashMap::new();
-    for spawn in &spawns {
+    for spawn in ir.records(SemanticCollection::ChildProcessSpawns) {
         let function = owner_id(context, spawn.at("ownerCallableId"));
         let label = spawn
             .at("command")
@@ -975,14 +967,14 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             processes.insert(spawn.at("processId").str().to_owned(), node);
         }
     }
-    for spawn in &spawns {
+    for spawn in ir.records(SemanticCollection::ChildProcessSpawns) {
         let Some(child) = processes.get(spawn.at("processId").str()).cloned() else {
             continue;
         };
         let call = context.call_site_at(spawn.at("location"));
         let complete = is_complete(spawn.at("resolution"));
         context.relate(call.as_ref(), Some(&child), "spawns", resolution(complete));
-        projected_bindings(context, Some(&child), spawn);
+        projected_bindings(context, Some(&child), &spawn);
         if !spawn.at("argvCount").is_null() {
             let mut spec =
                 RelationSpec::new(call.as_ref(), Some(&child), "supplies-argv", "resolved");
@@ -1036,8 +1028,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             );
         }
     }
-    let interactions = context.ir.at("childProcessInteractions").arr().to_vec();
-    for interaction in &interactions {
+    let ir = context.ir.clone();
+    for interaction in ir.records(SemanticCollection::ChildProcessInteractions) {
         let children: Vec<Json> = interaction
             .at("linkedProcessIds")
             .arr()
@@ -1181,9 +1173,9 @@ fn configuration_relation(kind: &str) -> &'static str {
 
 /// `projectSemanticConfiguration`.
 pub fn project_configuration(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("configurationOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ConfigurationOperations) {
         let function = owner_id(context, operation.at("ownerCallableId"));
         let mut properties = Obj::new()
             .with_static("key", operation.at("key").clone())
@@ -1210,7 +1202,7 @@ pub fn project_configuration(context: &mut FileContext<'_>) {
             nodes.insert(operation.at("configId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ConfigurationOperations) {
         let Some(config) = nodes.get(operation.at("configId").str()).cloned() else {
             continue;
         };
@@ -1267,9 +1259,9 @@ pub fn project_configuration(context: &mut FileContext<'_>) {
 
 /// `projectSemanticRequests`.
 pub fn project_requests(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("requestOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut nodes: HashMap<String, Json> = HashMap::new();
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::RequestOperations) {
         let method = operation.at("method").str();
         let label = match operation.at("endpoint").as_js_string() {
             Some(endpoint) if endpoint.len() <= utf16_len(method) => endpoint.clone(),
@@ -1295,7 +1287,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
             nodes.insert(operation.at("requestId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::RequestOperations) {
         let Some(request) = nodes.get(operation.at("requestId").str()).cloned() else {
             continue;
         };
@@ -1309,7 +1301,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                 "constructs-request",
                 resolution(complete),
             );
-            projected_bindings(context, Some(&request), operation);
+            projected_bindings(context, Some(&request), &operation);
             for field in operation.at("fields").arr() {
                 let source = if field.at("sourceBindingId").is_null() {
                     call.clone()
@@ -1370,8 +1362,8 @@ pub fn project_requests(context: &mut FileContext<'_>) {
 
 /// `projectSemanticBoundaries`.
 pub fn project_boundaries(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("boundaryOperations").arr().to_vec();
-    for operation in &operations {
+    let ir = context.ir.clone();
+    for operation in ir.records(SemanticCollection::BoundaryOperations) {
         let function = owner_id(context, operation.at("ownerCallableId"));
         let Some(boundary) = context.retain(NodeSpec {
             kind: "boundary",
@@ -1424,10 +1416,10 @@ pub fn project_boundaries(context: &mut FileContext<'_>) {
 
 /// `projectSemanticResources`.
 pub fn project_resources(context: &mut FileContext<'_>) {
-    let operations = context.ir.at("resourceOperations").arr().to_vec();
+    let ir = context.ir.clone();
     let mut resources: HashMap<String, Json> = HashMap::new();
-    for operation in operations
-        .iter()
+    for operation in ir
+        .records(SemanticCollection::ResourceOperations)
         .filter(|operation| operation.at("kind").str() == "acquire")
     {
         let function = owner_id(context, operation.at("ownerCallableId"));
@@ -1443,7 +1435,7 @@ pub fn project_resources(context: &mut FileContext<'_>) {
             resources.insert(operation.at("resourceId").str().to_owned(), node);
         }
     }
-    for operation in &operations {
+    for operation in ir.records(SemanticCollection::ResourceOperations) {
         let call = context.call_site_at(operation.at("location"));
         if operation.at("kind").str() == "acquire" {
             let target = resources.get(operation.at("resourceId").str()).cloned();
@@ -1492,8 +1484,8 @@ pub fn project_resources(context: &mut FileContext<'_>) {
 
 /// `projectSemanticClosureCaptures`.
 pub fn project_closure_captures(context: &mut FileContext<'_>) {
-    let captures = context.ir.at("closureCaptures").arr().to_vec();
-    for capture in &captures {
+    let ir = context.ir.clone();
+    for capture in ir.records(SemanticCollection::ClosureCaptures) {
         let source = context.binding(capture.at("bindingId"));
         let target = context.callable(capture.at("callableId"));
         let mut spec = RelationSpec::new(source.as_ref(), target.as_ref(), "captures", "resolved");
@@ -1507,8 +1499,8 @@ pub fn project_closure_captures(context: &mut FileContext<'_>) {
 
 /// `projectSemanticFrontiers`.
 pub fn project_frontiers(context: &mut FileContext<'_>) {
-    let frontiers = context.ir.at("frontiers").arr().to_vec();
-    for frontier in &frontiers {
+    let ir = context.ir.clone();
+    for frontier in ir.records(SemanticCollection::Frontiers) {
         let kind = frontier.at("kind").str();
         let (family, relations): (&str, &[&str]) = match kind {
             "dynamic-call" => ("call-flow", &["calls"]),
@@ -1535,9 +1527,9 @@ pub fn project_frontiers(context: &mut FileContext<'_>) {
 
 /// `projectSemanticFunctionFingerprints`.
 pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
-    let fingerprints = context.ir.at("functionFingerprints").arr().to_vec();
+    let ir = context.ir.clone();
     let mut output = Vec::new();
-    for fingerprint in &fingerprints {
+    for fingerprint in ir.records(SemanticCollection::FunctionFingerprints) {
         let Some(callable) = context.callable(fingerprint.at("callableId")) else {
             continue;
         };
@@ -1585,10 +1577,10 @@ pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
 pub fn project_resource_limits(
     state: &mut ProjectionState,
     file: &Json,
-    ir: &Json,
+    coverage: &Json,
     module_node: &Json,
 ) {
-    for limit in super::leaves::semantic_resource_limits(ir.at("coverage")) {
+    for limit in super::leaves::semantic_resource_limits(coverage) {
         if limit != "getter-expansion" {
             continue;
         }

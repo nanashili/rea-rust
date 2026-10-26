@@ -17,7 +17,7 @@ use super::resolution::{ArtifactPathResolver, ResolveRequest};
 use super::{SemanticGraphProjection, SemanticLimits, build_application_graph, project_file};
 
 #[test]
-fn project_file_preserves_raw_property_slot_metadata() {
+fn project_file_preserves_raw_property_metadata_across_repeated_binding_ids() {
     let property = Obj::new()
         .with_static("name", 7.0)
         .with_static("presence", Obj::new().with_static("raw", true))
@@ -43,8 +43,17 @@ fn project_file_preserves_raw_property_slot_metadata() {
                 .with_static("unknownProperties", false)
                 .with_static("omittedProperties", 0.0),
         );
+    let repeated_binding = binding.clone().with_static(
+        "value",
+        Obj::new()
+            .with_static("status", "literal")
+            .with_static("value", 9.0),
+    );
     let ir = Obj::new()
-        .with_static("bindings", Json::array(vec![binding.into()]))
+        .with_static(
+            "bindings",
+            Json::array(vec![binding.into(), repeated_binding.into()]),
+        )
         .into();
     let file = Obj::new()
         .with_static("path", "fixture.js")

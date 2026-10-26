@@ -13,6 +13,7 @@ use super::semantic_graph::{
     inferred_evidence_at, observed_evidence, record_unknown_omission, retain_node,
     seal_semantic_graph, unknown_evidence,
 };
+use super::semantic_ir_view::{SemanticCollection, SemanticIrView};
 use super::semantic_lookup::{CallableOwnerLookup, NodeRangeLookup, range_key};
 use super::semantic_projection::{
     FileContext, project_boundaries, project_calls, project_child_processes,
@@ -39,6 +40,17 @@ pub enum SemanticProjectionError {
 pub fn project_file(
     file: &Json,
     ir: &Json,
+    capacity_nodes: usize,
+    capacity_unknowns: usize,
+    paths: &[Json],
+) -> Result<Json, SemanticProjectionError> {
+    let view = SemanticIrView::from_json(ir);
+    project_file_view(file, &view, capacity_nodes, capacity_unknowns, paths)
+}
+
+pub(crate) fn project_file_view(
+    file: &Json,
+    ir: &SemanticIrView,
     capacity_nodes: usize,
     capacity_unknowns: usize,
     paths: &[Json],
@@ -82,7 +94,7 @@ fn first_definition_location(binding: &Json) -> Json {
 /// `projectFileSteps`: project one file into `state`, returning its fingerprints.
 fn project_source(
     file: &Json,
-    ir: &Json,
+    ir: &SemanticIrView,
     state: &mut ProjectionState,
     paths: &[Json],
 ) -> Vec<Json> {
@@ -102,8 +114,9 @@ fn project_source(
         return Vec::new();
     };
     add_root(state, module_node.at("node_id").str());
-    project_resource_limits(state, file, ir, &module_node);
-    for location in ir.at("coverage").at("widenedReturnedReferences").arr() {
+    let coverage = ir.coverage();
+    project_resource_limits(state, file, &coverage, &module_node);
+    for location in coverage.at("widenedReturnedReferences").arr() {
         let mut evidence = unknown_evidence(file, location).obj();
         evidence.set(
             "limitations",
@@ -124,7 +137,7 @@ fn project_source(
     }
     project_electron_paths(state, file, paths);
     let mut callable_nodes = HashMap::new();
-    for callable in ir.at("callables").arr() {
+    for callable in ir.callable_headers() {
         let name = callable.at("name");
         if let Some(node) = retain_node(
             state,
@@ -143,8 +156,8 @@ fn project_source(
     }
     let owners = CallableOwnerLookup::new(ir);
     let mut binding_nodes = HashMap::new();
-    for binding in ir.at("bindings").arr() {
-        let location = first_definition_location(binding);
+    for binding in ir.binding_headers() {
+        let location = first_definition_location(&binding);
         let owner = owners
             .owner(&location, &callable_nodes)
             .map(|node| node.at("node_id").str().to_owned());
@@ -168,7 +181,7 @@ fn project_source(
         }
     }
     let mut return_site_nodes = HashMap::new();
-    for callable in ir.at("callables").arr() {
+    for callable in ir.callable_headers() {
         let Some(owner) = callable_nodes
             .get(callable.at("callableId").str())
             .map(|node| node.at("node_id").str().to_owned())
@@ -194,7 +207,7 @@ fn project_source(
         }
     }
     let mut call_site_nodes = HashMap::new();
-    for call in ir.at("callSites").arr() {
+    for call in ir.records(SemanticCollection::CallSites) {
         let owner = call
             .at("callerCallableId")
             .as_str()
@@ -217,7 +230,7 @@ fn project_source(
     }
     let mut call_resolutions = HashMap::new();
     let mut call_sites_by_range = HashMap::new();
-    for call in ir.at("callSites").arr() {
+    for call in ir.records(SemanticCollection::CallSites) {
         let id = call.at("callSiteId").str().to_owned();
         call_resolutions.insert(
             id.clone(),
@@ -241,14 +254,13 @@ fn project_source(
         call_site_nodes,
         return_site_nodes,
         argument_nodes: HashMap::new(),
-        reference_nodes: Vec::new(),
         call_resolutions,
         owners,
         call_sites_by_range,
         references: None,
     };
-    project_definitions_and_references(&mut context);
-    context.references = Some(NodeRangeLookup::new(&context.reference_nodes));
+    let references = project_definitions_and_references(&mut context);
+    context.references = Some(NodeRangeLookup::new(references));
     project_values(&mut context);
     project_objects(&mut context);
     project_calls(&mut context);
@@ -265,9 +277,10 @@ fn project_source(
     project_fingerprints(&mut context)
 }
 
-fn project_definitions_and_references(context: &mut FileContext<'_>) {
-    let bindings = context.ir.at("bindings").clone();
-    for binding in bindings.arr() {
+fn project_definitions_and_references(context: &mut FileContext<'_>) -> Vec<Json> {
+    let ir = context.ir.clone();
+    let mut reference_nodes = Vec::new();
+    for binding in ir.binding_headers() {
         let id = binding.at("bindingId").str();
         let Some(binding_node) = context.binding_nodes.get(id).cloned() else {
             continue;
@@ -291,8 +304,7 @@ fn project_definitions_and_references(context: &mut FileContext<'_>) {
             );
         }
     }
-    let references = context.ir.at("references").clone();
-    for (index, reference) in references.arr().iter().enumerate() {
+    for (index, reference) in ir.records(SemanticCollection::References).enumerate() {
         let location = reference.at("location");
         let owner = context
             .owners
@@ -321,7 +333,7 @@ fn project_definitions_and_references(context: &mut FileContext<'_>) {
             .and_then(|id| context.binding_nodes.get(id))
             .cloned();
         if let Some(expression) = &expression {
-            context.reference_nodes.push(expression.clone());
+            reference_nodes.push(expression.clone());
         }
         let (Some(binding), Some(expression)) = (binding, expression) else {
             continue;
@@ -340,6 +352,8 @@ fn project_definitions_and_references(context: &mut FileContext<'_>) {
             _ => {}
         }
     }
+
+    reference_nodes
 }
 
 /// Parent-side retained capacities (`createJavaScriptSemanticGraphProjection` limits).
@@ -596,7 +610,8 @@ impl SemanticGraphProjection {
                 .total_unknowns
                 .min(self.state.unknowns.len() + self.limits.file_unknowns),
         );
-        let fingerprints = project_source(file, ir, &mut self.state, paths);
+        let view = SemanticIrView::from_json(ir);
+        let fingerprints = project_source(file, &view, &mut self.state, paths);
         self.fingerprints.extend(fingerprints);
         if self.state.file_nodes_dropped {
             self.truncated_files += 1;

@@ -15,7 +15,6 @@ use serde::ser::{
 
 use super::super::semantic::value_types::JsString;
 use super::json::{Json, Obj, parse};
-use crate::javascript::contracts::semantic_ir::SemanticIr;
 
 const RAW_VALUE_TOKEN: &str = "$serde_json::private::RawValue";
 
@@ -53,7 +52,7 @@ impl ser::Error for DirectJsonError {
 type ParseRaw = fn(&str) -> Result<Json, DirectJsonError>;
 
 pub(crate) fn serialize<T: ?Sized + Serialize>(value: &T) -> Result<Json, DirectJsonError> {
-    serialize_with_keys(value, &new_key_pool())
+    JsonConversion::default().serialize(value)
 }
 
 fn serialize_with_keys<T: ?Sized + Serialize>(
@@ -65,10 +64,20 @@ fn serialize_with_keys<T: ?Sized + Serialize>(
 
 type KeyPoolRef = Rc<RefCell<KeyPool>>;
 
-/// Static serde field and variant names are pooled for one conversion only.
-/// Dynamic object keys still use serde_json's map-key rules and are never retained.
-fn new_key_pool() -> KeyPoolRef {
-    Rc::new(RefCell::new(KeyPool::default()))
+/// Reuse static serde keys across a graph projection's ephemeral records.
+/// Dynamic keys and record values are not retained by this conversion context.
+#[derive(Clone, Default)]
+pub(crate) struct JsonConversion {
+    keys: KeyPoolRef,
+}
+
+impl JsonConversion {
+    pub(crate) fn serialize<T: ?Sized + Serialize>(
+        &self,
+        value: &T,
+    ) -> Result<Json, DirectJsonError> {
+        serialize_with_keys(value, &self.keys)
+    }
 }
 
 fn pool_key(keys: &KeyPoolRef, value: &'static str) -> JsString {
@@ -87,115 +96,6 @@ impl KeyPool {
             .or_insert_with(|| JsString::from(key))
             .clone()
     }
-}
-
-/// Consume the semantic IR while converting it to the graph-owned JSON value.
-///
-/// This adapter applies only the transport contract's declared field names and
-/// order. Each collection is converted item-by-item and released before the
-/// next collection is visited, avoiding a full typed-IR plus JSON-text peak.
-pub(crate) fn serialize_semantic_ir(ir: SemanticIr) -> Result<Json, DirectJsonError> {
-    let SemanticIr {
-        schema,
-        scopes,
-        bindings,
-        callables,
-        references,
-        module_links,
-        call_sites,
-        argument_flows,
-        call_return_flows,
-        call_result_flows,
-        closure_captures,
-        promise_operations,
-        event_operations,
-        timer_operations,
-        child_process_spawns,
-        child_process_interactions,
-        configuration_operations,
-        request_operations,
-        boundary_operations,
-        resource_operations,
-        object_operations,
-        function_fingerprints,
-        frontiers,
-        coverage,
-        limitations,
-    } = ir;
-
-    let keys = new_key_pool();
-    let mut object = Obj::new();
-    object.set_static("schema", serialize_with_keys(&schema, &keys)?);
-    set_serialized_vec(&mut object, "scopes", scopes, &keys)?;
-    set_serialized_vec(&mut object, "bindings", bindings, &keys)?;
-    set_serialized_vec(&mut object, "callables", callables, &keys)?;
-    set_serialized_vec(&mut object, "references", references, &keys)?;
-    set_serialized_vec(&mut object, "moduleLinks", module_links, &keys)?;
-    set_serialized_vec(&mut object, "callSites", call_sites, &keys)?;
-    set_serialized_vec(&mut object, "argumentFlows", argument_flows, &keys)?;
-    set_serialized_vec(&mut object, "callReturnFlows", call_return_flows, &keys)?;
-    set_serialized_vec(&mut object, "callResultFlows", call_result_flows, &keys)?;
-    set_serialized_vec(&mut object, "closureCaptures", closure_captures, &keys)?;
-    set_serialized_vec(&mut object, "promiseOperations", promise_operations, &keys)?;
-    set_serialized_vec(&mut object, "eventOperations", event_operations, &keys)?;
-    set_serialized_vec(&mut object, "timerOperations", timer_operations, &keys)?;
-    set_serialized_vec(
-        &mut object,
-        "childProcessSpawns",
-        child_process_spawns,
-        &keys,
-    )?;
-    set_serialized_vec(
-        &mut object,
-        "childProcessInteractions",
-        child_process_interactions,
-        &keys,
-    )?;
-    set_serialized_vec(
-        &mut object,
-        "configurationOperations",
-        configuration_operations,
-        &keys,
-    )?;
-    set_serialized_vec(&mut object, "requestOperations", request_operations, &keys)?;
-    set_serialized_vec(
-        &mut object,
-        "boundaryOperations",
-        boundary_operations,
-        &keys,
-    )?;
-    set_serialized_vec(
-        &mut object,
-        "resourceOperations",
-        resource_operations,
-        &keys,
-    )?;
-    set_serialized_vec(&mut object, "objectOperations", object_operations, &keys)?;
-    set_serialized_vec(
-        &mut object,
-        "functionFingerprints",
-        function_fingerprints,
-        &keys,
-    )?;
-    set_serialized_vec(&mut object, "frontiers", frontiers, &keys)?;
-    object.set_static("coverage", serialize_with_keys(&coverage, &keys)?);
-    set_serialized_vec(&mut object, "limitations", limitations, &keys)?;
-
-    Ok(Json::Object(object))
-}
-
-fn set_serialized_vec<T: Serialize>(
-    object: &mut Obj,
-    key: &'static str,
-    values: Vec<T>,
-    keys: &KeyPoolRef,
-) -> Result<(), DirectJsonError> {
-    let items = values
-        .into_iter()
-        .map(|value| serialize_with_keys(&value, keys))
-        .collect::<Result<Vec<_>, _>>()?;
-    object.set_static(key, Json::array(items));
-    Ok(())
 }
 
 fn parse_raw(text: &str) -> Result<Json, DirectJsonError> {
@@ -738,35 +638,5 @@ mod tests {
 
         assert_eq!(direct, expected);
         assert_eq!(direct.stringify(), r#"{"first":3,"second":2}"#);
-    }
-
-    #[test]
-    fn consuming_semantic_ir_matches_legacy_contract_shape() {
-        let value = SemanticIr::failed();
-        let expected = oracle(&value);
-        let actual = serialize_semantic_ir(value).expect("semantic IR serializes");
-
-        assert_eq!(actual, expected);
-        assert_eq!(actual.stringify(), expected.stringify());
-    }
-
-    #[test]
-    fn consuming_semantic_ir_matches_real_analysis_fixture() {
-        let source = r#"
-            import { readFile } from "node:fs";
-            const helper = (value) => value + 1;
-            export function main(input) {
-                return helper(input);
-            }
-            export { readFile };
-        "#;
-        let value =
-            crate::javascript::semantic::analysis::analyze_source(source, Some("fixture.js"))
-                .expect("fixture produces semantic IR");
-        let expected = oracle(&value);
-        let actual = serialize_semantic_ir(value).expect("semantic IR serializes");
-
-        assert_eq!(actual, expected);
-        assert_eq!(actual.stringify(), expected.stringify());
     }
 }

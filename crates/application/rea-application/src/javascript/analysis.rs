@@ -7,6 +7,7 @@
 //! canonical graph JSON shape rather than a second application-only model.
 
 use serde_json::Value;
+use std::collections::HashSet;
 use std::ops::ControlFlow;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
@@ -18,6 +19,7 @@ use super::artifact_files::{JavaScriptArtifactFile, JavaScriptArtifactFileKind, 
 use super::contracts::static_analysis::{ElectronFindings, ParseStatus, StaticAnalysis};
 use super::graph::SemanticLimits;
 use super::graph::json::{Json, Obj, parse};
+use super::graph::semantic_ir_view::{SemanticCollection, SemanticIrView};
 use super::non_js;
 use super::parser::parse_javascript_analysis_program;
 use super::semantic::state::ResolutionMode;
@@ -703,23 +705,27 @@ struct ProjectedSemanticResponse {
 }
 
 fn project_semantic_response(
-    ir_json: Json,
+    ir: SemanticIrView,
     file: &Json,
     node_budget: usize,
     unknown_budget: usize,
     paths: &[Json],
 ) -> Result<ProjectedSemanticResponse, super::worker::WorkerSemanticFailure> {
-    let metadata_module_links = ir_json.at("moduleLinks").arr().len();
-    let metadata_coverage = ir_json.at("coverage").clone();
-    let metadata_module_ir = compact_module_ir(&ir_json);
-    let projection_json =
-        super::graph::project_file(file, &ir_json, node_budget, unknown_budget, paths).map_err(
-            |error| super::worker::WorkerSemanticFailure {
-                phase: "project-file".to_owned(),
-                reason: format!("{error:?}"),
-            },
-        )?;
-    drop(ir_json);
+    let metadata_module_links = ir.collection_len(SemanticCollection::ModuleLinks);
+    let metadata_coverage = ir.coverage();
+    let metadata_module_ir = compact_module_ir(&ir);
+    let projection_json = super::graph::semantic_builder::project_file_view(
+        file,
+        &ir,
+        node_budget,
+        unknown_budget,
+        paths,
+    )
+    .map_err(|error| super::worker::WorkerSemanticFailure {
+        phase: "project-file".to_owned(),
+        reason: format!("{error:?}"),
+    })?;
+    drop(ir);
 
     let projection_text = projection_json.canonical();
     drop(projection_json);
@@ -749,22 +755,14 @@ fn project_semantic_response(
 /// Retain only the semantic facts consumed by source-module relationships.
 /// The full IR remains owned by the worker and is never transferred when the
 /// worker projection succeeds.
-fn compact_module_ir(ir: &Json) -> Json {
-    let links = ir.at("moduleLinks").arr();
-    let callable_ids: Vec<JsString> = links
+fn compact_module_ir(ir: &SemanticIrView) -> Json {
+    let links: Vec<Json> = ir.records(SemanticCollection::ModuleLinks).collect();
+    let callable_ids: HashSet<JsString> = links
         .iter()
         .filter_map(|link| link.at("callableId").as_js_string().cloned())
         .collect();
     let callables = ir
-        .at("callables")
-        .arr()
-        .iter()
-        .filter(|callable| {
-            callable
-                .at("callableId")
-                .as_js_string()
-                .is_some_and(|id| callable_ids.contains(id))
-        })
+        .module_callables(&callable_ids)
         .map(|callable| {
             Obj::new()
                 .with("callableId", callable.at("callableId").clone())
@@ -776,9 +774,7 @@ fn compact_module_ir(ir: &Json) -> Json {
         })
         .collect();
     let bindings = ir
-        .at("bindings")
-        .arr()
-        .iter()
+        .module_bindings()
         .map(|binding| {
             Obj::new()
                 .with("name", binding.at("name").clone())
@@ -788,10 +784,7 @@ fn compact_module_ir(ir: &Json) -> Json {
         })
         .collect();
     let scopes = ir
-        .at("scopes")
-        .arr()
-        .iter()
-        .filter(|scope| scope.at("kind").str() == "program")
+        .program_scopes()
         .map(|scope| {
             Obj::new()
                 .with("kind", scope.at("kind").clone())
@@ -802,12 +795,12 @@ fn compact_module_ir(ir: &Json) -> Json {
         .collect();
 
     Obj::new()
-        .with("moduleLinks", Json::array(links.to_vec()))
+        .with("moduleLinks", Json::array(links))
         .with("callables", Json::array(callables))
         .with("bindings", Json::array(bindings))
         .with("scopes", Json::array(scopes))
-        .with("coverage", ir.at("coverage").clone())
-        .with("limitations", ir.at("limitations").clone())
+        .with("coverage", ir.coverage())
+        .with("limitations", ir.limitations())
         .into()
 }
 
@@ -829,24 +822,17 @@ pub(crate) fn analyze_source_for_worker_with_checkpoint(
     checkpoint: impl FnOnce(&serde_json::value::RawValue),
 ) -> super::worker::WorkerResponse {
     // Source analysis owns the arena and producer caches. Release them before
-    // expanding the owned IR into graph JSON and serializing the projection.
+    // projecting the owned IR record by record and serializing the graph.
     let analysis = analyze_worker_source(source, path, checkpoint);
     let projected = catch_semantic_failure(|| {
         let Some(ir) = analysis.semantic_ir? else {
             return Ok(None);
         };
-        let ir_json = super::graph::direct_serializer::serialize_semantic_ir(ir)
-            .expect("semantic IR contract is serializable and valid JSON");
+        let ir = SemanticIrView::from_typed(ir);
 
         let file = worker_semantic_file(path, metadata);
-        project_semantic_response(
-            ir_json,
-            &file,
-            node_budget,
-            unknown_budget,
-            &analysis.call_paths,
-        )
-        .map(Some)
+        project_semantic_response(ir, &file, node_budget, unknown_budget, &analysis.call_paths)
+            .map(Some)
     });
 
     let (semantic_projection, semantic_metadata, semantic_failure) = match projected {
@@ -1127,7 +1113,7 @@ mod tests {
             .with("limitations", Json::array(vec![]));
 
         let ir: Json = ir.into();
-        let compact = compact_module_ir(&ir);
+        let compact = compact_module_ir(&SemanticIrView::from_json(&ir));
         assert_eq!(compact.at("moduleLinks"), ir.at("moduleLinks"));
         assert_eq!(compact.at("callables").arr().len(), 1);
         assert_eq!(compact.at("bindings").arr()[0].at("name").str(), "run");

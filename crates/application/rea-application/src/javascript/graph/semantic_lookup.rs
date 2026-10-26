@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::json::Json;
+use super::semantic_ir_view::SemanticIrView;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct Point(i64, i64);
@@ -87,18 +88,14 @@ pub struct CallableOwnerLookup {
 
 impl CallableOwnerLookup {
     /// Index one IR's callables.
-    pub fn new(ir: &Json) -> Self {
-        let callables = ir.at("callables").arr();
-        let ids = callables
-            .iter()
-            .map(|callable| callable.at("callableId").str().to_owned())
-            .collect();
-        let entries = sorted_entries(
-            callables
-                .iter()
-                .enumerate()
-                .map(|(order, callable)| (range(callable.at("location")), order)),
-        );
+    pub fn new(ir: &SemanticIrView) -> Self {
+        let mut ids = Vec::new();
+        let mut ranges = Vec::new();
+        for (order, callable) in ir.callable_headers().enumerate() {
+            ids.push(callable.at("callableId").str().to_owned());
+            ranges.push((range(callable.at("location")), order));
+        }
+        let entries = sorted_entries(ranges.into_iter());
         let tree = build(&entries, 0, entries.len());
         Self { entries, ids, tree }
     }
@@ -149,7 +146,7 @@ pub struct NodeRangeLookup {
 
 impl NodeRangeLookup {
     /// Index nodes with a source range.
-    pub fn new(nodes: &[Json]) -> Self {
+    pub fn new(nodes: Vec<Json>) -> Self {
         let entries = sorted_entries(nodes.iter().enumerate().filter_map(|(order, node)| {
             let source = node.at("identity").at("source_range");
             (!source.is_null()).then(|| (range(source), order))
@@ -157,7 +154,7 @@ impl NodeRangeLookup {
         let tree = build(&entries, 0, entries.len());
         Self {
             entries,
-            nodes: nodes.to_vec(),
+            nodes,
             tree,
         }
     }

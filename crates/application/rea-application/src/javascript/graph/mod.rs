@@ -27,6 +27,7 @@ mod modules;
 pub mod resolution;
 pub mod semantic_builder;
 pub mod semantic_graph;
+pub(crate) mod semantic_ir_view;
 mod semantic_lookup;
 mod semantic_projection;
 mod structure;
