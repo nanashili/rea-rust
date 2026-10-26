@@ -10,7 +10,7 @@ use super::leaves::{
     semantic_resource_limit_reason, slot_at_value,
 };
 use super::semantic_graph::{
-    NodeDetails, NodeAdmission, NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation,
+    NodeAdmission, NodeDetails, NodeSpec, ProjectionState, RelationSpec, UnknownSpec, add_relation,
     add_unknown, inferred_evidence_at, retain_node, retain_node_lazy, unknown_evidence,
 };
 use super::semantic_ir_view::{BindingValueLookup, SemanticCollection, SemanticIrView};

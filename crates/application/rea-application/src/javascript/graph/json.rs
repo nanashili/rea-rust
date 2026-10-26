@@ -1187,7 +1187,7 @@ mod tests {
     }
 
     #[test]
-    fn pooled_static_keys_keep_assignment_order_and_replacement_semantics() {
+    fn pooled_static_strings_keep_assignment_order_and_replacement_semantics() {
         let value = Obj::new()
             .with_static("first", 1_usize)
             .with_static("second", 2_usize)
