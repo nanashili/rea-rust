@@ -63,6 +63,11 @@ impl Obj {
         Self(Arc::new(Vec::new()))
     }
 
+    /// Reserve space for a known number of properties without changing order.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Arc::new(Vec::with_capacity(capacity)))
+    }
+
     /// Read one own property.
     pub fn get<K: ?Sized>(&self, key: &K) -> Option<&Json>
     where

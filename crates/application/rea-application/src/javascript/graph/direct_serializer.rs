@@ -419,11 +419,11 @@ impl Compound {
             pending_key: None,
         }
     }
-    fn object(parse_raw: ParseRaw, keys: KeyPoolRef, _len: Option<usize>) -> Self {
+    fn object(parse_raw: ParseRaw, keys: KeyPoolRef, len: Option<usize>) -> Self {
         Self {
             parse_raw,
             keys,
-            container: Container::Object(Obj::new()),
+            container: Container::Object(Obj::with_capacity(len.unwrap_or(0))),
             pending_key: None,
         }
     }
@@ -444,12 +444,12 @@ impl Compound {
         parse_raw: ParseRaw,
         keys: KeyPoolRef,
         variant: &'static str,
-        _len: usize,
+        len: usize,
     ) -> Self {
         Self {
             parse_raw,
             keys,
-            container: Container::VariantObject(variant, Obj::new()),
+            container: Container::VariantObject(variant, Obj::with_capacity(len)),
             pending_key: None,
         }
     }
