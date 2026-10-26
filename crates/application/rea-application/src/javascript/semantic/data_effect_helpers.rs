@@ -383,6 +383,9 @@ pub fn builtin_data_effect_method<'a>(
     ) {
         return None;
     }
+    if !method_may_match_specifiers(&property, specifiers) {
+        return None;
+    }
     let object = callee
         .field(state.source, Field::Object)
         .map(|node| unwrapped(state.source, node))?;
@@ -465,6 +468,17 @@ fn builtin_method_allowed(specifier: &JsString, property: &JsString) -> bool {
         ),
         _ => false,
     }
+}
+
+/// Reject member properties that no supplied built-in family can accept.
+///
+/// This is an optimistic filter: the resolved module origin and imported path
+/// still have to pass the authoritative checks in `builtin_data_effect_method`.
+fn method_may_match_specifiers(property: &JsString, specifiers: &[&str]) -> bool {
+    specifiers.iter().any(|candidate| {
+        let normalized = candidate.strip_prefix("node:").unwrap_or(candidate);
+        builtin_method_allowed(&JsString::from(normalized), property)
+    })
 }
 
 fn known_method(property: &JsString, candidates: &[&str]) -> bool {

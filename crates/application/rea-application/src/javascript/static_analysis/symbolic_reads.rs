@@ -75,6 +75,10 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
     fn seed_reachable(&mut self, node: Node<'a>, environment: &Environment<'a>) -> bool {
         let mut child = node;
         while let Some(parent) = self.resolver.state.parent_of(&child) {
+            if self.uncertainty_established() {
+                return false;
+            }
+
             if is_function(&parent) {
                 break;
             }
@@ -108,6 +112,10 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
                         .into_iter()
                         .flatten()
                     {
+                        if self.uncertainty_established() {
+                            return false;
+                        }
+
                         if statement.key() == child.key() {
                             break;
                         }
@@ -124,12 +132,28 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
     }
 
     fn call(&mut self, call: Node<'a>, environment: &Environment<'a>) {
+        if self.uncertainty_established() {
+            return;
+        }
+
         let Some(callee) = call.field(self.context.source(), Field::Callee) else {
             return;
         };
         let value = self.resolver.evaluate(callee, environment);
+        if self.uncertainty_established() {
+            return;
+        }
+
         let arguments = self.resolver.arguments(call, environment);
+        if self.uncertainty_established() {
+            return;
+        }
+
         for variant in symbolic_variants(&value) {
+            if self.uncertainty_established() {
+                break;
+            }
+
             if let SymbolicKind::Function(function) = &variant.kind {
                 self.function_body(function, call, arguments.clone(), environment);
             }
@@ -165,10 +189,15 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
     }
 
     fn walk(&mut self, node: Node<'a>, environment: &Environment<'a>) {
-        if self.remaining_visits == 0 {
+        if self.uncertainty_established() {
             return;
         }
         self.remaining_visits -= 1;
+
+        if self.uncertainty_established() {
+            return;
+        }
+
         if is_function(&node) || is_class(&node) {
             return;
         }
@@ -181,8 +210,16 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
                 if is_call(&node) {
                     self.call(node, environment);
                 }
+
+                if self.uncertainty_established() {
+                    return;
+                }
+
                 for child in self.context.children(&node) {
                     self.walk(child, environment);
+                    if self.uncertainty_established() {
+                        break;
+                    }
                 }
             }
         }
@@ -195,6 +232,10 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
             .flatten()
         {
             self.walk(statement, environment);
+            if self.uncertainty_established() {
+                break;
+            }
+
             if self.exits(statement, environment) {
                 break;
             }
@@ -235,6 +276,10 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
         {
             self.walk(consequent, environment);
         }
+        if self.uncertainty_established() {
+            return;
+        }
+
         if selected != Some(true)
             && let Some(alternate) = node.field(self.context.source(), Field::Alternate)
         {
@@ -257,6 +302,10 @@ impl<'state, 'a> SymbolicReads<'state, 'a> {
         if let Some(left) = node.field(self.context.source(), Field::Left) {
             self.walk(left, environment);
         }
+        if self.uncertainty_established() {
+            return;
+        }
+
         if self.logical_right(node, environment) != Some(false)
             && let Some(right) = node.field(self.context.source(), Field::Right)
         {
