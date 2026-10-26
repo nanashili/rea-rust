@@ -42,6 +42,10 @@ impl Default for JsString {
 
 impl PartialEq for JsString {
     fn eq(&self, other: &Self) -> bool {
+        if let (Some(left), Some(right)) = (self.source_str(), other.source_str()) {
+            return left == right;
+        }
+
         self.units() == other.units()
     }
 }
@@ -394,6 +398,10 @@ impl fmt::Display for JsString {
 
 impl PartialEq<str> for JsString {
     fn eq(&self, other: &str) -> bool {
+        if let Some(value) = self.source_str() {
+            return value == other;
+        }
+
         self.encode_utf16().eq(other.encode_utf16())
     }
 }
@@ -552,6 +560,23 @@ mod tests {
         assert_eq!(
             from_utf8.code_points().collect::<Vec<_>>(),
             from_utf16.code_points().collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn utf8_equality_does_not_materialize_utf16_units() {
+        let left = JsString::from("café 🚀");
+        let right = JsString::from("café 🚀");
+
+        assert_eq!(left, right);
+        assert_eq!(left, "café 🚀");
+        assert!(
+            left.storage
+                .as_deref()
+                .expect("non-empty text has storage")
+                .units
+                .get()
+                .is_none()
         );
     }
 

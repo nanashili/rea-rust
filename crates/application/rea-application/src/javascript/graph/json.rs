@@ -598,9 +598,7 @@ fn quote_units_into(units: &[u16], output: &mut String) {
             0x0a => output.push_str("\\n"),
             0x0d => output.push_str("\\r"),
             0x09 => output.push_str("\\t"),
-            0..=0x1f | 0xd800..=0xdfff => {
-                let _ = write!(output, "\\u{unit:04x}");
-            }
+            0..=0x1f | 0xd800..=0xdfff => push_unicode_escape(output, unit),
             value => output.push(char::from_u32(u32::from(value)).unwrap_or('\u{fffd}')),
         }
         index += 1;
@@ -610,22 +608,49 @@ fn quote_units_into(units: &[u16], output: &mut String) {
 
 fn quote_into(value: &str, output: &mut String) {
     output.push('"');
-    for character in value.chars() {
-        match character {
-            '"' => output.push_str("\\\""),
-            '\\' => output.push_str("\\\\"),
-            '\u{8}' => output.push_str("\\b"),
-            '\u{c}' => output.push_str("\\f"),
-            '\n' => output.push_str("\\n"),
-            '\r' => output.push_str("\\r"),
-            '\t' => output.push_str("\\t"),
-            control if (control as u32) < 0x20 => {
-                let _ = write!(output, "\\u{:04x}", control as u32);
-            }
-            other => output.push(other),
+    let bytes = value.as_bytes();
+    let mut run_start = 0;
+
+    for (index, &byte) in bytes.iter().enumerate() {
+        if !needs_json_escape(byte) {
+            continue;
         }
+
+        if run_start < index {
+            // Escape bytes are ASCII, so every run boundary is valid UTF-8.
+            output.push_str(&value[run_start..index]);
+        }
+        match byte {
+            b'"' => output.push_str("\\\""),
+            b'\\' => output.push_str("\\\\"),
+            0x08 => output.push_str("\\b"),
+            0x0c => output.push_str("\\f"),
+            b'\n' => output.push_str("\\n"),
+            b'\r' => output.push_str("\\r"),
+            b'\t' => output.push_str("\\t"),
+            byte => push_unicode_escape(output, u16::from(byte)),
+        }
+        run_start = index + 1;
+    }
+
+    if run_start < bytes.len() {
+        output.push_str(&value[run_start..]);
     }
     output.push('"');
+}
+
+fn needs_json_escape(byte: u8) -> bool {
+    matches!(byte, 0..=0x1f | b'"' | b'\\')
+}
+
+fn push_unicode_escape(output: &mut String, unit: u16) {
+    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+
+    output.push_str("\\u");
+    output.push(HEX_DIGITS[((unit >> 12) & 0x0f) as usize] as char);
+    output.push(HEX_DIGITS[((unit >> 8) & 0x0f) as usize] as char);
+    output.push(HEX_DIGITS[((unit >> 4) & 0x0f) as usize] as char);
+    output.push(HEX_DIGITS[(unit & 0x0f) as usize] as char);
 }
 
 /// JavaScript JSON number spelling, including `null` for non-finite values.
@@ -1199,6 +1224,18 @@ mod tests {
         assert_eq!(
             utf8.stringify(),
             format!("\"prefix\\n\\t{}\\u0000suffix\"", "🚀".repeat(32))
+        );
+    }
+
+    #[test]
+    fn quote_matches_serde_for_ascii_controls_and_unicode() {
+        let mut source = String::from("🚀");
+        source.extend((0..=0x1f).map(char::from));
+        source.push_str(r#"🚀 quote " slash \ 🚀"#);
+
+        assert_eq!(
+            quote(&source),
+            serde_json::to_string(&source).expect("serializes")
         );
     }
 
