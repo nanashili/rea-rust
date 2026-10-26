@@ -32,10 +32,11 @@ pub struct StatementPosition {
 /// and repeatedly recomputing it was the hot path in large applications.
 #[derive(Default)]
 pub struct StatementPositionCache {
-    body_indexes: HashMap<NodeKey, BodyPositionIndex>,
+    indexed_bodies: HashSet<NodeKey>,
     unindexed_bodies: HashSet<NodeKey>,
     body_index_entries: usize,
     body_index_entry_limit: Option<usize>,
+    positions: HashMap<NodeKey, CachedPosition>,
     direct_mutations: HashMap<NodeKey, Option<StatementPosition>>,
     direct_initializers: HashMap<NodeKey, Option<StatementPosition>>,
     reference_initializers: HashMap<NodeKey, Option<StatementPosition>>,
@@ -44,12 +45,6 @@ pub struct StatementPositionCache {
 }
 
 const STATEMENT_POSITION_CACHE_ENTRY_LIMIT: usize = 16_384;
-
-#[derive(Default)]
-struct BodyPositionIndex {
-    statements: HashMap<NodeKey, isize>,
-    declarators: HashMap<(NodeKey, NodeKey), isize>,
-}
 
 impl StatementPositionCache {
     fn admit_position(&mut self) {
@@ -71,6 +66,12 @@ impl StatementPositionCache {
 pub struct BindingReadPosition {
     pub position: Option<StatementPosition>,
     pub repeating: bool,
+}
+
+#[derive(Clone, Copy)]
+struct CachedPosition {
+    index: isize,
+    declarator_index: isize,
 }
 
 #[derive(Clone, Debug)]
@@ -186,18 +187,18 @@ fn statement_position<'a>(
     })
 }
 
-fn body_position_index<'a, 'cache>(
-    cache: &'cache mut StatementPositionCache,
+fn ensure_body_position_index<'a>(
+    cache: &mut StatementPositionCache,
     parent: Node<'a>,
     parents: &NodeParents<'a>,
     source: &str,
-) -> Option<&'cache BodyPositionIndex> {
+) -> bool {
     let body_key = parent.key();
-    if cache.body_indexes.contains_key(&body_key) {
-        return cache.body_indexes.get(&body_key);
+    if cache.indexed_bodies.contains(&body_key) {
+        return true;
     }
     if cache.unindexed_bodies.contains(&body_key) {
-        return None;
+        return false;
     }
 
     let body = parent.field_list(source, Field::Body);
@@ -215,19 +216,26 @@ fn body_position_index<'a, 'cache>(
         .get_or_insert_with(|| parents.len().saturating_mul(2));
     if required_entries > entry_limit.saturating_sub(cache.body_index_entries) {
         cache.unindexed_bodies.insert(body_key);
-        return None;
+        return false;
     }
 
-    let mut index = BodyPositionIndex::default();
+    let mut positions = Vec::with_capacity(required_entries);
     for (position, statement) in body.iter().enumerate() {
         let Some(statement) = statement else {
             continue;
         };
         let Ok(position) = isize::try_from(position) else {
             cache.unindexed_bodies.insert(body_key);
-            return None;
+            return false;
         };
-        index.statements.insert(statement.key(), position);
+        let statement_index = position;
+        positions.push((
+            statement.key(),
+            CachedPosition {
+                index: statement_index,
+                declarator_index: -1,
+            },
+        ));
         if statement.babel_type() != "VariableDeclaration" {
             continue;
         }
@@ -241,16 +249,21 @@ fn body_position_index<'a, 'cache>(
             };
             let Ok(declarator_index) = isize::try_from(declarator_index) else {
                 cache.unindexed_bodies.insert(body_key);
-                return None;
+                return false;
             };
-            index
-                .declarators
-                .insert((statement.key(), declarator.key()), declarator_index);
+            positions.push((
+                declarator.key(),
+                CachedPosition {
+                    index: statement_index,
+                    declarator_index,
+                },
+            ));
         }
     }
+    cache.positions.extend(positions);
     cache.body_index_entries = cache.body_index_entries.saturating_add(required_entries);
-    cache.body_indexes.insert(body_key, index);
-    cache.body_indexes.get(&body_key)
+    cache.indexed_bodies.insert(body_key);
+    true
 }
 
 fn cached_statement_position<'a>(
@@ -264,25 +277,26 @@ fn cached_statement_position<'a>(
     if !matches!(parent.babel_type(), "Program" | "BlockStatement") {
         return None;
     }
-    let Some(index) = body_position_index(cache, parent, parents, source) else {
+    if !ensure_body_position_index(cache, parent, parents, source) {
         return statement_position(statement, parents, declarator, source);
-    };
-    let statement_index = *index.statements.get(&statement.key())?;
+    }
+
+    let cached = cache.positions.get(&statement.key())?;
     let declarator_index = if statement.babel_type() == "VariableDeclaration" {
         declarator
-            .and_then(|declarator| {
-                index
-                    .declarators
-                    .get(&(statement.key(), declarator.key()))
-                    .copied()
+            .filter(|declarator| {
+                parents
+                    .get(&declarator.key())
+                    .is_some_and(|parent| parent.key() == statement.key())
             })
-            .unwrap_or(-1)
+            .and_then(|declarator| cache.positions.get(&declarator.key()))
+            .map_or(-1, |position| position.declarator_index)
     } else {
         -1
     };
     Some(StatementPosition {
         body: parent.key(),
-        index: statement_index,
+        index: cached.index,
         declarator_index,
     })
 }
@@ -1279,6 +1293,20 @@ mod tests {
                 ),
                 statement_position(&declaration, &nodes.parents, Some(node), source)
             );
+
+            for other_statement in nodes.nodes.iter().filter(|node| is_statement(node)) {
+                assert_eq!(
+                    cached_statement_position(
+                        &mut cache,
+                        other_statement,
+                        &nodes.parents,
+                        Some(node),
+                        source,
+                    ),
+                    statement_position(other_statement, &nodes.parents, Some(node), source),
+                    "a declarator must retain its containing statement identity",
+                );
+            }
         }
     }
 
@@ -1302,7 +1330,7 @@ mod tests {
             cached_statement_position(&mut cache, &statement, &nodes.parents, None, source),
             statement_position(&statement, &nodes.parents, None, source)
         );
-        assert!(cache.body_indexes.is_empty());
+        assert!(cache.indexed_bodies.is_empty());
         assert!(
             cache.unindexed_bodies.contains(
                 &nodes
@@ -1338,8 +1366,8 @@ mod tests {
         let actual_initializer =
             cached_direct_initializer_position(&mut cache, initializer, &nodes.parents, source);
         assert_eq!(actual_initializer, expected_initializer);
-        assert!(!cache.body_indexes.is_empty());
-        let body_index_count = cache.body_indexes.len();
+        assert!(!cache.indexed_bodies.is_empty());
+        let body_index_count = cache.indexed_bodies.len();
 
         cache.position_entries = STATEMENT_POSITION_CACHE_ENTRY_LIMIT;
         let expected_read = cached_binding_read_position(
@@ -1353,7 +1381,7 @@ mod tests {
         assert_eq!(actual_read, expected_read);
         assert!(actual_read.position.is_none());
         assert!(actual_read.repeating);
-        assert_eq!(cache.body_indexes.len(), body_index_count);
+        assert_eq!(cache.indexed_bodies.len(), body_index_count);
         assert!(cache.direct_mutations.is_empty());
         assert!(cache.binding_reads.contains_key(&read.key()));
     }

@@ -885,7 +885,7 @@ fn analyze_worker_source(
 
     let prepared = super::semantic::analysis::prepare_state(&parsed, ResolutionMode::Import);
     let parser_partial = !parsed.errors.is_empty();
-    let (static_result, mut prepared) =
+    let (static_result, prepared) =
         super::static_analysis::analyze::analyze_source_with_prepared_state(
             source, path, &parsed, prepared,
         );
@@ -906,7 +906,7 @@ fn analyze_worker_source(
         catch_semantic_failure(|| {
             match super::semantic::analysis::analyze_prepared_source_with_checkpoint(
                 parser_partial,
-                &mut prepared,
+                prepared,
                 || ControlFlow::<()>::Continue(()),
             ) {
                 ControlFlow::Continue(result) => result,
