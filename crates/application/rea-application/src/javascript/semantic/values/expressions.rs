@@ -98,9 +98,11 @@ where
     let mut properties = Vec::<Property>::new();
     let mut unknown_properties = false;
     let mut omitted_properties = Some(0usize);
+    let source_properties = node.field_list(source, Field::Properties);
     let demanded_property = demanded_key.and_then(|demanded| {
-        node.field_list(source, Field::Properties)
-            .into_iter()
+        source_properties
+            .iter()
+            .copied()
             .flatten()
             .rev()
             .find(|property| {
@@ -112,11 +114,7 @@ where
             .map(|property| property.key())
     });
 
-    for property in node
-        .field_list(source, Field::Properties)
-        .into_iter()
-        .flatten()
-    {
+    for property in source_properties.into_iter().flatten() {
         if property.babel_type() == "SpreadElement" {
             unknown_properties = true;
             omitted_properties = None;
@@ -172,7 +170,7 @@ where
 
     properties.sort_by(|left, right| compare_js_strings(&left.name, &right.name));
     SemanticValue::Object {
-        properties,
+        properties: properties.into(),
         coverage: if unknown_properties {
             Coverage::Unknown {
                 omitted: omitted_properties,
@@ -212,7 +210,7 @@ where
         });
     }
     SemanticValue::Array {
-        items,
+        items: items.into(),
         coverage: if unknown_items {
             Coverage::Unknown {
                 omitted: omitted_items,

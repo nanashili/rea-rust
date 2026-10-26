@@ -525,7 +525,8 @@ mod tests {
                     value: Primitive::String("ok".to_owned().into()),
                 },
                 presence: SlotPresence::Present,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Exact,
         };
         let (fields, coverage) = flatten_semantic_return_value(&value);
@@ -543,7 +544,8 @@ mod tests {
                     value: Primitive::Boolean(true),
                 },
                 presence: SlotPresence::UnknownCoverage,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Unknown { omitted: None },
         };
         let (fields, _) = flatten_semantic_return_value(&value);
@@ -579,7 +581,8 @@ mod tests {
                     value: Primitive::Boolean(true),
                 },
                 presence: SlotPresence::Present,
-            }],
+            }]
+            .into(),
             coverage: Coverage::Exact,
         };
 
@@ -609,7 +612,8 @@ mod tests {
                     },
                     presence: SlotPresence::Present,
                 },
-            ],
+            ]
+            .into(),
             coverage: Coverage::Exact,
         };
 
