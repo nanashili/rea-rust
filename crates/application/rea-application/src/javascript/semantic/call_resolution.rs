@@ -204,9 +204,8 @@ impl<'s, 'a> ResolutionContext<'s, 'a> {
             return self.unresolved(reason);
         }
 
-        let initializers = binding.initializers.clone();
-        let mut candidates = Vec::with_capacity(initializers.len());
-        for initializer in &initializers {
+        let mut candidates = Vec::with_capacity(binding.initializers.len());
+        for initializer in &binding.initializers {
             let key = initializer.record_id;
             debug_assert!(
                 key != 0,

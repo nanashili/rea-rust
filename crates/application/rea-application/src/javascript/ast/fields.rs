@@ -729,6 +729,21 @@ impl<'a> Node<'a> {
             _ => None,
         }
     }
+
+    /// Exact JavaScript string value of a cooked template element, retaining
+    /// UTF-8 when no lone surrogate decoding is required.
+    pub fn template_cooked_js_string(&self) -> Option<JsString> {
+        match self.kind() {
+            K::TemplateElement(it) => it.value.cooked.as_ref().map(|cooked| {
+                if it.lone_surrogates {
+                    JsString::from_utf16(decode_lossy_surrogates(cooked.as_str(), true))
+                } else {
+                    JsString::from(cooked.as_str())
+                }
+            }),
+            _ => None,
+        }
+    }
 }
 
 fn decode_lossy_surrogates(value: &str, has_lone_surrogates: bool) -> Vec<u16> {

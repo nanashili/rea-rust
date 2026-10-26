@@ -49,9 +49,15 @@ pub(super) fn collect_symbolic_read_uncertainty<'a>(
             // the call cannot become a path entry.
             collector.resolver.evaluate(callee, &environment);
         }
+
+        // This collector contributes one sticky fact; later probes cannot
+        // refine an uncertainty that has already been established.
+        if collector.uncertainty_established() {
+            return true;
+        }
     }
 
-    collector.resolver.unresolved || collector.resolver.truncated || collector.remaining_visits == 0
+    collector.uncertainty_established()
 }
 
 struct SymbolicReads<'state, 'a> {
@@ -62,6 +68,10 @@ struct SymbolicReads<'state, 'a> {
 }
 
 impl<'state, 'a> SymbolicReads<'state, 'a> {
+    fn uncertainty_established(&self) -> bool {
+        self.resolver.unresolved || self.resolver.truncated || self.remaining_visits == 0
+    }
+
     fn seed_reachable(&mut self, node: Node<'a>, environment: &Environment<'a>) -> bool {
         let mut child = node;
         while let Some(parent) = self.resolver.state.parent_of(&child) {

@@ -148,28 +148,25 @@ pub enum ExactLiteral {
 pub fn read_exact_literal(source: &str, node: Node<'_>) -> Option<ExactLiteral> {
     let node = unwrapped(source, node);
     match node.babel_type() {
-        "StringLiteral" => node
-            .string_value_units()
-            .map(JsString::from_utf16)
-            .map(ExactLiteral::String),
+        "StringLiteral" => node.string_value_js_string().map(ExactLiteral::String),
         "NumericLiteral" => node
             .numeric_value()
             .filter(|value| value.is_finite())
             .map(ExactLiteral::Number),
         "BooleanLiteral" => node.boolean_value().map(ExactLiteral::Boolean),
         "NullLiteral" => Some(ExactLiteral::Null),
-        "TemplateLiteral" => single_quasi_cooked_units(source, &node).map(ExactLiteral::String),
+        "TemplateLiteral" => single_quasi_cooked_js_string(source, &node).map(ExactLiteral::String),
         _ => None,
     }
 }
 
-fn single_quasi_cooked_units(source: &str, node: &Node<'_>) -> Option<JsString> {
+fn single_quasi_cooked_js_string(source: &str, node: &Node<'_>) -> Option<JsString> {
     if !node.field_list(source, Field::Expressions).is_empty() {
         return None;
     }
     let quasis = node.field_list(source, Field::Quasis);
     match quasis.as_slice() {
-        [Some(quasi)] => quasi.template_cooked_units().map(JsString::from_utf16),
+        [Some(quasi)] => quasi.template_cooked_js_string(),
         _ => None,
     }
 }
@@ -206,7 +203,7 @@ pub fn static_property_name(source: &str, property: Node<'_>, computed: bool) ->
 pub fn static_property_key(source: &str, property: Node<'_>, computed: bool) -> Option<JsString> {
     let property = unwrapped(source, property);
     match property.babel_type() {
-        "StringLiteral" => property.string_value_units().map(JsString::from_utf16),
+        "StringLiteral" => property.string_value_js_string(),
         "NumericLiteral" => property
             .numeric_value()
             .map(js_number_string)
@@ -250,8 +247,7 @@ pub fn static_property_key(source: &str, property: Node<'_>, computed: bool) -> 
                 return quasis
                     .into_iter()
                     .flatten()
-                    .find_map(|quasi| quasi.template_cooked_units())
-                    .map(JsString::from_utf16);
+                    .find_map(|quasi| quasi.template_cooked_js_string());
             }
             None
         }
@@ -469,4 +465,81 @@ pub fn write_targets<'a>(source: &'a str, root: Node<'a>) -> Vec<Node<'a>> {
 /// `javascriptDisplayText`.
 pub fn display_text(value: &str) -> &str {
     if value.is_empty() { "\"\"" } else { value }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::ControlFlow;
+
+    use oxc_allocator::Allocator;
+
+    use super::*;
+    use crate::javascript::ast::{AstContext, AstVisitor, Node, traverse};
+    use crate::javascript::parser::parse_javascript_analysis_program;
+
+    struct LiteralNodes<'a> {
+        strings: Vec<Node<'a>>,
+        templates: Vec<Node<'a>>,
+    }
+
+    impl<'a> AstVisitor<'a> for LiteralNodes<'a> {
+        fn enter(&mut self, node: &Node<'a>, _: Option<&Node<'a>>, _: &[Node<'a>]) {
+            match node.babel_type() {
+                "StringLiteral" => self.strings.push(*node),
+                "TemplateLiteral" => self.templates.push(*node),
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn literal_helpers_retain_utf8_and_lone_surrogates() {
+        let allocator = Allocator::default();
+        let source = r#"
+            const ordinary = "hello";
+            const unicode = "café🚀";
+            const lone = "\uD800";
+            const template = `world`;
+            const template_lone = `\uD800`;
+            const interpolated = `world${ordinary}`;
+        "#;
+        let parsed = parse_javascript_analysis_program(&allocator, source, Some("literals.js"))
+            .expect("literal source parses");
+        let context = AstContext::new(parsed.program);
+        let mut nodes = LiteralNodes {
+            strings: Vec::new(),
+            templates: Vec::new(),
+        };
+        let _: ControlFlow<()> = traverse(context.root(), source, &mut nodes, || {
+            ControlFlow::Continue(())
+        });
+
+        assert!(nodes.strings.iter().any(|node| {
+            read_exact_literal(source, *node) == Some(ExactLiteral::String(JsString::from("hello")))
+                && static_property_key(source, *node, true) == Some(JsString::from("hello"))
+        }));
+        assert!(nodes.strings.iter().any(|node| {
+            read_exact_literal(source, *node)
+                == Some(ExactLiteral::String(JsString::from("café🚀")))
+                && static_property_key(source, *node, true) == Some(JsString::from("café🚀"))
+        }));
+        let lone = JsString::from_utf16([0xd800]);
+        assert!(nodes.strings.iter().any(|node| {
+            read_exact_literal(source, *node) == Some(ExactLiteral::String(lone.clone()))
+                && static_property_key(source, *node, true) == Some(lone.clone())
+        }));
+
+        assert!(nodes.templates.iter().any(|node| {
+            read_exact_literal(source, *node) == Some(ExactLiteral::String(JsString::from("world")))
+                && static_property_key(source, *node, true) == Some(JsString::from("world"))
+        }));
+        assert!(nodes.templates.iter().any(|node| {
+            read_exact_literal(source, *node) == Some(ExactLiteral::String(lone.clone()))
+                && static_property_key(source, *node, true) == Some(lone.clone())
+        }));
+        assert!(nodes.templates.iter().any(|node| {
+            read_exact_literal(source, *node).is_none()
+                && static_property_key(source, *node, true).is_none()
+        }));
+    }
 }
