@@ -363,7 +363,7 @@ impl<'s, 'a, 'c> Collector<'s, 'a, 'c> {
         let Some(owner_scope) = callable.body_scope_id.as_deref() else {
             return;
         };
-        let within = self.binding_within(binding.scope_id.as_str(), owner_scope);
+        let within = self.state.scope_is_within(&binding.scope_id, owner_scope);
         if !within {
             self.output.closure_captures.push(SemanticClosureCapture {
                 callable_id: owner.to_owned(),
@@ -371,21 +371,6 @@ impl<'s, 'a, 'c> Collector<'s, 'a, 'c> {
                 reference_location: contract_range(self.state.context.range(&node)),
             });
         }
-    }
-
-    fn binding_within(&self, binding_scope: &str, owner_scope: &str) -> bool {
-        let mut current = Some(binding_scope.to_owned());
-        while let Some(scope_id) = current {
-            if scope_id == owner_scope {
-                return true;
-            }
-            current = self
-                .state
-                .scopes_by_id
-                .get(&scope_id)
-                .and_then(|index| self.state.scope(*index).parent_scope_id.clone());
-        }
-        false
     }
 
     fn collect_dynamic_property(&mut self, node: Node<'a>, owner: Option<&str>) {

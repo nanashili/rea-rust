@@ -322,7 +322,9 @@ pub enum RequiredModuleEffectKind {
 #[derive(Clone, Debug)]
 pub struct ScopeState<'a> {
     pub scope_id: String,
-    pub parent_scope_id: Option<String>,
+    /// The owner index is used for ancestry. Public scope IDs are derived
+    /// from the indexed scope only when projecting the analysis result.
+    pub parent_scope: Option<ScopeIndex>,
     pub kind: ScopeKind,
     pub location: SourceRange,
     pub bindings_complete: bool,
@@ -739,10 +741,26 @@ impl<'a> SemanticState<'a> {
 
     /// `state.scopesById.get(scope.parentScopeId)`.
     pub fn parent_scope(&self, index: ScopeIndex) -> Option<ScopeIndex> {
-        self.scopes[index]
-            .parent_scope_id
-            .as_deref()
-            .and_then(|id| self.scopes_by_id.get(id).copied())
+        self.scopes[index].parent_scope
+    }
+
+    /// Whether a scope is the named ancestor or one of its descendants.
+    pub fn scope_is_within(&self, scope_id: &str, ancestor_id: &str) -> bool {
+        if scope_id == ancestor_id {
+            return true;
+        }
+
+        let mut current = self
+            .scopes_by_id
+            .get(scope_id)
+            .and_then(|index| self.parent_scope(*index));
+        while let Some(index) = current {
+            if self.scope(index).scope_id == ancestor_id {
+                return true;
+            }
+            current = self.parent_scope(index);
+        }
+        false
     }
 
     pub fn parent_of(&self, node: &Node<'a>) -> Option<Node<'a>> {
@@ -773,6 +791,13 @@ impl<'a> SemanticState<'a> {
     /// `semanticBindingLookupFromScope`: certain and possible owners without
     /// discarding `with` uncertainty.
     pub fn lookup_from_scope(&self, scope: Option<ScopeIndex>, name: &str) -> BindingLookup {
+        // A local declaration wins even in an incomplete object environment.
+        // Read it directly instead of maintaining a second cached copy of
+        // the scope's own binding table for every identifier in a large file.
+        if let Some(binding) = scope.and_then(|index| self.scopes[index].bindings.get(name)) {
+            return BindingLookup::Binding(*binding);
+        }
+
         let prototype_require_mutation_observed = self.prototype_require_mutation_observed;
         if let Some(result) =
             self.binding_lookup_cache

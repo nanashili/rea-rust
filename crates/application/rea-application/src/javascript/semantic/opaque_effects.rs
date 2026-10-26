@@ -43,16 +43,18 @@ pub fn index_opaque_effects<'a>(state: &SemanticState<'a>) -> OpaqueEffects<'a> 
             .entry(scope_id.clone())
             .or_default()
             .push(*node);
-        let mut child = scope_id.clone();
-        while let Some(index) = state.scopes_by_id.get(&child).copied() {
-            let Some(parent) = state.scope(index).parent_scope_id.clone() else {
+        let mut child_index = state.scopes_by_id.get(scope_id).copied();
+        while let Some(index) = child_index {
+            let Some(parent_index) = state.parent_scope(index) else {
                 break;
             };
+            let child = &state.scope(index).scope_id;
+            let parent = &state.scope(parent_index).scope_id;
             let children = effects.children.entry(parent.clone()).or_default();
-            if !children.iter().any(|candidate| candidate == &child) {
-                children.push(child);
+            if !children.iter().any(|candidate| candidate == child) {
+                children.push(child.clone());
             }
-            child = parent;
+            child_index = Some(parent_index);
         }
     }
     index_global_sites(state, &mut effects);

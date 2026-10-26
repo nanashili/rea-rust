@@ -23,6 +23,7 @@ flate2 = { workspace = true, features = ["runtime_detection"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value", "preserve_order"] }
 sha2.workspace = true
+smallvec.workspace = true
 toml_edit.workspace = true
 yaml-rust2.workspace = true
 sha1.workspace = true

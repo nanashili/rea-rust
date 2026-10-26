@@ -12,6 +12,7 @@
 use oxc_ast::ast::*;
 use oxc_span::Span;
 use rea_core::JsString;
+use smallvec::{SmallVec, smallvec};
 
 use super::children::{
     argument_node, assignment_target_node, binding_identifier, binding_pattern, declaration_node,
@@ -26,6 +27,8 @@ macro_rules! node {
         Node::new(K::$variant(value), value.span, value.node_id())
     }};
 }
+
+type FieldValues<'a> = SmallVec<[Option<Node<'a>>; 1]>;
 
 /// A Babel field name with a node or node-list value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,15 +91,25 @@ impl<'a> Node<'a> {
 
     /// A single-node Babel field (`node[field]`), `None` when absent.
     pub fn field(&self, source: &'a str, field: Field) -> Option<Node<'a>> {
-        self.field_list(source, field).into_iter().next().flatten()
+        self.field_values(source, field)
+            .into_iter()
+            .next()
+            .flatten()
     }
 
     /// A Babel field as a list. Array fields (`elements`) keep holes as
     /// `None`; single-node fields yield at most one entry.
-    #[allow(clippy::too_many_lines)]
     pub fn field_list(&self, source: &'a str, field: Field) -> Vec<Option<Node<'a>>> {
+        self.field_values(source, field).into_vec()
+    }
+
+    /// Build one canonical field representation for both scalar and list
+    /// access. Single-node fields stay inline; larger fields use SmallVec's
+    /// heap-backed representation without an intermediate result copy.
+    #[allow(clippy::too_many_lines)]
+    fn field_values(&self, source: &'a str, field: Field) -> FieldValues<'a> {
         use Field as F;
-        let one = |node: Node<'a>| vec![Some(node)];
+        let one = |node: Node<'a>| smallvec![Some(node)];
         let opt_expr = |expression: Option<&'a Expression<'a>>| {
             expression
                 .map(expression_node)
@@ -104,9 +117,9 @@ impl<'a> Node<'a> {
                 .map(Some)
                 .collect()
         };
-        let all = |nodes: Vec<Node<'a>>| nodes.into_iter().map(Some).collect();
+        let all = |nodes: Vec<Node<'a>>| SmallVec::from_vec(nodes.into_iter().map(Some).collect());
         match (self.kind(), field) {
-            (K::PrivateName(it), F::Id) => vec![Some(Node::synthesized(
+            (K::PrivateName(it), F::Id) => smallvec![Some(Node::synthesized(
                 K::PrivateNameId(it),
                 Span::new(it.span.start + 1, it.span.end),
                 it.node_id(),
@@ -134,7 +147,7 @@ impl<'a> Node<'a> {
                     one(node!(VariableDeclaration, &**declaration))
                 }
                 Some(init) => one(expression_node(init.to_expression())),
-                None => Vec::new(),
+                None => SmallVec::new(),
             },
             (K::ForStatement(it), F::Test) => opt_expr(it.test.as_ref()),
             (K::ForStatement(it), F::Update) => opt_expr(it.update.as_ref()),
@@ -304,7 +317,7 @@ impl<'a> Node<'a> {
                         .iter()
                         .map(|body| Some(node!(FunctionBody, &**body)))
                         .collect(),
-                    None => Vec::new(),
+                    None => SmallVec::new(),
                 }
             }
             (K::ArrowFunctionExpression(it), F::Params) => {
@@ -343,7 +356,7 @@ impl<'a> Node<'a> {
             (K::ClassAccessorProperty(it), F::Value) => opt_expr(it.value.as_ref()),
 
             (K::ObjectPattern { pattern, .. }, F::Properties) => {
-                let mut out: Vec<Option<Node<'a>>> = pattern
+                let mut out: FieldValues<'a> = pattern
                     .properties
                     .iter()
                     .map(|property| Some(node!(BindingProperty, property)))
@@ -354,7 +367,7 @@ impl<'a> Node<'a> {
                 out
             }
             (K::ArrayPattern { pattern, .. }, F::Elements) => {
-                let mut out: Vec<Option<Node<'a>>> = pattern
+                let mut out: FieldValues<'a> = pattern
                     .elements
                     .iter()
                     .map(|element| element.as_ref().map(|it| binding_pattern(it, None, &[])))
@@ -386,7 +399,7 @@ impl<'a> Node<'a> {
                 one(binding_pattern(&it.rest.argument, None, &[]))
             }
             (K::ArrayAssignmentTarget(it), F::Elements) => {
-                let mut out: Vec<Option<Node<'a>>> = it
+                let mut out: FieldValues<'a> = it
                     .elements
                     .iter()
                     .map(|element| element.as_ref().map(|it| maybe_default_node(source, it)))
@@ -397,7 +410,7 @@ impl<'a> Node<'a> {
                 out
             }
             (K::ObjectAssignmentTarget(it), F::Properties) => {
-                let mut out: Vec<Option<Node<'a>>> = it
+                let mut out: FieldValues<'a> = it
                     .properties
                     .iter()
                     .map(|property| {
@@ -489,7 +502,7 @@ impl<'a> Node<'a> {
                     one(node!(Function, &**it))
                 }
                 ExportDefaultDeclarationKind::ClassDeclaration(it) => one(class(it)),
-                ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => Vec::new(),
+                ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => SmallVec::new(),
                 declaration => one(expression_node(declaration.to_expression())),
             },
             (K::TSInterfaceDeclaration(it), F::Id) => one(binding_identifier(&it.id, None, &[])),
@@ -518,7 +531,7 @@ impl<'a> Node<'a> {
             }
             (K::TSExportAssignment(it), F::Expression) => one(expression_node(&it.expression)),
             (K::Decorator(it), F::Expression) => one(expression_node(&it.expression)),
-            _ => Vec::new(),
+            _ => SmallVec::new(),
         }
     }
 

@@ -228,8 +228,8 @@ impl<'s, 'a> Evaluation<'s, 'a> {
                     format!("Unbound identifier {name}."),
                 );
             };
-            let binding = self.state.binding(index).clone();
-            return self.provenance_for_binding_at_read(&binding, node, point.nested());
+            let binding = self.state.binding(index);
+            return self.provenance_for_binding_at_read(binding, node, point.nested());
         }
         if matches!(
             node.babel_type(),

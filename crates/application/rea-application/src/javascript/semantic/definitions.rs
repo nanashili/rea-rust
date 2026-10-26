@@ -58,7 +58,7 @@ fn create_state<'a>(context: AstContext<'a>, mode: ResolutionMode) -> SemanticSt
     );
     let root = ScopeState {
         scope_id: root_id.clone(),
-        parent_scope_id: None,
+        parent_scope: None,
         kind: ScopeKind::Program,
         location: context.range(&program),
         bindings_complete: true,
@@ -170,7 +170,7 @@ impl<'a> AstVisitor<'a> for Definitions<'_, 'a> {
             );
             let dynamic = ScopeState {
                 scope_id: id.clone(),
-                parent_scope_id: Some(self.state.scopes[parent_scope].scope_id.clone()),
+                parent_scope: Some(parent_scope),
                 kind: ScopeKind::Block,
                 location: context.range(parent),
                 bindings_complete: false,
@@ -692,13 +692,10 @@ fn nested_scope<'a>(
     let kind = scope_kind(source, node, parent)?;
     let owner = switch_owner.unwrap_or(*node);
     let id = scope_id(kind, state.context.start(&owner), state.context.end(&owner));
-    let parent_scope_id = match function_name_scope(state, node, parent_scope) {
-        Some(name_scope) => state.scopes[name_scope].scope_id.clone(),
-        None => state.scopes[parent_scope].scope_id.clone(),
-    };
+    let parent_scope = function_name_scope(state, node, parent_scope).unwrap_or(parent_scope);
     let scope = ScopeState {
         scope_id: id,
-        parent_scope_id: Some(parent_scope_id),
+        parent_scope: Some(parent_scope),
         kind,
         location: state.context.range(&owner),
         bindings_complete: true,
@@ -729,7 +726,7 @@ fn function_name_scope<'a>(
                 state.context.end(node)
             )
         ),
-        parent_scope_id: Some(state.scopes[parent_scope].scope_id.clone()),
+        parent_scope: Some(parent_scope),
         kind: ScopeKind::Block,
         location: state.context.range(node),
         bindings_complete: true,

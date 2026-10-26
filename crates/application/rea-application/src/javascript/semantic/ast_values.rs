@@ -7,20 +7,17 @@ use super::value_types::JsString;
 
 /// Babel `t.isFunction` (the `Function` alias).
 pub fn is_function(node: &Node<'_>) -> bool {
-    matches!(
-        node.babel_type(),
-        "FunctionDeclaration"
-            | "FunctionExpression"
-            | "ArrowFunctionExpression"
-            | "ObjectMethod"
-            | "ClassMethod"
-            | "ClassPrivateMethod"
-    )
+    match node.kind() {
+        NodeKind::Function(function) => function.body.is_some(),
+        NodeKind::ArrowFunctionExpression(_) | NodeKind::ObjectMethod(_) => true,
+        NodeKind::ClassMethod(method) => method.value.body.is_some(),
+        _ => false,
+    }
 }
 
 /// Babel `t.isClass`.
 pub fn is_class(node: &Node<'_>) -> bool {
-    matches!(node.babel_type(), "ClassDeclaration" | "ClassExpression")
+    matches!(node.kind(), NodeKind::Class(_))
 }
 
 /// Whether TypeScript removes this declaration from emitted runtime code.
@@ -56,18 +53,12 @@ pub fn is_unmodeled_runtime_scope(node: Node<'_>) -> bool {
 
 /// Babel `t.isMemberExpression || t.isOptionalMemberExpression`.
 pub fn is_member(node: &Node<'_>) -> bool {
-    matches!(
-        node.babel_type(),
-        "MemberExpression" | "OptionalMemberExpression"
-    )
+    matches!(node.kind(), NodeKind::Member { .. })
 }
 
 /// Babel `t.isCallExpression || t.isOptionalCallExpression`.
 pub fn is_call(node: &Node<'_>) -> bool {
-    matches!(
-        node.babel_type(),
-        "CallExpression" | "OptionalCallExpression"
-    )
+    matches!(node.kind(), NodeKind::Call { .. })
 }
 
 /// Babel `t.isIdentifier(node, { name })`.
@@ -100,13 +91,16 @@ pub struct Unwrapped<'a> {
     pub depth: usize,
 }
 
-const TYPE_WRAPPERS: [&str; 5] = [
-    "TSAsExpression",
-    "TSTypeAssertion",
-    "TSNonNullExpression",
-    "TSSatisfiesExpression",
-    "TSInstantiationExpression",
-];
+fn is_type_wrapper(node: &Node<'_>) -> bool {
+    matches!(
+        node.kind(),
+        NodeKind::TSAsExpression(_)
+            | NodeKind::TSTypeAssertion(_)
+            | NodeKind::TSNonNullExpression { .. }
+            | NodeKind::TSSatisfiesExpression(_)
+            | NodeKind::TSInstantiationExpression(_)
+    )
+}
 
 /// `unwrapJavaScriptExpression`. Babel analysis inputs have no
 /// `ParenthesizedExpression` nodes (and no Flow `TypeCastExpression` in
@@ -119,7 +113,7 @@ pub fn unwrap_expression<'a>(
 ) -> Unwrapped<'a> {
     let mut current = node;
     let mut depth = 0;
-    while TYPE_WRAPPERS.contains(&current.babel_type()) {
+    while is_type_wrapper(&current) {
         if stop_at_parentheses && current.parenthesized() {
             break;
         }

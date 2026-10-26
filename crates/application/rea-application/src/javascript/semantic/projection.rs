@@ -99,7 +99,9 @@ pub fn immutable_scopes(state: &SemanticState<'_>) -> Vec<SemanticScopeProjectio
 
             SemanticScopeProjection {
                 scope_id: scope.scope_id.clone(),
-                parent_scope_id: scope.parent_scope_id.clone(),
+                parent_scope_id: scope
+                    .parent_scope
+                    .map(|index| state.scope(index).scope_id.clone()),
                 kind: scope.kind.as_str().to_owned(),
                 location: scope.location,
                 bindings_complete: scope.bindings_complete,
