@@ -127,7 +127,7 @@ fn analysis_file_counts(analysis: &Json) -> Result<(usize, usize), Failure> {
         None => return Err(invalid("JavaScript analysis has no files array")),
     };
 
-    for entry in files {
+    for entry in files.iter() {
         if entry.get("javascript").is_none() {
             return Err(invalid(
                 "JavaScript analysis file is missing its javascript result",
@@ -184,7 +184,7 @@ fn json_u64(value: u64) -> Json {
 }
 
 fn strings(values: impl IntoIterator<Item = String>) -> Json {
-    Json::Array(values.into_iter().map(Json::from).collect())
+    Json::array(values.into_iter().map(Json::from).collect())
 }
 
 fn serialize_json<T: Serialize>(value: &T) -> Result<Json, Failure> {
@@ -260,7 +260,7 @@ mod tests {
         let analysis: Json = Obj::new()
             .with(
                 "files",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with(
                             "file",
@@ -290,7 +290,7 @@ mod tests {
             .with("parse_failures", 1usize)
             .with(
                 "limitations",
-                Json::Array(vec![
+                Json::array(vec![
                     Json::String(surrogate.clone()),
                     Json::from("analysis limitation"),
                 ]),
@@ -435,12 +435,12 @@ mod tests {
     #[test]
     fn rejects_analysis_entry_without_explicit_javascript_result() {
         let analysis: Json = Obj::new()
-            .with("files", Json::Array(vec![Obj::new().into()]))
+            .with("files", Json::array(vec![Obj::new().into()]))
             .with("visited_ast_nodes", 0usize)
             .with("findings", 0usize)
             .with("modules", 0usize)
             .with("parse_failures", 0usize)
-            .with("limitations", Json::Array(Vec::new()))
+            .with("limitations", Json::array(Vec::new()))
             .into();
         let inventory = snapshot();
         let file_set = JavaScriptArtifactFileSet {

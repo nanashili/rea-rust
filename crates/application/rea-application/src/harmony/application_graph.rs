@@ -102,7 +102,7 @@ pub fn project_evidence(input: &Json) -> Result<Box<RawValue>, Failure> {
         .with("environment", Json::Null)
         .with("limitations", limitations)
         .with("relationship_coverage", Json::Null)
-        .with("locations", Json::Array(Vec::new()))
+        .with("locations", Json::array(Vec::new()))
         .with("evidence_links", json::strings(source_evidence_ids));
     let raw = RawValue::from_string(Json::from(unsigned).stringify())
         .map_err(|error| protocol_failure(&error.to_string()))?;
@@ -195,10 +195,10 @@ fn project_pages(pages: &[Page]) -> Result<Json, String> {
         .with("source_evidence_ids", json::strings(source_evidence_ids))
         .with("packaging_model", packaging_model(&components.manifests))
         .with("components", components_value)
-        .with("unavailable_components", Json::Array(unavailable))
-        .with("app_pack_children", Json::Array(app_pack_children))
+        .with("unavailable_components", Json::array(unavailable))
+        .with("app_pack_children", Json::array(app_pack_children))
         .with("runtime_families", json::strings(runtime))
-        .with("bridge_candidates", Json::Array(bridge.candidates))
+        .with("bridge_candidates", Json::array(bridge.candidates))
         .with(
             "bridge_candidate_coverage",
             Obj::new()
@@ -268,13 +268,13 @@ fn projected_subject(
     limitations: &mut Json,
 ) -> Result<Json, Failure> {
     if page.record.subject().get() == "null" {
-        match limitations {
-            Json::Array(values) => values.insert(
-                0,
-                "Artifact identity is unavailable for this observation.".into(),
-            ),
-            _ => return Err(protocol_failure("projection limitations are not an array")),
-        }
+        let Some(values) = limitations.array_mut() else {
+            return Err(protocol_failure("projection limitations are not an array"));
+        };
+        values.insert(
+            0,
+            "Artifact identity is unavailable for this observation.".into(),
+        );
         return Ok(Json::Null);
     }
 

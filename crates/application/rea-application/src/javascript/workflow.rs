@@ -123,7 +123,7 @@ fn retain_unvisited_files(
     let Json::Object(root) = analysis else {
         return;
     };
-    let Some(Json::Array(files)) = root.get_mut("files") else {
+    let Some(files) = root.get_mut("files").and_then(Json::array_mut) else {
         return;
     };
 
@@ -254,7 +254,7 @@ fn release_semantic_ir(analysis: &mut Json, file_index: usize) {
     let Json::Object(root) = analysis else {
         return;
     };
-    let Some(Json::Array(files)) = root.get_mut("files") else {
+    let Some(files) = root.get_mut("files").and_then(Json::array_mut) else {
         return;
     };
     let Some(Json::Object(file)) = files.get_mut(file_index) else {
@@ -317,12 +317,12 @@ mod tests {
             .with(
                 "javascript",
                 Obj::new()
-                    .with("findings", Json::Array(vec![Json::from("require")]))
+                    .with("findings", Json::array(vec![Json::from("require")]))
                     .with(
                         "electron",
                         Obj::new().with(
                             "call_paths",
-                            Json::Array(vec![Json::from("ipcRenderer.send")]),
+                            Json::array(vec![Json::from("ipcRenderer.send")]),
                         ),
                     ),
             )
@@ -334,7 +334,7 @@ mod tests {
                         Obj::new()
                             .with(
                                 "moduleLinks",
-                                Json::Array(vec![
+                                Json::array(vec![
                                     Obj::new()
                                         .with("source", "./preload")
                                         .with("target", "./main")
@@ -343,7 +343,7 @@ mod tests {
                             )
                             .with(
                                 "bindings",
-                                Json::Array(vec![
+                                Json::array(vec![
                                     Obj::new()
                                         .with("name", "ipc")
                                         .with("kind", "require")
@@ -354,14 +354,14 @@ mod tests {
                     .with(
                         "projection",
                         Obj::new()
-                            .with("nodes", Json::Array(vec![]))
-                            .with("relations", Json::Array(vec![])),
+                            .with("nodes", Json::array(vec![]))
+                            .with("relations", Json::array(vec![])),
                     ),
             );
         let retained_file_facts = file.get("file").expect("file facts").clone();
         let retained_static_facts = file.get("javascript").expect("static facts").clone();
         let mut analysis = Obj::new()
-            .with("files", Json::Array(vec![file.into()]))
+            .with("files", Json::array(vec![file.into()]))
             .into();
 
         release_semantic_ir(&mut analysis, 0);

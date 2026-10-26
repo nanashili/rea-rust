@@ -84,7 +84,7 @@ fn normalize_evidence(evidence: &Json) -> Json {
     let mut coverage = evidence.at("coverage").obj();
     let mut limits: Vec<Json> = evidence.at("coverage").at("limits").arr().to_vec();
     limits.sort_by(|left, right| compare_code_points(&left.canonical(), &right.canonical()));
-    coverage.set("limits", Json::Array(limits));
+    coverage.set("limits", Json::array(limits));
     object.set("coverage", coverage);
     let sorted = |value: &Json| {
         strings(unique_sorted(
@@ -120,15 +120,17 @@ impl EvidenceRegistry {
                     !self.contexts.contains_key(&id),
                     "JavaScript semantic evidence context digest collision"
                 );
-                self.contexts
-                    .insert(id.clone(), context.with("context_id", id.as_str()).into());
+                self.contexts.insert(
+                    id.clone(),
+                    context.with_static("context_id", id.as_str()).into(),
+                );
                 self.ids_by_canonical.insert(canonical, id.clone());
                 id
             }
         };
         Obj::new()
-            .with("context_id", id)
-            .with("location", location)
+            .with_static("context_id", id)
+            .with_static("location", location)
             .into()
     }
 
@@ -298,45 +300,51 @@ pub fn observed_evidence(file: &Json, location: &Json) -> Json {
     let path = file.at("path").text();
     let sha = file.at("sha256").str();
     let location = if location.is_null() {
-        Obj::new().with("available", true).with(
+        Obj::new().with_static("available", true).with_static(
             "value",
-            Obj::new().with("kind", "artifact-path").with("path", path),
+            Obj::new()
+                .with_static("kind", "artifact-path")
+                .with_static("path", path),
         )
     } else {
-        let mut value = Obj::new().with("kind", "source-range").with("source", path);
+        let mut value = Obj::new()
+            .with_static("kind", "source-range")
+            .with_static("source", path);
         value.extend_from(&location.obj());
-        Obj::new().with("available", true).with("value", value)
+        Obj::new()
+            .with_static("available", true)
+            .with_static("value", value)
     };
     Obj::new()
-        .with("authority", "ast-static-analysis")
-        .with("state", "observed")
-        .with("confidence", "exact")
-        .with(
+        .with_static("authority", "ast-static-analysis")
+        .with_static("state", "observed")
+        .with_static("confidence", "exact")
+        .with_static(
             "artifact",
             Obj::new()
-                .with("available", true)
-                .with("artifact_id", format!("art_{sha}"))
-                .with("sha256", sha),
+                .with_static("available", true)
+                .with_static("artifact_id", format!("art_{sha}"))
+                .with_static("sha256", sha),
         )
-        .with("location", location)
-        .with(
+        .with_static("location", location)
+        .with_static(
             "extractor",
             Obj::new()
-                .with("name", "rea-javascript-semantic-analysis")
-                .with("version", "1")
-                .with("operation", "analyze_javascript_application")
-                .with("executable_sha256", Json::Null),
+                .with_static("name", "rea-javascript-semantic-analysis")
+                .with_static("version", "1")
+                .with_static("operation", "analyze_javascript_application")
+                .with_static("executable_sha256", Json::Null),
         )
-        .with(
+        .with_static(
             "coverage",
             Obj::new()
-                .with("status", "complete")
-                .with("truncated", false)
-                .with("omitted_count", 0.0)
-                .with("limits", Json::Array(Vec::new())),
+                .with_static("status", "complete")
+                .with_static("truncated", false)
+                .with_static("omitted_count", 0.0)
+                .with_static("limits", Json::array(Vec::new())),
         )
-        .with("limitations", Json::Array(Vec::new()))
-        .with("evidence_ids", Json::Array(Vec::new()))
+        .with_static("limitations", Json::array(Vec::new()))
+        .with_static("evidence_ids", Json::array(Vec::new()))
         .into()
 }
 
@@ -380,10 +388,10 @@ fn display_text(label: &JsString) -> JsString {
 
 fn node_identity(file: &Json, location: &Json, role_key: &JsString) -> Json {
     Obj::new()
-        .with("artifact_sha256", file.at("sha256").clone())
-        .with("module_path", file.at("path").clone())
-        .with("source_range", location.clone())
-        .with("role_key", role_key)
+        .with_static("artifact_sha256", file.at("sha256").clone())
+        .with_static("module_path", file.at("path").clone())
+        .with_static("source_range", location.clone())
+        .with_static("role_key", role_key)
         .into()
 }
 
@@ -419,14 +427,14 @@ pub fn retain_node(state: &mut ProjectionState, file: &Json, spec: NodeSpec<'_>)
         .evidence
         .intern(&observed_evidence(file, &spec.location));
     let node: Json = Obj::new()
-        .with("kind", spec.kind)
-        .with("identity", identity)
-        .with("function_node_id", spec.function_node_id)
-        .with("application_node_ids", Json::Array(Vec::new()))
-        .with("label", spec.label.map(|label| display_text(&label)))
-        .with("properties", spec.properties)
-        .with("evidence", evidence)
-        .with("node_id", id)
+        .with_static("kind", spec.kind)
+        .with_static("identity", identity)
+        .with_static("function_node_id", spec.function_node_id)
+        .with_static("application_node_ids", Json::array(Vec::new()))
+        .with_static("label", spec.label.map(|label| display_text(&label)))
+        .with_static("properties", spec.properties)
+        .with_static("evidence", evidence)
+        .with_static("node_id", id)
         .into();
     admit_node(state, node)
 }
@@ -478,19 +486,19 @@ pub fn add_relation(state: &mut ProjectionState, spec: RelationSpec<'_>) {
         .evidence
         .unwrap_or_else(|| inferred_evidence(&state.evidence.resolve(source.at("evidence"))));
     let semantic = Obj::new()
-        .with("source_node_id", source.at("node_id").clone())
-        .with("target_node_id", target.at("node_id").clone())
-        .with("relation", spec.relation)
-        .with("resolution", spec.resolution)
-        .with("properties", spec.properties)
-        .with("evidence", state.evidence.intern(&evidence));
+        .with_static("source_node_id", source.at("node_id").clone())
+        .with_static("target_node_id", target.at("node_id").clone())
+        .with_static("relation", spec.relation)
+        .with_static("resolution", spec.resolution)
+        .with_static("properties", spec.properties)
+        .with_static("evidence", state.evidence.intern(&evidence));
     let id = format!("jsrg_relation_{}", Json::from(semantic.clone()).digest());
     if state.relations.has(&id) {
         return;
     }
     state
         .relations
-        .set(id.clone(), semantic.with("relation_id", id).into());
+        .set(id.clone(), semantic.with_static("relation_id", id).into());
 }
 
 /// `recordSemanticUnknownOmission`.
@@ -534,33 +542,33 @@ pub fn add_unknown(state: &mut ProjectionState, spec: UnknownSpec<'_>) {
         && state.unknowns.len() >= capacity
     {
         let omission = Obj::new()
-            .with("family", spec.family)
-            .with("reason", spec.reason)
-            .with("occurrences", 1.0);
+            .with_static("family", spec.family)
+            .with_static("reason", spec.reason)
+            .with_static("occurrences", 1.0);
         record_unknown_omission(state, &omission.into());
         return;
     }
     let semantic = Obj::new()
-        .with("node_id", spec.node_id)
-        .with("family", spec.family)
-        .with(
+        .with_static("node_id", spec.node_id)
+        .with_static("family", spec.family)
+        .with_static(
             "relation_kinds",
             strings(unique_sorted(spec.relation_kinds)),
         )
-        .with("reason", spec.reason)
-        .with("detail", spec.detail)
-        .with(
+        .with_static("reason", spec.reason)
+        .with_static("detail", spec.detail)
+        .with_static(
             "candidate_node_ids",
             strings(unique_sorted(spec.candidate_node_ids)),
         )
-        .with("evidence", state.evidence.intern(&spec.evidence));
+        .with_static("evidence", state.evidence.intern(&spec.evidence));
     let id = format!("jsrg_unknown_{}", Json::from(semantic.clone()).digest());
     if state.unknowns.has(&id) {
         return;
     }
     state
         .unknowns
-        .set(id.clone(), semantic.with("unknown_id", id).into());
+        .set(id.clone(), semantic.with_static("unknown_id", id).into());
 }
 
 /// `createJavaScriptSemanticFingerprint`.
@@ -594,77 +602,77 @@ pub fn create_fingerprint(state: &mut ProjectionState, input: Obj) -> Json {
     );
     semantic.set("evidence", state.evidence.intern(input.at("evidence")));
     let id_input = Obj::new()
-        .with("function_node_id", input.at("function_node_id").clone())
-        .with("algorithm", input.at("algorithm").clone())
-        .with("fingerprint_sha256", fingerprint_sha256.as_str());
+        .with_static("function_node_id", input.at("function_node_id").clone())
+        .with_static("algorithm", input.at("algorithm").clone())
+        .with_static("fingerprint_sha256", fingerprint_sha256.as_str());
     let id = format!("jsrg_fingerprint_{}", Json::from(id_input).digest());
     semantic
-        .with("fingerprint_sha256", fingerprint_sha256)
-        .with("fingerprint_id", id)
+        .with_static("fingerprint_sha256", fingerprint_sha256)
+        .with_static("fingerprint_id", id)
         .into()
 }
 
 /// `addSemanticFallbackRoot`.
 pub fn add_fallback_root(root_sha256: &str, state: &mut ProjectionState) {
     let identity: Json = Obj::new()
-        .with("artifact_sha256", root_sha256)
-        .with("module_path", "unknown-semantic-root")
-        .with("source_range", Json::Null)
-        .with("role_key", "artifact-root")
+        .with_static("artifact_sha256", root_sha256)
+        .with_static("module_path", "unknown-semantic-root")
+        .with_static("source_range", Json::Null)
+        .with_static("role_key", "artifact-root")
         .into();
     let evidence: Json = Obj::new()
-        .with("authority", "unknown")
-        .with("state", "unavailable")
-        .with("confidence", "unknown")
-        .with(
+        .with_static("authority", "unknown")
+        .with_static("state", "unavailable")
+        .with_static("confidence", "unknown")
+        .with_static(
             "artifact",
             Obj::new()
-                .with("available", true)
-                .with("artifact_id", format!("art_{root_sha256}"))
-                .with("sha256", root_sha256),
+                .with_static("available", true)
+                .with_static("artifact_id", format!("art_{root_sha256}"))
+                .with_static("sha256", root_sha256),
         )
-        .with(
+        .with_static(
             "location",
             Obj::new()
-                .with("available", false)
-                .with("reason", "not-observed")
-                .with(
+                .with_static("available", false)
+                .with_static("reason", "not-observed")
+                .with_static(
                     "detail",
                     "No admitted JavaScript source produced semantic IR.",
                 ),
         )
-        .with(
+        .with_static(
             "extractor",
             Obj::new()
-                .with("name", "rea-javascript-semantic-analysis")
-                .with("version", "1")
-                .with("operation", "analyze_javascript_application")
-                .with("executable_sha256", Json::Null),
+                .with_static("name", "rea-javascript-semantic-analysis")
+                .with_static("version", "1")
+                .with_static("operation", "analyze_javascript_application")
+                .with_static("executable_sha256", Json::Null),
         )
-        .with(
+        .with_static(
             "coverage",
             Obj::new()
-                .with("status", "unavailable")
-                .with("truncated", false)
-                .with("omitted_count", Json::Null)
-                .with("limits", Json::Array(Vec::new())),
+                .with_static("status", "unavailable")
+                .with_static("truncated", false)
+                .with_static("omitted_count", Json::Null)
+                .with_static("limits", Json::array(Vec::new())),
         )
-        .with(
+        .with_static(
             "limitations",
             strings(["This synthetic graph root does not claim a source location."]),
         )
-        .with("evidence_ids", Json::Array(Vec::new()))
+        .with_static("evidence_ids", Json::array(Vec::new()))
         .into();
     let id = semantic_node_id("module", &identity);
     let node: Json = Obj::new()
-        .with("kind", "module")
-        .with("identity", identity)
-        .with("function_node_id", Json::Null)
-        .with("application_node_ids", Json::Array(Vec::new()))
-        .with("label", "unavailable semantic root")
-        .with("properties", Obj::new())
-        .with("evidence", state.evidence.intern(&evidence))
-        .with("node_id", id)
+        .with_static("kind", "module")
+        .with_static("identity", identity)
+        .with_static("function_node_id", Json::Null)
+        .with_static("application_node_ids", Json::array(Vec::new()))
+        .with_static("label", "unavailable semantic root")
+        .with_static("properties", Obj::new())
+        .with_static("evidence", state.evidence.intern(&evidence))
+        .with_static("node_id", id)
         .into();
     if let Some(node) = admit_node(state, node) {
         add_root(state, node.at("node_id").str());
@@ -722,8 +730,8 @@ pub fn bind_application_nodes(state: &mut ProjectionState, application_nodes: &[
                     sha,
                     value.at("source").text(),
                     &Obj::new()
-                        .with("start", value.at("start").clone())
-                        .with("end", value.at("end").clone())
+                        .with_static("start", value.at("start").clone())
+                        .with_static("end", value.at("end").clone())
                         .into(),
                 ),
                 _ => continue,
@@ -807,7 +815,7 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
     let mut normalized = coverage.obj();
     let mut limits = coverage.at("limits").arr().to_vec();
     limits.sort_by(|left, right| compare_code_points(&left.canonical(), &right.canonical()));
-    normalized.set("limits", Json::Array(limits));
+    normalized.set("limits", Json::array(limits));
     if let Some(omitted) = coverage.get("omitted_unknown_occurrences") {
         let mut omitted = omitted.arr().to_vec();
         omitted.sort_by(|left, right| {
@@ -815,7 +823,7 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
                 |value: &Json| format!("{}:{}", value.at("family").str(), value.at("reason").str());
             compare_code_points(&key(left), &key(right))
         });
-        normalized.set("omitted_unknown_occurrences", Json::Array(omitted));
+        normalized.set("omitted_unknown_occurrences", Json::array(omitted));
     }
     let mut families: Vec<Json> = coverage
         .at("families")
@@ -837,21 +845,21 @@ pub fn seal_semantic_graph(content: SemanticGraphContent) -> Json {
         })
         .collect();
     sort_by_field(&mut families, "family");
-    normalized.set("families", Json::Array(families));
+    normalized.set("families", Json::array(families));
     let content = Obj::new()
-        .with("schema", "JavaScriptSemanticRelationGraph")
-        .with("root_artifact_sha256", root_artifact_sha256)
-        .with("application_graph_id", application_graph_id)
-        .with("root_node_ids", strings(unique_sorted(root_node_ids)))
-        .with("evidence_contexts", Json::Array(evidence_contexts))
-        .with("nodes", Json::Array(nodes))
-        .with("relations", Json::Array(relations))
-        .with("fingerprints", Json::Array(fingerprints))
-        .with("unknowns", Json::Array(unknowns))
-        .with("coverage", normalized)
-        .with("limitations", strings(unique_sorted(limitations)));
+        .with_static("schema", "JavaScriptSemanticRelationGraph")
+        .with_static("root_artifact_sha256", root_artifact_sha256)
+        .with_static("application_graph_id", application_graph_id)
+        .with_static("root_node_ids", strings(unique_sorted(root_node_ids)))
+        .with_static("evidence_contexts", Json::array(evidence_contexts))
+        .with_static("nodes", Json::array(nodes))
+        .with_static("relations", Json::array(relations))
+        .with_static("fingerprints", Json::array(fingerprints))
+        .with_static("unknowns", Json::array(unknowns))
+        .with_static("coverage", normalized)
+        .with_static("limitations", strings(unique_sorted(limitations)));
     let id = format!("jsrg_{}", Json::from(content.clone()).digest());
-    content.with("graph_id", id).into()
+    content.with_static("graph_id", id).into()
 }
 
 #[cfg(test)]
@@ -863,8 +871,8 @@ mod tests {
     fn observed_evidence_preserves_unpaired_path_units() {
         let path = JsString::from_utf16(vec![0x0061, 0xd800, 0x0062]);
         let file: Json = Obj::new()
-            .with("path", path.clone())
-            .with("sha256", "sha")
+            .with_static("path", path.clone())
+            .with_static("sha256", "sha")
             .into();
 
         let evidence = observed_evidence(&file, &Json::Null);

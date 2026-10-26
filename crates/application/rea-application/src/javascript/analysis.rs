@@ -264,19 +264,19 @@ pub fn analyze_artifact_files<B>(
 
     JavaScriptArtifactAnalysis {
         value: Obj::new()
-            .with("files", Json::Array(all_files))
-            .with("packages", Json::Array(packages))
-            .with("json_modules", Json::Array(json_modules))
-            .with("html_scripts", Json::Array(html_scripts))
-            .with("html_inline_scripts", Json::Array(html_inline_scripts))
-            .with("source_maps", Json::Array(source_maps))
+            .with("files", Json::array(all_files))
+            .with("packages", Json::array(packages))
+            .with("json_modules", Json::array(json_modules))
+            .with("html_scripts", Json::array(html_scripts))
+            .with("html_inline_scripts", Json::array(html_inline_scripts))
+            .with("source_maps", Json::array(source_maps))
             .with("visited_ast_nodes", visited_ast_nodes as usize)
             .with("findings", findings as usize)
             .with("modules", modules as usize)
             .with("parse_failures", parse_failures as usize)
             .with(
                 "limitations",
-                Json::Array({
+                Json::array({
                     if interrupted {
                         limitations.push(
                             "Analysis was cancelled after retaining completed source facts; unvisited files remain unknown."
@@ -677,7 +677,7 @@ fn unavailable_file(file: &super::artifact_files::JavaScriptUnanalyzedArtifactFi
     metadata.set("hash_status", file.hash_status.clone());
     metadata.set(
         "limitations",
-        Json::Array(file.limitations.iter().cloned().map(Json::from).collect()),
+        Json::array(file.limitations.iter().cloned().map(Json::from).collect()),
     );
     Obj::new()
         .with("file", metadata)
@@ -800,10 +800,10 @@ fn compact_module_ir(ir: &Json) -> Json {
         .collect();
 
     Obj::new()
-        .with("moduleLinks", Json::Array(links.to_vec()))
-        .with("callables", Json::Array(callables))
-        .with("bindings", Json::Array(bindings))
-        .with("scopes", Json::Array(scopes))
+        .with("moduleLinks", Json::array(links.to_vec()))
+        .with("callables", Json::array(callables))
+        .with("bindings", Json::array(bindings))
+        .with("scopes", Json::array(scopes))
         .with("coverage", ir.at("coverage").clone())
         .with("limitations", ir.at("limitations").clone())
         .into()
@@ -984,7 +984,7 @@ mod tests {
         fn resolve(&self, _request: &ResolveRequest<'_>) -> Json {
             Obj::new()
                 .with("resolution_status", "not-applicable")
-                .with("limitations", Json::Array(Vec::new()))
+                .with("limitations", Json::array(Vec::new()))
                 .into()
         }
 
@@ -1020,7 +1020,7 @@ mod tests {
             )
             .with(
                 "nodes",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with("artifact_id", "art_root")
                         .with("sha256", digest.clone())
@@ -1028,15 +1028,15 @@ mod tests {
                         .into(),
                 ]),
             )
-            .with("integrity_contradictions", Json::Array(Vec::new()));
+            .with("integrity_contradictions", Json::array(Vec::new()));
         let file_set = Obj::new()
-            .with("containers", Json::Array(Vec::new()))
-            .with("packages", Json::Array(Vec::new()))
-            .with("json_modules", Json::Array(Vec::new()))
-            .with("source_maps", Json::Array(Vec::new()))
-            .with("html_inline_scripts", Json::Array(Vec::new()))
-            .with("unavailable_relevant_files", Json::Array(Vec::new()));
-        let analysis = Obj::new().with("files", Json::Array(vec![interrupted]));
+            .with("containers", Json::array(Vec::new()))
+            .with("packages", Json::array(Vec::new()))
+            .with("json_modules", Json::array(Vec::new()))
+            .with("source_maps", Json::array(Vec::new()))
+            .with("html_inline_scripts", Json::array(Vec::new()))
+            .with("unavailable_relevant_files", Json::array(Vec::new()));
+        let analysis = Obj::new().with("files", Json::array(vec![interrupted]));
 
         let graph = build_application_graph(
             &snapshot.into(),
@@ -1078,7 +1078,7 @@ mod tests {
         let ir = Obj::new()
             .with(
                 "moduleLinks",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with("kind", "export")
                         .with("callableId", "callable-1")
@@ -1088,39 +1088,39 @@ mod tests {
             )
             .with(
                 "callables",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with("callableId", "callable-1")
                         .with("kind", "function")
-                        .with("returnSites", Json::Array(vec![]))
+                        .with("returnSites", Json::array(vec![]))
                         .with("returnCoverage", Obj::new().with("status", "complete"))
-                        .with("body", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .with("body", Json::array(vec![Json::from("large-unused-fact")]))
                         .into(),
                 ]),
             )
             .with(
                 "bindings",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with("name", "run")
                         .with("scopeId", "program")
                         .with("provenance", Obj::new().with("status", "module"))
-                        .with("unused", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .with("unused", Json::array(vec![Json::from("large-unused-fact")]))
                         .into(),
                 ]),
             )
             .with(
                 "scopes",
-                Json::Array(vec![
+                Json::array(vec![
                     Obj::new()
                         .with("kind", "program")
                         .with("scopeId", "program")
-                        .with("locals", Json::Array(vec![Json::from("large-unused-fact")]))
+                        .with("locals", Json::array(vec![Json::from("large-unused-fact")]))
                         .into(),
                 ]),
             )
             .with("coverage", Obj::new().with("status", "complete"))
-            .with("limitations", Json::Array(vec![]));
+            .with("limitations", Json::array(vec![]));
 
         let ir: Json = ir.into();
         let compact = compact_module_ir(&ir);

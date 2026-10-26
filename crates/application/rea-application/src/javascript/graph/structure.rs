@@ -51,14 +51,14 @@ pub fn create_root_node(accumulator: &mut Accumulator, snapshot: &Json) -> Optio
         .find(|node| node.at("artifact_id") == manifest.at("root_artifact_id"))?;
     let sha = root.at("sha256").str();
     let properties = Obj::new()
-        .with("format", manifest.at("root_format").clone())
-        .with("bytes", root.at("size").clone())
-        .with("inventory_manifest_id", manifest.at("manifest_id").clone())
-        .with(
+        .with_static("format", manifest.at("root_format").clone())
+        .with_static("bytes", root.at("size").clone())
+        .with_static("inventory_manifest_id", manifest.at("manifest_id").clone())
+        .with_static(
             "inventory_graph_sha256",
             manifest.at("graph_sha256").clone(),
         )
-        .with("inventory_artifact_id", root.at("artifact_id").clone());
+        .with_static("inventory_artifact_id", root.at("artifact_id").clone());
     let evidence = artifact_observation(
         &EvidenceInput::new(sha, "artifact-root", "inventory-root", complete_coverage()).limitations(vec![
             "artifact-root is a path-independent alias; the application result retains the canonical local input path."
@@ -82,10 +82,10 @@ pub fn add_containers(context: &mut GraphContext<'_>) {
         let sha = container.at("sha256").str();
         let path_key = container.at("path").text();
         let properties = Obj::new()
-            .with("path", Json::String(path_key.clone()))
-            .with("format", "asar")
-            .with("bytes", container.at("bytes").clone())
-            .with(
+            .with_static("path", Json::String(path_key.clone()))
+            .with_static("format", "asar")
+            .with_static("bytes", container.at("bytes").clone())
+            .with_static(
                 "inventory_artifact_id",
                 container.at("inventory_artifact_id").clone(),
             );
@@ -116,8 +116,8 @@ pub fn add_containers(context: &mut GraphContext<'_>) {
             target: node.node_id,
             relation: "contains".into(),
             properties: Obj::new()
-                .with("path", Json::String(path_key.clone()))
-                .with("format", "asar"),
+                .with_static("path", Json::String(path_key.clone()))
+                .with_static("format", "asar"),
             evidence,
         });
     }
@@ -165,8 +165,18 @@ fn source_file_range(file: &Json) -> Json {
     }
 
     Obj::new()
-        .with("start", Obj::new().with("line", 1.0).with("column", 0.0))
-        .with("end", Obj::new().with("line", line).with("column", column))
+        .with_static(
+            "start",
+            Obj::new()
+                .with_static("line", 1.0)
+                .with_static("column", 0.0),
+        )
+        .with_static(
+            "end",
+            Obj::new()
+                .with_static("line", line)
+                .with_static("column", column),
+        )
         .into()
 }
 
@@ -190,8 +200,8 @@ pub fn add_files(context: &mut GraphContext<'_>) {
         ) {
             let semantic = analyzed.at("semantic");
             let properties = Obj::new()
-                .with("static_analysis", javascript.clone())
-                .with(
+                .with_static("static_analysis", javascript.clone())
+                .with_static(
                     "semantic_module_analysis",
                     if semantic.is_null() {
                         Json::Null
@@ -204,7 +214,7 @@ pub fn add_files(context: &mut GraphContext<'_>) {
                         }
                     },
                 )
-                .with(
+                .with_static(
                     "application_projection_failure",
                     failure.at("error").clone(),
                 );
@@ -253,7 +263,7 @@ pub fn add_files(context: &mut GraphContext<'_>) {
                     source: entry.node_id,
                     target: target.node_id.clone(),
                     relation: "maps_to".into(),
-                    properties: Obj::new().with("sha256", file.at("sha256").clone()),
+                    properties: Obj::new().with_static("sha256", file.at("sha256").clone()),
                     evidence,
                 });
             }
@@ -285,7 +295,8 @@ pub fn add_files(context: &mut GraphContext<'_>) {
             );
             input.failure = Some(failure.at("error").clone());
             input.limits = Some(analysis_coverage_limits(failure.at("limits")));
-            input.details = Some(Obj::new().with("analysis_status", failure.at("status").clone()));
+            input.details =
+                Some(Obj::new().with_static("analysis_status", failure.at("status").clone()));
             add_unavailable_static_parse_scope(context, input);
         } else if kind == "javascript"
             && (javascript.is_null() || javascript.at("parse_status").str() == "failed")
@@ -382,21 +393,24 @@ pub fn add_files(context: &mut GraphContext<'_>) {
             input.omitted_count = Some(omitted_html_inline_script_locations([*inline]));
             input.details = Some(
                 Obj::new()
-                    .with("inline_script_count", inline.at("script_count").clone())
-                    .with(
+                    .with_static("inline_script_count", inline.at("script_count").clone())
+                    .with_static(
                         "inline_scripts",
-                        Json::Array(
+                        Json::array(
                             scripts
                                 .iter()
                                 .map(|script| {
                                     let location = script.at("location");
                                     Obj::new()
-                                        .with("script_type", script.at("script_type").clone())
-                                        .with(
+                                        .with_static(
+                                            "script_type",
+                                            script.at("script_type").clone(),
+                                        )
+                                        .with_static(
                                             "location",
                                             Obj::new()
-                                                .with("start", location.at("start").clone())
-                                                .with("end", location.at("end").clone()),
+                                                .with_static("start", location.at("start").clone())
+                                                .with_static("end", location.at("end").clone()),
                                         )
                                         .into()
                                 })
@@ -425,9 +439,9 @@ fn add_unavailable_asar_entries(context: &mut GraphContext<'_>) {
             kind.map_or("relevant", Json::str)
         )));
         let mut properties = Obj::new()
-            .with("entry_sha256", file.at("sha256").clone())
-            .with("bytes", file.at("bytes").clone())
-            .with(
+            .with_static("entry_sha256", file.at("sha256").clone())
+            .with_static("bytes", file.at("bytes").clone())
+            .with_static(
                 "inventory_artifact_id",
                 file.at("inventory_artifact_id").clone(),
             );
@@ -470,8 +484,8 @@ fn add_unavailable_asar_entries(context: &mut GraphContext<'_>) {
             .cloned()
             .unwrap_or_else(|| context.root.clone());
         let mut edge_properties = Obj::new()
-            .with("path", Json::String(path_key.clone()))
-            .with("content_available", false);
+            .with_static("path", Json::String(path_key.clone()))
+            .with_static("content_available", false);
         if let Some(status) = file.get("hash_status") {
             edge_properties.set("hash_status", status.clone());
         }
@@ -485,7 +499,7 @@ fn add_unavailable_asar_entries(context: &mut GraphContext<'_>) {
         if kind.map(Json::str) == Some("native-addon")
             || file.at("artifact_kind").str() == "native-addon"
         {
-            let mut addon_properties = Obj::new().with("availability", "unavailable");
+            let mut addon_properties = Obj::new().with_static("availability", "unavailable");
             if let Some(status) = file.get("hash_status") {
                 addon_properties.set("hash_status", status.clone());
             }
@@ -514,8 +528,8 @@ fn add_unavailable_asar_entries(context: &mut GraphContext<'_>) {
                 target: addon.node_id,
                 relation: "contains".into(),
                 properties: Obj::new()
-                    .with("classification", "native-addon")
-                    .with("content_available", false),
+                    .with_static("classification", "native-addon")
+                    .with_static("content_available", false),
                 evidence: evidence_for("classify-unavailable-native-addon"),
             });
         }
@@ -542,15 +556,15 @@ fn create_file_target(
         javascript.at("parse_status").clone()
     };
     let properties = Obj::new()
-        .with("path", Json::String(path_key.clone()))
-        .with("bytes", file.at("bytes").clone())
-        .with(
+        .with_static("path", Json::String(path_key.clone()))
+        .with_static("bytes", file.at("bytes").clone())
+        .with_static(
             "inventory_artifact_id",
             file.at("inventory_artifact_id").clone(),
         )
-        .with("unpacked", file.at("unpacked").clone())
-        .with("file_kind", file.at("kind").clone())
-        .with(
+        .with_static("unpacked", file.at("unpacked").clone())
+        .with_static("file_kind", file.at("kind").clone())
+        .with_static(
             "text_status",
             if text.at("included").as_bool() == Some(true) {
                 Json::from("included")
@@ -558,27 +572,27 @@ fn create_file_target(
                 text.at("reason").clone()
             },
         )
-        .with("parse_status", parse_status)
-        .with(
+        .with_static("parse_status", parse_status)
+        .with_static(
             "json_parse_status",
             json.map_or(Json::Null, |json| json.at("status").clone()),
         )
-        .with(
+        .with_static(
             "json_top_level_keys",
-            json.map_or(Json::Array(Vec::new()), |json| {
+            json.map_or(Json::array(Vec::new()), |json| {
                 json.at("top_level_keys").clone()
             }),
         )
-        .with(
+        .with_static(
             "omitted_json_top_level_keys",
             json.map_or(Json::Number(0.0), |json| {
                 json.at("omitted_top_level_keys").clone()
             }),
         )
-        .with(
+        .with_static(
             "vendor_markers",
             if javascript.is_null() {
-                Json::Array(Vec::new())
+                Json::array(Vec::new())
             } else {
                 javascript.at("vendors").clone()
             },
@@ -608,10 +622,10 @@ fn create_asar_entry(context: &mut GraphContext<'_>, file: &Json) -> Option<AppN
     }
     let path_key = file.at("path").text().clone();
     let properties = Obj::new()
-        .with("entry_sha256", file.at("sha256").clone())
-        .with("bytes", file.at("bytes").clone())
-        .with("unpacked", file.at("unpacked").clone())
-        .with(
+        .with_static("entry_sha256", file.at("sha256").clone())
+        .with_static("bytes", file.at("bytes").clone())
+        .with_static("unpacked", file.at("unpacked").clone())
+        .with_static(
             "inventory_artifact_id",
             file.at("inventory_artifact_id").clone(),
         );
@@ -678,8 +692,8 @@ fn application_manifest_path(context: &GraphContext<'_>) -> Option<JsString> {
 pub fn add_package_nodes(context: &mut GraphContext<'_>) -> Vec<AppNode> {
     let mut roots = Vec::new();
     let root_path = application_manifest_path(context);
-    let packages = context.analysis.at("packages").arr().to_vec();
-    for package in &packages {
+    let packages = context.analysis.at("packages").clone();
+    for package in packages.arr() {
         let package_path = package.at("path").text();
         let Some(file) = context.files_by_path.get(package_path).cloned() else {
             continue;
@@ -687,12 +701,12 @@ pub fn add_package_nodes(context: &mut GraphContext<'_>) -> Vec<AppNode> {
         let path_key = file.at("path").text().clone();
         let sha = file.at("sha256").str();
         let properties = Obj::new()
-            .with("path", Json::String(path_key.clone()))
-            .with("name", package.at("name").clone())
-            .with("version", package.at("version").clone())
-            .with("main", package.at("main").clone())
-            .with("renderer", package.at("renderer").clone())
-            .with("parse_status", package.at("status").clone());
+            .with_static("path", Json::String(path_key.clone()))
+            .with_static("name", package.at("name").clone())
+            .with_static("version", package.at("version").clone())
+            .with_static("main", package.at("main").clone())
+            .with_static("renderer", package.at("renderer").clone())
+            .with_static("parse_status", package.at("status").clone());
         let limitations = package
             .at("limitation")
             .as_str()
@@ -727,7 +741,7 @@ pub fn add_package_nodes(context: &mut GraphContext<'_>) -> Vec<AppNode> {
                 source: node.node_id.clone(),
                 target: context.root.node_id.clone(),
                 relation: "contains".into(),
-                properties: Obj::new().with("basis", "package-metadata-within-artifact"),
+                properties: Obj::new().with_static("basis", "package-metadata-within-artifact"),
                 evidence,
             });
         } else {
@@ -778,13 +792,13 @@ fn add_package_role(
         },
     );
     let mut properties = Obj::new()
-        .with("declared_path", declared)
-        .with(
+        .with_static("declared_path", declared)
+        .with_static(
             "resolution_context",
             resolution.at("resolution_context").clone(),
         )
-        .with("resolved_path", resolution.at("resolved_path").clone())
-        .with(
+        .with_static("resolved_path", resolution.at("resolved_path").clone())
+        .with_static(
             "resolution_status",
             resolution.at("resolution_status").clone(),
         );
@@ -816,7 +830,7 @@ mod tests {
 
     fn file_with_text(value: JsString) -> Json {
         Obj::new()
-            .with("text", Obj::new().with("value", Json::String(value)))
+            .with_static("text", Obj::new().with_static("value", Json::String(value)))
             .into()
     }
 

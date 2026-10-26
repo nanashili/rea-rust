@@ -125,10 +125,7 @@ pub(crate) fn serialize_semantic_ir(ir: SemanticIr) -> Result<Json, DirectJsonEr
 
     let keys = new_key_pool();
     let mut object = Obj::new();
-    object.set(
-        pool_key(&keys, "schema"),
-        serialize_with_keys(&schema, &keys)?,
-    );
+    object.set_static("schema", serialize_with_keys(&schema, &keys)?);
     set_serialized_vec(&mut object, "scopes", scopes, &keys)?;
     set_serialized_vec(&mut object, "bindings", bindings, &keys)?;
     set_serialized_vec(&mut object, "callables", callables, &keys)?;
@@ -181,10 +178,7 @@ pub(crate) fn serialize_semantic_ir(ir: SemanticIr) -> Result<Json, DirectJsonEr
         &keys,
     )?;
     set_serialized_vec(&mut object, "frontiers", frontiers, &keys)?;
-    object.set(
-        pool_key(&keys, "coverage"),
-        serialize_with_keys(&coverage, &keys)?,
-    );
+    object.set_static("coverage", serialize_with_keys(&coverage, &keys)?);
     set_serialized_vec(&mut object, "limitations", limitations, &keys)?;
 
     Ok(Json::Object(object))
@@ -200,7 +194,7 @@ fn set_serialized_vec<T: Serialize>(
         .into_iter()
         .map(|value| serialize_with_keys(&value, keys))
         .collect::<Result<Vec<_>, _>>()?;
-    object.set(pool_key(keys, key), Json::Array(items));
+    object.set_static(key, Json::array(items));
     Ok(())
 }
 
@@ -303,7 +297,7 @@ impl ser::Serializer for DirectJsonSerializer {
         Ok(Json::String(JsString::from(value)))
     }
     fn serialize_bytes(self, value: &[u8]) -> Result<Json, DirectJsonError> {
-        Ok(Json::Array(
+        Ok(Json::array(
             value
                 .iter()
                 .map(|byte| Json::Number(f64::from(*byte)))
@@ -470,19 +464,18 @@ impl Compound {
     fn finish(self) -> Result<Json, DirectJsonError> {
         let Compound {
             parse_raw,
-            keys,
             container,
             ..
         } = self;
 
         match container {
-            Container::Array(values) => Ok(Json::Array(values)),
+            Container::Array(values) => Ok(Json::array(values)),
             Container::Object(object) => Ok(Json::Object(object)),
             Container::VariantArray(variant, values) => Ok(Json::Object(
-                Obj::new().with(pool_key(&keys, variant), Json::Array(values)),
+                Obj::new().with_static(variant, Json::array(values)),
             )),
             Container::VariantObject(variant, object) => Ok(Json::Object(
-                Obj::new().with(pool_key(&keys, variant), Json::Object(object)),
+                Obj::new().with_static(variant, Json::Object(object)),
             )),
             Container::Raw(Some(raw)) => (parse_raw)(&raw),
             Container::Raw(None) => Err(DirectJsonError::Raw("RawValue had no payload".into())),
@@ -501,6 +494,16 @@ impl Compound {
         match &mut self.container {
             Container::Object(object) | Container::VariantObject(_, object) => {
                 object.set(key, value);
+                Ok(())
+            }
+            _ => Err(DirectJsonError::Unsupported("object field")),
+        }
+    }
+
+    fn set_static(&mut self, key: &'static str, value: Json) -> Result<(), DirectJsonError> {
+        match &mut self.container {
+            Container::Object(object) | Container::VariantObject(_, object) => {
+                object.set_static(key, value);
                 Ok(())
             }
             _ => Err(DirectJsonError::Unsupported("object field")),
@@ -595,9 +598,8 @@ impl SerializeStruct for Compound {
             raw.replace(raw_text(value)?);
             return Ok(());
         }
-        let field_key = pool_key(&self.keys, field);
         let serialized = serialize_with_keys(value, &self.keys)?;
-        self.set(field_key, serialized)
+        self.set_static(field, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
         self.finish()
@@ -611,9 +613,8 @@ impl SerializeStructVariant for Compound {
         field: &'static str,
         value: &T,
     ) -> Result<(), DirectJsonError> {
-        let field_key = pool_key(&self.keys, field);
         let serialized = serialize_with_keys(value, &self.keys)?;
-        self.set(field_key, serialized)
+        self.set_static(field, serialized)
     }
     fn end(self) -> Result<Json, DirectJsonError> {
         self.finish()

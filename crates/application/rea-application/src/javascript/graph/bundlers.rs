@@ -42,7 +42,7 @@ pub fn add_bundler_nodes(context: &mut GraphContext<'_>) -> Vec<String> {
                 file,
                 registration.at("location"),
                 &coverage,
-                Obj::new().with("bundler", registration.at("bundler").clone()),
+                Obj::new().with_static("bundler", registration.at("bundler").clone()),
             );
             let runtime = registration.at("runtime").str();
             for key in registration.at("chunk_keys").arr() {
@@ -84,39 +84,39 @@ fn create_chunk_node(
         .concat_str(":")
         .concat(&JsString::join(keys, ","));
     let properties = Obj::new()
-        .with("path", file.at("path").clone())
-        .with("bundler", registration.at("bundler").clone())
-        .with("runtime", runtime)
-        .with("chunk_keys", registration.at("chunk_keys").clone())
-        .with(
+        .with_static("path", file.at("path").clone())
+        .with_static("bundler", registration.at("bundler").clone())
+        .with_static("runtime", runtime)
+        .with_static("chunk_keys", registration.at("chunk_keys").clone())
+        .with_static(
             "unknown_chunk_keys",
             registration.at("unknown_chunk_keys").clone(),
         )
-        .with(
+        .with_static(
             "runtime_require_name",
             registration.at("runtime_require_name").clone(),
         )
-        .with(
+        .with_static(
             "runtime_module_cache_status",
             registration.at("runtime_module_cache_status").clone(),
         )
-        .with(
+        .with_static(
             "entry_module_keys",
             registration.at("entry_module_keys").clone(),
         )
-        .with(
+        .with_static(
             "unknown_entry_module_keys",
             registration.at("unknown_entry_module_keys").clone(),
         )
-        .with(
+        .with_static(
             "async_chunk_keys",
             registration.at("async_chunk_keys").clone(),
         )
-        .with(
+        .with_static(
             "unknown_async_chunk_keys",
             registration.at("unknown_async_chunk_keys").clone(),
         )
-        .with("module_count", registration.at("modules").arr().len());
+        .with_static("module_count", registration.at("modules").arr().len());
     let evidence = ast_observation(
         &EvidenceInput::new(
             file.at("sha256").str(),
@@ -151,26 +151,26 @@ fn add_module_nodes(
     for module in registration.at("modules").arr() {
         let key = module.at("module_key");
         let properties = Obj::new()
-            .with("path", file.at("path").clone())
-            .with("bundler", registration.at("bundler").clone())
-            .with("runtime", runtime)
-            .with("chunk_keys", registration.at("chunk_keys").clone())
-            .with("module_key", key.clone())
-            .with(
+            .with_static("path", file.at("path").clone())
+            .with_static("bundler", registration.at("bundler").clone())
+            .with_static("runtime", runtime)
+            .with_static("chunk_keys", registration.at("chunk_keys").clone())
+            .with_static("module_key", key.clone())
+            .with_static(
                 "factory_require_name",
                 module.at("factory_require_name").clone(),
             )
-            .with("runtime_entry", entries.contains(key))
-            .with("source_sha256", module.at("source_sha256").clone())
-            .with(
+            .with_static("runtime_entry", entries.contains(key))
+            .with_static("source_sha256", module.at("source_sha256").clone())
+            .with_static(
                 "structural_fingerprint_sha256",
                 module.at("structural_fingerprint_sha256").clone(),
             )
-            .with(
+            .with_static(
                 "structural_fingerprint_algorithm",
                 module.at("structural_fingerprint_algorithm").clone(),
             )
-            .with("exports", module.at("exports").clone());
+            .with_static("exports", module.at("exports").clone());
         let evidence = ast_observation(
             &EvidenceInput::new(
                 file.at("sha256").str(),
@@ -206,10 +206,10 @@ fn add_module_nodes(
             module.at("location"),
             coverage,
             Obj::new()
-                .with("bundler", registration.at("bundler").clone())
-                .with("runtime", runtime)
-                .with("chunk_keys", registration.at("chunk_keys").clone())
-                .with("module_key", key.clone()),
+                .with_static("bundler", registration.at("bundler").clone())
+                .with_static("runtime", runtime)
+                .with_static("chunk_keys", registration.at("chunk_keys").clone())
+                .with_static("module_key", key.clone()),
         );
     }
 }
@@ -247,11 +247,11 @@ fn add_runtime_edges(context: &mut GraphContext<'_>, record: &Record) -> usize {
             target: target.node_id,
             relation: "loads".into(),
             properties: Obj::new()
-                .with("kind", "bundler-entry-module")
-                .with("bundler", registration.at("bundler").clone())
-                .with("runtime", runtime)
-                .with("module_key", key.clone())
-                .with(
+                .with_static("kind", "bundler-entry-module")
+                .with_static("bundler", registration.at("bundler").clone())
+                .with_static("runtime", runtime)
+                .with_static("module_key", key.clone())
+                .with_static(
                     "resolution_status",
                     if resolved.is_none() {
                         "not-found"
@@ -289,11 +289,11 @@ fn add_runtime_edges(context: &mut GraphContext<'_>, record: &Record) -> usize {
             target: target.node_id,
             relation: "imports".into(),
             properties: Obj::new()
-                .with("kind", "bundler-async-chunk")
-                .with("bundler", registration.at("bundler").clone())
-                .with("runtime", runtime)
-                .with("chunk_key", key.clone())
-                .with(
+                .with_static("kind", "bundler-async-chunk")
+                .with_static("bundler", registration.at("bundler").clone())
+                .with_static("runtime", runtime)
+                .with_static("chunk_key", key.clone())
+                .with_static(
                     "resolution_status",
                     if resolved.is_none() {
                         "not-found"
@@ -332,11 +332,11 @@ fn unresolved_node(
         )
     };
     let properties = Obj::new()
-        .with("semantic_role", role)
-        .with("bundler", record.registration.at("bundler").clone())
-        .with("runtime", runtime)
+        .with_static("semantic_role", role)
+        .with_static("bundler", record.registration.at("bundler").clone())
+        .with_static("runtime", runtime)
         .with(key_name, Json::String(key.clone()))
-        .with("resolution_status", "not-found");
+        .with_static("resolution_status", "not-found");
     let evidence = static_inference(
         &EvidenceInput::new(
             record.file.at("sha256").str(),

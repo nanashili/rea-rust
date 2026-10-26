@@ -45,8 +45,8 @@ struct PrimaryPhase<'a> {
     links: CollectedModuleLinks<'a>,
 }
 
-struct CallablePhase<'a> {
-    returns: Vec<super::returns::SemanticCallableReturns<'a>>,
+struct CallablePhase {
+    return_sites: HashMap<String, HashMap<String, String>>,
     callables: Vec<ContractCallable>,
     module_links: Vec<crate::javascript::contracts::semantic_ir::SemanticModuleLink>,
 }
@@ -339,7 +339,7 @@ fn collect_primary_projection_phase<'a, B>(
 fn collect_derived_phase<'a, B>(
     state: &super::state::SemanticState<'a>,
     primary: &PrimaryPhase<'a>,
-    callable_phase: &CallablePhase<'a>,
+    callable_phase: &CallablePhase,
     callables: &[ContractCallable],
     parser_partial: bool,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
@@ -347,8 +347,11 @@ fn collect_derived_phase<'a, B>(
     let calls = collect_semantic_calls(state, callables);
     checkpoint()?;
 
-    let return_sites = return_site_index(&callable_phase.returns);
-    let promises = collect_semantic_promises(state, &primary.internal_callables, &return_sites);
+    let promises = collect_semantic_promises(
+        state,
+        &primary.internal_callables,
+        &callable_phase.return_sites,
+    );
     checkpoint()?;
 
     let async_effects = collect_semantic_async_effects(state.program, state, callables);
@@ -401,12 +404,12 @@ fn collect_callable_phase<'a, B>(
     primary: &PrimaryPhase<'a>,
     parser_partial: bool,
     checkpoint: &mut impl FnMut() -> ControlFlow<B>,
-) -> ControlFlow<B, CallablePhase<'a>> {
+) -> ControlFlow<B, CallablePhase> {
     let returns =
         collect_semantic_returns_with_values(state, &primary.internal_callables, parser_partial);
+    let return_sites = return_site_index(&returns);
     let callables = returns
-        .iter()
-        .cloned()
+        .into_iter()
         .map(Into::into)
         .collect::<Vec<ContractCallable>>();
     let admitted_callable_ids = callables
@@ -421,7 +424,7 @@ fn collect_callable_phase<'a, B>(
     checkpoint()?;
 
     ControlFlow::Continue(CallablePhase {
-        returns,
+        return_sites,
         callables,
         module_links,
     })

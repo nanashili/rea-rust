@@ -81,7 +81,7 @@ pub fn project_evidence(input: &Json) -> Result<Box<serde_json::value::RawValue>
         .with("environment", Json::Null)
         .with("limitations", limitations)
         .with("relationship_coverage", Json::Null)
-        .with("locations", Json::Array(Vec::new()))
+        .with("locations", Json::array(Vec::new()))
         .with("evidence_links", source_evidence_ids);
 
     let raw = serde_json::value::RawValue::from_string(Json::from(unsigned).stringify())
@@ -937,7 +937,7 @@ impl Inventory {
         let integrity_contradictions = contradictions
             .as_array()
             .ok_or("inventory integrity_contradictions must be an array")?
-            .clone();
+            .to_vec();
         let inventory = Self {
             root_artifact_id,
             root_sha256,
@@ -1092,7 +1092,7 @@ impl Inventory {
                             occurrence
                                 .get("limitations")
                                 .cloned()
-                                .unwrap_or_else(|| Json::Array(Vec::new())),
+                                .unwrap_or_else(|| Json::array(Vec::new())),
                         ),
                 )),
             });
@@ -1716,7 +1716,7 @@ fn platforms_of(bundles: &[Bundle]) -> Vec<&'static str> {
 }
 
 fn strings_json<S: Into<String>>(values: Vec<S>) -> Json {
-    Json::Array(
+    Json::array(
         values
             .into_iter()
             .map(|value| Json::from(value.into()))
@@ -1725,11 +1725,11 @@ fn strings_json<S: Into<String>>(values: Vec<S>) -> Json {
 }
 
 fn js_strings_json(values: impl IntoIterator<Item = JsString>) -> Json {
-    Json::Array(values.into_iter().map(Json::from).collect())
+    Json::array(values.into_iter().map(Json::from).collect())
 }
 
 fn bundles_json(bundles: Vec<Bundle>) -> Json {
-    Json::Array(
+    Json::array(
         bundles
             .into_iter()
             .map(|bundle| {

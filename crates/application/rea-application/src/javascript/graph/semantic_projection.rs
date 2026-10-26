@@ -6,7 +6,7 @@ use super::super::semantic::value_types::JsString;
 use super::evidence::partial_coverage;
 use super::json::{Json, Obj, js_int, strings, utf16_len};
 use super::leaves::{
-    container, property_pointer_js, semantic_resource_limit_coverage,
+    SlotFact, container, property_pointer_js, semantic_resource_limit_coverage,
     semantic_resource_limit_reason, slot_at_path,
 };
 use super::semantic_graph::{
@@ -181,7 +181,7 @@ fn project_value(
                     context,
                     binding.at("bindingId").str(),
                     &property_path,
-                    property,
+                    &SlotFact::Observed(property),
                 );
                 let presence = property.at("presence").str();
                 if presence == "absent" {
@@ -230,7 +230,7 @@ fn project_value(
             evidence.set("authority", "unknown");
             evidence.set("state", "unknown");
             evidence.set("confidence", "unknown");
-            evidence.set("limitations", Json::Array(vec![value.at("reason").clone()]));
+            evidence.set("limitations", Json::array(vec![value.at("reason").clone()]));
             let id = target.at("node_id").str().to_owned();
             context.unknown(UnknownSpec {
                 node_id: Some(id.clone()),
@@ -291,7 +291,7 @@ fn literal_node(
         location,
         label: Some(label.into()),
         function_node_id: function.map(Into::into),
-        properties: Obj::new().with("value", value.clone()),
+        properties: Obj::new().with_static("value", value.clone()),
     })
 }
 
@@ -300,7 +300,7 @@ fn property_slot(
     context: &mut FileContext<'_>,
     binding_id: &str,
     path: &[JsString],
-    fact: &Json,
+    fact: &SlotFact<'_>,
 ) -> Option<Json> {
     let function = context
         .binding_nodes
@@ -309,30 +309,30 @@ fn property_slot(
         .map(str::to_owned);
     let role_key = format!(
         "property:{}",
-        Json::Array(vec![
+        Json::array(vec![
             binding_id.into(),
-            Json::Array(path.iter().cloned().map(Json::from).collect()),
+            Json::array(path.iter().cloned().map(Json::from).collect()),
         ])
         .stringify()
     );
-    let coverage = container(fact.at("value")).map_or(Json::Null, |inventory| inventory.coverage);
+    let coverage = container(fact.value()).map_or(Json::Null, |inventory| inventory.coverage);
     context.retain(NodeSpec {
         kind: "property-slot",
         role_key: role_key.into(),
         location: Json::Null,
-        label: Some(fact.at("name").text().clone()),
+        label: Some(fact.name()),
         function_node_id: function.map(Into::into),
         properties: Obj::new()
-            .with("name", fact.at("name").clone())
-            .with(
+            .with_static("name", fact.raw_name())
+            .with_static(
                 "property_path",
-                Json::Array(path.iter().cloned().map(Json::from).collect()),
+                Json::array(path.iter().cloned().map(Json::from).collect()),
             )
-            .with("property_pointer", property_pointer_js(path))
-            .with("object_binding_id", binding_id)
-            .with("presence", fact.at("presence").clone())
-            .with("value_status", fact.at("value").at("status").clone())
-            .with("value_coverage", coverage),
+            .with_static("property_pointer", property_pointer_js(path))
+            .with_static("object_binding_id", binding_id)
+            .with_static("presence", fact.raw_presence())
+            .with_static("value_status", fact.value().at("status").clone())
+            .with_static("value_coverage", coverage),
     })
 }
 
@@ -370,7 +370,7 @@ pub fn project_objects(context: &mut FileContext<'_>) {
             location: operation.at("location").clone(),
             label: Some(label),
             function_node_id: function.map(Into::into),
-            properties: Obj::new().with("operation_kind", kind).with(
+            properties: Obj::new().with_static("operation_kind", kind).with_static(
                 "property_path",
                 if path.is_null() {
                     Json::Null
@@ -462,14 +462,14 @@ fn object_target(
     };
     let path = js_string_path(path);
     let fact = slot_at_path(value, &path);
-    let presence = fact.at("presence").str().to_owned();
+    let presence = fact.presence().to_owned();
     if path.is_empty() {
         return (binding, None, presence, container(value).is_some());
     }
     let slot = property_slot(context, object_id, &path, &fact);
     let receiver = slot_at_path(value, &path[..path.len().saturating_sub(1)]);
     let receiver_resolved =
-        receiver.at("presence").str() == "present" && container(receiver.at("value")).is_some();
+        receiver.presence() == "present" && container(receiver.value()).is_some();
     (slot.clone(), slot, presence, receiver_resolved)
 }
 
@@ -636,10 +636,10 @@ pub fn project_promises(context: &mut FileContext<'_>) {
             label: Some(label.into()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("method", operation.at("method").clone())
-                .with("operation_kind", kind)
-                .with("ownership", operation.at("ownership").clone())
-                .with(
+                .with_static("method", operation.at("method").clone())
+                .with_static("operation_kind", kind)
+                .with_static("ownership", operation.at("ownership").clone())
+                .with_static(
                     "source_resolution",
                     operation.at("sourceResolution").clone(),
                 ),
@@ -775,8 +775,8 @@ pub fn project_events(context: &mut FileContext<'_>) {
                     label,
                     function_node_id: None,
                     properties: Obj::new()
-                        .with("emitter_key", operation.at("emitterKey").clone())
-                        .with("event_name", name.clone()),
+                        .with_static("emitter_key", operation.at("emitterKey").clone())
+                        .with_static("event_name", name.clone()),
                 })
             }
         };
@@ -822,9 +822,9 @@ pub fn project_events(context: &mut FileContext<'_>) {
                 label: Some(label.into()),
                 function_node_id: function.map(Into::into),
                 properties: Obj::new()
-                    .with("emitter_key", operation.at("emitterKey").clone())
-                    .with("event_name", name.clone())
-                    .with("method", method),
+                    .with_static("emitter_key", operation.at("emitterKey").clone())
+                    .with_static("event_name", name.clone())
+                    .with_static("method", method),
             });
             context.relate(
                 Some(&event),
@@ -869,8 +869,8 @@ fn projected_bindings(context: &mut FileContext<'_>, source: Option<&Json>, oper
             resolution(is_complete(projected.at("resolution"))),
         );
         spec.properties = Obj::new()
-            .with("projection_path", projected.at("projectionPath").clone())
-            .with("projection_resolution", projected.at("resolution").clone());
+            .with_static("projection_path", projected.at("projectionPath").clone())
+            .with_static("projection_resolution", projected.at("resolution").clone());
         add_relation(context.state, spec);
     }
 }
@@ -891,11 +891,11 @@ pub fn project_timers(context: &mut FileContext<'_>) {
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with(
+                .with_static(
                     "delay_milliseconds",
                     operation.at("delayMilliseconds").clone(),
                 )
-                .with("method", operation.at("method").clone()),
+                .with_static("method", operation.at("method").clone()),
         });
         if let Some(timer) = timer {
             timers.insert(operation.at("timerId").str().to_owned(), timer);
@@ -962,14 +962,14 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             label: Some(label),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("argv_count", spawn.at("argvCount").clone())
-                .with("command", spawn.at("command").clone())
-                .with(
+                .with_static("argv_count", spawn.at("argvCount").clone())
+                .with_static("command", spawn.at("command").clone())
+                .with_static(
                     "environment_supplied",
                     spawn.at("environmentSupplied").clone(),
                 )
-                .with("method", spawn.at("method").clone())
-                .with("stdio_mode", spawn.at("stdioMode").clone()),
+                .with_static("method", spawn.at("method").clone())
+                .with_static("stdio_mode", spawn.at("stdioMode").clone()),
         });
         if let Some(node) = node {
             processes.insert(spawn.at("processId").str().to_owned(), node);
@@ -986,7 +986,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
         if !spawn.at("argvCount").is_null() {
             let mut spec =
                 RelationSpec::new(call.as_ref(), Some(&child), "supplies-argv", "resolved");
-            spec.properties = Obj::new().with("argument_count", spawn.at("argvCount").clone());
+            spec.properties =
+                Obj::new().with_static("argument_count", spawn.at("argvCount").clone());
             add_relation(context.state, spec);
         }
         if spawn.at("environmentSupplied").as_bool() == Some(true) {
@@ -999,7 +1000,7 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
             location: spawn.at("location").clone(),
             label: Some(mode.to_owned().into()),
             function_node_id: child.at("function_node_id").as_js_string().cloned(),
-            properties: Obj::new().with("mode", mode),
+            properties: Obj::new().with_static("mode", mode),
         });
         context.relate(
             Some(&child),
@@ -1058,8 +1059,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
                 label: interaction.at("eventName").as_js_string().cloned(),
                 function_node_id: function.map(Into::into),
                 properties: Obj::new()
-                    .with("event_name", interaction.at("eventName").clone())
-                    .with("method", interaction.at("method").clone()),
+                    .with_static("event_name", interaction.at("eventName").clone())
+                    .with_static("method", interaction.at("method").clone()),
             })
         } else {
             context.retain(NodeSpec {
@@ -1068,7 +1069,8 @@ pub fn project_child_processes(context: &mut FileContext<'_>) {
                 location: interaction.at("location").clone(),
                 label: interaction.at("signalName").as_js_string().cloned(),
                 function_node_id: function.map(Into::into),
-                properties: Obj::new().with("signal_name", interaction.at("signalName").clone()),
+                properties: Obj::new()
+                    .with_static("signal_name", interaction.at("signalName").clone()),
             })
         };
         let relation = if interaction.at("kind").str() == "signal" {
@@ -1184,9 +1186,9 @@ pub fn project_configuration(context: &mut FileContext<'_>) {
     for operation in &operations {
         let function = owner_id(context, operation.at("ownerCallableId"));
         let mut properties = Obj::new()
-            .with("key", operation.at("key").clone())
-            .with("source_kind", operation.at("kind").clone())
-            .with("value", operation.at("value").clone());
+            .with_static("key", operation.at("key").clone())
+            .with_static("source_kind", operation.at("kind").clone())
+            .with_static("value", operation.at("value").clone());
         if let Some(limit) = operation.get("valueResourceLimit") {
             properties.set("value_resource_limit", limit.clone());
         }
@@ -1285,9 +1287,9 @@ pub fn project_requests(context: &mut FileContext<'_>) {
             label: Some(label),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("endpoint", operation.at("endpoint").clone())
-                .with("method", method)
-                .with("operation_kind", operation.at("kind").clone()),
+                .with_static("endpoint", operation.at("endpoint").clone())
+                .with_static("method", method)
+                .with_static("operation_kind", operation.at("kind").clone()),
         });
         if let Some(node) = node {
             nodes.insert(operation.at("requestId").str().to_owned(), node);
@@ -1324,7 +1326,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                         "resolved"
                     },
                 );
-                spec.properties = Obj::new().with("field", field.at("name").clone());
+                spec.properties = Obj::new().with_static("field", field.at("name").clone());
                 add_relation(context.state, spec);
             }
         } else {
@@ -1334,7 +1336,7 @@ pub fn project_requests(context: &mut FileContext<'_>) {
                 "consumed-by",
                 resolution(complete),
             );
-            spec.properties = Obj::new().with("method", operation.at("method").clone());
+            spec.properties = Obj::new().with_static("method", operation.at("method").clone());
             add_relation(context.state, spec);
         }
         if !complete {
@@ -1378,9 +1380,9 @@ pub fn project_boundaries(context: &mut FileContext<'_>) {
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
             properties: Obj::new()
-                .with("boundary_kind", operation.at("kind").clone())
-                .with("field", operation.at("method").clone())
-                .with("method", operation.at("method").clone()),
+                .with_static("boundary_kind", operation.at("kind").clone())
+                .with_static("field", operation.at("method").clone())
+                .with_static("method", operation.at("method").clone()),
         }) else {
             continue;
         };
@@ -1435,7 +1437,7 @@ pub fn project_resources(context: &mut FileContext<'_>) {
             location: operation.at("location").clone(),
             label: Some(operation.at("method").text().clone()),
             function_node_id: function.map(Into::into),
-            properties: Obj::new().with("method", operation.at("method").clone()),
+            properties: Obj::new().with_static("method", operation.at("method").clone()),
         });
         if let Some(node) = node {
             resources.insert(operation.at("resourceId").str().to_owned(), node);
@@ -1541,33 +1543,33 @@ pub fn project_fingerprints(context: &mut FileContext<'_>) -> Vec<Json> {
         };
         let components = fingerprint.at("components");
         let input = Obj::new()
-            .with("function_node_id", callable.at("node_id").clone())
-            .with("algorithm", "rea.javascript-semantic-function")
-            .with("status", fingerprint.at("status").clone())
-            .with(
+            .with_static("function_node_id", callable.at("node_id").clone())
+            .with_static("algorithm", "rea.javascript-semantic-function")
+            .with_static("status", fingerprint.at("status").clone())
+            .with_static(
                 "components",
                 Obj::new()
-                    .with("parameter_arity", components.at("parameterArity").clone())
-                    .with(
+                    .with_static("parameter_arity", components.at("parameterArity").clone())
+                    .with_static(
                         "normalized_ast_sha256",
                         components.at("normalizedAstSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "control_flow_sha256",
                         components.at("controlFlowSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "relation_shape_sha256",
                         components.at("relationShapeSha256").clone(),
                     )
-                    .with(
+                    .with_static(
                         "literal_set_sha256",
                         components.at("literalSetSha256").clone(),
                     )
-                    .with("effects", components.at("effects").clone()),
+                    .with_static("effects", components.at("effects").clone()),
             )
-            .with("limitations", fingerprint.at("limitations").clone())
-            .with(
+            .with_static("limitations", fingerprint.at("limitations").clone())
+            .with_static(
                 "evidence",
                 observed_evidence(&context.file, callable.at("identity").at("source_range")),
             );
@@ -1625,8 +1627,8 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
         for (index, step) in path.at("steps").arr().iter().enumerate() {
             let step_kind = step.at("kind").str();
             let mut properties = Obj::new()
-                .with("path_id", path_id.as_str())
-                .with("entry", path.at("entry").clone());
+                .with_static("path_id", path_id.as_str())
+                .with_static("entry", path.at("entry").clone());
             if let Some(entry_path) = &entry_path {
                 properties.set("entry_path", entry_path.clone());
             }
@@ -1636,19 +1638,19 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
             properties.set("resolution", "candidate");
             properties.set(
                 "conditions",
-                Json::Array(
+                Json::array(
                     path.at("conditions")
                         .arr()
                         .iter()
                         .map(|condition| {
                             let location = condition.at("location");
                             Obj::new()
-                                .with("expression", condition.at("expression").clone())
-                                .with(
+                                .with_static("expression", condition.at("expression").clone())
+                                .with_static(
                                     "location",
                                     Obj::new()
-                                        .with("start", location.at("start").clone())
-                                        .with("end", location.at("end").clone()),
+                                        .with_static("start", location.at("start").clone())
+                                        .with_static("end", location.at("end").clone()),
                                 )
                                 .into()
                         })
@@ -1682,8 +1684,8 @@ pub fn project_electron_paths(state: &mut ProjectionState, file: &Json, paths: &
                 _ => "calls",
             };
             let mut relation_properties = Obj::new()
-                .with("path_id", path_id.as_str())
-                .with("entry", path.at("entry").clone());
+                .with_static("path_id", path_id.as_str())
+                .with_static("entry", path.at("entry").clone());
             if let Some(entry_path) = &entry_path {
                 relation_properties.set("entry_path", entry_path.clone());
             }
@@ -1706,7 +1708,7 @@ mod tests {
 
     #[test]
     fn property_path_keeps_unpaired_units_and_pointer_escaping() {
-        let path: Json = Json::Array(vec![
+        let path: Json = Json::array(vec![
             Json::from(JsString::from_utf16(vec![0x0078, 0xd800, 0x0079])),
             Json::from(JsString::from("a/b~c")),
         ]);

@@ -570,7 +570,7 @@ fn inventory_unknowns(source: &Source) -> Vec<String> {
     values
 }
 fn strings(values: Vec<String>) -> Json {
-    Json::Array(values.into_iter().map(Json::from).collect())
+    Json::array(values.into_iter().map(Json::from).collect())
 }
 fn count(value: &Json, key: &str) -> usize {
     value

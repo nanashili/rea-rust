@@ -5,6 +5,7 @@
 //! publish a value into a live reader's cache.
 
 mod expressions;
+mod independent_cache;
 mod provenance;
 
 use std::cell::RefCell;
@@ -21,6 +22,7 @@ use super::opaque_effects::{
 use super::provenance::{BindingProvenance, semantic_ambiguous_provenance};
 use super::state::{BindingState, ProjectionKey, SemanticState};
 use super::value_types::{JsString, ResourceLimit, SemanticValue};
+use independent_cache::{IndependentBindingCache, IndependentBindingValue};
 
 const CALLER_INDEPENDENT: isize = isize::MAX;
 const EVERY_CALLER: isize = -1;
@@ -32,12 +34,6 @@ const MAX_SHARED_PROJECTION_SNAPSHOTS: usize = 256;
 struct Memoized<T> {
     value: T,
     dependencies: Option<SemanticDependencyProof>,
-}
-
-#[derive(Clone)]
-struct IndependentBindingValue {
-    evaluated: Memoized<SemanticValue>,
-    depth: usize,
 }
 
 #[derive(Clone)]
@@ -81,7 +77,7 @@ pub(crate) struct ValueCaches {
     primitive_bindings: HashMap<String, SemanticValue>,
     captured_bindings: HashMap<NodeKey, HashMap<String, SemanticValue>>,
     primitive_expressions: HashMap<NodeKey, SemanticValue>,
-    independent_bindings: HashMap<String, IndependentBindingValue>,
+    independent_bindings: IndependentBindingCache,
 }
 
 #[derive(Default)]
@@ -682,13 +678,7 @@ impl<'s, 'a> Evaluation<'s, 'a> {
                 .value_caches
                 .borrow_mut()
                 .independent_bindings
-                .insert(
-                    binding.binding_id.clone(),
-                    IndependentBindingValue {
-                        evaluated: result.evaluated.clone(),
-                        depth: point.depth,
-                    },
-                );
+                .admit(&binding.binding_id, &result.evaluated, point.depth);
         }
 
         if self.memo.snapshots.len() < MAX_SHARED_PROJECTION_SNAPSHOTS
@@ -841,6 +831,64 @@ mod tests {
 
         assert_eq!(object_property_number(&first, "first"), Some(1.0));
         assert_eq!(object_property_number(&second, "second"), Some(2.0));
+    }
+
+    #[test]
+    fn independent_binding_recomputes_after_cache_entry_eviction() {
+        let allocator = Allocator::default();
+        let parsed = parse_javascript_analysis_program(
+            &allocator,
+            "const value = { first: 1, second: 2 };",
+            Some("independent-cache-eviction.js"),
+        )
+        .expect("independent cache source parses");
+        let mut prepared = prepare_state(&parsed, ResolutionMode::Import);
+        prepared.ensure_member_mutations();
+        let state = prepared.state();
+        let binding = state
+            .bindings_by_id
+            .values()
+            .map(|index| state.binding(*index))
+            .find(|binding| binding.name == "value")
+            .expect("value binding exists");
+
+        let first = evaluate_semantic_binding(binding, state);
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .independent_bindings
+                .get(&binding.binding_id)
+                .is_some(),
+            "independent evaluator should retain the first result"
+        );
+
+        for index in 0..independent_cache::MAX_CACHE_ENTRIES {
+            let evaluated = Memoized {
+                value: SemanticValue::Literal {
+                    value: super::super::value_types::Primitive::Number(index as f64),
+                },
+                dependencies: None,
+            };
+            state.value_caches.borrow_mut().independent_bindings.admit(
+                &format!("synthetic-{index}"),
+                &evaluated,
+                0,
+            );
+        }
+
+        assert!(
+            state
+                .value_caches
+                .borrow()
+                .independent_bindings
+                .get(&binding.binding_id)
+                .is_none(),
+            "the bounded cache should evict the original entry"
+        );
+
+        let recomputed = evaluate_semantic_binding(binding, state);
+        assert_eq!(recomputed, first);
     }
 
     fn object_property_number(value: &SemanticValue, name: &str) -> Option<f64> {

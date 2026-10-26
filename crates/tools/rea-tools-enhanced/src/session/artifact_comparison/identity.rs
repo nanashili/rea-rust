@@ -53,12 +53,12 @@ pub fn artifact_graph_digest(
 ) -> Result<String, AnalysisError> {
     digest_canonical_value(
         &Obj::new()
-            .with("nodes", Json::Array(nodes.to_vec()))
-            .with("occurrences", Json::Array(occurrences.to_vec()))
-            .with("edges", Json::Array(edges.to_vec()))
+            .with("nodes", Json::array(nodes.to_vec()))
+            .with("occurrences", Json::array(occurrences.to_vec()))
+            .with("edges", Json::array(edges.to_vec()))
             .with(
                 "integrity_contradictions",
-                Json::Array(contradictions.to_vec()),
+                Json::array(contradictions.to_vec()),
             )
             .into(),
         CONTEXT,

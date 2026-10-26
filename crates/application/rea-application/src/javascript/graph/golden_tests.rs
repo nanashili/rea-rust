@@ -12,9 +12,57 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use super::super::semantic::value_types::JsString;
-use super::json::{Json, parse};
+use super::json::{Json, Obj, parse};
 use super::resolution::{ArtifactPathResolver, ResolveRequest};
 use super::{SemanticGraphProjection, SemanticLimits, build_application_graph, project_file};
+
+#[test]
+fn project_file_preserves_raw_property_slot_metadata() {
+    let property = Obj::new()
+        .with_static("name", 7.0)
+        .with_static("presence", Obj::new().with_static("raw", true))
+        .with_static(
+            "value",
+            Obj::new()
+                .with_static("status", "literal")
+                .with_static("value", 1.0),
+        );
+    let binding = Obj::new()
+        .with_static("bindingId", "binding-1")
+        .with_static("kind", "variable")
+        .with_static("name", "value")
+        .with_static(
+            "definitions",
+            Json::array(vec![Obj::new().with_static("location", Json::Null).into()]),
+        )
+        .with_static(
+            "value",
+            Obj::new()
+                .with_static("status", "object")
+                .with_static("properties", Json::array(vec![property.into()]))
+                .with_static("unknownProperties", false)
+                .with_static("omittedProperties", 0.0),
+        );
+    let ir = Obj::new()
+        .with_static("bindings", Json::array(vec![binding.into()]))
+        .into();
+    let file = Obj::new()
+        .with_static("path", "fixture.js")
+        .with_static("sha256", "fixture-sha")
+        .into();
+
+    let projection = project_file(&file, &ir, 100, 100, &[]).expect("projection succeeds");
+    let slot = projection
+        .at("nodes")
+        .arr()
+        .iter()
+        .find(|node| node.at("kind").str() == "property-slot")
+        .expect("property slot is projected");
+    let properties = slot.at("properties");
+
+    assert_eq!(properties.at("name").as_f64(), Some(7.0));
+    assert_eq!(properties.at("presence").at("raw").as_bool(), Some(true));
+}
 
 /// Replays the resolution owner's recorded results in call order per request.
 struct RecordedResolver {
@@ -120,7 +168,7 @@ fn first_difference(left: &Json, right: &Json, path: &str) -> Option<String> {
                 .map(|(key, _)| format!("{path}.{key}: missing on Rust side"))
         }
         (Json::Array(a), Json::Array(b)) => {
-            for (index, (x, y)) in a.iter().zip(b).enumerate() {
+            for (index, (x, y)) in a.iter().zip(b.iter()).enumerate() {
                 if let Some(found) = first_difference(x, y, &format!("{path}[{index}]")) {
                     return Some(found);
                 }

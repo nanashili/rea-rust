@@ -118,6 +118,59 @@ pub struct Container<'a> {
     pub coverage: Json,
 }
 
+/// A property selected from a semantic value without copying its subtree.
+pub(crate) enum SlotFact<'a> {
+    Root(&'a Json),
+    Observed(&'a Json),
+    Synthetic {
+        name: JsString,
+        presence: &'static str,
+        value: Json,
+    },
+}
+
+impl SlotFact<'_> {
+    pub(crate) fn name(&self) -> JsString {
+        match self {
+            Self::Root(_) => JsString::from(""),
+            Self::Observed(property) => property.at("name").text().clone(),
+            Self::Synthetic { name, .. } => name.clone(),
+        }
+    }
+
+    pub(crate) fn presence(&self) -> &str {
+        match self {
+            Self::Root(_) => "present",
+            Self::Observed(property) => property.at("presence").str(),
+            Self::Synthetic { presence, .. } => presence,
+        }
+    }
+
+    pub(crate) fn raw_name(&self) -> Json {
+        match self {
+            Self::Root(_) => Json::String(JsString::from("")),
+            Self::Observed(property) => property.at("name").clone(),
+            Self::Synthetic { name, .. } => Json::String(name.clone()),
+        }
+    }
+
+    pub(crate) fn raw_presence(&self) -> Json {
+        match self {
+            Self::Root(_) => Json::String(JsString::from("present")),
+            Self::Observed(property) => property.at("presence").clone(),
+            Self::Synthetic { presence, .. } => Json::String(JsString::from(*presence)),
+        }
+    }
+
+    pub(crate) fn value(&self) -> &Json {
+        match self {
+            Self::Root(value) => value,
+            Self::Observed(property) => property.at("value"),
+            Self::Synthetic { value, .. } => value,
+        }
+    }
+}
+
 /// `semanticContainer`.
 pub fn container(value: &Json) -> Option<Container<'_>> {
     let (slots, unknown, omitted) = match value.at("status").str() {
@@ -127,10 +180,12 @@ pub fn container(value: &Json) -> Option<Container<'_>> {
     };
     let coverage = if value.at(unknown).as_bool() == Some(true) {
         Obj::new()
-            .with("status", "partial")
-            .with("omitted", value.at(omitted).clone())
+            .with_static("status", "partial")
+            .with_static("omitted", value.at(omitted).clone())
     } else {
-        Obj::new().with("status", "complete").with("omitted", 0.0)
+        Obj::new()
+            .with_static("status", "complete")
+            .with_static("omitted", 0.0)
     };
     Some(Container {
         slots: value.at(slots).arr(),
@@ -139,87 +194,117 @@ pub fn container(value: &Json) -> Option<Container<'_>> {
 }
 
 /// `semanticSlotAtPath`.
-pub fn slot_at_path(value: &Json, path: &[JsString]) -> Json {
+pub(crate) fn slot_at_path<'a>(value: &'a Json, path: &[JsString]) -> SlotFact<'a> {
     let leaf = path.last().cloned().unwrap_or_default();
-    let mut current: Json = Obj::new()
-        .with("name", "")
-        .with("presence", "present")
-        .with("value", value.clone())
-        .into();
+    if path.is_empty() {
+        return SlotFact::Root(value);
+    }
+
+    let mut current = value;
     for (index, name) in path.iter().enumerate() {
-        let current_value = current.at("value").clone();
-        let inventory = container(&current_value);
-        if current.at("presence").str() != "present" || inventory.is_none() {
-            let reason = if let Some(reason) = current_value.get("reason") {
-                let mut unknown = current_value.obj();
-                unknown.set(
-                    "reason",
-                    format!(
-                        "{} Cannot continue {} through receiver {}.",
-                        reason.str(),
-                        property_pointer_js(path),
-                        property_pointer_js(&path[..index])
-                    ),
-                );
-                unknown
-            } else {
-                Obj::new().with("status", "unknown").with(
-                    "reason",
-                    format!(
-                        "Cannot resolve {} through {} receiver {}.",
-                        property_pointer_js(path),
-                        current_value.at("status").str(),
-                        property_pointer_js(&path[..index])
-                    ),
-                )
+        let Some(inventory) = container(current) else {
+            return SlotFact::Synthetic {
+                name: leaf,
+                presence: "unknown-coverage",
+                value: continued_path_unknown(path, index, current),
             };
-            return Obj::new()
-                .with("name", leaf)
-                .with("presence", "unknown-coverage")
-                .with("value", reason)
-                .into();
-        }
-        let Some(inventory) = inventory else { break };
-        if current_value.at("status").str() == "array" && name == "length" {
-            current = Obj::new()
-                .with("name", name)
-                .with("presence", "present")
-                .with(
-                    "value",
-                    Obj::new().with("status", "unknown").with(
-                        "reason",
-                        "Array length is present but its value is not retained.",
-                    ),
+        };
+
+        if current.at("status").str() == "array" && name == "length" {
+            let length_value: Json = Obj::new()
+                .with_static("status", "unknown")
+                .with_static(
+                    "reason",
+                    "Array length is present but its value is not retained.",
                 )
                 .into();
-            continue;
+            if index + 1 == path.len() {
+                return SlotFact::Synthetic {
+                    name: name.clone(),
+                    presence: "present",
+                    value: length_value,
+                };
+            }
+            return SlotFact::Synthetic {
+                name: leaf,
+                presence: "unknown-coverage",
+                value: continued_path_unknown(path, index + 1, &length_value),
+            };
         }
+
         let observed = inventory
             .slots
             .iter()
-            .find(|slot| slot.at("name").text() == name)
-            .cloned();
-        current = observed.unwrap_or_else(|| {
-            Obj::new()
-                .with("name", name)
-                .with(
-                    "presence",
-                    if inventory.coverage.at("status").str() == "complete" {
-                        "absent"
-                    } else {
-                        "unknown-coverage"
-                    },
-                )
-                .with(
-                    "value",
-                    Obj::new()
-                        .with("status", "unknown")
-                        .with("reason", format!("Own property {name} was not observed.")),
-                )
-                .into()
-        });
+            .find(|slot| slot.at("name").text() == name);
+        let Some(observed) = observed else {
+            let presence = if inventory.coverage.at("status").str() == "complete" {
+                "absent"
+            } else {
+                "unknown-coverage"
+            };
+            let missing_value: Json = Obj::new()
+                .with_static("status", "unknown")
+                .with_static("reason", format!("Own property {name} was not observed."))
+                .into();
+            if index + 1 == path.len() {
+                return SlotFact::Synthetic {
+                    name: leaf,
+                    presence,
+                    value: missing_value,
+                };
+            }
+            return SlotFact::Synthetic {
+                name: leaf,
+                presence: "unknown-coverage",
+                value: continued_path_unknown(path, index + 1, &missing_value),
+            };
+        };
+
+        if index + 1 == path.len() {
+            return SlotFact::Observed(observed);
+        }
+
+        if observed.at("presence").str() != "present" {
+            return SlotFact::Synthetic {
+                name: leaf,
+                presence: "unknown-coverage",
+                value: continued_path_unknown(path, index + 1, observed.at("value")),
+            };
+        }
+
+        current = observed.at("value");
     }
-    current
+
+    unreachable!("a non-empty path must return a slot fact")
+}
+
+fn continued_path_unknown(path: &[JsString], receiver_index: usize, value: &Json) -> Json {
+    if let Some(reason) = value.get("reason") {
+        let mut unknown = value.obj();
+        unknown.set(
+            "reason",
+            format!(
+                "{} Cannot continue {} through receiver {}.",
+                reason.str(),
+                property_pointer_js(path),
+                property_pointer_js(&path[..receiver_index])
+            ),
+        );
+        return unknown.into();
+    }
+
+    Obj::new()
+        .with_static("status", "unknown")
+        .with_static(
+            "reason",
+            format!(
+                "Cannot resolve {} through {} receiver {}.",
+                property_pointer_js(path),
+                value.at("status").str(),
+                property_pointer_js(&path[..receiver_index])
+            ),
+        )
+        .into()
 }
 
 /// `flattenSemanticReturnValue`.
@@ -248,11 +333,11 @@ fn flatten_return_value(value: &Json) -> (Vec<Json>, Vec<Json>) {
 
 fn field(path: &JsString, presence: &str, state: &str, value: Json, reason: Json) -> Json {
     Obj::new()
-        .with("path", Json::String(path.clone()))
-        .with("presence", presence)
-        .with("state", state)
-        .with("value", value)
-        .with("reason", reason)
+        .with_static("path", Json::String(path.clone()))
+        .with_static("presence", presence)
+        .with_static("state", state)
+        .with_static("value", value)
+        .with_static("reason", reason)
         .into()
 }
 
@@ -301,7 +386,7 @@ fn flatten_value(
     let Some(inventory) = container(value) else {
         return;
     };
-    let mut entry = Obj::new().with("path", Json::String(path.clone()));
+    let mut entry = Obj::new().with_static("path", Json::String(path.clone()));
     if let Some(object) = inventory.coverage.as_obj() {
         entry.extend_from(object);
     }
@@ -340,10 +425,10 @@ pub fn export_return_shapes(
         .map(|site| {
             let (fields, property_coverage) = flatten_return_value(site.at("value"));
             Obj::new()
-                .with("source_range", site.at("location").clone())
-                .with("value_status", site.at("value").at("status").clone())
-                .with("fields", Json::Array(fields))
-                .with("property_coverage", Json::Array(property_coverage))
+                .with_static("source_range", site.at("location").clone())
+                .with_static("value_status", site.at("value").at("status").clone())
+                .with_static("fields", Json::array(fields))
+                .with_static("property_coverage", Json::array(property_coverage))
                 .into()
         })
         .collect();
@@ -373,21 +458,21 @@ pub fn export_return_shapes(
     }
     let retained = shapes.len();
     let properties = Obj::new()
-        .with("semantic_role", "export-return-shapes")
-        .with("module_path", Json::String(module_path.clone()))
-        .with("exported_name", Json::String(exported.clone()))
-        .with("callable_id", callable.at("callableId").clone())
-        .with("callable_kind", callable.at("kind").clone())
-        .with("static_return_shapes", Json::Array(shapes))
-        .with(
+        .with_static("semantic_role", "export-return-shapes")
+        .with_static("module_path", Json::String(module_path.clone()))
+        .with_static("exported_name", Json::String(exported.clone()))
+        .with_static("callable_id", callable.at("callableId").clone())
+        .with_static("callable_kind", callable.at("kind").clone())
+        .with_static("static_return_shapes", Json::array(shapes))
+        .with_static(
             "return_shape_coverage",
             Obj::new()
-                .with("status", return_coverage.at("status").clone())
-                .with("retained_return_sites", retained)
-                .with("omitted_return_sites", semantic_omitted)
-                .with("omitted_fields", 0.0)
-                .with("omitted_property_coverage", 0.0)
-                .with("projection_complete", true),
+                .with_static("status", return_coverage.at("status").clone())
+                .with_static("retained_return_sites", retained)
+                .with_static("omitted_return_sites", semantic_omitted)
+                .with_static("omitted_fields", 0.0)
+                .with_static("omitted_property_coverage", 0.0)
+                .with_static("projection_complete", true),
         );
     Some((
         properties,
@@ -399,7 +484,7 @@ pub fn export_return_shapes(
 
 #[cfg(test)]
 mod tests {
-    use super::property_pointer_js;
+    use super::{Json, Obj, property_pointer_js, slot_at_path};
     use crate::javascript::semantic::value_types::JsString;
 
     #[test]
@@ -410,5 +495,59 @@ mod tests {
             property_pointer_js(&path).units(),
             &[0x2f, 0xd800, 0x7e, 0x31, 0x7e, 0x30]
         );
+    }
+
+    #[test]
+    fn slot_lookup_preserves_nested_and_missing_slot_semantics() {
+        let value: Json = Obj::new()
+            .with_static("status", "object")
+            .with_static(
+                "properties",
+                Json::array(vec![
+                    Obj::new()
+                        .with_static("name", "items")
+                        .with_static("presence", "present")
+                        .with_static(
+                            "value",
+                            Obj::new()
+                                .with_static("status", "array")
+                                .with_static(
+                                    "items",
+                                    Json::array(vec![
+                                        Obj::new()
+                                            .with_static("name", "0")
+                                            .with_static("presence", "present")
+                                            .with_static(
+                                                "value",
+                                                Obj::new()
+                                                    .with_static("status", "literal")
+                                                    .with_static("value", 7.0),
+                                            )
+                                            .into(),
+                                    ]),
+                                )
+                                .with_static("unknownItems", false)
+                                .with_static("omittedItems", 0.0),
+                        )
+                        .into(),
+                ]),
+            )
+            .with_static("unknownProperties", false)
+            .with_static("omittedProperties", 0.0)
+            .into();
+
+        let observed = slot_at_path(&value, &["items".into(), "0".into()]);
+        assert_eq!(observed.name(), "0");
+        assert_eq!(observed.presence(), "present");
+        assert_eq!(observed.value().at("status").str(), "literal");
+
+        let missing = slot_at_path(&value, &["items".into(), "9".into()]);
+        assert_eq!(missing.name(), "9");
+        assert_eq!(missing.presence(), "absent");
+        assert_eq!(missing.value().at("status").str(), "unknown");
+
+        let length = slot_at_path(&value, &["items".into(), "length".into()]);
+        assert_eq!(length.presence(), "present");
+        assert_eq!(length.value().at("status").str(), "unknown");
     }
 }

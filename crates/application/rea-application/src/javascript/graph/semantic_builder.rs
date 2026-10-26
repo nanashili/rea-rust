@@ -53,19 +53,19 @@ pub fn project_file(
     };
     let fingerprints = project_source(file, ir, &mut state, paths);
     let roots = strings(std::mem::take(&mut state.roots));
-    let nodes = Json::Array(state.nodes.take_values());
-    let relations = Json::Array(state.relations.take_values());
-    let unknowns = Json::Array(state.unknowns.take_values());
+    let nodes = Json::array(state.nodes.take_values());
+    let relations = Json::array(state.relations.take_values());
+    let unknowns = Json::array(state.unknowns.take_values());
     let mut projection = Obj::new()
-        .with("roots", roots)
-        .with("evidenceContexts", Json::Array(state.evidence.contexts()))
-        .with("nodes", nodes)
-        .with("relations", relations)
-        .with("unknowns", unknowns)
-        .with("fingerprints", Json::Array(fingerprints));
+        .with_static("roots", roots)
+        .with_static("evidenceContexts", Json::array(state.evidence.contexts()))
+        .with_static("nodes", nodes)
+        .with_static("relations", relations)
+        .with_static("unknowns", unknowns)
+        .with_static("fingerprints", Json::array(fingerprints));
     if !state.unknown_omissions.is_empty() {
         let omissions = state.unknown_omissions.take_values();
-        projection.set("omittedUnknownOccurrences", Json::Array(omissions));
+        projection.set("omittedUnknownOccurrences", Json::array(omissions));
     }
     projection.set("nodesTruncated", state.file_nodes_dropped);
     Ok(projection.into())
@@ -135,7 +135,7 @@ fn project_source(
                 location: callable.at("location").clone(),
                 label: name.as_js_string().cloned(),
                 function_node_id: None,
-                properties: Obj::new().with("name", name.clone()),
+                properties: Obj::new().with_static("name", name.clone()),
             },
         ) {
             callable_nodes.insert(callable.at("callableId").str().to_owned(), node);
@@ -266,8 +266,8 @@ fn project_source(
 }
 
 fn project_definitions_and_references(context: &mut FileContext<'_>) {
-    let bindings = context.ir.at("bindings").arr().to_vec();
-    for binding in &bindings {
+    let bindings = context.ir.at("bindings").clone();
+    for binding in bindings.arr() {
         let id = binding.at("bindingId").str();
         let Some(binding_node) = context.binding_nodes.get(id).cloned() else {
             continue;
@@ -291,8 +291,8 @@ fn project_definitions_and_references(context: &mut FileContext<'_>) {
             );
         }
     }
-    let references = context.ir.at("references").arr().to_vec();
-    for (index, reference) in references.iter().enumerate() {
+    let references = context.ir.at("references").clone();
+    for (index, reference) in references.arr().iter().enumerate() {
         let location = reference.at("location");
         let owner = context
             .owners
@@ -505,7 +505,7 @@ impl SemanticGraphProjection {
         }
         let retained = analysis_coverage_limits(limits);
         for limit in &retained {
-            let key = Json::Array(vec![
+            let key = Json::array(vec![
                 limit.at("name").clone(),
                 limit.at("value").clone(),
                 limit.at("unit").clone(),
@@ -643,11 +643,11 @@ impl SemanticGraphProjection {
                     .collect();
                 Json::from(
                     Obj::new()
-                        .with("family", *family)
-                        .with("status", "partial")
-                        .with("retained_relations", retained)
-                        .with("omitted_relations", omitted.clone())
-                        .with("unknown_ids", strings(ids)),
+                        .with_static("family", *family)
+                        .with_static("status", "partial")
+                        .with_static("retained_relations", retained)
+                        .with_static("omitted_relations", omitted.clone())
+                        .with_static("unknown_ids", strings(ids)),
                 )
             })
             .collect();
@@ -683,7 +683,7 @@ impl SemanticGraphProjection {
             ));
         }
         let mut coverage = Obj::new()
-            .with(
+            .with_static(
                 "status",
                 if incomplete || dropped {
                     "partial"
@@ -691,17 +691,17 @@ impl SemanticGraphProjection {
                     "unknown"
                 },
             )
-            .with(
+            .with_static(
                 "truncated",
                 self.truncated_files > 0 || self.resource_truncated_files > 0 || dropped,
             );
         if dropped {
-            coverage.set("omitted_unknown_occurrences", Json::Array(omissions));
+            coverage.set("omitted_unknown_occurrences", Json::array(omissions));
         }
         coverage.set("omitted_nodes", omitted.clone());
         coverage.set("omitted_relations", omitted);
-        coverage.set("limits", Json::Array(limits));
-        coverage.set("families", Json::Array(families));
+        coverage.set("limits", Json::array(limits));
+        coverage.set("families", Json::array(families));
         let mut limitations = Vec::new();
         if dropped {
             limitations.push("Semantic unknown retention reached an effective capacity. Omission coverage counts examined emission occurrences by family and reason, including repeats; it does not count unexamined source frontiers or distinct discarded identities.".to_owned());

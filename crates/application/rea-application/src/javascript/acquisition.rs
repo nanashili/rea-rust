@@ -146,17 +146,17 @@ pub(crate) fn canonical_file_set_json(file_set: &JavaScriptArtifactFileSet<'_>) 
             value.set("hash_status", file.hash_status.clone());
             value.set(
                 "limitations",
-                Json::Array(file.limitations.iter().cloned().map(Json::from).collect()),
+                Json::array(file.limitations.iter().cloned().map(Json::from).collect()),
             );
             value.into()
         })
         .collect();
     let mut value = Obj::new()
-        .with("files", Json::Array(files))
-        .with("unavailable_relevant_files", Json::Array(unavailable))
+        .with("files", Json::array(files))
+        .with("unavailable_relevant_files", Json::array(unavailable))
         .with(
             "containers",
-            Json::Array(
+            Json::array(
                 file_set
                     .containers
                     .iter()
@@ -182,7 +182,7 @@ pub(crate) fn canonical_file_set_json(file_set: &JavaScriptArtifactFileSet<'_>) 
             Obj::new()
                 .with(
                     "requested_paths",
-                    Json::Array(
+                    Json::array(
                         selection
                             .requested_paths
                             .iter()

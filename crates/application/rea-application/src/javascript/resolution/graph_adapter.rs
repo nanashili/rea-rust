@@ -112,7 +112,7 @@ impl<'a> JavaScriptGraphResolver<'a> {
                 .with("resolution_context", Json::String(request.context.clone()))
                 .with(
                     "limitations",
-                    Json::Array(vec![Json::String(reason.into())]),
+                    Json::array(vec![Json::String(reason.into())]),
                 )
                 .with("resolved_path", Json::Null)
                 .with("resolution_status", "unavailable"),
@@ -134,7 +134,7 @@ impl ArtifactPathResolver for JavaScriptGraphResolver<'_> {
                     .with("resolution_context", Json::String(request.context.clone()))
                     .with(
                         "limitations",
-                        Json::Array(vec![Json::String(
+                        Json::array(vec![Json::String(
                             "No extension, directory package, or index candidate exists in the inventoried artifact container.".into(),
                         )]),
                     )
@@ -190,7 +190,7 @@ impl ArtifactPathResolver for JavaScriptGraphResolver<'_> {
             .with("resolution_context", request.context.clone())
             .with(
                 "limitations",
-                Json::Array(
+                Json::array(
                     result
                         .limitations
                         .into_iter()
@@ -214,7 +214,7 @@ impl ArtifactPathResolver for JavaScriptGraphResolver<'_> {
         if let Some(branches) = result.conditional_resolutions {
             object.set(
                 "conditional_resolutions",
-                Json::Array(
+                Json::array(
                     branches
                         .into_iter()
                         .map(|branch| {
@@ -232,7 +232,7 @@ impl ArtifactPathResolver for JavaScriptGraphResolver<'_> {
                                 )
                                 .with(
                                     "limitations",
-                                    Json::Array(
+                                    Json::array(
                                         branch
                                             .limitations
                                             .into_iter()

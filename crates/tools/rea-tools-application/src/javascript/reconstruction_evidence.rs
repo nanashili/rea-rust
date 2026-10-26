@@ -74,7 +74,7 @@ pub fn create(
         .with("id", PROVIDER_ID)
         .with("name", PROVIDER_NAME)
         .with("version", PROVIDER_VERSION);
-    let locations = Json::Array(vec![
+    let locations = Json::array(vec![
         Obj::new()
             .with("kind", "artifact-path")
             .with("path", "artifact-root")
@@ -96,7 +96,7 @@ pub fn create(
         .with("limitations", limitations)
         .with("relationship_coverage", Json::Null)
         .with("locations", locations)
-        .with("evidence_links", Json::Array(Vec::new()));
+        .with("evidence_links", Json::array(Vec::new()));
 
     let raw = RawValue::from_string(Json::from(unsigned).stringify())
         .map_err(EvidenceRecordError::Json)?;
@@ -268,7 +268,7 @@ mod tests {
         let caller_path = JsString::from("./relative/app");
         let graph = Obj::new().with(
             "limitations",
-            Json::Array(vec![Json::String(JsString::from_utf16([0xdc00]))]),
+            Json::array(vec![Json::String(JsString::from_utf16([0xdc00]))]),
         );
         let result: Json = Obj::new()
             .with("input_path", path.clone())
@@ -309,7 +309,7 @@ mod tests {
         let digest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         let resolved_path = JsString::from_utf16([b'/' as u16, b'a' as u16, 0xd800]);
         let caller_path = JsString::from("./app");
-        let graph = Obj::new().with("limitations", Json::Array(Vec::new()));
+        let graph = Obj::new().with("limitations", Json::array(Vec::new()));
         let result = Obj::new()
             .with("input_path", resolved_path)
             .with("format", "directory")

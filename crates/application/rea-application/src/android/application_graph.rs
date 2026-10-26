@@ -62,7 +62,7 @@ pub fn project_evidence(input: &Json) -> Result<Box<RawValue>, Failure> {
         .with("environment", Json::Null)
         .with("limitations", limitations)
         .with("relationship_coverage", Json::Null)
-        .with("locations", Json::Array(Vec::new()))
+        .with("locations", Json::array(Vec::new()))
         .with("evidence_links", json::strings(source_evidence_ids));
     let raw = RawValue::from_string(Json::from(unsigned).stringify())
         .map_err(|error| protocol_failure(&error.to_string()))?;
@@ -134,7 +134,7 @@ fn project_pages(pages: &[Page]) -> Result<Json, String> {
             )),
         )
         .with("components", components)
-        .with("unavailable_components", Json::Array(unavailable))
+        .with("unavailable_components", Json::array(unavailable))
         .with("runtime_families", runtime_families)
         .with("bridge_candidates", bridges)
         .with("bridge_candidate_coverage", bridge_coverage)
@@ -619,7 +619,7 @@ fn classify(entries: &[Entry]) -> Obj {
                 matched.then(|| component.clone())
             })
             .collect::<Vec<_>>();
-        output.set(name, Json::Array(values));
+        output.set(name, Json::array(values));
     }
     output
 }
@@ -670,7 +670,7 @@ fn runtime_families(entries: &[Entry], components: &Obj) -> Json {
     }
     let mut values: Vec<_> = families.into_iter().collect();
     values.sort_by(|a, b| cmp_unicode_codepoints(a, b));
-    Json::Array(values.into_iter().map(Json::from).collect())
+    Json::array(values.into_iter().map(Json::from).collect())
 }
 
 fn component_items<'a>(components: &'a Obj, name: &str) -> Vec<&'a Json> {
@@ -711,7 +711,7 @@ fn bridge_candidates(managed: &[&Json], native: &[&Json]) -> (Json, Json) {
     }
     let emitted = candidates.len();
     (
-        Json::Array(candidates),
+        Json::array(candidates),
         Obj::new()
             .with(
                 "status",

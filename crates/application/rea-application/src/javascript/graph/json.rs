@@ -5,8 +5,9 @@
 //! and RFC 8785-style canonical JSON (UTF-16 code-unit key order, used for every
 //! content digest). [`Json`] keeps producer key order so both are reproducible.
 
+use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Write as _};
 use std::ops::Index;
 use std::sync::Arc;
@@ -15,6 +16,22 @@ use super::super::semantic::value_types::JsString;
 use serde::de::{Deserialize, Deserializer, Error as _};
 use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
+
+thread_local! {
+    /// Static graph field names share one `JsString` allocation per worker
+    /// thread. The key set is bounded by compiled graph producers.
+    static STATIC_KEYS: RefCell<HashMap<&'static str, JsString>> =
+        RefCell::new(HashMap::new());
+}
+
+fn static_key(key: &'static str) -> JsString {
+    STATIC_KEYS.with(|keys| {
+        keys.borrow_mut()
+            .entry(key)
+            .or_insert_with(|| JsString::from(key))
+            .clone()
+    })
+}
 
 /// One JSON value whose objects retain producer insertion order.
 #[derive(Clone, Debug, PartialEq)]
@@ -28,7 +45,7 @@ pub enum Json {
     /// A string.
     String(JsString),
     /// An array.
-    Array(Vec<Json>),
+    Array(Arc<Vec<Json>>),
     /// An object in insertion order.
     Object(Obj),
 }
@@ -91,6 +108,18 @@ impl Obj {
     pub fn with(mut self, key: impl Into<JsString>, value: impl Into<Json>) -> Self {
         self.set(key, value);
         self
+    }
+
+    /// Builder form for a compiled graph field name.
+    #[must_use]
+    pub fn with_static(mut self, key: &'static str, value: impl Into<Json>) -> Self {
+        self.set_static(key, value);
+        self
+    }
+
+    /// Assign a compiled graph field name using the bounded static-key pool.
+    pub fn set_static(&mut self, key: &'static str, value: impl Into<Json>) {
+        self.set(static_key(key), value);
     }
 
     /// Spread another object's properties (`{...this, ...other}`).
@@ -181,7 +210,7 @@ impl From<i64> for Json {
 }
 impl From<Vec<Json>> for Json {
     fn from(value: Vec<Json>) -> Self {
-        Json::Array(value)
+        Self::array(value)
     }
 }
 impl From<&Json> for Json {
@@ -208,7 +237,7 @@ where
     I: IntoIterator<Item = S>,
     S: Into<JsString>,
 {
-    Json::Array(
+    Json::array(
         values
             .into_iter()
             .map(|value| Json::String(value.into()))
@@ -220,6 +249,19 @@ static NULL: Json = Json::Null;
 static EMPTY_JS_STRING: JsString = JsString::new_const();
 
 impl Json {
+    /// Build an immutable array whose storage is shared by cheap clones.
+    pub fn array(values: Vec<Json>) -> Self {
+        Self::Array(Arc::new(values))
+    }
+
+    /// Mutably access an array, detaching shared storage first.
+    pub fn array_mut(&mut self) -> Option<&mut Vec<Json>> {
+        match self {
+            Self::Array(values) => Some(Arc::make_mut(values)),
+            _ => None,
+        }
+    }
+
     /// Read an object property; absent and non-object values read as `undefined` (`None`).
     pub fn get(&self, key: &str) -> Option<&Json> {
         match self {
@@ -327,9 +369,9 @@ impl Json {
     }
 
     /// Borrow array storage without treating non-array values as empty.
-    pub fn as_array(&self) -> Option<&Vec<Json>> {
+    pub fn as_array(&self) -> Option<&[Json]> {
         match self {
-            Self::Array(values) => Some(values),
+            Self::Array(values) => Some(values.as_slice()),
             _ => None,
         }
     }
@@ -634,7 +676,7 @@ pub fn unique_sorted_js(values: impl IntoIterator<Item = JsString>) -> Vec<JsStr
 
 /// `compositeKey`: a JSON tuple of the parts.
 pub fn composite_key(parts: Vec<Json>) -> String {
-    Json::Array(parts).stringify()
+    Json::array(parts).stringify()
 }
 
 /// UTF-16 length of a JavaScript string.
@@ -885,13 +927,13 @@ impl<'a> RawParser<'a> {
         self.whitespace();
         let mut values = Vec::new();
         if self.consume(b']') {
-            return Ok(Json::Array(values));
+            return Ok(Json::array(values));
         }
         loop {
             values.push(self.value()?);
             self.whitespace();
             if self.consume(b']') {
-                return Ok(Json::Array(values));
+                return Ok(Json::array(values));
             }
             self.expect(b',')?;
         }
@@ -1069,7 +1111,7 @@ mod tests {
         nested.set("keep", 5_usize);
         nested.set("added", 6_usize);
 
-        let Json::Array(list) = changed.get_mut("list").expect("list") else {
+        let Some(list) = changed.get_mut("list").and_then(Json::array_mut) else {
             panic!("expected array");
         };
         let Json::Object(item) = &mut list[0] else {
@@ -1111,6 +1153,21 @@ mod tests {
         assert_eq!(value.stringify(), r#"{"\ud800x":"\ud800x"}"#);
         assert_eq!(value.canonical(), r#"{"\ud800x":"\ud800x"}"#);
         assert_eq!(value.digest(), sha256_text(r#"{"\ud800x":"\ud800x"}"#));
+    }
+
+    #[test]
+    fn pooled_static_keys_keep_assignment_order_and_replacement_semantics() {
+        let value = Obj::new()
+            .with_static("first", 1_usize)
+            .with_static("second", 2_usize)
+            .with_static("first", 3_usize);
+
+        let keys = value
+            .iter()
+            .map(|(key, _)| key.as_str().expect("static key is valid UTF-8"))
+            .collect::<Vec<_>>();
+        assert_eq!(keys, ["first", "second"]);
+        assert_eq!(value.get("first"), Some(&Json::from(3_usize)));
     }
 
     #[test]
